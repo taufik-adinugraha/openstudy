@@ -1,0 +1,206 @@
+<title>Nighttime-Lights Pulse Spec</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper: #FAF9F5; --surface: #F2F0E9; --ink: #1C232E; --muted: #5B6473;
+    --hairline: #E5E2D9; --accent: #B97F14; --accent-soft: #F3E7CC;
+    --teal: #177368; --teal-soft: #DCEBE8; --warn: #A6521F; --warn-soft: #F5E4D7;
+    --code-bg: #EEECE4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #12151D; --surface: #1A1F2B; --ink: #E9E6DD; --muted: #9BA3B0;
+      --hairline: #2A3140; --accent: #E2A94A; --accent-soft: #33290F;
+      --teal: #4BB8A9; --teal-soft: #12312C; --warn: #E08B54; --warn-soft: #3A2413;
+      --code-bg: #222938;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #12151D; --surface: #1A1F2B; --ink: #E9E6DD; --muted: #9BA3B0;
+    --hairline: #2A3140; --accent: #E2A94A; --accent-soft: #33290F;
+    --teal: #4BB8A9; --teal-soft: #12312C; --warn: #E08B54; --warn-soft: #3A2413;
+    --code-bg: #222938;
+  }
+  body { background: var(--paper); color: var(--ink); font-family: "Source Serif 4", Georgia, serif; font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 56px 24px 96px; }
+  h1, h2, h3 { font-family: "Archivo", "Helvetica Neue", Arial, sans-serif; text-wrap: balance; margin: 0; }
+  h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
+  h2 { font-size: 1.3rem; font-weight: 700; }
+  h3 { font-size: 1rem; font-weight: 600; }
+  p { margin: 0; max-width: 68ch; }
+  a { color: var(--teal); }
+  .eyebrow { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+  header.doc { display: flex; flex-direction: column; gap: 14px; padding-bottom: 30px; border-bottom: 2px solid var(--ink); }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px 26px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.78rem; color: var(--muted); }
+  .meta-row b { color: var(--ink); font-weight: 500; }
+  section { display: flex; flex-direction: column; gap: 16px; margin-top: 48px; }
+  .lede { font-size: 1rem; color: var(--muted); }
+  .q { font-size: 1.15rem; font-style: italic; border-left: 3px solid var(--accent); padding: 6px 0 6px 18px; max-width: 62ch; }
+  table { border-collapse: collapse; width: 100%; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.78rem; line-height: 1.5; }
+  .table-scroll { overflow-x: auto; }
+  th { text-align: left; font-weight: 600; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 8px 14px 8px 0; border-bottom: 1px solid var(--ink); }
+  td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.82em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  pre { background: var(--code-bg); padding: 14px 16px; overflow-x: auto; border-radius: 4px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.78rem; line-height: 1.6; margin: 0; }
+  ul.plain, ol.plain { margin: 0; padding-left: 1.35em; display: flex; flex-direction: column; gap: 8px; max-width: 70ch; }
+  ol.plain li::marker, ul.plain li::marker { color: var(--accent); font-family: "IBM Plex Mono", monospace; font-weight: 600; }
+  .stage { display: grid; grid-template-columns: 120px 1fr; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--hairline); }
+  .stage:last-child { border-bottom: 0; }
+  .stage .sname { font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; font-weight: 600; color: var(--accent); padding-top: 3px; }
+  .stage p { font-size: 0.95rem; }
+  @media (max-width: 600px) { .stage { grid-template-columns: 1fr; gap: 4px; } }
+  .gate { border: 1px solid var(--hairline); border-left: 3px solid var(--teal); background: var(--surface); padding: 14px 18px; font-size: 0.95rem; max-width: 70ch; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+  .sw { display: flex; align-items: center; gap: 8px; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+  .sw i { width: 22px; height: 22px; border-radius: 4px; display: inline-block; border: 1px solid var(--hairline); }
+  .check li { list-style: none; position: relative; padding-left: 1.6em; }
+  .check li::before { content: "☐"; position: absolute; left: 0; color: var(--accent); font-family: "IBM Plex Mono", monospace; }
+  .check { padding-left: 0; }
+  footer.doc { margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--hairline); font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header class="doc">
+    <span class="eyebrow">Flagship A · Phase 1 · Spec v2 (D12: Black Marble primary)</span>
+    <h1>Nighttime-Lights Economic Pulse</h1>
+    <p class="lede">Full build spec: a monthly satellite-lights nowcast of economic activity across Indonesia’s 514 regencies, validated against official statistics and shipped as a dark-first interactive story + explorer.</p>
+    <div class="meta-row">
+      <span>DATE <b>2026-08-29</b></span>
+      <span>REFRESH <b>Monthly cron</b></span>
+      <span>BUILD SLOT <b>Weeks 2–3</b></span>
+      <span>COST SHARE <b>&lt; US$10/mo</b></span>
+      <span>PLAN <b><a href="https://claude.ai/code/artifact/db923b4e-94e8-4b0b-a1e2-504a8bd309e8">Build Plan §4</a></b></span>
+    </div>
+  </header>
+
+  <section>
+    <span class="eyebrow">A1 · The question</span>
+    <p class="q">“Which of Indonesia’s 514 regencies are accelerating or stalling — months before official statistics say so?”</p>
+    <p>The client-facing promise: official regional GDP (PDRB) arrives annually, 6–12 months late. Satellite radiance arrives monthly. We calibrate the relationship where it is strong, state plainly where it is weak, and deliver a regency-level activity pulse the audience can interrogate. The honesty is the pitch: a client who watches us bound our own claims trusts the rest of the site.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">A2 · Data contract</span>
+    <h2>Data contract</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Source</th><th>Product / endpoint</th><th>License</th><th>Latency</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>NASA LAADS</td><td>Black Marble monthly composites, archive set <code>5200</code> (verified 2026-08-29): <code>VNP46A3</code> (Suomi-NPP, 2012→ production ends 2026-11) spliced with <code>VJ146A3</code> (NOAA-20, 2018-01→ now), inter-calibrated on the 2018+ overlap; tiles h27–h32 / v08–v10; Earthdata bearer token</td><td>Fully open incl. commercial</td><td>~weeks</td><td><b>Primary radiance series (D12)</b></td></tr>
+          <tr><td>EOG (Mines)</td><td>VIIRS VNL annual composite — <em>one manual interactive download per year</em>; EOG limited programmatic access to paid subscribers on 2026-06-01, which rules it out as the automated source</td><td>CC BY 4.0 incl. commercial; attribution on the cross-check chart</td><td>annual</td><td>Independent cross-check (G-A4b)</td></tr>
+          <tr><td>BPS WebAPI</td><td>PDRB ADHK (constant-price GRDP) per kabupaten/kota, annual; per-domain <code>var</code> discovery across 514 domains, cached to a local crosswalk</td><td>Free key; cite BPS</td><td>6–12 mo</td><td>Calibration target</td></tr>
+          <tr><td>Boundaries</td><td>Single fixed vintage (BPS 2020 kabupaten polygons; GADM 4.1 L2 fallback) + a pemekaran crosswalk table mapping split districts across years</td><td>Open</td><td>static</td><td>Zonal geometry</td></tr>
+          <tr><td>EOG VNF</td><td>Gas-flare site catalog (public subset)</td><td>CC BY 4.0</td><td>static</td><td>Flare masking (5 km buffer)</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><b>Boundary rule (load-bearing):</b> all zonal statistics use one frozen boundary vintage for the entire 2012→now series; BPS region codes from other years map through the crosswalk. Without this, pemekaran (district splitting) fabricates fake growth jumps.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">A3 · Pipeline</span>
+    <h2>Pipeline — monthly DAG</h2>
+    <p class="lede">GitHub Actions cron, ~90 min, idempotent by month key. If EOG hasn’t published the month yet, the run exits cleanly and the site keeps its “data through …” stamp.</p>
+    <div>
+      <div class="stage"><span class="sname">ingest</span><p>Download the month’s Black Marble tiles (h27–h32/v08–v10) from LAADS with the Earthdata bearer token — VJ146A3 from 2018-01, VNP46A3 for earlier months, both during the overlap era. HDF5 → Indonesia-clipped COGs in R2 (<code>raw/bm/YYYY-MM/</code>). Ocean-only tiles 404 and are skipped; checksum-verify; retry ×3.</p></div>
+      <div class="stage"><span class="sname">mask</span><p>Null out cells failing the composite’s own QA layers (observation count &lt; 2, mandatory-quality flags); clamp negative radiance to 0; apply 5 km gas-flare buffers (EOG VNF static catalog). Log masked-area share per month as a pipeline health metric.</p></div>
+      <div class="stage"><span class="sname">zonal</span><p><code>exactextract</code> sum-of-lights, mean radiance, and lit-area share per regency against the frozen boundaries → one row per regency-month appended to the parquet ledger (DuckDB-managed, ~514 × 170 months).</p></div>
+      <div class="stage"><span class="sname">deseason</span><p>Per-regency STL decomposition plus a Hijri-calendar regressor: Ramadan moves ~11 days earlier each Gregorian year and visibly shifts lighting, so each month carries its Ramadan-overlap fraction as a covariate. This detail is shown off in the story — it reads as “insightful,” because it is.</p></div>
+      <div class="stage"><span class="sname">calibrate</span><p>Annually: levels cross-section <code>log(PDRB) ~ log(SOL)</code> per year (the R² gate lives here) + within-regency panel elasticity with confidence intervals, reported honestly (~0.2 expected per the literature).</p></div>
+      <div class="stage"><span class="sname">nowcast</span><p>Pulse Index per regency = deseasonalized 3-month radiance growth mapped through the panel elasticity, with uncertainty band. Presented as a <em>lights-implied activity index</em>, never as “GDP.” Rolling backtest 2016–2024 vs later official PDRB releases.</p></div>
+      <div class="stage"><span class="sname">anomalies</span><p>STL-residual z-scores → quarterly “fastest risers / fallers” board, filtered to |z| ≥ 2 sustained ≥ 2 months.</p></div>
+      <div class="stage"><span class="sname">brief</span><p>Insight brief generated from the computed-stats JSON only (low-temperature LLM call, fixed template, no free retrieval). The brief lands as a PR — merging it <em>is</em> the human review. Unmerged brief = site shows the previous one.</p></div>
+      <div class="stage"><span class="sname">publish</span><p>Export monthly PMTiles (choropleth), parquet extracts, and JSON view models; static build; deploy to Cloudflare Pages with data-vintage stamp.</p></div>
+    </div>
+    <pre>cases/nightlights-pulse/
+  pipeline/    # ingest.py mask.py zonal.py models.py brief.py — `make month M=2026-07`
+  data/        # DuckDB + parquet ledger (R2-synced), boundary crosswalk
+  web/         # Astro + deck.gl/MapLibre app, PMTiles in R2
+  spec/        # this document, methodology.md
+  Makefile     # rebuild-all | month | validate | deploy</pre>
+  </section>
+
+  <section>
+    <span class="eyebrow">A4 · Validation gates</span>
+    <h2>Validation gates</h2>
+    <div class="gate"><b>G-A1 — Levels fit.</b> Cross-sectional <code>log(SOL) vs log(PDRB)</code> across ~500 regencies: R² ≥ 0.65 for every year 2015→latest. Scoped to levels only, per Gibson et al. 2021 — the panel elasticity (~0.2) is <em>displayed</em>, with CIs, not gated.</div>
+    <div class="gate"><b>G-A2 — Nowcast skill.</b> Rolling out-of-sample backtest: provincial Pulse Index growth must beat the naive last-value baseline on MAE for ≥ 60% of provinces. Published on the methodology page either way.</div>
+    <div class="gate"><b>G-A3 — Narrative sanity.</b> The series must show, unprompted: the 2020 COVID collapse and recovery, Morowali’s smelter-driven surge, IKN construction ramp, and the Ramadan cycle. Any absence is a bug until explained.</div>
+    <div class="gate"><b>G-A4 — Cross-sensor checks.</b> (a) Splice integrity: VNP46A3 and VJ146A3 national monthly series correlate ≥ 0.95 over their overlap, and the inter-calibration leaves no visible step at the 2018 seam. (b) Independent source: annual national totals correlate ≥ 0.9 with the manually downloaded EOG VNL annual composite. Divergence blocks publish (sensor drift or pipeline error).</div>
+  </section>
+
+  <section>
+    <span class="eyebrow">A5 · Dashboard</span>
+    <h2>Dashboard — page anatomy</h2>
+    <p class="lede">Canonical structure: dark WebGL hero → four scroll chapters → free-explore instrument. Every chart: hover inspection with real values, shareable URL state, chart/table toggle, data download (Grapher affordances).</p>
+    <ol class="plain">
+      <li><b>Hero — “From 830 km up.”</b> Black screen, one line of copy, then Indonesia’s lights fade up over 3 s (pre-rendered annual-composite frames cross-faded as WebGL textures; static image under <code>prefers-reduced-motion</code>). A scrub hint invites dragging through 2012→now.</li>
+      <li><b>Chapter 1 — “Lights track money.”</b> Animated scatter: log SOL vs log PDRB, one dot per regency, colored by island group, per-year animation with the fitted line and live R² readout — gate G-A1 rendered publicly as the trust move.</li>
+      <li><b>Chapter 2 — “The pulse.”</b> National + provincial deseasonalized index against official GDP growth: COVID dip annotated, Ramadan wiggle explained inline with the Hijri regressor.</li>
+      <li><b>Chapter 3 — “Where it’s happening.”</b> Camera flights to Morowali (nickel smelters — cross-links to Flagship B), IKN Nusantara, Bali’s tourism recovery; small-multiple light curves with event annotations.</li>
+      <li><b>Explore — the instrument.</b> Full-screen MapLibre + deck.gl choropleth of the Pulse Index; month slider with play; regency click → drawer (light curve vs PDRB bars, rank, anomaly flags); pin-two compare mode; search; full state in URL.</li>
+      <li><b>Brief + methodology.</b> “This month in lights” (labeled generated · reviewed, with timestamp); methodology page carries the full method, limitations (elasticity honesty, DKI service-economy caveat), EOG/NASA attribution + logo, downloads, citations.</li>
+    </ol>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Chart</th><th>Form</th><th>Interactions</th><th>Perf target</th></tr></thead>
+        <tbody>
+          <tr><td>Lights map</td><td>deck.gl raster/PMTiles choropleth</td><td>time scrub, zoom/pan, click-drawer, compare pins</td><td>60 fps pan; &lt;1.5 s tile load</td></tr>
+          <tr><td>Calibration scatter</td><td>custom d3, animated per year</td><td>hover regency, island filter, year play</td><td>500 pts, 60 fps transitions</td></tr>
+          <tr><td>Pulse timelines</td><td>d3 line + band (uncertainty)</td><td>hover crosshair, province switch, event annotations</td><td>instant</td></tr>
+          <tr><td>Anomaly board</td><td>ranked stat tiles + sparklines</td><td>click → map flyover</td><td>instant</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">A6 · Design brief</span>
+    <h2>Design brief</h2>
+    <p><b>Identity:</b> city lights seen from orbit. Dark-first; the data ramp <em>is</em> the aesthetic — the same black→indigo→amber→white ramp as the imagery itself, so the interface and the satellite agree.</p>
+    <div class="swatches">
+      <span class="sw"><i style="background:#0A0E1A"></i> ground #0A0E1A</span>
+      <span class="sw"><i style="background:#131A2E"></i> surface #131A2E</span>
+      <span class="sw"><i style="background:#E9E4D6"></i> starlight text #E9E4D6</span>
+      <span class="sw"><i style="background:#E8A33D"></i> sodium amber #E8A33D</span>
+      <span class="sw"><i style="background:#6B7CA6"></i> slate (declines) #6B7CA6</span>
+      <span class="sw"><i style="background:#4BB8A9"></i> teal (official series) #4BB8A9</span>
+    </div>
+    <ul class="plain">
+      <li>Amber is reserved for lights-derived data and rising values; official-statistics series always render teal — the two data provenances are color-coded site-visitors can learn once.</li>
+      <li>Type: shared lab system — Archivo (display), Public Sans (UI/body), IBM Plex Mono (data, axis, stamps), <code>tabular-nums</code> throughout.</li>
+      <li>Motion: one hero reveal; one camera flight per chapter; 200–300 ms ease-out micro-interactions; nothing loops except the optional time-scrub play.</li>
+      <li>Light theme (fallback): warm paper ground, same amber/teal semantics at darkened, AA-contrast values.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">A7 · Acceptance</span>
+    <h2>Acceptance checklist</h2>
+    <ul class="plain check">
+      <li><code>make rebuild-all</code> reproduces the full ledger from raw sources on a clean machine (gate 1).</li>
+      <li>G-A1…G-A4 pass and their results render publicly on the methodology page (gates 2–3).</li>
+      <li>Explore mode interactive &lt; 3 s on mid-range 4G; charts 60 fps; Lighthouse ≥ 90 (gate 4).</li>
+      <li>Data-vintage stamp + next-refresh date visible on every view (gate 5).</li>
+      <li>NASA Black Marble citation (Román et al. 2018) on every lights visual; EOG credited on the annual cross-check chart; BPS cited (gate 6).</li>
+      <li>The story reads in one scroll before any control is touched (gate 7).</li>
+      <li>Case infra cost ≤ US$10/mo measured over first month (gate 8).</li>
+      <li>Signature moment + identity reviewed against the plan’s §3 “would we enter this for an award?” test (gate 9).</li>
+      <li>Insight brief pipeline: generated → PR → human merge; label + timestamp render on site.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">A8 · Risks &amp; out of scope</span>
+    <h2>Risks &amp; out of scope</h2>
+    <ul class="plain">
+      <li><b>LAADS publication delay</b> — some months publish late; the clean-exit design makes this a non-event, and the vintage stamp keeps it honest.</li>
+      <li><b>Splice inter-calibration (D12)</b> — the 2018 VNP46→VJ146 seam must not read as an economic event; gate G-A4a exists precisely for this, and the methodology page shows the overlap fit.</li>
+      <li><b>Earthdata token rotation</b> — tokens live ~60 days; the CI secret must be regenerated on schedule or the cron starts no-op’ing (current token expires 2026-10-28).</li>
+      <li><b>DKI divergence</b> — Jakarta’s service economy weakens the lights link locally (published finding); the drawer for DKI carries an explicit caveat chip.</li>
+      <li><b>Out of scope:</b> ask-the-data Q&amp;A (phase 2), per-capita welfare claims, sub-regency estimates, any use of the word “GDP” for the Pulse Index.</li>
+    </ul>
+  </section>
+
+  <footer class="doc">FLAGSHIP A SPEC v2 (D12) · 2026-08-29 · SIBLING: TRADE &amp; COMPLEXITY SPEC · PARENT: BUILD PLAN</footer>
+</div>

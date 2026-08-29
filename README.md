@@ -6,9 +6,12 @@ award-level interactive dashboard.
 
 ## Governing documents
 
-- Build plan (decisions D1–D11, portfolio, quality gates): https://claude.ai/code/artifact/5363019d-6af0-4643-8cc7-e98f15cd61a7
-- Flagship A spec — Nighttime-Lights Pulse: https://claude.ai/code/artifact/06da6f68-9ed2-4a61-b8ce-bac9086856d3
-- Flagship B spec — Trade Complexity: https://claude.ai/code/artifact/5f595e20-bfa6-49e5-b400-bf36ff9ab1a7
+Source HTML lives in `docs/` (the durable copy); published views:
+
+- Build plan (decisions D1–D16, portfolio, quality gates, validation results): https://claude.ai/code/artifact/db923b4e-94e8-4b0b-a1e2-504a8bd309e8
+- Flagship A spec — Nighttime-Lights Pulse: https://claude.ai/code/artifact/becd92dc-5dfe-4ba8-9627-56a00a470ce1
+- Flagship B spec — Trade Complexity: https://claude.ai/code/artifact/6f1db914-d986-48a3-8708-b15535c927a0
+- Platform spec — Pustaka knowledge assistant: https://claude.ai/code/artifact/6b8a2784-27c9-48cf-ac8b-d9faa14ecd4c
 
 ## Architecture rule
 

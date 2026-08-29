@@ -1,0 +1,205 @@
+<title>Trade Complexity Spec</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper: #FAF9F5; --surface: #F2F0E9; --ink: #1C232E; --muted: #5B6473;
+    --hairline: #E5E2D9; --accent: #B05A1E; --accent-soft: #F5E4D4;
+    --teal: #177368; --teal-soft: #DCEBE8; --warn: #A6521F; --warn-soft: #F5E4D7;
+    --code-bg: #EEECE4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #10141A; --surface: #181E27; --ink: #E7E9EC; --muted: #99A2AE;
+      --hairline: #28303C; --accent: #D9722C; --accent-soft: #33200F;
+      --teal: #4BB8A9; --teal-soft: #12312C; --warn: #E08B54; --warn-soft: #3A2413;
+      --code-bg: #212936;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #10141A; --surface: #181E27; --ink: #E7E9EC; --muted: #99A2AE;
+    --hairline: #28303C; --accent: #D9722C; --accent-soft: #33200F;
+    --teal: #4BB8A9; --teal-soft: #12312C; --warn: #E08B54; --warn-soft: #3A2413;
+    --code-bg: #212936;
+  }
+  body { background: var(--paper); color: var(--ink); font-family: "Source Serif 4", Georgia, serif; font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 56px 24px 96px; }
+  h1, h2, h3 { font-family: "Archivo", "Helvetica Neue", Arial, sans-serif; text-wrap: balance; margin: 0; }
+  h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
+  h2 { font-size: 1.3rem; font-weight: 700; }
+  h3 { font-size: 1rem; font-weight: 600; }
+  p { margin: 0; max-width: 68ch; }
+  a { color: var(--teal); }
+  .eyebrow { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+  header.doc { display: flex; flex-direction: column; gap: 14px; padding-bottom: 30px; border-bottom: 2px solid var(--ink); }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px 26px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.78rem; color: var(--muted); }
+  .meta-row b { color: var(--ink); font-weight: 500; }
+  section { display: flex; flex-direction: column; gap: 16px; margin-top: 48px; }
+  .lede { font-size: 1rem; color: var(--muted); }
+  .q { font-size: 1.15rem; font-style: italic; border-left: 3px solid var(--accent); padding: 6px 0 6px 18px; max-width: 62ch; }
+  table { border-collapse: collapse; width: 100%; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.78rem; line-height: 1.5; }
+  .table-scroll { overflow-x: auto; }
+  th { text-align: left; font-weight: 600; font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 8px 14px 8px 0; border-bottom: 1px solid var(--ink); }
+  td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  code { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.82em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  pre { background: var(--code-bg); padding: 14px 16px; overflow-x: auto; border-radius: 4px; font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.78rem; line-height: 1.6; margin: 0; }
+  ul.plain, ol.plain { margin: 0; padding-left: 1.35em; display: flex; flex-direction: column; gap: 8px; max-width: 70ch; }
+  ol.plain li::marker, ul.plain li::marker { color: var(--accent); font-family: "IBM Plex Mono", monospace; font-weight: 600; }
+  .stage { display: grid; grid-template-columns: 120px 1fr; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--hairline); }
+  .stage:last-child { border-bottom: 0; }
+  .stage .sname { font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; font-weight: 600; color: var(--accent); padding-top: 3px; }
+  .stage p { font-size: 0.95rem; }
+  @media (max-width: 600px) { .stage { grid-template-columns: 1fr; gap: 4px; } }
+  .gate { border: 1px solid var(--hairline); border-left: 3px solid var(--teal); background: var(--surface); padding: 14px 18px; font-size: 0.95rem; max-width: 70ch; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+  .sw { display: flex; align-items: center; gap: 8px; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+  .sw i { width: 22px; height: 22px; border-radius: 4px; display: inline-block; border: 1px solid var(--hairline); }
+  .check li { list-style: none; position: relative; padding-left: 1.6em; }
+  .check li::before { content: "☐"; position: absolute; left: 0; color: var(--accent); font-family: "IBM Plex Mono", monospace; }
+  .check { padding-left: 0; }
+  footer.doc { margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--hairline); font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header class="doc">
+    <span class="eyebrow">Flagship B · Phase 1 · Spec v1</span>
+    <h1>Indonesia in the Global Trade Network</h1>
+    <p class="lede">Full build spec: billion-row bilateral trade flows distilled into Indonesia’s product space, complexity trajectory, and the verified tension at the heart of the nickel-downstreaming story.</p>
+    <div class="meta-row">
+      <span>DATE <b>2026-08-29</b></span>
+      <span>REFRESH <b>Annual rebuild · quarterly check</b></span>
+      <span>BUILD SLOT <b>Weeks 4–5</b></span>
+      <span>COST SHARE <b>&lt; US$5/mo</b></span>
+      <span>PLAN <b><a href="https://claude.ai/code/artifact/db923b4e-94e8-4b0b-a1e2-504a8bd309e8">Build Plan §5</a></b></span>
+    </div>
+  </header>
+
+  <section>
+    <span class="eyebrow">B1 · The question</span>
+    <p class="q">“Where does Indonesia sit in the global product space — and what did the nickel ban actually change?”</p>
+    <p>The story is a verified paradox, not a press release: after the 2020 raw-ore export ban, processed-nickel exports surged (USITC) — yet Indonesia’s economic complexity rank <em>declined</em> ~6 places over the decade to ≈ 69 (Harvard Atlas, 2023 data). The demo lets a client walk that tension themselves: what downstreaming bought, what basket concentration cost, and what the product space says is adjacent. Nothing sells analytical capability to a policy or corporate-strategy audience like resolving a story both sides tell one-sidedly.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">B2 · Data contract</span>
+    <h2>Data contract</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Source</th><th>Product / endpoint</th><th>License</th><th>Vintage</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>CEPII BACI</td><td>Release <code>202601</code>, HS92 revision: exporter × importer × HS6 × year, 1995–2024, mirror-reconciled; direct CSV-per-year zips (~330M rows total)</td><td>Etalab 2.0 — commercial OK, attribution</td><td>through 2024</td><td>Primary flows; all complexity math</td></tr>
+          <tr><td>UN Comtrade</td><td>Free-tier API (500 calls/day, 100K records/call): Indonesia-only HS2/HS4 top-up for the latest partial year</td><td>Free key; no bulk</td><td>current-year partial</td><td>“Latest pulse” panel only — never mixed into complexity math</td></tr>
+          <tr><td>BPS</td><td>Monthly export statistics (HS2) via WebAPI</td><td>Free key; cite BPS</td><td>~1–2 mo</td><td>Reconciliation gate G-B3</td></tr>
+          <tr><td>HS metadata</td><td>HS92 code descriptions + sector groupings (BACI docs); smelter locations (Morowali, Weda Bay et al.) hand-curated with citations</td><td>Open</td><td>static</td><td>Labels, sector colors, story map</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><b>Scope rule (load-bearing):</b> goods only — BACI has no services trade. Stated verbatim on the methodology page; “exports” in all copy means goods exports.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">B3 · Pipeline</span>
+    <h2>Pipeline — annual DAG + quarterly check</h2>
+    <p class="lede">Runs on a laptop or one CI job: DuckDB chews the full BACI corpus in minutes. Rebuilt when CEPII ships a new release (~each January); a quarterly cron only refreshes the Comtrade/BPS “latest pulse” panel.</p>
+    <div>
+      <div class="stage"><span class="sname">ingest</span><p>Download BACI HS92 CSVs → DuckDB with schema checks (year coverage, row counts vs release notes, value totals vs prior release drift &lt; 5%).</p></div>
+      <div class="stage"><span class="sname">filter</span><p>Atlas-style sample: countries with population ≥ 1M and total trade ≥ US$1B (~130 countries); aggregate HS6 → HS4 (~1,200 products) for complexity; keep HS6 detail for the nickel value chain (2604 ore, 7202 ferroalloys, 7501–7508 nickel articles, 72xx stainless).</p></div>
+      <div class="stage"><span class="sname">complexity</span><p>Per year 1995–2024: Balassa RCA → binary M matrix (RCA ≥ 1) → ECI/PCI via <code>py-ecomplexity</code> (eigenvector method), with the known PCI sign/scaling issue normalized against Atlas conventions; product proximity φ; Indonesia’s density and complexity-outlook gain per product.</p></div>
+      <div class="stage"><span class="sname">layout</span><p>Product-space graph: maximum-spanning-tree backbone + edges φ ≥ 0.55 (~1,200 nodes, ~2,500 edges); force-directed layout computed once with fixed seed, coordinates cached as JSON — the browser never runs the simulation.</p></div>
+      <div class="stage"><span class="sname">extracts</span><p>View models as parquet/JSON, each ≤ 3 MB: treemap shares per year, ECI-rank trajectories (Indonesia + peer set: Vietnam, Thailand, Malaysia, Philippines, India), nickel-chain value series, top-partner flows, product-space node states per year.</p></div>
+      <div class="stage"><span class="sname">pulse</span><p>Quarterly: Comtrade + BPS latest-year panel refresh; reconciliation check runs here (G-B3).</p></div>
+      <div class="stage"><span class="sname">brief</span><p>Insight brief from computed stats only, PR-reviewed — same mechanism as Flagship A.</p></div>
+      <div class="stage"><span class="sname">publish</span><p>Static build, deploy, vintage stamp (“trade data through 2024 · pulse through Q2-2026”).</p></div>
+    </div>
+    <pre>cases/trade-complexity/
+  pipeline/    # ingest.py complexity.py layout.py extracts.py — `make rebuild RELEASE=202601`
+  data/        # DuckDB + parquet, cached layout coordinates
+  web/         # Astro + deck.gl product space, d3 treemap/lines
+  spec/        # this document, methodology.md
+  Makefile     # rebuild | pulse | validate | deploy</pre>
+  </section>
+
+  <section>
+    <span class="eyebrow">B4 · Validation gates</span>
+    <h2>Validation gates</h2>
+    <div class="gate"><b>G-B1 — Atlas agreement.</b> ECI country ranking: Spearman ρ ≥ 0.9 vs the Harvard Atlas for every overlap year, and Indonesia’s 2023 rank reproduced within ±3 places of ≈ 69. Divergences are diagnosed (sample filter, HS level, PCI sign) before any publish. <b>Result (2026-08-29): PASS on rank</b> — #71 of 158 vs Atlas #69 of 133, after adding the World Bank population ≥ 1M filter (the trade-floor-only sample gave #95 of 190 at the same percentile — a sample effect, diagnosed and fixed). Top-5 order (JPN, CHE, TWN, KOR, DEU) matches the Atlas. Spearman check pending an Atlas download.</div>
+    <div class="gate"><b>G-B2 — Trajectory shape.</b> Our series must reproduce the decade decline (~6 places) that frames the story; if our methodology shows otherwise, the story is rewritten to match our numbers — never the reverse. <b>Result (2026-08-29): invoked.</b> Our computation shows Indonesia flat in the mid-70s (2013 #80 → 2023 #71 → 2024 #78), not declining; peers climbed (VNM 84→57, PHL 53→37, IND 63→47) while processed-nickel exports rose 15× and ore fell to ~zero. Story rewritten: “more value, same place — while the neighbors climbed.”</div>
+    <div class="gate"><b>G-B3 — BPS reconciliation.</b> Indonesia total and nickel-chain export values agree with BPS within ~5%; the FOB/CIF and coverage differences that remain are footnoted with numbers, not waved at.</div>
+    <div class="gate"><b>G-B4 — Story facts.</b> Raw-ore collapse after 2020 and processed surge (ferronickel/stainless/NPI) must match the USITC working paper’s direction and rough magnitudes.</div>
+  </section>
+
+  <section>
+    <span class="eyebrow">B5 · Dashboard</span>
+    <h2>Dashboard — page anatomy</h2>
+    <p class="lede">Interaction vocabulary from OEC / Atlas / Metroverse: treemap ↔ product space ↔ trajectory views over one dataset, every view URL-addressable, Grapher affordances on every chart.</p>
+    <ol class="plain">
+      <li><b>Hero — “Every product the world trades.”</b> The product-space constellation assembles on a dark canvas: nodes stream in clustered by sector over ~4 s (fade-in under reduced motion), then Indonesia’s occupied products ignite in copper. One sentence sets the premise; scroll begins the story.</li>
+      <li><b>Chapter 1 — “What Indonesia sells.”</b> Morphing treemap 1995 → 2024: oil/gas and wood give way to palm, coal — then the nickel complex blooms. Year scrubber with animated share transitions.</li>
+      <li><b>Chapter 2 — “The nickel gambit.”</b> Scrollytold: 2014 first ban, 2020 full ban as annotated events; dual line chart — raw ore (collapsing) vs processed exports (surging); smelter map beat (Morowali, Weda Bay) that cross-links to Flagship A’s lights surge in the same district. The two flagships corroborating each other is the site’s best moment.</li>
+      <li><b>Chapter 3 — “The complexity paradox.”</b> ECI rank trajectory vs peers (Vietnam’s climb as the foil); the paradox stated plainly: more value, fewer places — because the basket concentrated. Product-space frames highlight what concentrated.</li>
+      <li><b>Chapter 4 — “What’s adjacent.”</b> Density × PCI scatter of Indonesia’s nearest unoccupied products — the forward-looking payoff a strategy client remembers.</li>
+      <li><b>Explore — the instrument.</b> Full product space (deck.gl): hover → product name, PCI, world trade, Indonesia RCA sparkline; year slider re-lights the constellation; country switcher (peer set) re-lights it for any peer; product search; treemap and partner-flow tabs; full URL state.</li>
+      <li><b>Brief + methodology.</b> Generated-and-reviewed insight brief; methodology page with formulas (RCA, M, eigenvector ECI/PCI, φ), sample filters, goods-only scope, gates’ results, BACI/Comtrade/BPS attribution, downloads.</li>
+    </ol>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Chart</th><th>Form</th><th>Interactions</th><th>Perf target</th></tr></thead>
+        <tbody>
+          <tr><td>Product space</td><td>deck.gl scatter + line layers, cached layout</td><td>hover cards, year slider, country switch, search-fly, zoom/pan</td><td>1.2K nodes / 2.5K edges at 60 fps</td></tr>
+          <tr><td>Export treemap</td><td>custom d3, animated shares</td><td>year scrub, drill HS2→HS4, hover values</td><td>&lt;150 ms transitions</td></tr>
+          <tr><td>Nickel chain lines</td><td>d3 dual-axis-free small multiples</td><td>hover crosshair, event annotations</td><td>instant</td></tr>
+          <tr><td>ECI trajectory</td><td>d3 bump/line, peer set</td><td>hover, peer toggle</td><td>instant</td></tr>
+          <tr><td>Adjacency scatter</td><td>d3 density × PCI</td><td>hover product, threshold slider</td><td>instant</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">B6 · Design brief</span>
+    <h2>Design brief</h2>
+    <p><b>Identity:</b> smelter metal — deep carbon ink, structural nickel-silver, molten-copper highlights. The constellation reads as cooling metal: quiet silver network, Indonesia’s products glowing hot.</p>
+    <div class="swatches">
+      <span class="sw"><i style="background:#0C0F14"></i> ground #0C0F14</span>
+      <span class="sw"><i style="background:#161C25"></i> surface #161C25</span>
+      <span class="sw"><i style="background:#E6E8EC"></i> text #E6E8EC</span>
+      <span class="sw"><i style="background:#AEB6C2"></i> nickel silver #AEB6C2</span>
+      <span class="sw"><i style="background:#D9722C"></i> molten copper #D9722C</span>
+      <span class="sw"><i style="background:#58A89B"></i> verdigris (peers) #58A89B</span>
+    </div>
+    <ul class="plain">
+      <li>Copper is Indonesia; verdigris is any peer country; nickel-silver is the world’s structure. Sector hues for product nodes: a 10-step desaturated categorical ramp tuned for the dark ground (validated per the dataviz palette method before build).</li>
+      <li>Type: shared lab system — Archivo, Public Sans, IBM Plex Mono, <code>tabular-nums</code>.</li>
+      <li>Motion: one assembly reveal; chapter transitions re-light rather than re-layout the constellation (position permanence keeps the mental map); reduced-motion swaps all of it for crossfades.</li>
+      <li>Light theme (fallback): paper ground, ink structure, same copper/verdigris semantics at AA-contrast values.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">B7 · Acceptance</span>
+    <h2>Acceptance checklist</h2>
+    <ul class="plain check">
+      <li><code>make rebuild RELEASE=202601</code> reproduces every extract from raw BACI on a clean machine (gate 1).</li>
+      <li>G-B1…G-B4 pass; results render publicly on the methodology page (gates 2–3).</li>
+      <li>Product space interactive &lt; 3 s on mid-range 4G; 60 fps; Lighthouse ≥ 90 (gate 4).</li>
+      <li>Vintage stamp: “trade data through 2024 · pulse through …” on every view (gate 5).</li>
+      <li>BACI (Etalab), Comtrade, BPS attribution present; goods-only scope stated (gate 6).</li>
+      <li>The nickel story reads in one scroll before any control is touched (gate 7).</li>
+      <li>Case infra cost ≤ US$5/mo (static after rebuild) (gate 8).</li>
+      <li>Signature moment + identity pass the award test against plan §3 (gate 9).</li>
+      <li>Insight brief: generated → PR → human merge; label + timestamp on site.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">B8 · Risks &amp; out of scope</span>
+    <h2>Risks &amp; out of scope</h2>
+    <ul class="plain">
+      <li><b>Methodology drift vs Atlas</b> — Growth Lab occasionally revises methods; G-B1 pins us to observable agreement, and any residual divergence is documented rather than hidden.</li>
+      <li><b>py-ecomplexity PCI sign issue</b> — known (repo issue #1); normalization against Atlas conventions is an explicit pipeline step with a test.</li>
+      <li><b>2024-vintage honesty</b> — BACI trails ~2 years; the Comtrade/BPS pulse panel exists precisely so the page never looks stale, but the two data planes are never mixed in one chart.</li>
+      <li><b>Out of scope:</b> services trade, subnational trade, tariff simulation, forecasting, ask-the-data Q&amp;A (phase 2).</li>
+    </ul>
+  </section>
+
+  <footer class="doc">FLAGSHIP B SPEC v1 · 2026-08-29 · SIBLING: NIGHTTIME-LIGHTS PULSE SPEC · PARENT: BUILD PLAN</footer>
+</div>
