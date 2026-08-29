@@ -121,6 +121,7 @@ const maxMean = summary.topMean[0].v;
       </aside>
       <div id="tooltip" hidden></div>
     </section>
+    <div id="chart-tip" hidden></div>
 
     <footer class="method">
       <span class="eyebrow">Methodology & sources</span>
@@ -173,11 +174,23 @@ const maxMean = summary.topMean[0].v;
           .attr("d", d3.line().x((d) => x(d.m)).y((d) => y(d.sol)))
           .attr("fill", "none").attr("stroke", "#E8A33D").attr("stroke-width", 1.5)
           .attr("stroke-dasharray", series.length < 6 ? "2 4" : null);
-        svg.selectAll("circle").data(series).join("circle")
+        const dots = svg.selectAll("circle").data(series).join("circle")
           .attr("cx", (d) => x(d.m)).attr("cy", (d) => y(d.sol)).attr("r", 5)
           .attr("fill", (d) => (d.px / peak < 0.5 ? "transparent" : "#E8A33D"))
-          .attr("stroke", "#E8A33D").attr("stroke-width", 1.5)
-          .append("title").text((d) => `${d.m} · SOL ${d3.format(",.0f")(d.sol)} · coverage ${d3.format(".0%")(d.px / peak)}`);
+          .attr("stroke", "#E8A33D").attr("stroke-width", 1.5);
+        // hover: crosshair + tooltip (coverage explains the hollow months)
+        const ctip = document.getElementById("chart-tip");
+        const guide = svg.append("line").attr("y1", M.t).attr("y2", H - M.b).attr("stroke", "#E9E4D6").attr("stroke-opacity", 0.4).style("display", "none");
+        svg.append("rect").attr("x", M.l).attr("y", M.t).attr("width", W - M.l - M.r).attr("height", H - M.t - M.b).attr("fill", "transparent")
+          .on("mousemove", (e) => {
+            const px = d3.pointer(e)[0];
+            const d = series.reduce((best, s) => (Math.abs(x(s.m) - px) < Math.abs(x(best.m) - px) ? s : best), series[0]);
+            guide.style("display", null).attr("x1", x(d.m)).attr("x2", x(d.m));
+            dots.attr("r", (s) => (s === d ? 7 : 5));
+            ctip.hidden = false; ctip.style.left = e.pageX + 14 + "px"; ctip.style.top = e.pageY + 14 + "px";
+            ctip.innerHTML = `<b>${d.m}</b><br>sum of lights ${d3.format(",.0f")(d.sol)}<br>coverage ${d3.format(".0%")(d.px / peak)}${d.px / peak < 0.5 ? " — <span style='color:#6B7CA6'>monsoon-masked, low confidence</span>" : ""}`;
+          })
+          .on("mouseleave", () => { guide.style("display", "none"); dots.attr("r", 5); ctip.hidden = true; });
       }
 
       /* ---------- explore: choropleth ---------- */
@@ -355,6 +368,7 @@ const maxMean = summary.topMean[0].v;
       .toggle button:focus-visible, .controls select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
       #map { height: 76vh; }
+      #chart-tip { position: absolute; z-index: 30; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px; font-family: var(--font-data); font-size: 0.72rem; line-height: 1.6; color: var(--ink); }
       #tooltip { position: absolute; z-index: 10; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px; font-family: var(--font-data); font-size: 0.72rem; line-height: 1.5; color: var(--ink); }
       #region-panel { position: absolute; right: 20px; top: 90px; z-index: 11; width: 280px; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 6px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
       #region-panel h3 { margin: 0; font-size: 1.05rem; }

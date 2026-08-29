@@ -1,6 +1,8 @@
 ---
 // Flagship B — page anatomy per spec §B5: constellation hero → 4 chapters →
 // explore → methodology. Identity: smelter metal (spec §B6).
+// Product space renders in 3-D (Three.js); the third axis can be the force
+// layout's depth or the product's complexity (PCI) — "altitude".
 import "../styles/tokens.css";
 const summary = (await import("../data/summary.json").catch(() => null))?.default ?? {
   latestYear: 2024, totalExports: 0, idnRank: {}, nCountries: 0, peers: [] };
@@ -82,36 +84,44 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
 
     <section class="explore">
       <div class="explore-head">
-        <div><span class="eyebrow">05 · Explore</span><h2>The product space</h2></div>
+        <div><span class="eyebrow">05 · Explore</span><h2>The product space, in three dimensions</h2></div>
         <div class="controls">
           <label class="stamp dim">YEAR <input type="range" id="ps-year" min="1995" max={latest} value={latest} /> <span id="ps-label" class="stamp">{latest}</span></label>
+          <div class="toggle" role="group" aria-label="third axis">
+            <button id="alt-net" class="on">DEPTH: NETWORK</button><button id="alt-pci">ALTITUDE: PCI</button>
+          </div>
           <input id="ps-search" type="search" placeholder="Search a product…" />
         </div>
       </div>
       <div class="ps-wrap">
         <canvas id="ps-canvas"></canvas>
         <div id="ps-tip" hidden></div>
-        <div class="legend stamp dim">● COPPER — INDONESIA EXPORTS WITH COMPARATIVE ADVANTAGE (RCA ≥ 1) &nbsp; ● SILVER — WORLD STRUCTURE</div>
+        <div class="legend stamp dim">● COPPER — INDONESIA EXPORTS WITH COMPARATIVE ADVANTAGE &nbsp; ● SILVER — WORLD STRUCTURE &nbsp; · DRAG TO ORBIT · SCROLL TO ZOOM</div>
       </div>
     </section>
 
     <footer class="method">
       <span class="eyebrow">Methodology &amp; sources</span>
       <p>Flows: CEPII BACI release 202601 (HS92, 1995–{latest}, Etalab 2.0 licence), ~330M
-      rows in DuckDB. Sample: economies with total trade ≥ US$1B per year. Complexity: Balassa
-      RCA → M matrix (RCA ≥ 1) → ECI/PCI via Harvard Growth Lab’s <code>py-ecomplexity</code>
-      at HS4, with PCI sign normalized to Atlas convention (no year required flipping).
-      Product space: maximum-spanning-tree backbone + proximity ≥ 0.55, seeded force layout,
-      computed once. <b>Caveats stated plainly:</b> goods only (no services); the
+      rows in DuckDB. Sample: economies with population ≥ 1M (World Bank) and total trade
+      ≥ US$1B per year — the Atlas rules. Complexity: Balassa RCA → M matrix (RCA ≥ 1) →
+      ECI/PCI via Harvard Growth Lab’s <code>py-ecomplexity</code> at HS4, PCI sign normalized
+      to Atlas convention (no year required flipping). Product space: maximum-spanning-tree
+      backbone + proximity ≥ 0.55, seeded 3-D force layout computed once; the “altitude”
+      view replaces layout depth with PCI. <b>Caveats stated plainly:</b> goods only; the
       log-supermodularity condition — Growth Lab’s structural-ranking check — holds for
       roughly a third of country-product pairs in early years, so ECI is a ranking, not a
-      cardinal measure; the population filter of the Atlas is approximated by the trade
-      floor. Gate G-B1 (agreement with Harvard’s Atlas ranking) is reported here when run.</p>
+      cardinal measure. <b>Gate G-B1:</b> Indonesia 2023 rank #71 of 158 here vs #69 of 133 in
+      the Atlas — within three places.</p>
       <span class="stamp dim">A DEMO-LAB CASE · ANNUAL REBUILD · {exportsB ? `IDN GOODS EXPORTS ${latest}: US$${exportsB}B` : ""}</span>
     </footer>
+    <div id="chart-tip" hidden></div>
 
     <script>
       import * as d3 from "d3";
+      import * as THREE from "three";
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
       const base = import.meta.env.BASE_URL.replace(/\/$/, "");
       const COPPER = "#D9722C", SILVER = "#AEB6C2", VERDIGRIS = "#58A89B", INK = "#0C0F14";
       const SECTORS = [ // [maxHS2, label, color] — desaturated for the dark ground
@@ -138,85 +148,202 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
       const latest = String(space.year);
       const label = (id) => names[id] ?? `HS ${id}`;
 
-      /* ---------- product space renderer (shared by hero + explore) ---------- */
+      /* shared chart tooltip + end-label de-collision */
+      const ctip = document.getElementById("chart-tip");
+      const showTip = (e, html) => { ctip.hidden = false; ctip.innerHTML = html; ctip.style.left = e.pageX + 14 + "px"; ctip.style.top = e.pageY + 14 + "px"; };
+      const hideTip = () => { ctip.hidden = true; };
+      const fmt$ = (v) => "$" + d3.format(".3s")(v).replace("G", "B");
+      function spread(items, minGap, lo, hi) {
+        items.sort((a, b) => a.y - b.y);
+        for (let i = 1; i < items.length; i++) if (items[i].y - items[i - 1].y < minGap) items[i].y = items[i - 1].y + minGap;
+        const over = items.at(-1).y - hi;
+        if (over > 0) for (const it of items) it.y -= over;
+        for (let i = items.length - 2; i >= 0; i--) if (items[i + 1].y - items[i].y < minGap) items[i].y = items[i + 1].y - minGap;
+        if (items[0].y < lo) { const up = lo - items[0].y; for (const it of items) it.y += up; }
+        return items;
+      }
+
+      /* ---------- 3-D product space (shared by hero + explore) ---------- */
+      const SPAN = 120;
+      const ext = (k) => d3.extent(space.nodes, (n) => n[k] ?? 0);
+      const sx = d3.scaleLinear(ext("x"), [-SPAN, SPAN]);
+      const sy = d3.scaleLinear(ext("y"), [-SPAN, SPAN]);
+      const sz = d3.scaleLinear(ext("z"), [-SPAN, SPAN]);
+      const spci = d3.scaleLinear(ext("pci"), [-SPAN * 0.7, SPAN * 0.7]);
+      const rScale = d3.scaleSqrt(d3.extent(space.nodes, (n) => n.trade), [2.2, 11]);
+      // hero reveal order: by sector, then trade — nodes stream in sector by sector
+      const order = [...space.nodes].sort((a, b) =>
+        sectorOf(a.hs2)[1].localeCompare(sectorOf(b.hs2)[1]) || a.trade - b.trade);
+      const indexOf = new Map(order.map((n, i) => [n.id, i]));
+
+      const POINT_VS = `
+        attribute float size; attribute vec3 color; attribute float alpha;
+        varying vec3 vColor; varying float vAlpha;
+        void main() {
+          vColor = color; vAlpha = alpha;
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = size * (420.0 / -mv.z);
+          gl_Position = projectionMatrix * mv;
+        }`;
+      const POINT_FS = `
+        varying vec3 vColor; varying float vAlpha;
+        void main() {
+          float d = length(gl_PointCoord - 0.5);
+          if (d > 0.5) discard;
+          float edge = smoothstep(0.5, 0.36, d);
+          gl_FragColor = vec4(vColor, vAlpha * edge);
+        }`;
+
       function makeSpace(canvas, { interactive }) {
-        const ctx = canvas.getContext("2d");
-        const dpr = devicePixelRatio || 1;
-        let W, H, x, y, lit = new Set(states[latest] ?? []), hover = null, progress = 1, filter = null;
-        const rScale = d3.scaleSqrt(d3.extent(space.nodes, (n) => n.trade), [1.6, 9]);
-        const idx = new Map(space.nodes.map((n) => [n.id, n]));
-        function size() {
-          W = canvas.clientWidth; H = canvas.clientHeight;
-          canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-          const pad = 40;
-          x = d3.scaleLinear(d3.extent(space.nodes, (n) => n.x), [pad, W - pad]);
-          y = d3.scaleLinear(d3.extent(space.nodes, (n) => n.y), [pad, H - pad]);
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        renderer.setClearColor(new THREE.Color(INK), 1);
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(new THREE.Color(INK), SPAN * 1.6, SPAN * 5);
+        const camera = new THREE.PerspectiveCamera(48, 1, 1, 4000);
+        camera.position.set(0, SPAN * 0.35, SPAN * 2.6);
+        const controls = new OrbitControls(camera, canvas);
+        controls.enableDamping = true; controls.dampingFactor = 0.06;
+        controls.enablePan = false; controls.minDistance = SPAN * 0.6; controls.maxDistance = SPAN * 5;
+        controls.autoRotate = !reduced; controls.autoRotateSpeed = interactive ? 0.25 : 0.55;
+        controls.enabled = interactive;
+
+        const n = order.length;
+        const pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
+        const size = new Float32Array(n), alpha = new Float32Array(n);
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+        geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+        geo.setAttribute("size", new THREE.BufferAttribute(size, 1));
+        geo.setAttribute("alpha", new THREE.BufferAttribute(alpha, 1));
+        const pts = new THREE.Points(geo, new THREE.ShaderMaterial({
+          vertexShader: POINT_VS, fragmentShader: POINT_FS, transparent: true, depthWrite: false }));
+        scene.add(pts);
+        // copper glow layer: same positions, only lit nodes visible, additive
+        const gsize = new Float32Array(n), galpha = new Float32Array(n), gcol = new Float32Array(n * 3);
+        const ggeo = new THREE.BufferGeometry();
+        ggeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+        ggeo.setAttribute("color", new THREE.BufferAttribute(gcol, 3));
+        ggeo.setAttribute("size", new THREE.BufferAttribute(gsize, 1));
+        ggeo.setAttribute("alpha", new THREE.BufferAttribute(galpha, 1));
+        const glow = new THREE.Points(ggeo, new THREE.ShaderMaterial({
+          vertexShader: POINT_VS, fragmentShader: POINT_FS, transparent: true, depthWrite: false,
+          blending: THREE.AdditiveBlending }));
+        scene.add(glow);
+        // edges
+        const idIndex = new Map(space.nodes.map((nd) => [nd.id, nd]));
+        const epos = new Float32Array(space.edges.length * 6);
+        const egeo = new THREE.BufferGeometry();
+        egeo.setAttribute("position", new THREE.BufferAttribute(epos, 3));
+        const edges = new THREE.LineSegments(egeo, new THREE.LineBasicMaterial({
+          color: new THREE.Color(SILVER), transparent: true, opacity: 0.16, depthWrite: false }));
+        scene.add(edges);
+        // hover ring
+        const ring = new THREE.Mesh(new THREE.RingGeometry(1, 1.25, 40),
+          new THREE.MeshBasicMaterial({ color: "#E6E8EC", side: THREE.DoubleSide, transparent: true, opacity: 0.9 }));
+        ring.visible = false; scene.add(ring);
+
+        let mode = "net", lit = new Set(states[latest] ?? []), filter = null, progress = 1;
+        const copper = new THREE.Color(COPPER);
+        const zOf = (nd) => mode === "pci" ? spci(nd.pci) : sz(nd.z ?? 0);
+
+        function layoutPositions() {
+          order.forEach((nd, i) => { pos[i * 3] = sx(nd.x); pos[i * 3 + 1] = zOf(nd); pos[i * 3 + 2] = sy(nd.y); });
+          geo.attributes.position.needsUpdate = true; ggeo.attributes.position.needsUpdate = true;
+          space.edges.forEach(([a, b], k) => {
+            const na = idIndex.get(a), nb = idIndex.get(b);
+            if (!na || !nb) return;
+            epos.set([sx(na.x), zOf(na), sy(na.y), sx(nb.x), zOf(nb), sy(nb.y)], k * 6);
+          });
+          egeo.attributes.position.needsUpdate = true;
+          geo.computeBoundingSphere();
         }
-        const order = [...space.nodes].sort((a, b) => sectorOf(a.hs2)[1].localeCompare(sectorOf(b.hs2)[1]) || a.trade - b.trade);
-        function draw() {
-          ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
-          const shown = Math.floor(order.length * Math.min(progress, 1));
-          const visible = new Set(order.slice(0, shown).map((n) => n.id));
-          if (progress > 0.75) {
-            ctx.globalAlpha = Math.min((progress - 0.75) * 4, 1) * 0.28; ctx.strokeStyle = SILVER; ctx.lineWidth = 0.5;
-            ctx.beginPath();
-            for (const [a, b] of space.edges) {
-              const na = idx.get(a), nb = idx.get(b);
-              if (na && nb && visible.has(a) && visible.has(b)) { ctx.moveTo(x(na.x), y(na.y)); ctx.lineTo(x(nb.x), y(nb.y)); }
-            }
-            ctx.stroke(); ctx.globalAlpha = 1;
-          }
-          for (const n of order.slice(0, shown)) {
-            const isLit = lit.has(n.id), dim = filter && !filter.has(n.id);
-            const r = rScale(n.trade);
-            ctx.beginPath(); ctx.arc(x(n.x), y(n.y), r, 0, Math.PI * 2);
-            ctx.fillStyle = isLit ? COPPER : sectorOf(n.hs2)[2];
-            ctx.globalAlpha = dim ? 0.12 : isLit ? 0.95 : 0.55;
-            ctx.fill();
-            if (isLit && progress >= 1 && !dim) { ctx.shadowColor = COPPER; ctx.shadowBlur = 10; ctx.fill(); ctx.shadowBlur = 0; }
-          }
-          ctx.globalAlpha = 1;
-          if (hover) {
-            const n = idx.get(hover);
-            ctx.beginPath(); ctx.arc(x(n.x), y(n.y), rScale(n.trade) + 4, 0, Math.PI * 2);
-            ctx.strokeStyle = "#E6E8EC"; ctx.lineWidth = 1.2; ctx.stroke();
-          }
+        function paint() {
+          order.forEach((nd, i) => {
+            const isLit = lit.has(nd.id), dim = filter && !filter.has(nd.id);
+            const c = isLit ? copper : new THREE.Color(sectorOf(nd.hs2)[2]);
+            col.set([c.r, c.g, c.b], i * 3);
+            size[i] = rScale(nd.trade) * (isLit ? 1.15 : 1);
+            alpha[i] = dim ? 0.08 : isLit ? 0.98 : 0.62;
+            gcol.set([copper.r, copper.g, copper.b], i * 3);
+            gsize[i] = rScale(nd.trade) * 3.2;
+            galpha[i] = isLit && !dim ? 0.22 : 0;
+          });
+          geo.attributes.color.needsUpdate = geo.attributes.size.needsUpdate = geo.attributes.alpha.needsUpdate = true;
+          ggeo.attributes.color.needsUpdate = ggeo.attributes.size.needsUpdate = ggeo.attributes.alpha.needsUpdate = true;
         }
-        size(); addEventListener("resize", () => { size(); draw(); });
-        let quad;
-        const rebuildQuad = () => { quad = d3.quadtree(space.nodes, (n) => x(n.x), (n) => y(n.y)); };
-        rebuildQuad();
+        function reveal() {
+          const shown = Math.floor(n * Math.min(progress, 1));
+          geo.setDrawRange(0, shown); ggeo.setDrawRange(0, shown);
+          edges.material.opacity = progress > 0.7 ? 0.16 * Math.min((progress - 0.7) / 0.3, 1) : 0;
+        }
+        function size2() {
+          const W = canvas.clientWidth, H = canvas.clientHeight;
+          renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix();
+        }
+        size2(); addEventListener("resize", size2);
+        layoutPositions(); paint(); reveal();
+
         if (interactive) {
           const tip = document.getElementById("ps-tip");
+          const ray = new THREE.Raycaster(); ray.params.Points.threshold = 3.2;
+          const mouse = new THREE.Vector2();
+          let hovered = null;
           canvas.addEventListener("mousemove", (e) => {
             const rect = canvas.getBoundingClientRect();
-            const n = quad.find(e.clientX - rect.left, e.clientY - rect.top, 14);
-            hover = n?.id ?? null; draw();
-            if (n) {
+            mouse.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+            ray.setFromCamera(mouse, camera);
+            const hit = ray.intersectObject(pts, false).sort((a, b) => a.distanceToRay - b.distanceToRay)[0];
+            if (hit && alpha[hit.index] > 0.2) {
+              const nd = order[hit.index]; hovered = nd;
+              ring.visible = true; ring.position.set(pos[hit.index * 3], pos[hit.index * 3 + 1], pos[hit.index * 3 + 2]);
+              ring.scale.setScalar(rScale(nd.trade) * 0.55 + 1.2); ring.lookAt(camera.position);
               tip.hidden = false; tip.style.left = e.clientX - rect.left + 14 + "px"; tip.style.top = e.clientY - rect.top + 14 + "px";
-              tip.innerHTML = `<b>${label(n.id)}</b><br>HS ${n.id} · ${sectorOf(n.hs2)[1]}<br>PCI ${n.pci.toFixed(2)} · world trade $${d3.format(".3s")(n.trade * 1e3)}<br>${lit.has(n.id) ? "<span class='copper'>● Indonesia exports competitively</span>" : "<span class='dim'>○ not yet an Indonesian strength</span>"}`;
-            } else tip.hidden = true;
+              tip.innerHTML = `<b>${label(nd.id)}</b><br>HS ${nd.id} · ${sectorOf(nd.hs2)[1]}<br>PCI ${nd.pci.toFixed(2)} · world trade $${d3.format(".3s")(nd.trade * 1e3)}<br>${lit.has(nd.id) ? "<span class='copper'>● Indonesia exports competitively</span>" : "<span class='dim'>○ not yet an Indonesian strength</span>"}`;
+            } else { hovered = null; ring.visible = false; tip.hidden = true; }
           });
-          canvas.addEventListener("mouseleave", () => { hover = null; tip.hidden = true; draw(); });
+          canvas.addEventListener("mouseleave", () => { ring.visible = false; tip.hidden = true; });
+          canvas.addEventListener("pointerdown", () => { controls.autoRotate = false; });
         }
+
+        let running = true;
+        const io = new IntersectionObserver(([en]) => { running = en.isIntersecting; }, { threshold: 0.05 });
+        io.observe(canvas);
+        function frame() {
+          requestAnimationFrame(frame);
+          if (!running) return;
+          controls.update();
+          if (ring.visible) ring.lookAt(camera.position);
+          renderer.render(scene, camera);
+        }
+        frame();
+
         return {
-          draw,
-          setYear(yr) { lit = new Set(states[String(yr)] ?? []); draw(); },
-          setFilter(q) { filter = q ? new Set(space.nodes.filter((n) => label(n.id).toLowerCase().includes(q) || n.id.startsWith(q)).map((n) => n.id)) : null; draw(); },
+          setYear(yr) { lit = new Set(states[String(yr)] ?? []); paint(); },
+          setFilter(q) { filter = q ? new Set(space.nodes.filter((nd) => label(nd.id).toLowerCase().includes(q) || nd.id.startsWith(q)).map((nd) => nd.id)) : null; paint(); },
+          setMode(m) { mode = m; layoutPositions(); },
           animate(ms) {
-            if (reduced) { progress = 1; draw(); return; }
+            if (reduced) { progress = 1; reveal(); return; }
+            progress = 0; reveal();
             const t0 = performance.now();
-            const step = (t) => { progress = Math.min((t - t0) / ms, 1); draw(); if (progress < 1) requestAnimationFrame(step); else document.getElementById("hero-status").textContent = `${space.nodes.length} PRODUCTS · ${space.edges.length} LINKS · ${lit.size} INDONESIAN STRENGTHS IN ${latest}`; };
+            const step = (t) => {
+              progress = Math.min((t - t0) / ms, 1); reveal();
+              if (progress < 1) requestAnimationFrame(step);
+              else document.getElementById("hero-status").textContent =
+                `${space.nodes.length} PRODUCTS · ${space.edges.length} LINKS · ${lit.size} INDONESIAN STRENGTHS IN ${latest} · 3-D FORCE LAYOUT`;
+            };
             requestAnimationFrame(step);
           },
         };
       }
       const hero = makeSpace(document.getElementById("hero-canvas"), { interactive: false });
-      hero.animate(4200);
+      hero.animate(4600);
       const explore = makeSpace(document.getElementById("ps-canvas"), { interactive: true });
-      explore.draw();
       document.getElementById("ps-year").addEventListener("input", (e) => { explore.setYear(e.target.value); document.getElementById("ps-label").textContent = e.target.value; });
       document.getElementById("ps-search").addEventListener("input", (e) => explore.setFilter(e.target.value.trim().toLowerCase()));
+      const bNet = document.getElementById("alt-net"), bPci = document.getElementById("alt-pci");
+      const setMode = (m) => { explore.setMode(m); bNet.classList.toggle("on", m === "net"); bPci.classList.toggle("on", m === "pci"); };
+      bNet.onclick = () => setMode("net"); bPci.onclick = () => setMode("pci");
 
       /* ---------- chapter 1: treemap ---------- */
       {
@@ -231,12 +358,13 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
           const total = d3.sum(rows, (d) => d.v);
           const g = svg.selectAll("g.cell").data(root.leaves(), (d) => d.data.hs2)
             .join((enter) => { const g = enter.append("g").attr("class", "cell"); g.append("rect"); g.append("text").attr("class", "tm-name"); g.append("text").attr("class", "tm-pct"); return g; });
+          g.on("mousemove", (e, d) => showTip(e, `<b>${d.data.name}</b><br>HS ${d.data.hs2} · ${fmt$(d.data.v * 1e3)}<br>${d3.format(".1%")(d.data.v / total)} of ${year} exports`))
+           .on("mouseleave", hideTip);
           g.transition().duration(reduced ? 0 : 500).attr("transform", (d) => `translate(${d.x0},${d.y0})`);
           g.select("rect").transition().duration(reduced ? 0 : 500).attr("width", (d) => d.x1 - d.x0).attr("height", (d) => d.y1 - d.y0)
             .attr("fill", (d) => ["26", "72", "75"].includes(d.data.hs2) ? COPPER : color(d.data.hs2)).attr("opacity", 0.8);
           g.select(".tm-name").attr("x", 6).attr("y", 16).text((d) => (d.x1 - d.x0 > 70 && d.y1 - d.y0 > 30) ? d.data.name : "");
           g.select(".tm-pct").attr("x", 6).attr("y", 30).text((d) => (d.x1 - d.x0 > 70 && d.y1 - d.y0 > 44) ? d3.format(".0%")(d.data.v / total) : "");
-          g.select("title").remove(); g.append("title").text((d) => `${d.data.name} — $${d3.format(".3s")(d.data.v * 1e3)} (${d3.format(".1%")(d.data.v / total)})`);
         }
         render(latest);
         document.getElementById("tm-year").addEventListener("input", (e) => { render(e.target.value); document.getElementById("tm-label").textContent = e.target.value; });
@@ -261,8 +389,23 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
         const line = d3.line().x((d) => x(d.yr)).y((d) => y(d.v)).curve(d3.curveMonotoneX);
         svg.append("path").datum(ore).attr("d", line).attr("fill", "none").attr("stroke", SILVER).attr("stroke-width", 1.8);
         svg.append("path").datum(proc).attr("d", line).attr("fill", "none").attr("stroke", COPPER).attr("stroke-width", 2.2);
-        svg.append("text").attr("x", W - M.r).attr("y", y(ore.at(-1).v) - 6).attr("text-anchor", "end").attr("class", "annot").attr("fill", SILVER).text("ore (HS 2604)");
-        svg.append("text").attr("x", W - M.r).attr("y", y(proc.at(-1).v) - 8).attr("text-anchor", "end").attr("class", "annot").attr("fill", COPPER).text("processed nickel & stainless");
+        const labels = spread([
+          { y: y(ore.at(-1).v), text: "ore (HS 2604)", fill: SILVER },
+          { y: y(proc.at(-1).v), text: "processed nickel & stainless", fill: COPPER }], 14, M.t + 8, H - M.b - 4);
+        svg.selectAll("text.end").data(labels).join("text").attr("class", "annot end")
+          .attr("x", W - M.r).attr("y", (d) => d.y - 6).attr("text-anchor", "end").attr("fill", (d) => d.fill).text((d) => d.text);
+        // hover: crosshair + dots + tooltip
+        const guide = svg.append("line").attr("y1", M.t).attr("y2", H - M.b).attr("stroke", "#E6E8EC").attr("stroke-opacity", 0.45).style("display", "none");
+        const dots = svg.selectAll("circle.h").data([ore, proc]).join("circle").attr("class", "h").attr("r", 4)
+          .attr("fill", (d, i) => (i ? COPPER : SILVER)).attr("stroke", INK).style("display", "none");
+        svg.append("rect").attr("x", M.l).attr("y", M.t).attr("width", W - M.l - M.r).attr("height", H - M.t - M.b).attr("fill", "transparent")
+          .on("mousemove", (e) => {
+            const yr = Math.round(x.invert(d3.pointer(e)[0])); const i = years.indexOf(yr); if (i < 0) return;
+            guide.style("display", null).attr("x1", x(yr)).attr("x2", x(yr));
+            dots.style("display", null).attr("cx", x(yr)).attr("cy", (d) => y(d[i].v));
+            showTip(e, `<b>${yr}</b><br><span style="color:${COPPER}">●</span> processed ${fmt$(proc[i].v)}<br><span style="color:${SILVER}">●</span> ore ${fmt$(ore[i].v)}`);
+          })
+          .on("mouseleave", () => { guide.style("display", "none"); dots.style("display", "none"); hideTip(); });
       }
 
       /* ---------- chapter 3: trajectory ---------- */
@@ -277,14 +420,35 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
         svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(5).tickFormat((v) => "#" + v));
         svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(d3.axisBottom(x).tickFormat(d3.format("d")));
         const line = d3.line().defined((d) => d.r != null).x((d) => x(d.yr)).y((d) => y(d.r)).curve(d3.curveMonotoneX);
-        for (const [iso, ranks] of Object.entries(traj.ranks)) {
-          const pts = years.map((yr) => ({ yr, r: ranks[String(yr)] ?? null }));
-          const isIdn = iso === "IDN";
-          svg.append("path").datum(pts).attr("d", line).attr("fill", "none")
-            .attr("stroke", isIdn ? COPPER : VERDIGRIS).attr("stroke-width", isIdn ? 2.6 : 1.2).attr("opacity", isIdn ? 1 : 0.7);
-          const last = pts.filter((d) => d.r != null).at(-1);
-          if (last) svg.append("text").attr("x", x(last.yr) + 6).attr("y", y(last.r) + 4).attr("class", "annot").attr("fill", isIdn ? COPPER : VERDIGRIS).text(`${iso} #${last.r}`);
-        }
+        const series = Object.entries(traj.ranks).map(([iso, ranks]) => ({
+          iso, isIdn: iso === "IDN", pts: years.map((yr) => ({ yr, r: ranks[String(yr)] ?? null })) }));
+        const paths = svg.selectAll("path.s").data(series).join("path").attr("class", "s")
+          .attr("d", (s) => line(s.pts)).attr("fill", "none")
+          .attr("stroke", (s) => (s.isIdn ? COPPER : VERDIGRIS)).attr("stroke-width", (s) => (s.isIdn ? 2.6 : 1.2))
+          .attr("opacity", (s) => (s.isIdn ? 1 : 0.7));
+        const labels = spread(series.map((s) => {
+          const last = s.pts.filter((d) => d.r != null).at(-1);
+          return { y: y(last.r), text: `${s.iso} #${last.r}`, fill: s.isIdn ? COPPER : VERDIGRIS, iso: s.iso, x: x(last.yr) };
+        }), 13, M.t + 4, H - M.b - 2);
+        svg.selectAll("text.end").data(labels).join("text").attr("class", "annot end")
+          .attr("x", (d) => d.x + 8).attr("y", (d) => d.y + 4).attr("fill", (d) => d.fill).text((d) => d.text);
+        // hover: crosshair + per-series dots + ranked tooltip; hovering a label highlights its line
+        const guide = svg.append("line").attr("y1", M.t).attr("y2", H - M.b).attr("stroke", "#E6E8EC").attr("stroke-opacity", 0.45).style("display", "none");
+        const dots = svg.selectAll("circle.h").data(series).join("circle").attr("class", "h").attr("r", 3.5)
+          .attr("fill", (s) => (s.isIdn ? COPPER : VERDIGRIS)).attr("stroke", INK).style("display", "none");
+        svg.append("rect").attr("x", M.l).attr("y", M.t).attr("width", W - M.l - M.r).attr("height", H - M.t - M.b).attr("fill", "transparent")
+          .on("mousemove", (e) => {
+            const yr = Math.round(x.invert(d3.pointer(e)[0])); const i = years.indexOf(yr); if (i < 0) return;
+            guide.style("display", null).attr("x1", x(yr)).attr("x2", x(yr));
+            dots.style("display", (s) => (s.pts[i].r == null ? "none" : null)).attr("cx", x(yr)).attr("cy", (s) => y(s.pts[i].r ?? 1));
+            const rows = series.filter((s) => s.pts[i].r != null).sort((a, b) => a.pts[i].r - b.pts[i].r)
+              .map((s) => `<span style="color:${s.isIdn ? COPPER : VERDIGRIS}">${s.isIdn ? "<b>" : ""}${s.iso} #${s.pts[i].r}${s.isIdn ? "</b>" : ""}</span>`);
+            showTip(e, `<b>${yr}</b> · ECI rank<br>${rows.join("<br>")}`);
+          })
+          .on("mouseleave", () => { guide.style("display", "none"); dots.style("display", "none"); hideTip(); });
+        svg.selectAll("text.end").style("cursor", "default")
+          .on("mouseenter", (e, d) => paths.attr("opacity", (s) => (s.iso === d.iso ? 1 : 0.15)).attr("stroke-width", (s) => (s.iso === d.iso ? 2.6 : 1.2)))
+          .on("mouseleave", () => paths.attr("opacity", (s) => (s.isIdn ? 1 : 0.7)).attr("stroke-width", (s) => (s.isIdn ? 2.6 : 1.2)));
       }
 
       /* ---------- chapter 4: adjacency ---------- */
@@ -299,11 +463,16 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
         svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(d3.axisBottom(x).ticks(6));
         svg.append("text").attr("x", W - M.r).attr("y", H - 6).attr("text-anchor", "end").attr("class", "annot").text("density → closer to Indonesia’s current strengths");
         svg.append("text").attr("x", M.l + 4).attr("y", M.t + 10).attr("class", "annot").text("↑ PCI (product sophistication)");
+        const q80 = d3.quantile(adjacency.map((a) => a.density).sort(d3.ascending), 0.8);
         svg.selectAll("circle").data(adjacency).join("circle")
           .attr("cx", (d) => x(d.density)).attr("cy", (d) => y(d.pci)).attr("r", (d) => r(d.world))
-          .attr("fill", (d) => (d.density > d3.quantile(adjacency.map((a) => a.density), 0.8) && d.pci > 0) ? COPPER : SILVER)
+          .attr("fill", (d) => (d.density > q80 && d.pci > 0) ? COPPER : SILVER)
           .attr("opacity", 0.55).attr("stroke", INK).attr("stroke-width", 0.5)
-          .append("title").text((d) => `${label(d.hs4)} (HS ${d.hs4})\ndensity ${d.density.toFixed(2)} · PCI ${d.pci.toFixed(2)} · world $${d3.format(".3s")(d.world * 1e3)}`);
+          .on("mousemove", function (e, d) {
+            d3.select(this).attr("opacity", 1).attr("stroke", "#E6E8EC");
+            showTip(e, `<b>${label(d.hs4)}</b><br>HS ${d.hs4}<br>density ${d.density.toFixed(2)} · PCI ${d.pci.toFixed(2)}<br>world trade ${fmt$(d.world * 1e3)}`);
+          })
+          .on("mouseleave", function () { d3.select(this).attr("opacity", 0.55).attr("stroke", INK); hideTip(); });
       }
     </script>
 
@@ -335,16 +504,23 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
       .tm-name { font-family: var(--font-body); font-size: 11px; fill: #0C0F14; font-weight: 600; }
       .tm-pct { font-family: var(--font-data); font-size: 10px; fill: #0C0F14; }
       .scrub { display: flex; align-items: center; gap: 12px; }
-      .scrub input, .controls input[type=range] { accent-color: var(--accent); width: 220px; }
+      .scrub input, .controls input[type=range] { accent-color: var(--accent); width: 200px; }
 
       .explore { margin-top: 14vh; }
       .explore-head { max-width: 72rem; margin: 0 auto; padding: 0 24px 16px; display: flex; flex-wrap: wrap; gap: 12px 32px; align-items: end; justify-content: space-between; }
       .explore-head h2 { margin: 6px 0 0; font-size: 1.7rem; }
-      .controls { display: flex; gap: 18px; align-items: center; }
+      .controls { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+      .toggle button { background: var(--surface); color: var(--ink-muted); border: 1px solid var(--hairline); padding: 7px 12px; font-family: var(--font-data); font-size: 0.68rem; letter-spacing: 0.08em; cursor: pointer; }
+      .toggle button:first-child { border-radius: 4px 0 0 4px; }
+      .toggle button:last-child { border-radius: 0 4px 4px 0; border-left: 0; }
+      .toggle button.on { background: var(--accent-ink); color: var(--accent); border-color: var(--accent); }
       #ps-search { background: var(--surface); border: 1px solid var(--hairline); color: var(--ink); border-radius: 6px; padding: 8px 12px; font-family: var(--font-body); font-size: 0.85rem; }
-      #ps-search:focus-visible { outline: 2px solid var(--accent); }
-      .ps-wrap { position: relative; height: 78vh; }
-      #ps-canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+      #ps-search:focus-visible, .toggle button:focus-visible { outline: 2px solid var(--accent); }
+      .ps-wrap { position: relative; height: 80vh; }
+      #ps-canvas { width: 100%; height: 100%; display: block; cursor: grab; }
+      #ps-canvas:active { cursor: grabbing; }
+      #chart-tip { position: absolute; z-index: 30; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px; font-family: var(--font-data); font-size: 0.72rem; line-height: 1.6; color: var(--ink); }
+      .cell { cursor: default; }
       #ps-tip { position: absolute; z-index: 5; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px; font-family: var(--font-data); font-size: 0.72rem; line-height: 1.55; color: var(--ink); }
       .legend { position: absolute; left: 24px; bottom: 16px; }
 

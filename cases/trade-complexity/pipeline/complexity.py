@@ -78,14 +78,17 @@ def layout() -> None:
         if d["weight"] >= config.PHI_THRESHOLD:
             keep.add_edge(u, v, weight=d["weight"])
     print(f"[layout] graph: {keep.number_of_nodes()} nodes, {keep.number_of_edges()} edges")
-    pos = nx.spring_layout(keep, seed=config.LAYOUT_SEED, k=0.06, iterations=150, weight="weight")
+    # 3-D force layout: the browser renders it in WebGL (spec §B5 signature moment)
+    pos = nx.spring_layout(keep, dim=3, seed=config.LAYOUT_SEED, k=0.06, iterations=150,
+                           weight="weight")
 
     world_trade = data.groupby("hs4")["v"].sum()
     pci = con.execute(f"SELECT DISTINCT hs4, pci FROM complexity WHERE t={latest}").df() \
              .set_index("hs4")["pci"]
-    nodes = [{"id": p, "x": round(float(xy[0]), 4), "y": round(float(xy[1]), 4),
+    nodes = [{"id": p, "x": round(float(xyz[0]), 4), "y": round(float(xyz[1]), 4),
+              "z": round(float(xyz[2]), 4),
               "hs2": p[:2], "trade": float(world_trade.get(p, 0)),
-              "pci": round(float(pci.get(p, 0)), 3)} for p, xy in pos.items()]
+              "pci": round(float(pci.get(p, 0)), 3)} for p, xyz in pos.items()]
     edges = [[u, v] for u, v in keep.edges()]
     config.LAYOUT_JSON.write_text(json.dumps({"year": int(latest), "nodes": nodes, "edges": edges}))
     con.close()
