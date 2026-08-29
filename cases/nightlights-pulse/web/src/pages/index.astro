@@ -1,27 +1,371 @@
 ---
-// Flagship A — page anatomy per spec §A5:
-// hero ("From 830 km up") -> 3 chapters -> explore instrument -> brief + methodology.
-import "../../../../../shared/design/tokens.css";
+// Flagship A — page anatomy per spec §A5.
+// Dark-first, data-case="nightlights" identity (spec §A6).
+import "../styles/tokens.css";
+import "maplibre-gl/dist/maplibre-gl.css";
+import summary from "../data/summary.json";
+
+const vintage = summary.latestMonth;
+const javaPct = Math.round(summary.javaShareSOL * 100);
+const landPct = (summary.javaLandShare * 100).toFixed(1);
+const maxSol = summary.topSol[0].v;
+const maxMean = summary.topMean[0].v;
 ---
-<html lang="en" data-case="nightlights">
+<html lang="en" data-case="nightlights" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Nighttime-Lights Economic Pulse</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
   </head>
   <body>
-    <main>
-      <!-- TODO week 3, in spec order:
-        <Hero />        WebGL lights fade-up, pre-rendered frames; reduced-motion: static
-        <Chapter1 />    calibration scatter with live R² readout (gate G-A1, public)
-        <Chapter2 />    pulse vs official GDP; Ramadan/Hijri explainer inline
-        <Chapter3 />    Morowali / IKN / Bali flights (cross-link: trade case)
-        <Explore />     MapLibre+deck.gl choropleth, month scrub, drawer, compare, URL state
-        <Brief />       "generated · reviewed" label + timestamp
-        <Methodology /> gates, limitations, EOG attribution line + logo, downloads
-      -->
-      <h1>Nighttime-Lights Economic Pulse</h1>
-      <p class="stamp">skeleton — build slot weeks 2–3</p>
-    </main>
+
+    <header class="stamp-bar">
+      <span class="stamp">NIGHTTIME-LIGHTS ECONOMIC PULSE</span>
+      <span class="stamp dim">DATA THROUGH {vintage} · {summary.monthCount} MONTHS · NASA BLACK MARBLE</span>
+    </header>
+
+    <section class="hero">
+      <img src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/hero.jpg`}
+           alt={`Indonesia at night, ${vintage} — NASA Black Marble radiance rendered in amber`} />
+      <div class="hero-copy">
+        <h1>From 830&nbsp;km up, Indonesia looks like this.</h1>
+        <p>Monthly satellite radiance, translated into a regency-level pulse of
+        economic activity — months before official statistics arrive.</p>
+        <span class="stamp dim">VJ146A3 · {vintage} · 15 ARC-SECOND COMPOSITE</span>
+      </div>
+      <div class="scroll-hint" aria-hidden="true">▾</div>
+    </section>
+
+    <section class="chapter">
+      <span class="eyebrow">01 · Concentration</span>
+      <h2>Java carries the light</h2>
+      <p class="big-stat"><b class="amber">{javaPct}%</b> of Indonesia’s night light
+      comes from <b class="amber">{landPct}%</b> of its land.</p>
+      <div class="share-bars" role="img" aria-label={`Java: ${javaPct}% of lights, ${landPct}% of land`}>
+        <div class="share-row"><span class="stamp dim">LIGHT</span><div class="bar"><i style={`width:${javaPct}%`}></i></div></div>
+        <div class="share-row"><span class="stamp dim">LAND</span><div class="bar"><i style={`width:${landPct}%`}></i></div></div>
+      </div>
+      <p>One island holds the archipelago’s economic gravity. Every regency’s share
+      of that light — and how it moves month to month — is measurable from orbit.
+      That is what this instrument does.</p>
+    </section>
+
+    <section class="chapter">
+      <span class="eyebrow">02 · The pulse</span>
+      <h2>The series so far</h2>
+      <p>National sum of lights per month. The ledger is backfilling 2018→present;
+      this chart grows as months land. Hollow points mark monsoon months, where
+      cloud cover leaves few clear observations — the pipeline reports what it
+      cannot see rather than guessing.</p>
+      <div id="pulse-chart" class="chart"></div>
+      <p class="footnote">Values are lights-implied activity, not GDP. Coverage-weighted
+      deseasonalization arrives with the calibration stage.</p>
+    </section>
+
+    <section class="chapter">
+      <span class="eyebrow">03 · Where</span>
+      <h2>Where the light is · {vintage}</h2>
+      <div class="top-lists">
+        <div>
+          <h3 class="stamp">TOTAL LIGHT — BREADTH</h3>
+          <ol class="ranked">
+            {summary.topSol.map((r) => (
+              <li><span class="rname">{r.name}</span>
+                  <span class="rbar"><i style={`width:${(r.v / maxSol) * 100}%`}></i></span>
+                  <span class="rval">{r.v.toLocaleString()}</span></li>
+            ))}
+          </ol>
+        </div>
+        <div>
+          <h3 class="stamp">MEAN RADIANCE — INTENSITY</h3>
+          <ol class="ranked">
+            {summary.topMean.map((r) => (
+              <li><span class="rname">{r.name}</span>
+                  <span class="rbar"><i style={`width:${(r.v / maxMean) * 100}%`}></i></span>
+                  <span class="rval">{r.v}</span></li>
+            ))}
+          </ol>
+        </div>
+      </div>
+      <p>Breadth and intensity tell different stories: industrial Bekasi and Bogor
+      lead on total light, while Jakarta’s dense urban cores lead on brightness per
+      pixel. (Kutai Kartanegara’s total is inflated by gas flaring — a mask for
+      flare sites is on the pipeline’s roadmap and disclosed here until it lands.)</p>
+    </section>
+
+    <section class="explore">
+      <div class="explore-head">
+        <span class="eyebrow">04 · Explore</span>
+        <h2>Every regency, every month</h2>
+        <div class="controls">
+          <label class="stamp dim">MONTH
+            <select id="month-select"></select>
+          </label>
+          <div class="toggle" role="group" aria-label="metric">
+            <button id="btn-sol" class="on">TOTAL LIGHT</button><button id="btn-mean">INTENSITY</button>
+          </div>
+        </div>
+      </div>
+      <div id="map"></div>
+      <aside id="region-panel" hidden>
+        <button id="panel-close" aria-label="close">×</button>
+        <h3 id="panel-name"></h3>
+        <div class="stamp dim" id="panel-bps"></div>
+        <dl class="panel-stats">
+          <dt>SUM OF LIGHTS</dt><dd id="panel-sol"></dd>
+          <dt>MEAN RADIANCE</dt><dd id="panel-mean"></dd>
+        </dl>
+        <div id="panel-spark"></div>
+        <div class="stamp dim" id="panel-months"></div>
+      </aside>
+      <div id="tooltip" hidden></div>
+    </section>
+
+    <footer class="method">
+      <span class="eyebrow">Methodology & sources</span>
+      <p>Radiance: NASA Black Marble VJ146A3 monthly composites (Román et al. 2018),
+      NOAA-20 VIIRS, 15 arc-second, QA-masked at &lt;2 cloud-free observations.
+      Boundaries: geoBoundaries gbOpen IDN ADM2 (CC BY 3.0 IGO), 2020 vintage, frozen.
+      Regional statistics: exact area-weighted extraction, 514 regencies matched 1:1
+      to BPS codes. <b>This index measures light, not GDP</b> — calibration against
+      BPS regional accounts, with its full fit statistics, publishes here when the
+      backfill completes.</p>
+      <span class="stamp dim">A DEMO-LAB CASE · PIPELINE RERUNS MONTHLY · GENERATED {vintage}</span>
+    </footer>
+
+    <script>
+      import maplibregl from "maplibre-gl";
+      import * as d3 from "d3";
+
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const RAMP = ["#05070F", "#1B2447", "#7A5A22", "#E8A33D", "#FFEFC9"];
+      const state = { month: null, metric: "sol", region: null };
+
+      const [geo, ledger] = await Promise.all([
+        fetch(`${base}/data/regencies.geojson`).then((r) => r.json()),
+        fetch(`${base}/data/ledger.json`).then((r) => r.json()),
+      ]);
+      state.month = ledger.months[ledger.months.length - 1];
+
+      /* ---------- chapter 2: national pulse ---------- */
+      {
+        const el = document.getElementById("pulse-chart");
+        const W = el.clientWidth, H = 260, M = { t: 16, r: 16, b: 28, l: 64 };
+        const series = [];
+        for (const m of ledger.months) {
+          let sol = 0, px = 0;
+          for (const id in ledger.regions) {
+            const s = ledger.regions[id].series[m];
+            if (s) { sol += s[0]; px += s[2]; }
+          }
+          series.push({ m, sol, px });
+        }
+        const peak = d3.max(series, (d) => d.px);
+        const x = d3.scalePoint(series.map((d) => d.m), [M.l, W - M.r]).padding(0.5);
+        const y = d3.scaleLinear([0, d3.max(series, (d) => d.sol) * 1.1], [H - M.b, M.t]);
+        const svg = d3.select(el).append("svg").attr("width", W).attr("height", H);
+        svg.append("g").attr("transform", `translate(${M.l},0)`)
+          .call(d3.axisLeft(y).ticks(4).tickFormat(d3.format("~s"))).attr("class", "axis");
+        svg.append("g").attr("transform", `translate(0,${H - M.b})`)
+          .call(d3.axisBottom(x)).attr("class", "axis");
+        svg.append("path").datum(series)
+          .attr("d", d3.line().x((d) => x(d.m)).y((d) => y(d.sol)))
+          .attr("fill", "none").attr("stroke", "#E8A33D").attr("stroke-width", 1.5)
+          .attr("stroke-dasharray", series.length < 6 ? "2 4" : null);
+        svg.selectAll("circle").data(series).join("circle")
+          .attr("cx", (d) => x(d.m)).attr("cy", (d) => y(d.sol)).attr("r", 5)
+          .attr("fill", (d) => (d.px / peak < 0.5 ? "transparent" : "#E8A33D"))
+          .attr("stroke", "#E8A33D").attr("stroke-width", 1.5)
+          .append("title").text((d) => `${d.m} · SOL ${d3.format(",.0f")(d.sol)} · coverage ${d3.format(".0%")(d.px / peak)}`);
+      }
+
+      /* ---------- explore: choropleth ---------- */
+      const values = (month, metric) => {
+        const idx = metric === "sol" ? 0 : 1;
+        const out = new Map();
+        for (const id in ledger.regions) {
+          const s = ledger.regions[id].series[month];
+          if (s) out.set(id, s[idx]);
+        }
+        return out;
+      };
+      const paint = (month, metric) => {
+        const vals = values(month, metric);
+        const arr = [...vals.values()].filter((v) => v > 0);
+        const lo = 0, hi = Math.log10((d3.quantile(arr.sort(d3.ascending), 0.995) ?? 1) + 1);
+        for (const f of geo.features) {
+          const v = vals.get(f.properties.id) ?? 0;
+          f.properties.v = Math.min(Math.log10(v + 1) / hi, 1);
+        }
+        map.getSource("regencies")?.setData(geo);
+      };
+
+      const map = new maplibregl.Map({
+        container: "map",
+        style: { version: 8, sources: {}, layers: [
+          { id: "bg", type: "background", paint: { "background-color": "#05070F" } } ] },
+        bounds: [[94.5, -11.5], [141.5, 6.5]],
+        fitBoundsOptions: { padding: 24 },
+        attributionControl: false,
+        dragRotate: false,
+      });
+      map.addControl(new maplibregl.AttributionControl({
+        customAttribution: "NASA Black Marble · geoBoundaries CC BY 3.0 IGO", compact: true }));
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
+
+      map.on("load", () => {
+        paint(state.month, state.metric);
+        map.addSource("regencies", { type: "geojson", data: geo, promoteId: "id" });
+        map.addLayer({ id: "fill", type: "fill", source: "regencies",
+          paint: { "fill-color": ["interpolate", ["linear"], ["get", "v"],
+            0, RAMP[0], 0.25, RAMP[1], 0.5, RAMP[2], 0.75, RAMP[3], 1, RAMP[4]],
+            "fill-opacity": 0.92 } });
+        map.addLayer({ id: "line", type: "line", source: "regencies",
+          paint: { "line-color": "#232B44", "line-width": 0.4 } });
+        map.addLayer({ id: "hover", type: "line", source: "regencies",
+          paint: { "line-color": "#E8A33D", "line-width": 1.4 },
+          filter: ["==", ["get", "id"], ""] });
+      });
+
+      /* tooltip + click panel */
+      const tip = document.getElementById("tooltip");
+      map.on("mousemove", "fill", (e) => {
+        const f = e.features[0];
+        const reg = ledger.regions[f.properties.id];
+        const s = reg?.series[state.month];
+        map.setFilter("hover", ["==", ["get", "id"], f.properties.id]);
+        map.getCanvas().style.cursor = "pointer";
+        tip.hidden = false;
+        tip.style.left = e.point.x + 14 + "px";
+        tip.style.top = e.point.y + 14 + "px";
+        tip.innerHTML = `<b>${reg?.name ?? "—"}</b><br>${
+          s ? `SOL ${s[0].toLocaleString()} · mean ${s[1]}` : "no data this month"}`;
+      });
+      map.on("mouseleave", "fill", () => {
+        map.setFilter("hover", ["==", ["get", "id"], ""]);
+        map.getCanvas().style.cursor = ""; tip.hidden = true;
+      });
+
+      const panel = document.getElementById("region-panel");
+      map.on("click", "fill", (e) => openPanel(e.features[0].properties.id));
+      document.getElementById("panel-close").onclick = () => { panel.hidden = true; state.region = null; syncHash(); };
+
+      function openPanel(id) {
+        const reg = ledger.regions[id];
+        if (!reg) return;
+        state.region = id;
+        panel.hidden = false;
+        document.getElementById("panel-name").textContent = reg.name;
+        document.getElementById("panel-bps").textContent = `BPS ${reg.bps}`;
+        const s = reg.series[state.month];
+        document.getElementById("panel-sol").textContent = s ? s[0].toLocaleString() : "—";
+        document.getElementById("panel-mean").textContent = s ? `${s[1]} nW/cm²·sr` : "—";
+        document.getElementById("panel-months").textContent =
+          `${Object.keys(reg.series).length} MONTHS IN LEDGER`;
+        const spark = d3.select("#panel-spark").html("");
+        const pts = ledger.months.map((m) => ({ m, v: reg.series[m]?.[0] ?? null }));
+        const W = 240, H = 56;
+        const x = d3.scalePoint(ledger.months, [4, W - 4]).padding(0.5);
+        const y = d3.scaleLinear([0, d3.max(pts, (d) => d.v) || 1], [H - 6, 6]);
+        const svg = spark.append("svg").attr("width", W).attr("height", H);
+        svg.selectAll("circle").data(pts.filter((d) => d.v != null)).join("circle")
+          .attr("cx", (d) => x(d.m)).attr("cy", (d) => y(d.v)).attr("r", 2.5).attr("fill", "#E8A33D");
+        syncHash();
+      }
+
+      /* controls + URL state */
+      const sel = document.getElementById("month-select");
+      for (const m of ledger.months) sel.add(new Option(m, m));
+      sel.value = state.month;
+      sel.onchange = () => { state.month = sel.value; paint(state.month, state.metric); if (state.region) openPanel(state.region); syncHash(); };
+      const bSol = document.getElementById("btn-sol"), bMean = document.getElementById("btn-mean");
+      const setMetric = (metric) => {
+        state.metric = metric;
+        bSol.classList.toggle("on", metric === "sol");
+        bMean.classList.toggle("on", metric === "mean");
+        paint(state.month, state.metric); syncHash();
+      };
+      bSol.onclick = () => setMetric("sol");
+      bMean.onclick = () => setMetric("mean");
+      function syncHash() {
+        location.hash = `m=${state.month}&x=${state.metric}${state.region ? `&r=${state.region}` : ""}`;
+      }
+      // restore state from URL
+      const h = new URLSearchParams(location.hash.slice(1));
+      if (h.get("m") && ledger.months.includes(h.get("m"))) { state.month = h.get("m"); sel.value = state.month; }
+      if (h.get("x") === "mean") setMetric("mean");
+      if (h.get("r")) map.on("load", () => openPanel(h.get("r")));
+    </script>
+
+    <style is:global>
+      html { scroll-behavior: smooth; }
+      body { margin: 0; }
+      .stamp { font-family: var(--font-data); font-size: 0.7rem; letter-spacing: 0.12em; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); }
+      .eyebrow { font-family: var(--font-data); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+
+      .stamp-bar { position: fixed; inset: 0 0 auto 0; z-index: 20; display: flex; justify-content: space-between;
+        padding: 12px 20px; background: linear-gradient(color-mix(in srgb, var(--ground) 82%, transparent), transparent); pointer-events: none; }
+
+      .hero { position: relative; height: 100vh; overflow: hidden; background: #05070F; }
+      .hero img { width: 100%; height: 100%; object-fit: cover; opacity: 0; animation: fadeup 2.8s ease-out 0.4s forwards; }
+      @keyframes fadeup { to { opacity: 1; } }
+      .hero::after { content: ""; position: absolute; inset: 0;
+        background: linear-gradient(78deg, rgba(5,7,15,0.88) 0%, rgba(5,7,15,0.55) 32%, transparent 58%); }
+      .hero-copy { position: absolute; left: 6vw; bottom: 12vh; max-width: 34rem; display: flex; flex-direction: column; gap: 14px; z-index: 2; }
+      .hero-copy h1 { font-size: clamp(1.9rem, 4.5vw, 3.2rem); margin: 0; line-height: 1.08; letter-spacing: -0.015em; }
+      .hero-copy p { margin: 0; color: var(--ink-muted); font-size: 1.05rem; max-width: 30rem; }
+      .scroll-hint { position: absolute; bottom: 3vh; left: 50%; transform: translateX(-50%); color: var(--accent); animation: bob 2s ease-in-out infinite; }
+      @keyframes bob { 50% { transform: translate(-50%, 6px); } }
+
+      .chapter { max-width: 44rem; margin: 0 auto; padding: 14vh 24px 0; display: flex; flex-direction: column; gap: 18px; }
+      .chapter h2 { font-size: 1.7rem; margin: 0; }
+      .chapter p { margin: 0; line-height: 1.65; color: var(--ink); }
+      .big-stat { font-family: var(--font-display); font-size: clamp(1.3rem, 3vw, 1.8rem); line-height: 1.3; }
+      .amber { color: var(--accent); }
+      .footnote { font-size: 0.85rem; color: var(--ink-muted); }
+
+      .share-bars { display: flex; flex-direction: column; gap: 8px; }
+      .share-row { display: grid; grid-template-columns: 52px 1fr; gap: 12px; align-items: center; }
+      .share-row .bar { height: 14px; background: var(--surface); border-radius: 2px; overflow: hidden; }
+      .share-row .bar i { display: block; height: 100%; background: var(--accent); }
+
+      .chart { width: 100%; }
+      .axis { font-family: var(--font-data); font-size: 10px; color: var(--ink-muted); }
+      .axis path, .axis line { stroke: var(--hairline); }
+
+      .top-lists { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+      @media (max-width: 640px) { .top-lists { grid-template-columns: 1fr; } }
+      .ranked { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+      .ranked li { display: grid; grid-template-columns: 11rem 1fr 4.5rem; gap: 10px; align-items: center; font-size: 0.85rem; }
+      .ranked .rbar { height: 8px; background: var(--surface); border-radius: 2px; overflow: hidden; }
+      .ranked .rbar i { display: block; height: 100%; background: var(--accent); opacity: 0.85; }
+      .ranked .rval { font-family: var(--font-data); font-variant-numeric: tabular-nums; text-align: right; color: var(--ink-muted); }
+
+      .explore { margin-top: 14vh; position: relative; }
+      .explore-head { max-width: 72rem; margin: 0 auto; padding: 0 24px 18px; display: flex; flex-wrap: wrap; gap: 12px 32px; align-items: end; justify-content: space-between; }
+      .explore-head h2 { margin: 6px 0 0; font-size: 1.7rem; }
+      .controls { display: flex; gap: 18px; align-items: center; }
+      .controls select { background: var(--surface); color: var(--ink); border: 1px solid var(--hairline); border-radius: 4px; padding: 6px 10px; font-family: var(--font-data); font-size: 0.8rem; margin-left: 8px; }
+      .toggle button { background: var(--surface); color: var(--ink-muted); border: 1px solid var(--hairline); padding: 7px 12px; font-family: var(--font-data); font-size: 0.7rem; letter-spacing: 0.08em; cursor: pointer; }
+      .toggle button:first-child { border-radius: 4px 0 0 4px; }
+      .toggle button:last-child { border-radius: 0 4px 4px 0; border-left: 0; }
+      .toggle button.on { background: var(--accent-ink); color: var(--accent); border-color: var(--accent); }
+      .toggle button:focus-visible, .controls select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+      #map { height: 76vh; }
+      #tooltip { position: absolute; z-index: 10; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px; font-family: var(--font-data); font-size: 0.72rem; line-height: 1.5; color: var(--ink); }
+      #region-panel { position: absolute; right: 20px; top: 90px; z-index: 11; width: 280px; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 6px; padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+      #region-panel h3 { margin: 0; font-size: 1.05rem; }
+      #panel-close { position: absolute; top: 8px; right: 10px; background: none; border: 0; color: var(--ink-muted); font-size: 1.1rem; cursor: pointer; }
+      .panel-stats { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
+      .panel-stats dt { font-family: var(--font-data); font-size: 0.62rem; letter-spacing: 0.1em; color: var(--ink-muted); align-self: center; }
+      .panel-stats dd { margin: 0; font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+
+      .method { max-width: 44rem; margin: 0 auto; padding: 12vh 24px 12vh; display: flex; flex-direction: column; gap: 14px; }
+      .method p { margin: 0; font-size: 0.9rem; line-height: 1.7; color: var(--ink-muted); }
+      .maplibregl-ctrl-attrib { background: color-mix(in srgb, var(--ground) 70%, transparent) !important; color: var(--ink-muted); font-size: 10px; }
+    </style>
   </body>
 </html>

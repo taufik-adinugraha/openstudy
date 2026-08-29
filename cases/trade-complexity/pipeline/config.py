@@ -5,7 +5,8 @@ from pathlib import Path
 CASE_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = CASE_DIR / "data"
 
-# CEPII BACI, HS92 revision, direct CSV-per-year zips. Etalab 2.0 license.
+# CEPII BACI, HS92 revision. Etalab 2.0 license. Exact URL verified 2026-08-29:
+# https://www.cepii.fr/DATA_DOWNLOAD/baci/data/BACI_HS92_V202601.zip (2.42 GB)
 BACI_BASE = "https://www.cepii.fr/DATA_DOWNLOAD/baci"
 BACI_RELEASE = "202601"       # data through 2024
 YEARS = range(1995, 2025)

@@ -1,0 +1,112 @@
+{
+ "latestMonth": "2026-07",
+ "monthCount": 4,
+ "javaShareSOL": 0.667,
+ "javaLandShare": 0.066,
+ "national": [
+  {
+   "month": "2018-01",
+   "sol": 283.0,
+   "coverage": 0.002
+  },
+  {
+   "month": "2018-02",
+   "sol": 174670.0,
+   "coverage": 0.157
+  },
+  {
+   "month": "2018-03",
+   "sol": 156714.0,
+   "coverage": 0.165
+  },
+  {
+   "month": "2026-07",
+   "sol": 2745198.0,
+   "coverage": 1.0
+  }
+ ],
+ "topSol": [
+  {
+   "name": "Bekasi",
+   "v": 73168
+  },
+  {
+   "name": "Bogor",
+   "v": 70517
+  },
+  {
+   "name": "Tangerang",
+   "v": 65661
+  },
+  {
+   "name": "Banyuwangi",
+   "v": 56982
+  },
+  {
+   "name": "Kota Surabaya",
+   "v": 52304
+  },
+  {
+   "name": "Karawang",
+   "v": 44331
+  },
+  {
+   "name": "Sidoarjo",
+   "v": 37640
+  },
+  {
+   "name": "Kota Semarang",
+   "v": 34699
+  },
+  {
+   "name": "Kota Bekasi",
+   "v": 32438
+  },
+  {
+   "name": "Kutai Kartanegara",
+   "v": 30558
+  }
+ ],
+ "topMean": [
+  {
+   "name": "Kota Jakarta Pusat",
+   "v": 64.4
+  },
+  {
+   "name": "Kota Jakarta Barat",
+   "v": 45.3
+  },
+  {
+   "name": "Kota Jakarta Utara",
+   "v": 44.0
+  },
+  {
+   "name": "Kota Jakarta Selatan",
+   "v": 43.3
+  },
+  {
+   "name": "Kota Yogyakarta",
+   "v": 34.5
+  },
+  {
+   "name": "Kota Tangerang",
+   "v": 33.8
+  },
+  {
+   "name": "Kota Jakarta Timur",
+   "v": 33.3
+  },
+  {
+   "name": "Kota Surabaya",
+   "v": 33.0
+  },
+  {
+   "name": "Kota Tangerang Selatan",
+   "v": 32.4
+  },
+  {
+   "name": "Kota Bekasi",
+   "v": 32.2
+  }
+ ]
+}
