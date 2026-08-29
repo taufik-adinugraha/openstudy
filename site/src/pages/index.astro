@@ -7,6 +7,7 @@ import "../styles/tokens.css";
 const DEMOS = {
   nightlights: "http://localhost:4322/nightlights", // TODO prod: /nightlights
   knowledge: "http://localhost:4324/knowledge",     // TODO prod: /knowledge
+  trade: "http://localhost:4325/trade",             // TODO prod: /trade
 };
 ---
 <html lang="en" data-theme="dark">
@@ -45,7 +46,7 @@ const DEMOS = {
         </div>
       </a>
 
-      <div class="case building" data-case="trade">
+      <a class="case live" data-case="trade" href={DEMOS.trade}>
         <div class="case-visual trade-visual" aria-hidden="true">
           <span class="ps-dot" style="left:18%;top:34%"></span><span class="ps-dot" style="left:30%;top:52%"></span>
           <span class="ps-dot lit" style="left:44%;top:40%"></span><span class="ps-dot" style="left:56%;top:62%"></span>
@@ -53,14 +54,15 @@ const DEMOS = {
           <span class="ps-dot" style="left:24%;top:70%"></span><span class="ps-dot lit" style="left:52%;top:22%"></span>
         </div>
         <div class="case-body">
-          <span class="badge">IN BUILD — DATA LOADING</span>
+          <span class="badge">LIVE DEMO</span>
           <h2>Indonesia in the Global Trade Network</h2>
-          <p>A billion rows of bilateral trade distilled into the product space —
-          and the verified paradox of nickel downstreaming: processed exports
-          surged while economic complexity slipped.</p>
-          <span class="meta">1B+ ROWS · NETWORK SCIENCE · BACI/COMTRADE</span>
+          <p>330 million rows of bilateral trade distilled into the product space —
+          and the nickel-downstreaming paradox, computed independently and checked
+          against Harvard’s Atlas: processed exports grew fifteenfold while
+          Indonesia’s complexity rank stood still and its neighbors climbed.</p>
+          <span class="meta">330M ROWS · NETWORK SCIENCE · BACI · VALIDATED VS ATLAS</span>
         </div>
-      </div>
+      </a>
 
       <div class="case live" data-case="knowledge">
         <div class="case-visual pustaka-live">
