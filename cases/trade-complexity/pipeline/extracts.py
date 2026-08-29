@@ -28,12 +28,27 @@ PEER_CODES = {704: "VNM", 764: "THA", 458: "MYS", 608: "PHL", 699: "IND"}
 # nickel value chain, HS92 codes (prefix match)
 NICKEL_ORE = ("2604",)                     # ores & concentrates
 NICKEL_PROCESSED = ("7202", "7501", "7502", "7503", "7218", "7219", "7220")
-CHAPTER_NAMES = {
-    "27": "Mineral fuels", "15": "Animal/veg fats (palm)", "72": "Iron & steel",
-    "26": "Ores", "85": "Electrical machinery", "84": "Machinery", "40": "Rubber",
-    "64": "Footwear", "48": "Paper", "44": "Wood", "62": "Apparel", "61": "Knit apparel",
-    "87": "Vehicles", "38": "Chemicals", "80": "Tin", "03": "Fish", "09": "Coffee & spices",
-    "71": "Gems & gold", "75": "Nickel", "29": "Org. chemicals", "39": "Plastics",
+CHAPTER_NAMES = {  # HS chapters, short display names
+    "01": "Live animals", "02": "Meat", "03": "Fish", "04": "Dairy & eggs", "05": "Animal products",
+    "06": "Plants", "07": "Vegetables", "08": "Fruit & nuts", "09": "Coffee & spices", "10": "Cereals",
+    "11": "Milling products", "12": "Oil seeds", "13": "Gums & resins", "14": "Plant materials",
+    "15": "Animal/veg fats (palm)", "16": "Prepared meat & fish", "17": "Sugar", "18": "Cocoa",
+    "19": "Cereal preparations", "20": "Preserved fruit & veg", "21": "Food preparations", "22": "Beverages",
+    "23": "Food residues & feed", "24": "Tobacco", "25": "Salt, stone, cement", "26": "Ores",
+    "27": "Mineral fuels", "28": "Inorganic chemicals", "29": "Organic chemicals", "30": "Pharmaceuticals",
+    "31": "Fertilisers", "32": "Dyes & paints", "33": "Cosmetics", "34": "Soaps & waxes", "35": "Glues & enzymes",
+    "36": "Explosives", "37": "Photographic goods", "38": "Chemical products", "39": "Plastics", "40": "Rubber",
+    "41": "Hides & skins", "42": "Leather goods", "43": "Furskins", "44": "Wood", "45": "Cork", "46": "Basketware",
+    "47": "Wood pulp", "48": "Paper", "49": "Printed matter", "50": "Silk", "51": "Wool", "52": "Cotton",
+    "53": "Other fibres", "54": "Filaments", "55": "Man-made fibres", "56": "Nonwovens & rope", "57": "Carpets",
+    "58": "Special fabrics", "59": "Coated textiles", "60": "Knitted fabrics", "61": "Knit apparel", "62": "Apparel",
+    "63": "Textile articles", "64": "Footwear", "65": "Headgear", "66": "Umbrellas", "67": "Feathers & flowers",
+    "68": "Stone articles", "69": "Ceramics", "70": "Glass", "71": "Gems & gold", "72": "Iron & steel",
+    "73": "Iron & steel articles", "74": "Copper", "75": "Nickel", "76": "Aluminium", "78": "Lead", "79": "Zinc",
+    "80": "Tin", "81": "Other metals", "82": "Tools & cutlery", "83": "Metal articles", "84": "Machinery",
+    "85": "Electrical machinery", "86": "Railway", "87": "Vehicles", "88": "Aircraft", "89": "Ships",
+    "90": "Instruments", "91": "Clocks", "92": "Musical instruments", "93": "Arms", "94": "Furniture",
+    "95": "Toys & sports", "96": "Miscellaneous", "97": "Art & antiques", "99": "Unspecified",
 }
 
 

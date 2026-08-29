@@ -355,9 +355,12 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
           },
         };
       }
-      const hero = makeSpace(document.getElementById("hero-canvas"), { interactive: false });
-      hero.animate(4600);
-      const explore = makeSpace(document.getElementById("ps-canvas"), { interactive: true });
+      // ?nohero — dev aid for screenshotting the chapters: skips both WebGL scenes.
+      const NOHERO = location.search.includes("nohero");
+      if (!NOHERO) makeSpace(document.getElementById("hero-canvas"), { interactive: false }).animate(4600);
+      const explore = NOHERO
+        ? { setYear() {}, setFilter() {}, setMode() {}, focus() {} }
+        : makeSpace(document.getElementById("ps-canvas"), { interactive: true });
       document.getElementById("ps-year").addEventListener("input", (e) => { explore.setYear(e.target.value); document.getElementById("ps-label").textContent = e.target.value; });
       /* ---------- product search: lexical (all HS6 descriptions, prefix + fuzzy) first,
          semantic (local multilingual-E5 via the lab's embedding service) layered on top.
@@ -479,26 +482,67 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
       const setMode = (m) => { explore.setMode(m); bNet.classList.toggle("on", m === "net"); bPci.classList.toggle("on", m === "pci"); };
       bNet.onclick = () => setMode("net"); bPci.onclick = () => setMode("pci");
 
+      /* ---------- shared SVG defs: gradients, sheen, glows (document-wide ids) ---------- */
+      if (location.search.includes("nohero")) document.querySelector(".hero").style.display = "none"; // dev aid: screenshot chapters
+      const defs = d3.select("body").append("svg").attr("width", 0).attr("height", 0).style("position", "absolute").append("defs");
+      const gradId = (hex) => "g" + hex.replace("#", "");
+      const mkGrad = (hex) => {
+        const lg = defs.append("linearGradient").attr("id", gradId(hex)).attr("x1", 0).attr("y1", 0).attr("x2", 1).attr("y2", 1);
+        lg.append("stop").attr("offset", "0%").attr("stop-color", d3.color(hex).brighter(0.6).formatHex());
+        lg.append("stop").attr("offset", "100%").attr("stop-color", d3.color(hex).darker(0.8).formatHex());
+      };
+      SECTORS.forEach(([, , c]) => mkGrad(c)); mkGrad(COPPER); mkGrad(SILVER);
+      const sheen = defs.append("linearGradient").attr("id", "sheen").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 1);
+      sheen.append("stop").attr("offset", "0%").attr("stop-color", "#fff").attr("stop-opacity", 0.18);
+      sheen.append("stop").attr("offset", "40%").attr("stop-color", "#fff").attr("stop-opacity", 0.03);
+      sheen.append("stop").attr("offset", "100%").attr("stop-color", "#000").attr("stop-opacity", 0.14);
+      const mkGlow = (id, color, sd, op, dy = 0) => {
+        const f = defs.append("filter").attr("id", id).attr("x", "-40%").attr("y", "-40%").attr("width", "180%").attr("height", "180%");
+        f.append("feDropShadow").attr("dx", 0).attr("dy", dy).attr("stdDeviation", sd).attr("flood-color", color).attr("flood-opacity", op);
+        return f;
+      };
+      mkGlow("copper-glow", COPPER, 7, 0.55);
+      mkGlow("copper-glow-soft", COPPER, 3, 0.7);
+      mkGlow("hover-glow", "#000", 12, 0.6, 8)
+        .append("feDropShadow").attr("dx", 0).attr("dy", 0).attr("stdDeviation", 9).attr("flood-color", "#E6E8EC").attr("flood-opacity", 0.2);
+
       /* ---------- chapter 1: treemap ---------- */
       {
         const el = document.getElementById("treemap");
-        const W = el.clientWidth, H = 380;
-        const svg = d3.select(el).append("svg").attr("width", W).attr("height", H);
-        const color = (hs2) => sectorOf(hs2)[2];
+        const W = el.clientWidth, H = 400;
+        const svg = d3.select(el).append("svg").attr("width", W).attr("height", H).attr("class", "treemap");
+        const isCopper = (hs2) => ["26", "72", "75"].includes(hs2);
         function render(year) {
           const rows = (treemap[String(year)] ?? []).slice(0, 18);
           const root = d3.hierarchy({ children: rows }).sum((d) => d.v);
-          d3.treemap().size([W, H]).paddingInner(2)(root);
+          d3.treemap().size([W, H]).paddingInner(6).round(true)(root);
           const total = d3.sum(rows, (d) => d.v);
+          const t = svg.transition().duration(reduced ? 0 : 650).ease(d3.easeCubicOut);
           const g = svg.selectAll("g.cell").data(root.leaves(), (d) => d.data.hs2)
-            .join((enter) => { const g = enter.append("g").attr("class", "cell"); g.append("rect"); g.append("text").attr("class", "tm-name"); g.append("text").attr("class", "tm-pct"); return g; });
-          g.on("mousemove", (e, d) => showTip(e, `<b>${d.data.name}</b><br>HS ${d.data.hs2} · ${fmt$(d.data.v * 1e3)}<br>${d3.format(".1%")(d.data.v / total)} of ${year} exports`))
+            .join((enter) => {
+              const g = enter.append("g").attr("class", "cell");
+              const inner = g.append("g").attr("class", "inner");
+              inner.append("rect").attr("class", "main").attr("rx", 8);
+              inner.append("rect").attr("class", "sheen").attr("rx", 8).attr("fill", "url(#sheen)");
+              inner.append("text").attr("class", "tm-name");
+              inner.append("text").attr("class", "tm-pct");
+              return g;
+            });
+          g.classed("copper", (d) => isCopper(d.data.hs2))
+           .on("mouseenter", function () { this.parentNode.appendChild(this); }) // raise above neighbours
+           .on("mousemove", (e, d) => showTip(e, `<b>${d.data.name}</b><br>HS ${d.data.hs2} · ${fmt$(d.data.v * 1e3)}<br>${d3.format(".1%")(d.data.v / total)} of ${year} exports`))
            .on("mouseleave", hideTip);
-          g.transition().duration(reduced ? 0 : 500).attr("transform", (d) => `translate(${d.x0},${d.y0})`);
-          g.select("rect").transition().duration(reduced ? 0 : 500).attr("width", (d) => d.x1 - d.x0).attr("height", (d) => d.y1 - d.y0)
-            .attr("fill", (d) => ["26", "72", "75"].includes(d.data.hs2) ? COPPER : color(d.data.hs2)).attr("opacity", 0.8);
-          g.select(".tm-name").attr("x", 6).attr("y", 16).text((d) => (d.x1 - d.x0 > 70 && d.y1 - d.y0 > 30) ? d.data.name : "");
-          g.select(".tm-pct").attr("x", 6).attr("y", 30).text((d) => (d.x1 - d.x0 > 70 && d.y1 - d.y0 > 44) ? d3.format(".0%")(d.data.v / total) : "");
+          g.transition(t).attr("transform", (d) => `translate(${d.x0},${d.y0})`);
+          g.select("rect.main").attr("fill", (d) => `url(#${gradId(isCopper(d.data.hs2) ? COPPER : sectorOf(d.data.hs2)[2])})`)
+            .transition(t).attr("width", (d) => d.x1 - d.x0).attr("height", (d) => d.y1 - d.y0);
+          g.select("rect.sheen").transition(t).attr("width", (d) => d.x1 - d.x0).attr("height", (d) => d.y1 - d.y0);
+          // labels scale with the cell: small cells get a compact name, big cells name + share
+          const small = (d) => Math.min(d.x1 - d.x0, d.y1 - d.y0) < 90;
+          g.select(".tm-name").attr("x", (d) => (small(d) ? 8 : 12)).attr("y", (d) => (small(d) ? 17 : 24))
+            .style("font-size", (d) => (small(d) ? "10.5px" : "12.5px"))
+            .text((d) => (d.x1 - d.x0 > 46 && d.y1 - d.y0 > 26) ? d.data.name : "");
+          g.select(".tm-pct").attr("x", (d) => (small(d) ? 8 : 12)).attr("y", (d) => (small(d) ? 31 : 43))
+            .text((d) => (d.x1 - d.x0 > 46 && d.y1 - d.y0 > 42) ? d3.format(".0%")(d.data.v / total) : "");
         }
         render(latest);
         document.getElementById("tm-year").addEventListener("input", (e) => { render(e.target.value); document.getElementById("tm-label").textContent = e.target.value; });
@@ -522,7 +566,7 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
         }
         const line = d3.line().x((d) => x(d.yr)).y((d) => y(d.v)).curve(d3.curveMonotoneX);
         svg.append("path").datum(ore).attr("d", line).attr("fill", "none").attr("stroke", SILVER).attr("stroke-width", 1.8);
-        svg.append("path").datum(proc).attr("d", line).attr("fill", "none").attr("stroke", COPPER).attr("stroke-width", 2.2);
+        svg.append("path").datum(proc).attr("d", line).attr("fill", "none").attr("stroke", COPPER).attr("stroke-width", 2.2).style("filter", "url(#copper-glow-soft)");
         const labels = spread([
           { y: y(ore.at(-1).v), text: "ore (HS 2604)", fill: SILVER },
           { y: y(proc.at(-1).v), text: "processed nickel & stainless", fill: COPPER }], 14, M.t + 8, H - M.b - 4);
@@ -559,7 +603,7 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
         const paths = svg.selectAll("path.s").data(series).join("path").attr("class", "s")
           .attr("d", (s) => line(s.pts)).attr("fill", "none")
           .attr("stroke", (s) => (s.isIdn ? COPPER : VERDIGRIS)).attr("stroke-width", (s) => (s.isIdn ? 2.6 : 1.2))
-          .attr("opacity", (s) => (s.isIdn ? 1 : 0.7));
+          .attr("opacity", (s) => (s.isIdn ? 1 : 0.7)).style("filter", (s) => (s.isIdn ? "url(#copper-glow-soft)" : null));
         const labels = spread(series.map((s) => {
           const last = s.pts.filter((d) => d.r != null).at(-1);
           return { y: y(last.r), text: `${s.iso} #${last.r}`, fill: s.isIdn ? COPPER : VERDIGRIS, iso: s.iso, x: x(last.yr) };
@@ -598,9 +642,11 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
         svg.append("text").attr("x", W - M.r).attr("y", H - 6).attr("text-anchor", "end").attr("class", "annot").text("density → closer to Indonesia’s current strengths");
         svg.append("text").attr("x", M.l + 4).attr("y", M.t + 10).attr("class", "annot").text("↑ PCI (product sophistication)");
         const q80 = d3.quantile(adjacency.map((a) => a.density).sort(d3.ascending), 0.8);
+        const frontier = (d) => d.density > q80 && d.pci > 0;
         svg.selectAll("circle").data(adjacency).join("circle")
           .attr("cx", (d) => x(d.density)).attr("cy", (d) => y(d.pci)).attr("r", (d) => r(d.world))
-          .attr("fill", (d) => (d.density > q80 && d.pci > 0) ? COPPER : SILVER)
+          .attr("fill", (d) => (frontier(d) ? `url(#${gradId(COPPER)})` : `url(#${gradId(SILVER)})`))
+          .style("filter", (d) => (frontier(d) ? "url(#copper-glow-soft)" : null))
           .attr("opacity", 0.55).attr("stroke", INK).attr("stroke-width", 0.5)
           .on("mousemove", function (e, d) {
             d3.select(this).attr("opacity", 1).attr("stroke", "#E6E8EC");
@@ -635,8 +681,17 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
       .axis { font-family: var(--font-data); font-size: 10px; color: var(--ink-muted); }
       .axis path, .axis line { stroke: var(--hairline); }
       .annot { font-family: var(--font-data); font-size: 10px; fill: var(--ink-muted); letter-spacing: 0.04em; }
-      .tm-name { font-family: var(--font-body); font-size: 11px; fill: #0C0F14; font-weight: 600; }
-      .tm-pct { font-family: var(--font-data); font-size: 10px; fill: #0C0F14; }
+      .tm-name { font-family: var(--font-display); font-size: 12.5px; fill: #0C0F14; font-weight: 600; letter-spacing: -0.005em; }
+      .tm-pct { font-family: var(--font-data); font-size: 10.5px; fill: rgba(12,15,20,0.75); }
+      .treemap { overflow: visible; }
+      .treemap .cell { cursor: default; }
+      .treemap .cell .inner { transition: transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.28s ease, filter 0.28s ease; transform-box: fill-box; transform-origin: center; }
+      .treemap .cell rect.main { stroke: rgba(255,255,255,0.10); stroke-width: 1; transition: stroke 0.28s ease; }
+      .treemap .cell rect.sheen { pointer-events: none; }
+      .treemap .cell.copper rect.main { filter: url(#copper-glow); }
+      .treemap .cell:hover .inner { transform: scale(1.045); filter: url(#hover-glow); }
+      .treemap .cell:hover rect.main { stroke: rgba(230,232,236,0.65); }
+      .treemap:hover .cell:not(:hover) .inner { opacity: 0.68; }
       .scrub { display: flex; align-items: center; gap: 12px; }
       .scrub input, .controls input[type=range] { accent-color: var(--accent); width: 200px; }
 
