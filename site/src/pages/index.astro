@@ -62,6 +62,30 @@ const DEMOS = {
         </div>
       </div>
 
+      <div class="case live" data-case="knowledge">
+        <div class="case-visual pustaka-live">
+          <div class="try-chips" id="try-chips"></div>
+          <div class="try-answer" id="try-answer" hidden></div>
+          <div class="try-sources stamp dim" id="try-sources"></div>
+          <form id="try-form">
+            <input id="try-q" type="text" autocomplete="off"
+                   placeholder="Coba tanya di sini — try it right here…" />
+            <button type="submit">Ask</button>
+          </form>
+          <span class="stamp dim" id="try-status">LIVE — ANSWERS FROM REAL DOCUMENTS, CITED &amp; VERIFIED</span>
+        </div>
+        <div class="case-body">
+          <span class="badge">PLATFORM · LIVE — TRY IT HERE</span>
+          <h2>Pustaka — Knowledge Assistant</h2>
+          <p>Upload your organization’s documents; ask in Bahasa Indonesia or
+          English; every answer cites the exact pasal, page, and verbatim quote —
+          verified against the source, never invented. Runs on your
+          infrastructure; only the final question leaves it.</p>
+          <a class="cta" href={DEMOS.knowledge}>Open the full demo →</a>
+          <span class="meta">RAG · VERIFIED CITATIONS · LOCAL EMBEDDINGS · UU PDP–AWARE</span>
+        </div>
+      </div>
+
       <div class="coming">
         <span class="stamp">PHASE 2 — IN THE PIPELINE</span>
         <ul>
@@ -72,33 +96,6 @@ const DEMOS = {
       </div>
     </section>
 
-    <section class="cases platform">
-      <div class="section-head">
-        <span class="stamp">PLATFORM — WHAT WE BUILD FOR YOU</span>
-        <p class="section-sub">The cases above show what we can find in data.
-        This shows what we can build around yours.</p>
-      </div>
-
-      <a class="case live" data-case="knowledge" href={DEMOS.knowledge}>
-        <div class="case-visual pustaka-visual" aria-hidden="true">
-          <div class="chat-mock">
-            <span class="mock-q">Berapa batas waktu notifikasi kebocoran data?</span>
-            <span class="mock-a">3×24 jam sejak diketahui <i class="mock-cite">1</i><i class="mock-cite">2</i></span>
-            <span class="mock-src">✓ UU 27/2022 · Pasal 46 · verified verbatim</span>
-          </div>
-        </div>
-        <div class="case-body">
-          <span class="badge">LIVE DEMO</span>
-          <h2>Pustaka — Knowledge Assistant</h2>
-          <p>Upload your organization’s documents; ask in Bahasa Indonesia or
-          English; every answer cites the exact pasal, page, and verbatim quote —
-          verified against the source, never invented. Runs on your
-          infrastructure; only the final question leaves it.</p>
-          <span class="meta">RAG · VERIFIED CITATIONS · LOCAL EMBEDDINGS · UU PDP–AWARE</span>
-        </div>
-      </a>
-    </section>
-
     <footer id="contact" class="foot">
       <h2>Built end-to-end, in the open.</h2>
       <p>Acquisition → pipelines → models → validation → dashboards. If your
@@ -107,6 +104,57 @@ const DEMOS = {
       <a class="cta big" href="mailto:hello@example.com">Discuss a pilot</a><!-- TODO D8: real address -->
       <span class="stamp dim">DEMO LAB · JAKARTA · SOURCES CREDITED ON EVERY CASE</span>
     </footer>
+
+    <script>
+      // Homepage taste of Pustaka — real answers from the real API.
+      const API = "http://localhost:8600/api"; // TODO prod: /knowledge/api
+      const chips = document.getElementById("try-chips");
+      const answerEl = document.getElementById("try-answer");
+      const sourcesEl = document.getElementById("try-sources");
+      const statusEl = document.getElementById("try-status");
+      const input = document.getElementById("try-q");
+
+      const QUESTIONS = [
+        "Berapa hari cuti yang boleh dibawa ke tahun depan?",
+        "Batas waktu notifikasi kebocoran data pribadi?",
+        "What is the per diem for domestic travel?",
+      ];
+      chips.innerHTML = QUESTIONS.map((q) => `<button type="button">${q}</button>`).join("");
+      chips.querySelectorAll("button").forEach((b) =>
+        b.addEventListener("click", () => { input.value = b.textContent; tryAsk(); }));
+
+      function renderAnswer(text) {
+        const safe = text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+        return safe
+          .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
+          .replace(/\[(\d+)\]/g, '<span class="tcite">$1</span>')
+          .replace(/\n+/g, "<br>");
+      }
+
+      async function tryAsk() {
+        const q = input.value.trim();
+        if (!q) return;
+        answerEl.hidden = false;
+        answerEl.textContent = "Mencari di dokumen…";
+        sourcesEl.textContent = "";
+        try {
+          const res = await fetch(`${API}/ask`, { method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: q }) }).then((r) => r.json());
+          answerEl.innerHTML = renderAnswer(res.answer || "");
+          const cites = (res.citations || []).filter((c) => c.source);
+          sourcesEl.innerHTML = cites.slice(0, 3).map((c) =>
+            `${c.verified ? "✓ " : ""}${c.source.doc_title}${c.source.pasal ? " · " + c.source.pasal : ""}${c.source.page ? " · hal. " + c.source.page : ""}`
+          ).join("<br>");
+          statusEl.textContent = `${(res.mode || "").toUpperCase()} · ${res.latency_s}s — FULL EXPERIENCE IN THE DEMO →`;
+        } catch {
+          answerEl.textContent = "The demo API isn't running — open the full demo instead.";
+        }
+      }
+      document.getElementById("try-form").addEventListener("submit", (e) => {
+        e.preventDefault(); tryAsk();
+      });
+    </script>
 
     <style is:global>
       body { margin: 0; }
@@ -146,13 +194,17 @@ const DEMOS = {
       .platform { padding-top: 4vh; }
       .section-head { display: flex; flex-direction: column; gap: 8px; }
       .section-sub { margin: 0; color: var(--ink-muted); max-width: 34rem; }
-      .pustaka-visual { display: flex; align-items: center; justify-content: center; padding: 24px; }
-      .chat-mock { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 340px; }
-      .chat-mock span { border: 1px solid var(--hairline); border-radius: 10px; padding: 10px 14px; font-size: 0.8rem; line-height: 1.5; }
-      .mock-q { align-self: flex-end; background: var(--accent-ink); color: var(--ink); }
-      .mock-a { align-self: flex-start; background: var(--surface-raised); color: var(--ink); }
-      .mock-src { align-self: flex-start; border: 0 !important; font-family: var(--font-data); font-size: 0.62rem !important; color: var(--accent); letter-spacing: 0.06em; }
-      .mock-cite { display: inline-flex; min-width: 15px; height: 15px; align-items: center; justify-content: center; border: 1px solid var(--accent); border-radius: 3px; color: var(--accent); font-size: 0.6rem; font-style: normal; margin-left: 4px; }
+      .pustaka-live { display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 26px; }
+      .try-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+      .try-chips button { background: none; border: 1px solid var(--hairline); color: var(--ink-muted); border-radius: 16px; padding: 5px 11px; font-size: 0.72rem; cursor: pointer; font-family: var(--font-body); }
+      .try-chips button:hover { border-color: var(--accent); color: var(--accent); }
+      .try-answer { background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 10px; padding: 12px 16px; font-size: 0.85rem; line-height: 1.6; max-height: 190px; overflow-y: auto; }
+      .try-answer .tcite { display: inline-flex; min-width: 15px; height: 15px; align-items: center; justify-content: center; border: 1px solid var(--accent); border-radius: 3px; color: var(--accent); font-size: 0.6rem; margin: 0 2px; font-family: var(--font-data); }
+      .try-sources { line-height: 1.7; }
+      #try-form { display: flex; gap: 8px; }
+      #try-q { flex: 1; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 8px; color: var(--ink); padding: 10px 14px; font-family: var(--font-body); font-size: 0.85rem; }
+      #try-q:focus-visible { outline: 2px solid var(--accent); }
+      #try-form button { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 0 18px; font-family: var(--font-display); font-weight: 600; cursor: pointer; }
       .coming { border: 1px dashed var(--hairline); border-radius: 8px; padding: 24px 28px; display: flex; flex-direction: column; gap: 12px; }
       .coming ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; color: var(--ink-muted); font-size: 0.92rem; }
 
