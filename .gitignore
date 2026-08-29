@@ -1,0 +1,28 @@
+# secrets
+.env
+.env.*
+!.env.example
+
+# data planes (R2-synced, never in git)
+cases/*/data/*
+!cases/*/data/.gitkeep
+!cases/*/data/crosswalk/
+*.duckdb
+*.duckdb.wal
+*.parquet
+*.pmtiles
+*.tif
+
+# python
+__pycache__/
+.venv/
+*.egg-info/
+.ruff_cache/
+
+# node
+node_modules/
+dist/
+.astro/
+
+# os
+.DS_Store

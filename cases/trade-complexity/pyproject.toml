@@ -1,0 +1,19 @@
+[project]
+name = "trade-complexity"
+version = "0.1.0"
+description = "Flagship B pipeline: BACI trade flows -> Indonesia's product space and complexity"
+requires-python = ">=3.12"
+dependencies = [
+    "duckdb>=1.1",
+    "pandas>=2.2",
+    "pyarrow>=17",
+    "ecomplexity>=0.5",    # Harvard Growth Lab py-ecomplexity (PCI sign normalized in complexity.py)
+    "networkx>=3.3",
+    "scipy>=1.14",
+    "requests>=2.32",
+    "boto3>=1.34",
+    "anthropic>=0.40",
+]
+
+[tool.uv]
+package = false

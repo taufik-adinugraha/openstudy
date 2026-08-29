@@ -1,0 +1,17 @@
+{
+  "name": "nightlights-pulse-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "astro": "^5.1.0",
+    "maplibre-gl": "^5.0.0",
+    "deck.gl": "^9.1.0",
+    "d3": "^7.9.0",
+    "pmtiles": "^4.0.0"
+  }
+}

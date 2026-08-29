@@ -1,0 +1,37 @@
+# Flagship B: quarterly pulse refresh (Comtrade/BPS latest-year panel only).
+# The full BACI rebuild is manual — CEPII releases ~each January.
+name: trade-refresh
+
+on:
+  schedule:
+    - cron: "0 4 5 1,4,7,10 *"   # 5th of Jan/Apr/Jul/Oct, 04:00 UTC
+  workflow_dispatch:
+    inputs:
+      full_rebuild:
+        description: "Set to a BACI release id (e.g. 202601) for a full rebuild"
+        required: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Run pipeline
+        working-directory: cases/trade-complexity
+        env:
+          COMTRADE_API_KEY: ${{ secrets.COMTRADE_API_KEY }}
+          BPS_API_KEY: ${{ secrets.BPS_API_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          uv sync
+          if [ -n "${{ github.event.inputs.full_rebuild }}" ]; then
+            make rebuild RELEASE=${{ github.event.inputs.full_rebuild }}
+          else
+            make pulse
+          fi
+          make validate
+      # TODO week 5: brief-as-PR step, same mechanism as flagship A.

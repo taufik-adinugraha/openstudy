@@ -1,0 +1,23 @@
+[project]
+name = "nightlights-pulse"
+version = "0.1.0"
+description = "Flagship A pipeline: VIIRS night-lights economic pulse for Indonesia"
+requires-python = ">=3.12"
+dependencies = [
+    "duckdb>=1.1",
+    "pandas>=2.2",
+    "pyarrow>=17",
+    "geopandas>=1.0",
+    "rasterio>=1.3",
+    "h5py>=3.11",          # Black Marble HDF5 tiles (D12)
+    "exactextract>=0.2",
+    "statsmodels>=0.14",
+    "requests>=2.32",
+    "hijridate>=2.4",      # Ramadan-overlap regressor (spec A3 · deseason)
+    "boto3>=1.34",
+    "anthropic>=0.40",
+    "pillow>=10.4",        # ingest --preview renders
+]
+
+[tool.uv]
+package = false
