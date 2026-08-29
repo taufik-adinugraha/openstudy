@@ -90,7 +90,11 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
           <div class="toggle" role="group" aria-label="third axis">
             <button id="alt-net" class="on">DEPTH: NETWORK</button><button id="alt-pci">ALTITUDE: PCI</button>
           </div>
-          <input id="ps-search" type="search" placeholder="Search a product…" />
+          <div class="search-wrap">
+            <input id="ps-search" type="search" placeholder="Search a product — any language…" autocomplete="off" />
+            <div id="ps-results" hidden></div>
+            <span id="search-status" class="stamp dim"></span>
+          </div>
         </div>
       </div>
       <div class="ps-wrap">
@@ -108,7 +112,13 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
       ECI/PCI via Harvard Growth Lab’s <code>py-ecomplexity</code> at HS4, PCI sign normalized
       to Atlas convention (no year required flipping). Product space: maximum-spanning-tree
       backbone + proximity ≥ 0.55, seeded 3-D force layout computed once; the “altitude”
-      view replaces layout depth with PCI. <b>Caveats stated plainly:</b> goods only; the
+      view replaces layout depth with PCI. Product search is lexical over every HS6
+      description (prefix and one-edit fuzzy matching) plus semantic: each product’s
+      descriptions are embedded with a locally hosted multilingual-E5 model served by the
+      lab’s own embedding endpoint, so a query in Bahasa Indonesia finds English product
+      names — the same local-embedding capability that powers Pustaka. (A fully static
+      alternative would run the encoder in-browser with transformers.js, at the cost of a
+      30–100 MB first-visit download.) <b>Caveats stated plainly:</b> goods only; the
       log-supermodularity condition — Growth Lab’s structural-ranking check — holds for
       roughly a third of country-product pairs in early years, so ECI is a ranking, not a
       cardinal measure. <b>Gate G-B1:</b> Indonesia 2023 rank #71 of 158 here vs #69 of 133 in
@@ -320,8 +330,17 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
 
         return {
           setYear(yr) { lit = new Set(states[String(yr)] ?? []); paint(); },
-          setFilter(q) { filter = q ? new Set(space.nodes.filter((nd) => label(nd.id).toLowerCase().includes(q) || nd.id.startsWith(q)).map((nd) => nd.id)) : null; paint(); },
+          setFilter(ids) { filter = ids && ids.size ? ids : null; paint(); },
           setMode(m) { mode = m; layoutPositions(); },
+          focus(id) {
+            const i = indexOf.get(id); if (i == null) return;
+            const p = new THREE.Vector3(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
+            controls.autoRotate = false;
+            const dir = camera.position.clone().sub(controls.target).normalize();
+            controls.target.copy(p);
+            camera.position.copy(p.clone().add(dir.multiplyScalar(SPAN * 0.9)));
+            ring.visible = true; ring.position.copy(p); ring.scale.setScalar(rScale(order[i].trade) * 0.55 + 1.2);
+          },
           animate(ms) {
             if (reduced) { progress = 1; reveal(); return; }
             progress = 0; reveal();
@@ -340,7 +359,97 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
       hero.animate(4600);
       const explore = makeSpace(document.getElementById("ps-canvas"), { interactive: true });
       document.getElementById("ps-year").addEventListener("input", (e) => { explore.setYear(e.target.value); document.getElementById("ps-label").textContent = e.target.value; });
-      document.getElementById("ps-search").addEventListener("input", (e) => explore.setFilter(e.target.value.trim().toLowerCase()));
+      /* ---------- product search: lexical (all HS6 descriptions, prefix + fuzzy) first,
+         semantic (local multilingual-E5 via the lab's embedding service) layered on top.
+         Alternative for a fully static deploy: run the encoder in-browser with
+         transformers.js — same vectors, but a 30–100 MB model download on first visit. */
+      const EMBED_API = "http://localhost:8600/api/embed"; // TODO prod: /knowledge/api/embed
+      const [searchText, vectors] = await Promise.all([
+        load("search_text.json").catch(() => null), load("product_vectors.json").catch(() => null)]);
+      const tokenize = (s) => s.toLowerCase().normalize("NFKD").replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter((t) => t.length > 1);
+      const lex = space.nodes.map((nd) => {
+        const text = ((searchText?.[nd.id] ?? label(nd.id)) + " " + label(nd.id)).toLowerCase();
+        return { id: nd.id, text, tokens: new Set(tokenize(text)) };
+      });
+      const editDistance1 = (a, b) => { // Damerau-lite: one edit or one transposition
+        if (Math.abs(a.length - b.length) > 1) return false;
+        let i = 0, j = 0, edits = 0;
+        while (i < a.length && j < b.length) {
+          if (a[i] === b[j]) { i++; j++; continue; }
+          if (++edits > 1) return false;
+          if (a.length > b.length) i++; else if (b.length > a.length) j++;
+          else if (a[i + 1] === b[j] && a[i] === b[j + 1]) { i += 2; j += 2; } else { i++; j++; }
+        }
+        return edits + (a.length - i) + (b.length - j) <= 1;
+      };
+      function lexicalMatch(q) {
+        const qt = tokenize(q);
+        if (!qt.length) return [];
+        const hits = [];
+        for (const p of lex) {
+          let score = 0;
+          if (p.id.startsWith(q.replace(/\D/g, "")) && /^\d{2,4}$/.test(q)) score += 3;
+          for (const t of qt) {
+            if (p.tokens.has(t)) score += 2;
+            else if (t.length >= 3 && [...p.tokens].some((k) => k.startsWith(t))) score += 1.2;
+            else if (t.length >= 5 && [...p.tokens].some((k) => editDistance1(k, t))) score += 0.8;
+            else if (p.text.includes(t)) score += 0.6;
+            else { score = 0; break; } // every query token must match somehow
+          }
+          if (score > 0) hits.push({ id: p.id, score, how: "lexical" });
+        }
+        return hits.sort((a, b) => b.score - a.score);
+      }
+      let vecStore = null;
+      if (vectors) {
+        const raw = Uint8Array.from(atob(vectors.q), (c) => c.charCodeAt(0));
+        vecStore = { dims: vectors.dims, ids: vectors.ids, scale: vectors.scale, q: new Int8Array(raw.buffer) };
+      }
+      async function semanticMatch(q) {
+        if (!vecStore) return { hits: [], reason: "no vectors" };
+        const res = await fetch(EMBED_API, { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ texts: [q], kind: "query" }) }).then((r) => r.json());
+        const qv = res.vectors[0];
+        const { dims, ids, scale, q: qs } = vecStore;
+        const sims = ids.map((id, r) => {
+          let dot = 0; const off = r * dims, k = scale[r] / 127;
+          for (let d = 0; d < dims; d++) dot += qs[off + d] * qv[d];
+          return { id, sim: dot * k };
+        }).sort((a, b) => b.sim - a.sim);
+        const top = sims[0].sim;
+        return { hits: sims.slice(0, 40).filter((s) => s.sim >= top - 0.05).map((s) => ({ id: s.id, score: s.sim, how: "semantic" })) };
+      }
+      const resultsEl = document.getElementById("ps-results"), statusEl = document.getElementById("search-status");
+      let searchSeq = 0;
+      async function runSearch(q) {
+        q = q.trim();
+        if (!q) { explore.setFilter(null); resultsEl.hidden = true; statusEl.textContent = ""; return; }
+        const seq = ++searchSeq;
+        const lexHits = lexicalMatch(q.toLowerCase());
+        const show = (hits, note) => {
+          if (seq !== searchSeq) return;
+          const seen = new Set(); const merged = hits.filter((h) => !seen.has(h.id) && seen.add(h.id));
+          explore.setFilter(new Set(merged.map((h) => h.id)));
+          resultsEl.hidden = merged.length === 0;
+          resultsEl.innerHTML = merged.slice(0, 8).map((h) =>
+            `<button type="button" data-id="${h.id}"><span>${label(h.id)}</span><i>HS ${h.id} · ${h.how}</i></button>`).join("");
+          resultsEl.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => {
+            explore.focus(b.dataset.id); document.getElementById("ps-year").scrollIntoView({ block: "nearest" }); }));
+          statusEl.textContent = `${merged.length} MATCH${merged.length === 1 ? "" : "ES"} · ${note}`;
+        };
+        show(lexHits, vecStore ? "LEXICAL · SEMANTIC PENDING…" : "LEXICAL ONLY");
+        if (!vecStore) return;
+        try {
+          const sem = await semanticMatch(q);
+          show([...lexHits, ...sem.hits], "LEXICAL + SEMANTIC (MULTILINGUAL-E5, LOCAL)");
+        } catch {
+          show(lexHits, "LEXICAL ONLY — EMBEDDING SERVICE OFFLINE");
+        }
+      }
+      let debounce;
+      document.getElementById("ps-search").addEventListener("input", (e) => {
+        clearTimeout(debounce); debounce = setTimeout(() => runSearch(e.target.value), 220);
+      });
       const bNet = document.getElementById("alt-net"), bPci = document.getElementById("alt-pci");
       const setMode = (m) => { explore.setMode(m); bNet.classList.toggle("on", m === "net"); bPci.classList.toggle("on", m === "pci"); };
       bNet.onclick = () => setMode("net"); bPci.onclick = () => setMode("pci");
@@ -514,7 +623,14 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
       .toggle button:first-child { border-radius: 4px 0 0 4px; }
       .toggle button:last-child { border-radius: 0 4px 4px 0; border-left: 0; }
       .toggle button.on { background: var(--accent-ink); color: var(--accent); border-color: var(--accent); }
-      #ps-search { background: var(--surface); border: 1px solid var(--hairline); color: var(--ink); border-radius: 6px; padding: 8px 12px; font-family: var(--font-body); font-size: 0.85rem; }
+      .search-wrap { position: relative; display: flex; flex-direction: column; gap: 4px; }
+      #ps-search { width: 260px; background: var(--surface); border: 1px solid var(--hairline); color: var(--ink); border-radius: 6px; padding: 8px 12px; font-family: var(--font-body); font-size: 0.85rem; }
+      #ps-results { position: absolute; top: 40px; left: 0; z-index: 8; width: 320px; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 6px; overflow: hidden; }
+      #ps-results button { display: flex; justify-content: space-between; gap: 10px; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--hairline); color: var(--ink); padding: 8px 12px; font-family: var(--font-body); font-size: 0.8rem; cursor: pointer; }
+      #ps-results button:last-child { border-bottom: 0; }
+      #ps-results button:hover { background: var(--accent-ink); }
+      #ps-results button i { font-family: var(--font-data); font-style: normal; font-size: 0.62rem; color: var(--ink-muted); white-space: nowrap; letter-spacing: 0.04em; }
+      #search-status { min-height: 1em; }
       #ps-search:focus-visible, .toggle button:focus-visible { outline: 2px solid var(--accent); }
       .ps-wrap { position: relative; height: 80vh; }
       #ps-canvas { width: 100%; height: 100%; display: block; cursor: grab; }

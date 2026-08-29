@@ -37,8 +37,40 @@ CHAPTER_NAMES = {
 }
 
 
+EMBED_API = "http://localhost:8600/api/embed"   # the lab's own embedding service (Pustaka API)
+
+
 def _con():
     return duckdb.connect(str(config.DB), read_only=True)
+
+
+def export_vectors(search_text: dict) -> None:
+    """Semantic product search: embed every HS4's descriptions with the lab's
+    local multilingual-E5 service and ship int8-quantized vectors (~0.6 MB).
+    Skipped with a warning if the service is down — the UI falls back to
+    lexical search."""
+    import base64
+    import numpy as np
+    import requests
+
+    ids = sorted(search_text)
+    try:
+        resp = requests.post(EMBED_API, json={"texts": [search_text[i] for i in ids],
+                                              "kind": "passage"}, timeout=600)
+        resp.raise_for_status()
+        payload = resp.json()
+    except Exception as err:  # noqa: BLE001 — degrade gracefully
+        print(f"[extracts] WARNING embedding service unavailable ({err}); "
+              "product_vectors.json not written — search stays lexical")
+        return
+    vecs = np.asarray(payload["vectors"], dtype=np.float32)
+    scale = np.abs(vecs).max(axis=1, keepdims=True) + 1e-9
+    q = np.clip(np.round(vecs / scale * 127), -127, 127).astype(np.int8)
+    (OUT / "product_vectors.json").write_text(json.dumps({
+        "model": payload["model"], "dims": payload["dims"], "ids": ids,
+        "scale": [round(float(s), 6) for s in scale[:, 0]],
+        "q": base64.b64encode(q.tobytes()).decode()}))
+    print(f"[extracts] product_vectors.json: {len(ids)} × {payload['dims']} int8 ({payload['model']})")
 
 
 def export_views() -> None:
@@ -91,14 +123,19 @@ def export_views() -> None:
     if config.LAYOUT_JSON.exists():
         (OUT / "product_space.json").write_text(config.LAYOUT_JSON.read_text())
 
-    # --- HS4 labels (first HS6 description under each HS4, trimmed) ---
+    # --- HS4 labels (first HS6 description, trimmed) + full search text ---
     prod = con.execute("SELECT * FROM products").df()
     code_col = next(c for c in prod.columns if "code" in c.lower())
     desc_col = next(c for c in prod.columns if "desc" in c.lower())
     names: dict = {}
+    full: dict[str, list[str]] = {}
     for code, desc in zip(prod[code_col].astype(str).str.zfill(6), prod[desc_col]):
         names.setdefault(code[:4], str(desc).split(";")[0].split(":")[0][:60])
+        full.setdefault(code[:4], []).append(str(desc))
+    search_text = {h: " | ".join(dict.fromkeys(d))[:700] for h, d in full.items()}
     (OUT / "names.json").write_text(json.dumps(names))
+    (OUT / "search_text.json").write_text(json.dumps(search_text))
+    export_vectors(search_text)
 
     # --- adjacency: IDN's nearest unoccupied products, latest year ---
     latest_c = con.execute("SELECT max(t) FROM complexity").fetchone()[0]
