@@ -382,19 +382,44 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
         }
         return edits + (a.length - i) + (b.length - j) <= 1;
       };
+      // Bahasa ↔ English trade glossary: deterministic hits for the common terms,
+      // independent of embedding quality. Expand each query token with its synonyms.
+      const GLOSSARY = {
+        sawit: ["palm"], "kelapa sawit": ["palm"], minyak: ["oil", "oils"], mobil: ["motor", "vehicles", "cars"],
+        kendaraan: ["vehicles"], kopi: ["coffee"], nikel: ["nickel"], bijih: ["ores", "ore"], batubara: ["coal"],
+        batu: ["stone"], karet: ["rubber"], kayu: ["wood"], kertas: ["paper"], pakaian: ["apparel", "garments", "clothing"],
+        baju: ["apparel", "garments"], sepatu: ["footwear", "shoes"], tekstil: ["textile", "textiles"], ikan: ["fish"],
+        udang: ["shrimps", "prawns"], tembaga: ["copper"], emas: ["gold"], timah: ["tin"], baja: ["steel"], besi: ["iron"],
+        pupuk: ["fertilisers", "fertilizers"], gas: ["gas"], alam: ["natural"], kakao: ["cocoa"], coklat: ["chocolate", "cocoa"],
+        teh: ["tea"], gula: ["sugar"], beras: ["rice"], padi: ["rice"], jagung: ["maize", "corn"], kedelai: ["soya"],
+        obat: ["medicaments", "pharmaceutical"], mesin: ["machinery", "machines"], listrik: ["electric", "electrical"],
+        elektronik: ["electronic"], komputer: ["computers", "data processing"], ponsel: ["telephones"], kapal: ["ships", "vessels"],
+        pesawat: ["aircraft"], semen: ["cement"], plastik: ["plastics"], kaca: ["glass"], kulit: ["leather", "hides"],
+        perhiasan: ["jewellery"], furnitur: ["furniture"], mebel: ["furniture"], rokok: ["cigarettes", "tobacco"], tembakau: ["tobacco"],
+        aluminium: ["aluminium"], alumunium: ["aluminium"], kimia: ["chemical", "chemicals"], cat: ["paints"], ban: ["tyres"],
+      };
+      const expand = (tokens) => tokens.flatMap((t) => [t, ...(GLOSSARY[t] ?? [])]);
       function lexicalMatch(q) {
-        const qt = tokenize(q);
-        if (!qt.length) return [];
+        const raw = tokenize(q);
+        if (!raw.length) return [];
+        // a query token matches if it OR any of its glossary synonyms match
+        const groups = raw.map((t) => expand([t]));
         const hits = [];
         for (const p of lex) {
           let score = 0;
           if (p.id.startsWith(q.replace(/\D/g, "")) && /^\d{2,4}$/.test(q)) score += 3;
-          for (const t of qt) {
-            if (p.tokens.has(t)) score += 2;
-            else if (t.length >= 3 && [...p.tokens].some((k) => k.startsWith(t))) score += 1.2;
-            else if (t.length >= 5 && [...p.tokens].some((k) => editDistance1(k, t))) score += 0.8;
-            else if (p.text.includes(t)) score += 0.6;
-            else { score = 0; break; } // every query token must match somehow
+          for (const g of groups) {
+            let best = 0;
+            for (const t of g) {
+              let s = 0;
+              if (p.tokens.has(t)) s = 2;
+              else if (t.length >= 3 && [...p.tokens].some((k) => k.startsWith(t))) s = 1.2;
+              else if (t.length >= 5 && [...p.tokens].some((k) => editDistance1(k, t))) s = 0.8;
+              else if (p.text.includes(t)) s = 0.6;
+              if (s > best) best = s;
+            }
+            if (!best) { score = 0; break; } // every query token (or a synonym) must match
+            score += best;
           }
           if (score > 0) hits.push({ id: p.id, score, how: "lexical" });
         }
