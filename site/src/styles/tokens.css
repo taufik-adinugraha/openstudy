@@ -67,6 +67,35 @@
   --structure: #AEB6C2;       /* nickel silver — world structure, edges */
 }
 
+/* ── Phase 2: Jakarta Is Sinking — abyssal blue → cyan (water and depth) ── */
+[data-case="sinking"] {
+  --ground: #070D16;
+  --surface: #0E1926;
+  --surface-raised: #142236;
+  --ink: #E4EBF2;
+  --ink-muted: #8CA0B5;
+  --hairline: #1E2E44;
+  --accent: #35C6E0;          /* cyan — subsidence signal */
+  --accent-ink: #062A33;
+  /* bathymetric ramp: stable → sinking fast */
+  --ramp-0: #0A1F3A; --ramp-1: #144E7A; --ramp-2: #1F8FB5;
+  --ramp-3: #35C6E0; --ramp-4: #D8F6FC;
+  --danger: #F26D5B;          /* flood-exposure emphasis */
+}
+
+/* ── Platform: knowledge assistant — jade on deep evergreen ─────────── */
+[data-case="knowledge"] {
+  --ground: #0C1210;
+  --surface: #131C18;
+  --surface-raised: #1A2620;
+  --ink: #E7EAE4;
+  --ink-muted: #93A198;
+  --hairline: #24312A;
+  --accent: #46C08B;          /* jade — the assistant's voice + citations */
+  --accent-ink: #0A2A1D;
+  --quote: #F1EDDF;           /* paper — verbatim quotes read as paper */
+}
+
 /* ── Light fallback (accessibility/print) ───────────────────────────── */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {

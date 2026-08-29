@@ -88,10 +88,26 @@ const DEMOS = {
         </div>
       </div>
 
+      <div class="case building" data-case="sinking">
+        <div class="case-visual sinking-visual" aria-hidden="true">
+          <div class="depth-bars">
+            <i style="height:18%"></i><i style="height:26%"></i><i style="height:34%"></i><i style="height:48%"></i>
+            <i style="height:62%"></i><i style="height:74%"></i><i style="height:88%"></i>
+          </div>
+        </div>
+        <div class="case-body">
+          <span class="badge">IN BUILD — PHASE 2</span>
+          <h2>Jakarta Is Sinking</h2>
+          <p>Sentinel-1 radar interferometry measures the ground under Jakarta
+          dropping by centimetres a year. Fused with elevation and population, it
+          becomes a flood-exposure map by kelurahan — and a clock.</p>
+          <span class="meta">INSAR · SENTINEL-1 · EXPOSURE MODELLING</span>
+        </div>
+      </div>
+
       <div class="coming">
         <span class="stamp">PHASE 2 — IN THE PIPELINE</span>
         <ul>
-          <li><b>Jakarta Is Sinking</b> — InSAR subsidence + flood exposure</li>
           <li><b>Air Quality Nowcast</b> — Jabodetabek PM2.5, sensor fusion</li>
           <li><b>Global Narrative</b> — Indonesia in the world’s news, via GDELT</li>
         </ul>
@@ -192,6 +208,9 @@ const DEMOS = {
       .ps-dot { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--structure, #AEB6C2); opacity: 0.5; }
       .ps-dot.lit { background: var(--accent); opacity: 1; box-shadow: 0 0 12px var(--accent); }
       .building { opacity: 0.9; }
+      .sinking-visual { display: flex; align-items: flex-end; justify-content: center; padding: 28px; }
+      .depth-bars { display: flex; align-items: flex-end; gap: 10px; height: 160px; }
+      .depth-bars i { display: block; width: 22px; border-radius: 4px 4px 0 0; background: linear-gradient(to top, var(--ramp-3, #35C6E0), var(--ramp-0, #0A1F3A)); opacity: 0.85; box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 35%, transparent); }
 
       .platform { padding-top: 4vh; }
       .section-head { display: flex; flex-direction: column; gap: 8px; }
