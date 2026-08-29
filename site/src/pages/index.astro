@@ -6,6 +6,7 @@ import "../styles/tokens.css";
 
 const DEMOS = {
   nightlights: "http://localhost:4322/nightlights", // TODO prod: /nightlights
+  knowledge: "http://localhost:4324/knowledge",     // TODO prod: /knowledge
 };
 ---
 <html lang="en" data-theme="dark">
@@ -71,6 +72,33 @@ const DEMOS = {
       </div>
     </section>
 
+    <section class="cases platform">
+      <div class="section-head">
+        <span class="stamp">PLATFORM — WHAT WE BUILD FOR YOU</span>
+        <p class="section-sub">The cases above show what we can find in data.
+        This shows what we can build around yours.</p>
+      </div>
+
+      <a class="case live" data-case="knowledge" href={DEMOS.knowledge}>
+        <div class="case-visual pustaka-visual" aria-hidden="true">
+          <div class="chat-mock">
+            <span class="mock-q">Berapa batas waktu notifikasi kebocoran data?</span>
+            <span class="mock-a">3×24 jam sejak diketahui <i class="mock-cite">1</i><i class="mock-cite">2</i></span>
+            <span class="mock-src">✓ UU 27/2022 · Pasal 46 · verified verbatim</span>
+          </div>
+        </div>
+        <div class="case-body">
+          <span class="badge">LIVE DEMO</span>
+          <h2>Pustaka — Knowledge Assistant</h2>
+          <p>Upload your organization’s documents; ask in Bahasa Indonesia or
+          English; every answer cites the exact pasal, page, and verbatim quote —
+          verified against the source, never invented. Runs on your
+          infrastructure; only the final question leaves it.</p>
+          <span class="meta">RAG · VERIFIED CITATIONS · LOCAL EMBEDDINGS · UU PDP–AWARE</span>
+        </div>
+      </a>
+    </section>
+
     <footer id="contact" class="foot">
       <h2>Built end-to-end, in the open.</h2>
       <p>Acquisition → pipelines → models → validation → dashboards. If your
@@ -115,6 +143,16 @@ const DEMOS = {
       .ps-dot.lit { background: var(--accent); opacity: 1; box-shadow: 0 0 12px var(--accent); }
       .building { opacity: 0.9; }
 
+      .platform { padding-top: 4vh; }
+      .section-head { display: flex; flex-direction: column; gap: 8px; }
+      .section-sub { margin: 0; color: var(--ink-muted); max-width: 34rem; }
+      .pustaka-visual { display: flex; align-items: center; justify-content: center; padding: 24px; }
+      .chat-mock { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 340px; }
+      .chat-mock span { border: 1px solid var(--hairline); border-radius: 10px; padding: 10px 14px; font-size: 0.8rem; line-height: 1.5; }
+      .mock-q { align-self: flex-end; background: var(--accent-ink); color: var(--ink); }
+      .mock-a { align-self: flex-start; background: var(--surface-raised); color: var(--ink); }
+      .mock-src { align-self: flex-start; border: 0 !important; font-family: var(--font-data); font-size: 0.62rem !important; color: var(--accent); letter-spacing: 0.06em; }
+      .mock-cite { display: inline-flex; min-width: 15px; height: 15px; align-items: center; justify-content: center; border: 1px solid var(--accent); border-radius: 3px; color: var(--accent); font-size: 0.6rem; font-style: normal; margin-left: 4px; }
       .coming { border: 1px dashed var(--hairline); border-radius: 8px; padding: 24px 28px; display: flex; flex-direction: column; gap: 12px; }
       .coming ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; color: var(--ink-muted); font-size: 0.92rem; }
 
