@@ -1,0 +1,138 @@
+/* Demo Lab design tokens — dark-first (decision D9).
+ *
+ * :root           = lab chrome, dark (the designed-for experience)
+ * [data-case=…]   = per-case tonal identity, derived from the case's subject
+ * light theme     = accessibility/print fallback via media query + [data-theme]
+ *
+ * Rule: components style through tokens only. Semantic colors (up/down/alert)
+ * are separate from the accent and never reuse it.
+ */
+
+:root {
+  /* lab chrome — graphite + spectral cyan (the neutral observatory) */
+  --ground: #101318;
+  --surface: #171B22;
+  --surface-raised: #1E242E;
+  --ink: #E8EAED;
+  --ink-muted: #9AA3AF;
+  --hairline: #262D38;
+  --accent: #5BC8DB;          /* spectral cyan — lab identity only */
+  --accent-ink: #0E2A30;
+
+  /* provenance + semantics (site-wide constants) */
+  --official: #4BB8A9;        /* official-statistics series, teal, everywhere */
+  --up: #E0A63F;
+  --down: #6B7CA6;
+  --alert: #E08B54;
+
+  /* type */
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Public Sans", -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* rhythm */
+  --space-1: 4px; --space-2: 8px; --space-3: 16px;
+  --space-4: 24px; --space-5: 40px; --space-6: 64px;
+  --radius: 6px;
+  --content-width: 72rem;
+  --prose-width: 68ch;
+}
+
+/* ── Flagship A: city lights from orbit ─────────────────────────────── */
+[data-case="nightlights"] {
+  --ground: #0A0E1A;          /* midnight indigo */
+  --surface: #131A2E;
+  --surface-raised: #1A2340;
+  --ink: #E9E4D6;             /* starlight */
+  --ink-muted: #9C9A8D;
+  --hairline: #232B44;
+  --accent: #E8A33D;          /* sodium amber — lights-derived data only */
+  --accent-ink: #2E1F06;
+  /* radiance ramp = the imagery's own ramp */
+  --ramp-0: #05070F; --ramp-1: #1B2447; --ramp-2: #7A5A22;
+  --ramp-3: #E8A33D; --ramp-4: #FFEFC9;
+}
+
+/* ── Flagship B: smelter metal ──────────────────────────────────────── */
+[data-case="trade"] {
+  --ground: #0C0F14;          /* carbon ink */
+  --surface: #161C25;
+  --surface-raised: #1D2530;
+  --ink: #E6E8EC;
+  --ink-muted: #99A2AE;
+  --hairline: #242B36;
+  --accent: #D9722C;          /* molten copper — Indonesia */
+  --accent-ink: #2E1607;
+  --peer: #58A89B;            /* verdigris — peer countries */
+  --structure: #AEB6C2;       /* nickel silver — world structure, edges */
+}
+
+/* ── Platform: knowledge assistant — jade on deep evergreen ─────────── */
+[data-case="knowledge"] {
+  --ground: #0C1210;
+  --surface: #131C18;
+  --surface-raised: #1A2620;
+  --ink: #E7EAE4;
+  --ink-muted: #93A198;
+  --hairline: #24312A;
+  --accent: #46C08B;          /* jade — the assistant's voice + citations */
+  --accent-ink: #0A2A1D;
+  --quote: #F1EDDF;           /* paper — verbatim quotes read as paper */
+}
+
+/* ── Light fallback (accessibility/print) ───────────────────────────── */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --ground: #FAF9F5;
+    --surface: #F1EFE8;
+    --surface-raised: #FFFFFF;
+    --ink: #1C232E;
+    --ink-muted: #5B6473;
+    --hairline: #E3E0D7;
+    --accent: #147A8C;
+    --accent-ink: #E4F2F5;
+    --official: #177368;
+    --up: #8A6215;
+    --down: #55688F;
+    --alert: #A6521F;
+  }
+  /* The dark-guard must test the ROOT's theme, not the case-scoped element —
+     a dark page embedding case-scoped tiles stays dark throughout. */
+  :root[data-case="nightlights"]:not([data-theme="dark"]),
+  :root:not([data-theme="dark"]) [data-case="nightlights"] {
+    --ground: #FAF8F2; --surface: #F1EDE1; --surface-raised: #FFFFFF;
+    --ink: #201E16; --ink-muted: #6A675A; --hairline: #E2DDCD;
+    --accent: #8A5F12; --accent-ink: #F5E9CE;
+  }
+  :root[data-case="trade"]:not([data-theme="dark"]),
+  :root:not([data-theme="dark"]) [data-case="trade"] {
+    --ground: #F8F8F6; --surface: #EEEFEC; --surface-raised: #FFFFFF;
+    --ink: #191E25; --ink-muted: #5D6673; --hairline: #DFE1DC;
+    --accent: #A3541B; --accent-ink: #F6E5D6;
+    --peer: #2E7A6E; --structure: #6C7686;
+  }
+}
+:root[data-theme="light"] {
+  --ground: #FAF9F5; --surface: #F1EFE8; --surface-raised: #FFFFFF;
+  --ink: #1C232E; --ink-muted: #5B6473; --hairline: #E3E0D7;
+  --accent: #147A8C; --accent-ink: #E4F2F5;
+  --official: #177368; --up: #8A6215; --down: #55688F; --alert: #A6521F;
+}
+
+/* ── Base application ───────────────────────────────────────────────── */
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.6;
+}
+h1, h2, h3, h4 { font-family: var(--font-display); text-wrap: balance; }
+code, .data, .stamp { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

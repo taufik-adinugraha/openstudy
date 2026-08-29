@@ -1,29 +1,351 @@
 ---
-// Flagship B — page anatomy per spec §B5:
-// hero (constellation assembles) -> 4 chapters -> explore -> brief + methodology.
-import "../../../../../shared/design/tokens.css";
+// Flagship B — page anatomy per spec §B5: constellation hero → 4 chapters →
+// explore → methodology. Identity: smelter metal (spec §B6).
+import "../styles/tokens.css";
+const summary = (await import("../data/summary.json").catch(() => null))?.default ?? {
+  latestYear: 2024, totalExports: 0, idnRank: {}, nCountries: 0, peers: [] };
+const latest = summary.latestYear;
+const rankNow = summary.idnRank?.[String(latest)] ?? "—";
+const rankThen = summary.idnRank?.[String(latest - 10)] ?? "—";
+const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) : null;
 ---
-<html lang="en" data-case="trade">
+<html lang="en" data-case="trade" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Indonesia in the Global Trade Network</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
   </head>
   <body>
-    <main>
-      <!-- TODO week 5, in spec order:
-        <Hero />        product space assembles by sector; Indonesia ignites in copper
-        <Chapter1 />    morphing treemap 1995->2024
-        <Chapter2 />    nickel gambit: ore collapse vs processed surge; smelter map
-                        (cross-link: nightlights case, Morowali)
-        <Chapter3 />    complexity paradox: ECI trajectory vs peers (verdigris)
-        <Chapter4 />    adjacency: density x PCI scatter
-        <Explore />     full product space, year slider, country switch, URL state
-        <Brief />       "generated · reviewed" label + timestamp
-        <Methodology /> formulas, goods-only scope, gates, BACI/Comtrade/BPS attribution
-      -->
-      <h1>Indonesia in the Global Trade Network</h1>
-      <p class="stamp">skeleton — build slot weeks 4–5</p>
-    </main>
+    <header class="stamp-bar">
+      <span class="stamp">INDONESIA IN THE GLOBAL TRADE NETWORK</span>
+      <span class="stamp dim">BACI 202601 · TRADE DATA THROUGH {latest} · GOODS ONLY</span>
+    </header>
+
+    <section class="hero">
+      <canvas id="hero-canvas"></canvas>
+      <div class="hero-copy">
+        <h1>Every product the world trades — and where Indonesia stands among them.</h1>
+        <p>{summary.nCountries ? `${summary.nCountries} economies` : "The world"}, ~1,200 products, thirty years of
+        bilateral trade, distilled into one map. Copper marks what Indonesia exports
+        competitively.</p>
+        <span class="stamp dim" id="hero-status">ASSEMBLING THE PRODUCT SPACE…</span>
+      </div>
+    </section>
+
+    <section class="chapter">
+      <span class="eyebrow">01 · The basket</span>
+      <h2>What Indonesia sells the world</h2>
+      <p>Export shares by product chapter. Scrub the years: watch oil, gas, and wood give
+      way to palm and coal — then the nickel complex bloom.</p>
+      <div class="scrub"><span class="stamp dim">YEAR</span>
+        <input type="range" id="tm-year" min="1995" max={latest} value={latest} />
+        <span class="stamp" id="tm-label">{latest}</span></div>
+      <div id="treemap" class="chart tall"></div>
+    </section>
+
+    <section class="chapter">
+      <span class="eyebrow">02 · The gambit</span>
+      <h2>The nickel gambit</h2>
+      <p>Indonesia banned raw nickel-ore exports in 2014, relaxed the ban, then closed it
+      for good in 2020. Ore exports collapsed; processed nickel — ferroalloys, mattes,
+      stainless — surged. That part of the story is true, and here it is in the data.</p>
+      <div id="nickel" class="chart"></div>
+      <p class="footnote">Values in current US$; HS92 codes 2604 (ore) vs 7202, 7501–7503,
+      7218–7220 (processed). Source: BACI.</p>
+    </section>
+
+    <section class="chapter">
+      <span class="eyebrow">03 · The paradox</span>
+      <h2>More value, fewer places</h2>
+      <p class="big-stat">Indonesia ranks <b class="copper">#{rankNow}</b> in economic complexity
+      in {latest} — versus <b class="copper">#{rankThen}</b> a decade earlier.</p>
+      <p>Complexity rewards diversity and sophistication of the export basket. Downstreaming
+      added value, but concentrated the basket — while peers diversified. Both lines are
+      computed here from the same billion-row corpus; the methodology footer shows the
+      independent check against Harvard’s Atlas.</p>
+      <div id="trajectory" class="chart"></div>
+    </section>
+
+    <section class="chapter">
+      <span class="eyebrow">04 · What’s adjacent</span>
+      <h2>The nearest steps not yet taken</h2>
+      <p>Products Indonesia does not yet export competitively, placed by how close they sit
+      to what it already makes (density) and how sophisticated they are (PCI). The
+      upper-right corner is the strategic frontier.</p>
+      <div id="adjacency" class="chart"></div>
+    </section>
+
+    <section class="explore">
+      <div class="explore-head">
+        <div><span class="eyebrow">05 · Explore</span><h2>The product space</h2></div>
+        <div class="controls">
+          <label class="stamp dim">YEAR <input type="range" id="ps-year" min="1995" max={latest} value={latest} /> <span id="ps-label" class="stamp">{latest}</span></label>
+          <input id="ps-search" type="search" placeholder="Search a product…" />
+        </div>
+      </div>
+      <div class="ps-wrap">
+        <canvas id="ps-canvas"></canvas>
+        <div id="ps-tip" hidden></div>
+        <div class="legend stamp dim">● COPPER — INDONESIA EXPORTS WITH COMPARATIVE ADVANTAGE (RCA ≥ 1) &nbsp; ● SILVER — WORLD STRUCTURE</div>
+      </div>
+    </section>
+
+    <footer class="method">
+      <span class="eyebrow">Methodology &amp; sources</span>
+      <p>Flows: CEPII BACI release 202601 (HS92, 1995–{latest}, Etalab 2.0 licence), ~330M
+      rows in DuckDB. Sample: economies with total trade ≥ US$1B per year. Complexity: Balassa
+      RCA → M matrix (RCA ≥ 1) → ECI/PCI via Harvard Growth Lab’s <code>py-ecomplexity</code>
+      at HS4, with PCI sign normalized to Atlas convention (no year required flipping).
+      Product space: maximum-spanning-tree backbone + proximity ≥ 0.55, seeded force layout,
+      computed once. <b>Caveats stated plainly:</b> goods only (no services); the
+      log-supermodularity condition — Growth Lab’s structural-ranking check — holds for
+      roughly a third of country-product pairs in early years, so ECI is a ranking, not a
+      cardinal measure; the population filter of the Atlas is approximated by the trade
+      floor. Gate G-B1 (agreement with Harvard’s Atlas ranking) is reported here when run.</p>
+      <span class="stamp dim">A DEMO-LAB CASE · ANNUAL REBUILD · {exportsB ? `IDN GOODS EXPORTS ${latest}: US$${exportsB}B` : ""}</span>
+    </footer>
+
+    <script>
+      import * as d3 from "d3";
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const COPPER = "#D9722C", SILVER = "#AEB6C2", VERDIGRIS = "#58A89B", INK = "#0C0F14";
+      const SECTORS = [ // [maxHS2, label, color] — desaturated for the dark ground
+        [5, "Animal", "#8C7A6B"], [15, "Vegetable & fats", "#7E9A6C"], [24, "Foodstuffs", "#A48E5A"],
+        [27, "Minerals & fuels", "#6E7887"], [38, "Chemicals", "#7D6F9C"], [40, "Plastics & rubber", "#6C8FA1"],
+        [43, "Hides", "#8D7355"], [49, "Wood & paper", "#7C8A61"], [63, "Textiles", "#9A6F86"],
+        [67, "Footwear", "#8F7D9A"], [71, "Stone, glass, gems", "#6F97A6"], [83, "Metals", "#9AA3AF"],
+        [85, "Machinery & electrical", "#5D8FBF"], [89, "Transport", "#5FA8B5"], [99, "Instruments & misc", "#B0A46B"],
+      ];
+      const sectorOf = (hs2) => SECTORS.find(([max]) => +hs2 <= max);
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const load = (f) => fetch(`${base}/data/${f}`).then((r) => { if (!r.ok) throw f; return r.json(); });
+
+      let space, names, states, treemap, traj, nickel, adjacency;
+      try {
+        [space, names, states, treemap, traj, nickel, adjacency] = await Promise.all(
+          ["product_space.json", "names.json", "space_states.json", "treemap.json",
+           "trajectory.json", "nickel.json", "adjacency.json"].map(load));
+      } catch (missing) {
+        document.getElementById("hero-status").textContent =
+          `PIPELINE STILL RUNNING — ${missing} not yet exported. Refresh in a few minutes.`;
+        throw missing;
+      }
+      const latest = String(space.year);
+      const label = (id) => names[id] ?? `HS ${id}`;
+
+      /* ---------- product space renderer (shared by hero + explore) ---------- */
+      function makeSpace(canvas, { interactive }) {
+        const ctx = canvas.getContext("2d");
+        const dpr = devicePixelRatio || 1;
+        let W, H, x, y, lit = new Set(states[latest] ?? []), hover = null, progress = 1, filter = null;
+        const rScale = d3.scaleSqrt(d3.extent(space.nodes, (n) => n.trade), [1.6, 9]);
+        const idx = new Map(space.nodes.map((n) => [n.id, n]));
+        function size() {
+          W = canvas.clientWidth; H = canvas.clientHeight;
+          canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          const pad = 40;
+          x = d3.scaleLinear(d3.extent(space.nodes, (n) => n.x), [pad, W - pad]);
+          y = d3.scaleLinear(d3.extent(space.nodes, (n) => n.y), [pad, H - pad]);
+        }
+        const order = [...space.nodes].sort((a, b) => sectorOf(a.hs2)[1].localeCompare(sectorOf(b.hs2)[1]) || a.trade - b.trade);
+        function draw() {
+          ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
+          const shown = Math.floor(order.length * Math.min(progress, 1));
+          const visible = new Set(order.slice(0, shown).map((n) => n.id));
+          if (progress > 0.75) {
+            ctx.globalAlpha = Math.min((progress - 0.75) * 4, 1) * 0.28; ctx.strokeStyle = SILVER; ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            for (const [a, b] of space.edges) {
+              const na = idx.get(a), nb = idx.get(b);
+              if (na && nb && visible.has(a) && visible.has(b)) { ctx.moveTo(x(na.x), y(na.y)); ctx.lineTo(x(nb.x), y(nb.y)); }
+            }
+            ctx.stroke(); ctx.globalAlpha = 1;
+          }
+          for (const n of order.slice(0, shown)) {
+            const isLit = lit.has(n.id), dim = filter && !filter.has(n.id);
+            const r = rScale(n.trade);
+            ctx.beginPath(); ctx.arc(x(n.x), y(n.y), r, 0, Math.PI * 2);
+            ctx.fillStyle = isLit ? COPPER : sectorOf(n.hs2)[2];
+            ctx.globalAlpha = dim ? 0.12 : isLit ? 0.95 : 0.55;
+            ctx.fill();
+            if (isLit && progress >= 1 && !dim) { ctx.shadowColor = COPPER; ctx.shadowBlur = 10; ctx.fill(); ctx.shadowBlur = 0; }
+          }
+          ctx.globalAlpha = 1;
+          if (hover) {
+            const n = idx.get(hover);
+            ctx.beginPath(); ctx.arc(x(n.x), y(n.y), rScale(n.trade) + 4, 0, Math.PI * 2);
+            ctx.strokeStyle = "#E6E8EC"; ctx.lineWidth = 1.2; ctx.stroke();
+          }
+        }
+        size(); addEventListener("resize", () => { size(); draw(); });
+        let quad;
+        const rebuildQuad = () => { quad = d3.quadtree(space.nodes, (n) => x(n.x), (n) => y(n.y)); };
+        rebuildQuad();
+        if (interactive) {
+          const tip = document.getElementById("ps-tip");
+          canvas.addEventListener("mousemove", (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const n = quad.find(e.clientX - rect.left, e.clientY - rect.top, 14);
+            hover = n?.id ?? null; draw();
+            if (n) {
+              tip.hidden = false; tip.style.left = e.clientX - rect.left + 14 + "px"; tip.style.top = e.clientY - rect.top + 14 + "px";
+              tip.innerHTML = `<b>${label(n.id)}</b><br>HS ${n.id} · ${sectorOf(n.hs2)[1]}<br>PCI ${n.pci.toFixed(2)} · world trade $${d3.format(".3s")(n.trade * 1e3)}<br>${lit.has(n.id) ? "<span class='copper'>● Indonesia exports competitively</span>" : "<span class='dim'>○ not yet an Indonesian strength</span>"}`;
+            } else tip.hidden = true;
+          });
+          canvas.addEventListener("mouseleave", () => { hover = null; tip.hidden = true; draw(); });
+        }
+        return {
+          draw,
+          setYear(yr) { lit = new Set(states[String(yr)] ?? []); draw(); },
+          setFilter(q) { filter = q ? new Set(space.nodes.filter((n) => label(n.id).toLowerCase().includes(q) || n.id.startsWith(q)).map((n) => n.id)) : null; draw(); },
+          animate(ms) {
+            if (reduced) { progress = 1; draw(); return; }
+            const t0 = performance.now();
+            const step = (t) => { progress = Math.min((t - t0) / ms, 1); draw(); if (progress < 1) requestAnimationFrame(step); else document.getElementById("hero-status").textContent = `${space.nodes.length} PRODUCTS · ${space.edges.length} LINKS · ${lit.size} INDONESIAN STRENGTHS IN ${latest}`; };
+            requestAnimationFrame(step);
+          },
+        };
+      }
+      const hero = makeSpace(document.getElementById("hero-canvas"), { interactive: false });
+      hero.animate(4200);
+      const explore = makeSpace(document.getElementById("ps-canvas"), { interactive: true });
+      explore.draw();
+      document.getElementById("ps-year").addEventListener("input", (e) => { explore.setYear(e.target.value); document.getElementById("ps-label").textContent = e.target.value; });
+      document.getElementById("ps-search").addEventListener("input", (e) => explore.setFilter(e.target.value.trim().toLowerCase()));
+
+      /* ---------- chapter 1: treemap ---------- */
+      {
+        const el = document.getElementById("treemap");
+        const W = el.clientWidth, H = 380;
+        const svg = d3.select(el).append("svg").attr("width", W).attr("height", H);
+        const color = (hs2) => sectorOf(hs2)[2];
+        function render(year) {
+          const rows = (treemap[String(year)] ?? []).slice(0, 18);
+          const root = d3.hierarchy({ children: rows }).sum((d) => d.v);
+          d3.treemap().size([W, H]).paddingInner(2)(root);
+          const total = d3.sum(rows, (d) => d.v);
+          const g = svg.selectAll("g.cell").data(root.leaves(), (d) => d.data.hs2)
+            .join((enter) => { const g = enter.append("g").attr("class", "cell"); g.append("rect"); g.append("text").attr("class", "tm-name"); g.append("text").attr("class", "tm-pct"); return g; });
+          g.transition().duration(reduced ? 0 : 500).attr("transform", (d) => `translate(${d.x0},${d.y0})`);
+          g.select("rect").transition().duration(reduced ? 0 : 500).attr("width", (d) => d.x1 - d.x0).attr("height", (d) => d.y1 - d.y0)
+            .attr("fill", (d) => ["26", "72", "75"].includes(d.data.hs2) ? COPPER : color(d.data.hs2)).attr("opacity", 0.8);
+          g.select(".tm-name").attr("x", 6).attr("y", 16).text((d) => (d.x1 - d.x0 > 70 && d.y1 - d.y0 > 30) ? d.data.name : "");
+          g.select(".tm-pct").attr("x", 6).attr("y", 30).text((d) => (d.x1 - d.x0 > 70 && d.y1 - d.y0 > 44) ? d3.format(".0%")(d.data.v / total) : "");
+          g.select("title").remove(); g.append("title").text((d) => `${d.data.name} — $${d3.format(".3s")(d.data.v * 1e3)} (${d3.format(".1%")(d.data.v / total)})`);
+        }
+        render(latest);
+        document.getElementById("tm-year").addEventListener("input", (e) => { render(e.target.value); document.getElementById("tm-label").textContent = e.target.value; });
+      }
+
+      /* ---------- chapter 2: nickel ---------- */
+      {
+        const el = document.getElementById("nickel");
+        const W = el.clientWidth, H = 280, M = { t: 20, r: 20, b: 30, l: 60 };
+        const years = Object.keys(nickel.ore).map(Number).sort();
+        const series = (obj) => years.map((yr) => ({ yr, v: (obj[String(yr)] ?? 0) * 1e3 }));
+        const ore = series(nickel.ore), proc = series(nickel.processed);
+        const x = d3.scaleLinear(d3.extent(years), [M.l, W - M.r]);
+        const y = d3.scaleLinear([0, d3.max([...ore, ...proc], (d) => d.v) * 1.08], [H - M.b, M.t]);
+        const svg = d3.select(el).append("svg").attr("width", W).attr("height", H);
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(4).tickFormat((v) => "$" + d3.format("~s")(v)));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(d3.axisBottom(x).tickFormat(d3.format("d")));
+        for (const [yr, txt] of [[2014, "first ore ban"], [2020, "full ban"]]) {
+          svg.append("line").attr("x1", x(yr)).attr("x2", x(yr)).attr("y1", M.t).attr("y2", H - M.b).attr("stroke", "#3A4452").attr("stroke-dasharray", "3 4");
+          svg.append("text").attr("x", x(yr) + 5).attr("y", M.t + 10).attr("class", "annot").text(`${yr} · ${txt}`);
+        }
+        const line = d3.line().x((d) => x(d.yr)).y((d) => y(d.v)).curve(d3.curveMonotoneX);
+        svg.append("path").datum(ore).attr("d", line).attr("fill", "none").attr("stroke", SILVER).attr("stroke-width", 1.8);
+        svg.append("path").datum(proc).attr("d", line).attr("fill", "none").attr("stroke", COPPER).attr("stroke-width", 2.2);
+        svg.append("text").attr("x", W - M.r).attr("y", y(ore.at(-1).v) - 6).attr("text-anchor", "end").attr("class", "annot").attr("fill", SILVER).text("ore (HS 2604)");
+        svg.append("text").attr("x", W - M.r).attr("y", y(proc.at(-1).v) - 8).attr("text-anchor", "end").attr("class", "annot").attr("fill", COPPER).text("processed nickel & stainless");
+      }
+
+      /* ---------- chapter 3: trajectory ---------- */
+      {
+        const el = document.getElementById("trajectory");
+        const W = el.clientWidth, H = 300, M = { t: 16, r: 60, b: 30, l: 44 };
+        const years = Object.keys(traj.ranks.IDN).map(Number).sort();
+        const maxRank = d3.max(Object.values(traj.ranks).flatMap((r) => Object.values(r)));
+        const x = d3.scaleLinear(d3.extent(years), [M.l, W - M.r]);
+        const y = d3.scaleLinear([1, maxRank], [M.t, H - M.b]);
+        const svg = d3.select(el).append("svg").attr("width", W).attr("height", H);
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(5).tickFormat((v) => "#" + v));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(d3.axisBottom(x).tickFormat(d3.format("d")));
+        const line = d3.line().defined((d) => d.r != null).x((d) => x(d.yr)).y((d) => y(d.r)).curve(d3.curveMonotoneX);
+        for (const [iso, ranks] of Object.entries(traj.ranks)) {
+          const pts = years.map((yr) => ({ yr, r: ranks[String(yr)] ?? null }));
+          const isIdn = iso === "IDN";
+          svg.append("path").datum(pts).attr("d", line).attr("fill", "none")
+            .attr("stroke", isIdn ? COPPER : VERDIGRIS).attr("stroke-width", isIdn ? 2.6 : 1.2).attr("opacity", isIdn ? 1 : 0.7);
+          const last = pts.filter((d) => d.r != null).at(-1);
+          if (last) svg.append("text").attr("x", x(last.yr) + 6).attr("y", y(last.r) + 4).attr("class", "annot").attr("fill", isIdn ? COPPER : VERDIGRIS).text(`${iso} #${last.r}`);
+        }
+      }
+
+      /* ---------- chapter 4: adjacency ---------- */
+      {
+        const el = document.getElementById("adjacency");
+        const W = el.clientWidth, H = 320, M = { t: 16, r: 20, b: 34, l: 50 };
+        const x = d3.scaleLinear(d3.extent(adjacency, (d) => d.density), [M.l, W - M.r]).nice();
+        const y = d3.scaleLinear(d3.extent(adjacency, (d) => d.pci), [H - M.b, M.t]).nice();
+        const r = d3.scaleSqrt(d3.extent(adjacency, (d) => d.world), [2, 14]);
+        const svg = d3.select(el).append("svg").attr("width", W).attr("height", H);
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(5));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(d3.axisBottom(x).ticks(6));
+        svg.append("text").attr("x", W - M.r).attr("y", H - 6).attr("text-anchor", "end").attr("class", "annot").text("density → closer to Indonesia’s current strengths");
+        svg.append("text").attr("x", M.l + 4).attr("y", M.t + 10).attr("class", "annot").text("↑ PCI (product sophistication)");
+        svg.selectAll("circle").data(adjacency).join("circle")
+          .attr("cx", (d) => x(d.density)).attr("cy", (d) => y(d.pci)).attr("r", (d) => r(d.world))
+          .attr("fill", (d) => (d.density > d3.quantile(adjacency.map((a) => a.density), 0.8) && d.pci > 0) ? COPPER : SILVER)
+          .attr("opacity", 0.55).attr("stroke", INK).attr("stroke-width", 0.5)
+          .append("title").text((d) => `${label(d.hs4)} (HS ${d.hs4})\ndensity ${d.density.toFixed(2)} · PCI ${d.pci.toFixed(2)} · world $${d3.format(".3s")(d.world * 1e3)}`);
+      }
+    </script>
+
+    <style is:global>
+      html { scroll-behavior: smooth; }
+      body { margin: 0; }
+      .stamp { font-family: var(--font-data); font-size: 0.7rem; letter-spacing: 0.12em; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); }
+      .eyebrow { font-family: var(--font-data); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+      .copper { color: var(--accent); } .dim { color: var(--ink-muted); }
+      .stamp-bar { position: fixed; inset: 0 0 auto 0; z-index: 20; display: flex; justify-content: space-between; padding: 12px 20px; background: linear-gradient(color-mix(in srgb, var(--ground) 82%, transparent), transparent); pointer-events: none; }
+
+      .hero { position: relative; height: 100vh; background: var(--ground); }
+      #hero-canvas { width: 100%; height: 100%; display: block; }
+      .hero::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(78deg, rgba(12,15,20,0.9) 0%, rgba(12,15,20,0.55) 34%, transparent 60%); }
+      .hero-copy { position: absolute; left: 6vw; bottom: 12vh; max-width: 36rem; display: flex; flex-direction: column; gap: 14px; z-index: 2; }
+      .hero-copy h1 { font-size: clamp(1.8rem, 4.2vw, 3rem); margin: 0; line-height: 1.1; letter-spacing: -0.015em; }
+      .hero-copy p { margin: 0; color: var(--ink-muted); font-size: 1.05rem; max-width: 32rem; }
+
+      .chapter { max-width: 46rem; margin: 0 auto; padding: 14vh 24px 0; display: flex; flex-direction: column; gap: 18px; }
+      .chapter h2 { font-size: 1.7rem; margin: 0; }
+      .chapter p { margin: 0; line-height: 1.65; }
+      .big-stat { font-family: var(--font-display); font-size: clamp(1.2rem, 2.8vw, 1.7rem); line-height: 1.3; }
+      .footnote { font-size: 0.85rem; color: var(--ink-muted); }
+      .chart { width: 100%; } .chart.tall { min-height: 380px; }
+      .axis { font-family: var(--font-data); font-size: 10px; color: var(--ink-muted); }
+      .axis path, .axis line { stroke: var(--hairline); }
+      .annot { font-family: var(--font-data); font-size: 10px; fill: var(--ink-muted); letter-spacing: 0.04em; }
+      .tm-name { font-family: var(--font-body); font-size: 11px; fill: #0C0F14; font-weight: 600; }
+      .tm-pct { font-family: var(--font-data); font-size: 10px; fill: #0C0F14; }
+      .scrub { display: flex; align-items: center; gap: 12px; }
+      .scrub input, .controls input[type=range] { accent-color: var(--accent); width: 220px; }
+
+      .explore { margin-top: 14vh; }
+      .explore-head { max-width: 72rem; margin: 0 auto; padding: 0 24px 16px; display: flex; flex-wrap: wrap; gap: 12px 32px; align-items: end; justify-content: space-between; }
+      .explore-head h2 { margin: 6px 0 0; font-size: 1.7rem; }
+      .controls { display: flex; gap: 18px; align-items: center; }
+      #ps-search { background: var(--surface); border: 1px solid var(--hairline); color: var(--ink); border-radius: 6px; padding: 8px 12px; font-family: var(--font-body); font-size: 0.85rem; }
+      #ps-search:focus-visible { outline: 2px solid var(--accent); }
+      .ps-wrap { position: relative; height: 78vh; }
+      #ps-canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+      #ps-tip { position: absolute; z-index: 5; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px; font-family: var(--font-data); font-size: 0.72rem; line-height: 1.55; color: var(--ink); }
+      .legend { position: absolute; left: 24px; bottom: 16px; }
+
+      .method { max-width: 46rem; margin: 0 auto; padding: 12vh 24px; display: flex; flex-direction: column; gap: 14px; }
+      .method p { margin: 0; font-size: 0.9rem; line-height: 1.7; color: var(--ink-muted); }
+    </style>
   </body>
 </html>

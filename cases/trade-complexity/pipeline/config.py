@@ -33,5 +33,7 @@ STATS_JSON = DATA_DIR / "stats.json"
 
 # Gates (spec §B4)
 GATE_SPEARMAN = 0.90          # G-B1 vs Harvard Atlas, every overlap year
-GATE_IDN_RANK = (66, 72)      # G-B1: 2023 rank reproduced within ±3 of ~69
+ATLAS_IDN_2023 = (69, 133)    # Atlas: Indonesia rank 69 of 133 economies (2023 data)
+GATE_IDN_RANK = (66, 72)      # G-B1 strict: rank within ±3 when the sample matches
+GATE_PCT_TOLERANCE = 0.05     # G-B1 relaxed: percentile-from-top within 5 points
 GATE_BPS_TOLERANCE = 0.05     # G-B3

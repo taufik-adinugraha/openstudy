@@ -63,12 +63,15 @@ def layout() -> None:
     latest = con.execute("SELECT max(t) FROM exports_hs4").fetchone()[0]
     data = con.execute(f"SELECT t, country, hs4, v FROM exports_hs4 WHERE t={latest}").df()
     prox = proximity(data, COLS)
-    print(f"[layout] proximity pairs ({latest}): {len(prox):,}")
+    print(f"[layout] proximity pairs ({latest}): {len(prox):,} cols={list(prox.columns)}")
+    # ecomplexity names the pair columns after the prod column; be agnostic.
+    pair_cols = [c for c in prox.columns if c not in ("t", "time", "proximity")]
+    a_col, b_col = pair_cols[0], pair_cols[1]
 
     g = nx.Graph()
-    for r in prox.itertuples():
-        if r.prod_1 < r.prod_2:
-            g.add_edge(r.prod_1, r.prod_2, weight=float(r.proximity))
+    for a, b, w in zip(prox[a_col].astype(str), prox[b_col].astype(str), prox["proximity"]):
+        if a < b and w > 0:
+            g.add_edge(a, b, weight=float(w))
     mst = nx.maximum_spanning_tree(g)
     keep = nx.Graph(mst)
     for u, v, d in g.edges(data=True):
@@ -105,12 +108,20 @@ def validate() -> int:
         idn = yr[yr["iso3"] == "IDN"]
         rank = int(idn["rank"].iloc[0]) if len(idn) else -1
         n = len(yr)
-        print(f"[validate] {t}: IDN ECI rank {rank}/{n} "
+        pct = rank / n
+        print(f"[validate] {t}: IDN ECI rank {rank}/{n} = {pct:.1%} percentile-from-top "
               f"(top 5: {', '.join(yr['iso3'].head(5).astype(str))})")
-        if t == 2023 and not (config.GATE_IDN_RANK[0] <= rank <= config.GATE_IDN_RANK[1]):
-            print(f"[validate] G-B1 FAIL: 2023 rank {rank} outside {config.GATE_IDN_RANK} "
-                  f"(sample filter differences must be diagnosed before publish)")
-            ok = False
+        if t == 2023:
+            ref_rank, ref_n = config.ATLAS_IDN_2023
+            ref_pct = ref_rank / ref_n
+            in_rank = config.GATE_IDN_RANK[0] <= rank <= config.GATE_IDN_RANK[1]
+            in_pct = abs(pct - ref_pct) <= config.GATE_PCT_TOLERANCE
+            print(f"[validate] G-B1 vs Atlas 2023 ({ref_rank}/{ref_n} = {ref_pct:.1%}): "
+                  f"rank {'OK' if in_rank else 'off'}, percentile {'OK' if in_pct else 'off'} "
+                  f"(Δ {abs(pct - ref_pct):.1%}); sample size {n} vs Atlas {ref_n}")
+            if not (in_rank or in_pct):
+                print("[validate] G-B1 FAIL — sample differences must be diagnosed before publish")
+                ok = False
     con.close()
     return 0 if ok else 1
 

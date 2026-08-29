@@ -91,6 +91,28 @@ def export_views() -> None:
     if config.LAYOUT_JSON.exists():
         (OUT / "product_space.json").write_text(config.LAYOUT_JSON.read_text())
 
+    # --- HS4 labels (first HS6 description under each HS4, trimmed) ---
+    prod = con.execute("SELECT * FROM products").df()
+    code_col = next(c for c in prod.columns if "code" in c.lower())
+    desc_col = next(c for c in prod.columns if "desc" in c.lower())
+    names: dict = {}
+    for code, desc in zip(prod[code_col].astype(str).str.zfill(6), prod[desc_col]):
+        names.setdefault(code[:4], str(desc).split(";")[0].split(":")[0][:60])
+    (OUT / "names.json").write_text(json.dumps(names))
+
+    # --- adjacency: IDN's nearest unoccupied products, latest year ---
+    latest_c = con.execute("SELECT max(t) FROM complexity").fetchone()[0]
+    adj = con.execute(f"""
+        SELECT c.hs4, c.density, c.pci, w.v AS world
+        FROM complexity c
+        JOIN (SELECT hs4, sum(v) AS v FROM exports_hs4 WHERE t={latest_c} GROUP BY 1) w
+          ON w.hs4 = c.hs4
+        WHERE c.t={latest_c} AND c.country={IDN_CODE} AND c.mcp = 0
+        ORDER BY c.density DESC LIMIT 400""").fetchall()
+    (OUT / "adjacency.json").write_text(json.dumps(
+        [{"hs4": h, "density": round(float(d), 4), "pci": round(float(p), 3),
+          "world": round(float(w))} for h, d, p, w in adj]))
+
     # --- summary for build time ---
     latest = max(int(t) for t in treemap)
     total = sum(d["v"] for d in treemap[str(latest)])
