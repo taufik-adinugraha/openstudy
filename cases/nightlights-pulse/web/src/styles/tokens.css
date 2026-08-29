@@ -83,12 +83,16 @@
     --down: #55688F;
     --alert: #A6521F;
   }
-  [data-case="nightlights"]:not([data-theme="dark"]) {
+  /* The dark-guard must test the ROOT's theme, not the case-scoped element —
+     a dark page embedding case-scoped tiles stays dark throughout. */
+  :root[data-case="nightlights"]:not([data-theme="dark"]),
+  :root:not([data-theme="dark"]) [data-case="nightlights"] {
     --ground: #FAF8F2; --surface: #F1EDE1; --surface-raised: #FFFFFF;
     --ink: #201E16; --ink-muted: #6A675A; --hairline: #E2DDCD;
     --accent: #8A5F12; --accent-ink: #F5E9CE;
   }
-  [data-case="trade"]:not([data-theme="dark"]) {
+  :root[data-case="trade"]:not([data-theme="dark"]),
+  :root:not([data-theme="dark"]) [data-case="trade"] {
     --ground: #F8F8F6; --surface: #EEEFEC; --surface-raised: #FFFFFF;
     --ink: #191E25; --ink-muted: #5D6673; --hairline: #DFE1DC;
     --accent: #A3541B; --accent-ink: #F6E5D6;

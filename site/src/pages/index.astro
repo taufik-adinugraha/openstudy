@@ -1,25 +1,126 @@
 ---
-// Landing page skeleton — lab chrome tokens (graphite + spectral cyan).
-// Design contract: plan §3 — the landing stays neutral so case hues do the
-// talking; the portfolio IS the demos (lead with playable work, no copy walls).
-import "../../../shared/design/tokens.css";
+// Landing page — lab chrome (graphite + spectral cyan). Case tiles carry
+// their own data-case identity; the chrome stays neutral (plan §3).
+// TODO D8: replace "Demo Lab" with the final brand; CTA wording pending.
+import "../styles/tokens.css";
+
+const DEMOS = {
+  nightlights: "http://localhost:4322/nightlights", // TODO prod: /nightlights
+};
 ---
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Demo Lab</title><!-- TODO D8: final lab name -->
+    <title>Demo Lab</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
   </head>
   <body>
-    <main style="max-width: var(--content-width); margin: 0 auto; padding: var(--space-6) var(--space-4);">
-      <p class="stamp" style="color: var(--accent);">DEMO LAB — WORKING NAME (D8 OPEN)</p>
-      <h1>Advanced analytics, end to end, on data anyone can check.</h1>
-      <p style="color: var(--ink-muted); max-width: var(--prose-width);">
-        Case tiles go here — each links to an independently deployed demo.
-        Week-5 build slot; see build plan §6.
-      </p>
-      <!-- TODO week 5: case tile grid (nightlights, trade), each tile carrying
-           its own data-case token scope; CTA per D1/D8. -->
-    </main>
+
+    <header class="top">
+      <span class="wordmark">DEMO&nbsp;LAB</span>
+      <a class="cta" href="#contact">Discuss a pilot</a>
+    </header>
+
+    <section class="hero">
+      <p class="kicker">ADVANCED ANALYTICS · END TO END · PUBLIC DATA</p>
+      <h1>We turn open data into instruments.</h1>
+      <p class="sub">Satellites, trade ledgers, statistical registries — acquired,
+      engineered, modeled, and delivered as living dashboards. Every case below is
+      real, reproducible, and validated in the open. Play with them.</p>
+    </section>
+
+    <section class="cases">
+
+      <a class="case live" data-case="nightlights" href={DEMOS.nightlights}>
+        <img src="/tile-nightlights.jpg" alt="Java and Sumatra at night from orbit, amber city lights" loading="lazy" />
+        <div class="case-body">
+          <span class="badge">LIVE DEMO</span>
+          <h2>Nighttime-Lights Economic Pulse</h2>
+          <p>Monthly satellite radiance across 514 regencies — a pulse of Indonesia’s
+          economy, months ahead of official statistics. NASA Black Marble, refreshed
+          on a schedule, honest about its limits.</p>
+          <span class="meta">SATELLITE · ECONOMETRICS · MONTHLY CRON</span>
+        </div>
+      </a>
+
+      <div class="case building" data-case="trade">
+        <div class="case-visual trade-visual" aria-hidden="true">
+          <span class="ps-dot" style="left:18%;top:34%"></span><span class="ps-dot" style="left:30%;top:52%"></span>
+          <span class="ps-dot lit" style="left:44%;top:40%"></span><span class="ps-dot" style="left:56%;top:62%"></span>
+          <span class="ps-dot lit" style="left:66%;top:30%"></span><span class="ps-dot lit" style="left:78%;top:50%"></span>
+          <span class="ps-dot" style="left:24%;top:70%"></span><span class="ps-dot lit" style="left:52%;top:22%"></span>
+        </div>
+        <div class="case-body">
+          <span class="badge">IN BUILD — DATA LOADING</span>
+          <h2>Indonesia in the Global Trade Network</h2>
+          <p>A billion rows of bilateral trade distilled into the product space —
+          and the verified paradox of nickel downstreaming: processed exports
+          surged while economic complexity slipped.</p>
+          <span class="meta">1B+ ROWS · NETWORK SCIENCE · BACI/COMTRADE</span>
+        </div>
+      </div>
+
+      <div class="coming">
+        <span class="stamp">PHASE 2 — IN THE PIPELINE</span>
+        <ul>
+          <li><b>Jakarta Is Sinking</b> — InSAR subsidence + flood exposure</li>
+          <li><b>Air Quality Nowcast</b> — Jabodetabek PM2.5, sensor fusion</li>
+          <li><b>Global Narrative</b> — Indonesia in the world’s news, via GDELT</li>
+        </ul>
+      </div>
+    </section>
+
+    <footer id="contact" class="foot">
+      <h2>Built end-to-end, in the open.</h2>
+      <p>Acquisition → pipelines → models → validation → dashboards. If your
+      organization has a question that data like this can answer, we’ll scope a
+      pilot around it.</p>
+      <a class="cta big" href="mailto:hello@example.com">Discuss a pilot</a><!-- TODO D8: real address -->
+      <span class="stamp dim">DEMO LAB · JAKARTA · SOURCES CREDITED ON EVERY CASE</span>
+    </footer>
+
+    <style is:global>
+      body { margin: 0; }
+      .stamp { font-family: var(--font-data); font-size: 0.7rem; letter-spacing: 0.12em; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); }
+
+      .top { display: flex; justify-content: space-between; align-items: center; padding: 20px 5vw; }
+      .wordmark { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.22em; font-size: 0.95rem; }
+      .cta { font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.08em; color: var(--accent);
+        border: 1px solid var(--accent); border-radius: 4px; padding: 9px 16px; text-decoration: none; }
+      .cta:hover { background: var(--accent-ink); }
+      .cta.big { font-size: 0.9rem; padding: 13px 26px; }
+
+      .hero { max-width: 46rem; margin: 0 auto; padding: 14vh 24px 10vh; display: flex; flex-direction: column; gap: 20px; }
+      .kicker { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--accent); margin: 0; }
+      .hero h1 { font-size: clamp(2.2rem, 5.5vw, 3.6rem); margin: 0; line-height: 1.05; letter-spacing: -0.02em; }
+      .sub { margin: 0; font-size: 1.1rem; line-height: 1.65; color: var(--ink-muted); max-width: 38rem; }
+
+      .cases { max-width: 62rem; margin: 0 auto; padding: 0 24px 10vh; display: flex; flex-direction: column; gap: 28px; }
+      .case { display: grid; grid-template-columns: 1.1fr 1fr; border: 1px solid var(--hairline); border-radius: 8px;
+        overflow: hidden; background: var(--surface); text-decoration: none; color: var(--ink);
+        transition: border-color 0.25s ease, transform 0.25s ease; }
+      a.case:hover { border-color: var(--accent); transform: translateY(-2px); }
+      @media (max-width: 720px) { .case { grid-template-columns: 1fr; } }
+      .case img, .case-visual { width: 100%; height: 100%; min-height: 240px; object-fit: cover; display: block; background: var(--ground); }
+      .case-body { padding: 28px; display: flex; flex-direction: column; gap: 12px; }
+      .case-body h2 { margin: 0; font-size: 1.35rem; letter-spacing: -0.01em; }
+      .case-body p { margin: 0; color: var(--ink-muted); line-height: 1.6; font-size: 0.95rem; }
+      .badge { font-family: var(--font-data); font-size: 0.65rem; letter-spacing: 0.14em; color: var(--accent); }
+      .meta { font-family: var(--font-data); font-size: 0.65rem; letter-spacing: 0.1em; color: var(--ink-muted); margin-top: auto; }
+
+      .trade-visual { position: relative; }
+      .ps-dot { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--structure, #AEB6C2); opacity: 0.5; }
+      .ps-dot.lit { background: var(--accent); opacity: 1; box-shadow: 0 0 12px var(--accent); }
+      .building { opacity: 0.9; }
+
+      .coming { border: 1px dashed var(--hairline); border-radius: 8px; padding: 24px 28px; display: flex; flex-direction: column; gap: 12px; }
+      .coming ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; color: var(--ink-muted); font-size: 0.92rem; }
+
+      .foot { max-width: 46rem; margin: 0 auto; padding: 6vh 24px 12vh; display: flex; flex-direction: column; gap: 18px; align-items: flex-start; }
+      .foot h2 { margin: 0; font-size: 1.6rem; }
+      .foot p { margin: 0; color: var(--ink-muted); line-height: 1.65; max-width: 34rem; }
+    </style>
   </body>
 </html>

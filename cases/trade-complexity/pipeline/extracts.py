@@ -1,23 +1,116 @@
 """Stages: extracts + pulse + publish (spec §B3, §B5).
 
-extracts: view models as parquet/JSON, each <= 3 MB — treemap shares per year,
-          ECI-rank trajectories (IDN + peers), nickel-chain value series,
-          top-partner flows, product-space node states per year.
-pulse   : quarterly Comtrade free-tier + BPS latest-year panel. NEVER mixed
-          into the complexity math or into any BACI chart — separate data
-          plane, separate vintage stamp.
-publish : static build + deploy with the double vintage stamp
-          ("trade data through 2024 · pulse through Qx-YYYY").
+extracts: view-model JSONs for the dashboard, each small enough to ship:
+  treemap.json     IDN export shares by HS2 chapter per year
+  trajectory.json  ECI rank per year, IDN + peer set
+  nickel.json      nickel value chain: ore vs processed export values per year
+  space_states.json IDN RCA>=1 product sets per year (lights the constellation)
+  summary.json     headline stats for build-time rendering
+
+pulse   : quarterly Comtrade/BPS latest-year panel — separate data plane,
+          never mixed into BACI charts (TODO week 5).
+publish : astro build + deploy (TODO week 5).
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+
+import duckdb
+
+import config
+
+OUT = config.CASE_DIR / "web" / "public" / "data"
+IDN_CODE = 360
+PEER_CODES = {704: "VNM", 764: "THA", 458: "MYS", 608: "PHL", 699: "IND"}
+# nickel value chain, HS92 codes (prefix match)
+NICKEL_ORE = ("2604",)                     # ores & concentrates
+NICKEL_PROCESSED = ("7202", "7501", "7502", "7503", "7218", "7219", "7220")
+CHAPTER_NAMES = {
+    "27": "Mineral fuels", "15": "Animal/veg fats (palm)", "72": "Iron & steel",
+    "26": "Ores", "85": "Electrical machinery", "84": "Machinery", "40": "Rubber",
+    "64": "Footwear", "48": "Paper", "44": "Wood", "62": "Apparel", "61": "Knit apparel",
+    "87": "Vehicles", "38": "Chemicals", "80": "Tin", "03": "Fish", "09": "Coffee & spices",
+    "71": "Gems & gold", "75": "Nickel", "29": "Org. chemicals", "39": "Plastics",
+}
+
+
+def _con():
+    return duckdb.connect(str(config.DB), read_only=True)
 
 
 def export_views() -> None:
-    raise NotImplementedError("week 5: view-model exports")
+    OUT.mkdir(parents=True, exist_ok=True)
+    con = _con()
+
+    # --- treemap: IDN exports by HS2 per year ---
+    rows = con.execute(f"""
+        SELECT t, substr(k,1,2) AS hs2, sum(v) AS v
+        FROM flows WHERE i = {IDN_CODE} GROUP BY 1, 2 ORDER BY 1, 3 DESC""").fetchall()
+    treemap: dict = {}
+    for t, hs2, v in rows:
+        treemap.setdefault(str(t), []).append(
+            {"hs2": hs2, "name": CHAPTER_NAMES.get(hs2, f"HS {hs2}"), "v": round(v)})
+    (OUT / "treemap.json").write_text(json.dumps(treemap))
+
+    # --- ECI rank trajectory: IDN + peers ---
+    eci = con.execute("""
+        WITH e AS (SELECT t, country, any_value(eci) AS eci FROM complexity GROUP BY 1,2)
+        SELECT t, country, rank() OVER (PARTITION BY t ORDER BY eci DESC) AS r,
+               count(*) OVER (PARTITION BY t) AS n
+        FROM e""").fetchall()
+    want = {IDN_CODE: "IDN", **PEER_CODES}
+    traj: dict = {v: {} for v in want.values()}
+    n_by_year = {}
+    for t, c, r, n in eci:
+        n_by_year[str(t)] = n
+        if c in want:
+            traj[want[c]][str(t)] = int(r)
+    (OUT / "trajectory.json").write_text(json.dumps({"ranks": traj, "n": n_by_year}))
+
+    # --- nickel chain: ore vs processed, IDN exports ---
+    def series(prefixes):
+        ors = " OR ".join(f"k LIKE '{p}%'" for p in prefixes)
+        return dict(con.execute(f"""
+            SELECT t, round(sum(v)) FROM flows
+            WHERE i = {IDN_CODE} AND ({ors}) GROUP BY 1 ORDER BY 1""").fetchall())
+    nickel = {"ore": series(NICKEL_ORE), "processed": series(NICKEL_PROCESSED)}
+    (OUT / "nickel.json").write_text(json.dumps(
+        {k: {str(t): v for t, v in s.items()} for k, s in nickel.items()}))
+
+    # --- product-space state: IDN RCA>=1 per year ---
+    states = {}
+    for t, hs4 in con.execute(f"""
+        SELECT t, hs4 FROM complexity WHERE country = {IDN_CODE} AND mcp = 1""").fetchall():
+        states.setdefault(str(t), []).append(hs4)
+    (OUT / "space_states.json").write_text(json.dumps(states))
+
+    # --- layout passthrough ---
+    if config.LAYOUT_JSON.exists():
+        (OUT / "product_space.json").write_text(config.LAYOUT_JSON.read_text())
+
+    # --- summary for build time ---
+    latest = max(int(t) for t in treemap)
+    total = sum(d["v"] for d in treemap[str(latest)])
+    ore23 = nickel["ore"]
+    proc = nickel["processed"]
+    summary = {
+        "latestYear": latest,
+        "totalExports": total,
+        "idnRank": {t: traj["IDN"].get(t) for t in sorted(traj["IDN"])[-12:]},
+        "nCountries": n_by_year.get(str(latest)),
+        "oreCollapse": {str(t): ore23.get(t, 0) for t in range(2013, latest + 1)},
+        "processedRise": {str(t): proc.get(t, 0) for t in range(2013, latest + 1)},
+        "peers": list(PEER_CODES.values()),
+    }
+    (OUT / ".." / ".." / "src" / "data").mkdir(parents=True, exist_ok=True)
+    (config.CASE_DIR / "web" / "src" / "data" / "summary.json").write_text(
+        json.dumps(summary, indent=1))
+    con.close()
+    print(f"[extracts] views written to {OUT} (latest year {latest}, "
+          f"IDN exports ${total/1e6:,.0f}M kUSD-scale)")
 
 
 def pulse() -> None:
