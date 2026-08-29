@@ -46,8 +46,30 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
       <div id="treemap" class="chart tall"></div>
     </section>
 
+    <section class="chapter wide">
+      <span class="eyebrow">02 · Timelapse</span>
+      <h2>Thirty years in thirty seconds</h2>
+      <p>Indonesia’s top export chapters, racing from 1995 to {latest}. Copper bars are the
+      nickel chain. Watch coal and palm overtake oil and gas — then processed nickel climb
+      from nowhere after the 2020 ban.</p>
+      <div class="race-hud">
+        <span class="race-year" id="race-year">1995</span>
+        <div class="race-stats">
+          <div><span class="stamp dim">GOODS EXPORTS</span><b id="hud-total">—</b></div>
+          <div><span class="stamp dim">ECI RANK</span><b id="hud-rank">—</b></div>
+          <div><span class="stamp dim">COMPETITIVE PRODUCTS</span><b id="hud-strengths">—</b></div>
+        </div>
+        <div class="race-controls">
+          <button id="race-play" class="play" aria-label="play">▶</button>
+          <input type="range" id="race-scrub" min="1995" max={latest} value="1995" aria-label="year" />
+          <button id="race-speed" class="chip-btn" aria-label="speed">1×</button>
+        </div>
+      </div>
+      <div id="race" class="chart"></div>
+    </section>
+
     <section class="chapter">
-      <span class="eyebrow">02 · The gambit</span>
+      <span class="eyebrow">03 · The gambit</span>
       <h2>The nickel gambit</h2>
       <p>Indonesia banned raw nickel-ore exports in 2014, relaxed the ban, then closed it
       for good in 2020. Ore exports collapsed; processed nickel — ferroalloys, mattes,
@@ -58,7 +80,7 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
     </section>
 
     <section class="chapter">
-      <span class="eyebrow">03 · The paradox</span>
+      <span class="eyebrow">04 · The paradox</span>
       <h2>More value, same place — while the neighbors climbed</h2>
       <p class="big-stat">Indonesia ranks <b class="copper">#{rankNow}</b> in economic complexity
       in {latest} — versus <b class="copper">#{rankThen}</b> a decade earlier. Fifteen times
@@ -74,7 +96,7 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
     </section>
 
     <section class="chapter">
-      <span class="eyebrow">04 · What’s adjacent</span>
+      <span class="eyebrow">05 · What’s adjacent</span>
       <h2>The nearest steps not yet taken</h2>
       <p>Products Indonesia does not yet export competitively, placed by how close they sit
       to what it already makes (density) and how sophisticated they are (PCI). The
@@ -84,9 +106,9 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
 
     <section class="explore">
       <div class="explore-head">
-        <div><span class="eyebrow">05 · Explore</span><h2>The product space, in three dimensions</h2></div>
+        <div><span class="eyebrow">06 · Explore</span><h2>The product space, in three dimensions</h2></div>
         <div class="controls">
-          <label class="stamp dim">YEAR <input type="range" id="ps-year" min="1995" max={latest} value={latest} /> <span id="ps-label" class="stamp">{latest}</span></label>
+          <label class="stamp dim"><button id="ps-play" class="play small" aria-label="play years">▶</button> YEAR <input type="range" id="ps-year" min="1995" max={latest} value={latest} /> <span id="ps-label" class="stamp">{latest}</span></label>
           <div class="toggle" role="group" aria-label="third axis">
             <button id="alt-net" class="on">DEPTH: NETWORK</button><button id="alt-pci">ALTITUDE: PCI</button>
           </div>
@@ -361,7 +383,18 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
       const explore = NOHERO
         ? { setYear() {}, setFilter() {}, setMode() {}, focus() {} }
         : makeSpace(document.getElementById("ps-canvas"), { interactive: true });
-      document.getElementById("ps-year").addEventListener("input", (e) => { explore.setYear(e.target.value); document.getElementById("ps-label").textContent = e.target.value; });
+      const psYear = document.getElementById("ps-year"), psLabel = document.getElementById("ps-label"), psPlay = document.getElementById("ps-play");
+      const setPsYear = (yr) => { psYear.value = yr; psLabel.textContent = yr; explore.setYear(yr); };
+      let psTimer = null;
+      const psStop = () => { clearInterval(psTimer); psTimer = null; psPlay.textContent = "▶"; };
+      psYear.addEventListener("input", (e) => { psStop(); setPsYear(e.target.value); });
+      psPlay.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (psTimer) { psStop(); return; }
+        let yr = +psYear.value >= +psYear.max ? +psYear.min : +psYear.value;
+        setPsYear(yr); psPlay.textContent = "❚❚";
+        psTimer = setInterval(() => { yr += 1; setPsYear(yr); if (yr >= +psYear.max) psStop(); }, reduced ? 900 : 650);
+      });
       /* ---------- product search: lexical (all HS6 descriptions, prefix + fuzzy) first,
          semantic (local multilingual-E5 via the lab's embedding service) layered on top.
          Alternative for a fully static deploy: run the encoder in-browser with
@@ -548,7 +581,74 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
         document.getElementById("tm-year").addEventListener("input", (e) => { render(e.target.value); document.getElementById("tm-label").textContent = e.target.value; });
       }
 
-      /* ---------- chapter 2: nickel ---------- */
+      /* ---------- chapter 2: bar-chart race timelapse + HUD ---------- */
+      {
+        const el = document.getElementById("race");
+        const years = Object.keys(treemap).map(Number).sort((a, b) => a - b);
+        const N = 10, BAR = 34, M = { t: 6, r: 110, b: 28, l: 168 };
+        const W = el.clientWidth, H = M.t + N * BAR + M.b;
+        const svg = d3.select(el).append("svg").attr("width", W).attr("height", H).attr("class", "race");
+        const x = d3.scaleLinear().range([M.l, W - M.r]);
+        const yAt = (i) => M.t + i * BAR;
+        const axisG = svg.append("g").attr("class", "axis").attr("transform", `translate(0,${M.t + N * BAR})`);
+        const isCopper2 = (hs2) => ["26", "72", "75"].includes(hs2);
+        const yearEl = document.getElementById("race-year"), totalEl = document.getElementById("hud-total"),
+              rankEl = document.getElementById("hud-rank"), strEl = document.getElementById("hud-strengths");
+        const scrub = document.getElementById("race-scrub"), playBtn = document.getElementById("race-play"), speedBtn = document.getElementById("race-speed");
+        let year = years[0], playing = false, speed = 1, timer = null;
+
+        function frame(yr, dur) {
+          const all = treemap[String(yr)] ?? [];
+          const rows = all.slice().sort((a, b) => b.v - a.v).slice(0, N);
+          x.domain([0, (rows[0]?.v ?? 1) * 1.06]);
+          const t = svg.transition().duration(reduced ? 0 : dur).ease(d3.easeCubicInOut);
+          axisG.transition(t).call(d3.axisBottom(x).ticks(5).tickFormat((v) => fmt$(v * 1e3)));
+          const g = svg.selectAll("g.bar").data(rows, (d) => d.hs2).join(
+            (enter) => {
+              const g = enter.append("g").attr("class", "bar").attr("transform", `translate(0,${yAt(N)})`).style("opacity", 0);
+              g.append("rect").attr("x", M.l).attr("height", BAR - 9).attr("rx", 5).attr("width", 0);
+              g.append("text").attr("class", "race-name").attr("x", M.l - 12).attr("y", (BAR - 9) / 2 + 4).attr("text-anchor", "end");
+              g.append("text").attr("class", "race-val").attr("y", (BAR - 9) / 2 + 4);
+              return g;
+            },
+            (update) => update,
+            (exit) => exit.transition(t).attr("transform", `translate(0,${yAt(N)})`).style("opacity", 0).remove());
+          g.transition(t).attr("transform", (d, i) => `translate(0,${yAt(i)})`).style("opacity", 1);
+          g.select("rect").classed("copper", (d) => isCopper2(d.hs2))
+            .attr("fill", (d) => `url(#${gradId(isCopper2(d.hs2) ? COPPER : sectorOf(d.hs2)[2])})`)
+            .transition(t).attr("width", (d) => Math.max(0, x(d.v) - M.l));
+          g.select(".race-name").text((d) => d.name);
+          g.select(".race-val").transition(t).attr("x", (d) => x(d.v) + 8)
+            .tween("text", function (d) {
+              const from = +this.dataset.v || 0, ip = d3.interpolateNumber(from, d.v);
+              return (k) => { this.textContent = fmt$(ip(k) * 1e3); };
+            }).on("end", function (d) { this.dataset.v = d.v; });
+          // HUD
+          yearEl.textContent = yr;
+          totalEl.textContent = fmt$(d3.sum(all, (d) => d.v) * 1e3);
+          const rk = traj.ranks.IDN[String(yr)]; rankEl.textContent = rk ? `#${rk} of ${traj.n[String(yr)]}` : "—";
+          strEl.textContent = (states[String(yr)] ?? []).length || "—";
+          scrub.value = yr;
+        }
+        function stop() { playing = false; clearTimeout(timer); playBtn.textContent = "▶"; }
+        function step() {
+          if (year >= years.at(-1)) { stop(); return; }
+          year += 1; frame(year, 700 / speed);
+          timer = setTimeout(step, (reduced ? 900 : 780) / speed);
+        }
+        function play() { if (year >= years.at(-1)) { year = years[0]; frame(year, 300); } playing = true; playBtn.textContent = "❚❚"; timer = setTimeout(step, 400); }
+        playBtn.addEventListener("click", () => (playing ? stop() : play()));
+        speedBtn.addEventListener("click", () => { speed = speed === 1 ? 2 : speed === 2 ? 4 : 1; speedBtn.textContent = `${speed}×`; });
+        scrub.addEventListener("input", (e) => { stop(); year = +e.target.value; frame(year, 350); });
+        frame(year, 0);
+        // autoplay once when the chapter scrolls into view (not under reduced motion)
+        let autoplayed = false;
+        new IntersectionObserver(([en]) => {
+          if (en.isIntersecting && !autoplayed && !reduced) { autoplayed = true; play(); }
+        }, { threshold: 0.5 }).observe(el);
+      }
+
+      /* ---------- chapter 3: nickel ---------- */
       {
         const el = document.getElementById("nickel");
         const W = el.clientWidth, H = 280, M = { t: 20, r: 20, b: 30, l: 60 };
@@ -692,6 +792,23 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
       .treemap .cell:hover .inner { transform: scale(1.045); filter: url(#hover-glow); }
       .treemap .cell:hover rect.main { stroke: rgba(230,232,236,0.65); }
       .treemap:hover .cell:not(:hover) .inner { opacity: 0.68; }
+      .chapter.wide { max-width: 58rem; }
+      .race-hud { display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: center; padding: 18px 22px; border: 1px solid var(--hairline); border-radius: 10px; background: linear-gradient(135deg, var(--surface), var(--ground)); }
+      @media (max-width: 760px) { .race-hud { grid-template-columns: 1fr; } }
+      .race-year { font-family: var(--font-data); font-size: clamp(2.4rem, 5vw, 3.6rem); font-weight: 600; color: var(--accent); letter-spacing: -0.02em; line-height: 1; text-shadow: 0 0 24px color-mix(in srgb, var(--accent) 45%, transparent); font-variant-numeric: tabular-nums; }
+      .race-stats { display: flex; gap: 28px; flex-wrap: wrap; }
+      .race-stats div { display: flex; flex-direction: column; gap: 4px; }
+      .race-stats b { font-family: var(--font-display); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+      .race-controls { display: flex; align-items: center; gap: 10px; }
+      .race-controls input[type=range] { width: 180px; accent-color: var(--accent); }
+      .play { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--accent); background: var(--accent-ink); color: var(--accent); cursor: pointer; font-size: 0.8rem; display: inline-flex; align-items: center; justify-content: center; transition: transform 0.2s ease, background 0.2s ease; }
+      .play:hover { transform: scale(1.08); background: var(--accent); color: var(--accent-ink); }
+      .play.small { width: 26px; height: 26px; font-size: 0.6rem; vertical-align: middle; margin-right: 6px; }
+      .chip-btn { background: var(--surface); color: var(--ink-muted); border: 1px solid var(--hairline); border-radius: 14px; padding: 6px 10px; font-family: var(--font-data); font-size: 0.7rem; cursor: pointer; }
+      .chip-btn:hover { border-color: var(--accent); color: var(--accent); }
+      .race rect.copper { filter: url(#copper-glow-soft); }
+      .race-name { font-family: var(--font-body); font-size: 12px; fill: var(--ink); }
+      .race-val { font-family: var(--font-data); font-size: 11px; fill: var(--ink-muted); font-variant-numeric: tabular-nums; }
       .scrub { display: flex; align-items: center; gap: 12px; }
       .scrub input, .controls input[type=range] { accent-color: var(--accent); width: 200px; }
 
