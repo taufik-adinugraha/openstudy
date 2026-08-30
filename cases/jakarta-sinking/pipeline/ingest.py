@@ -4,7 +4,7 @@
               filtered to BBOX, duplicates kept for grid.py to average)
   gnss        Susilo et al. 2023 station files
   dem         two GLO-30 tiles
-  population  WorldPop constrained 2020 (national; clipped later), GHSL tile
+  population  WorldPop constrained 2020 (national; clipped later), GHSL GHS-POP + GHS-BUILT-S tiles
   admin       Jakarta Satu kelurahan polygons (GeoJSON)
   floods      BPBD flood history 2021–2024 (paginated), UNOSAT + EOS 2020 extents
 
@@ -92,6 +92,7 @@ def dem() -> None:
 def population() -> None:
     _get(config.WORLDPOP_URL, RAW / "population" / "idn_ppp_2020_constrained.tif")
     _get(config.GHSL_URL, RAW / "population" / "GHS_POP_E2020_R10_C29.zip")
+    _get(config.GHSL_BUILT_URL, RAW / "population" / "GHS_BUILT_S_E2020_R10_C29.zip")
 
 
 def arcgis_all(layer: str, dest: Path) -> None:
