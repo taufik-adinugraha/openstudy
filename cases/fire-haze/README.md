@@ -191,10 +191,11 @@ case.
 - **This is transport, not chemistry.** No CTM of our own. But CAMS publishes a real one covering
   both anchor years, so the trajectory result is shown **next to** it — where we agree, the cheap
   model is working; where we diverge, the divergence is the finding.
-- **Forecast means forecast.** Every feature is lagged to t−1, and the operational path is driven
-  by **CHIRPS-GEFS** forecast precipitation (0–15 day leads, issued same-day, public domain)
-  rather than by reanalysis. Both paths are scored, and the gap between them is published as the
-  real cost of forecasting rather than hindcasting.
+- **Forecast means forecast.** Every feature is lagged to t−1 and the lag is *asserted* — a probe
+  re-derives one antecedent window from raw and compares. Both paths are scored and the gap
+  between them is published as the real cost of forecasting rather than hindcasting. *(See B2:
+  the paths are separated by information set rather than by product, because no open CHIRPS-GEFS
+  reforecast archive covers 2012–2024. CHIRPS-GEFS is still ingested and drives the live panel.)*
 - **Receptors are reported individually, including the failures**, and each carries its tier.
 
 ## Signature interaction — "Blame the wind"
@@ -207,8 +208,9 @@ exactly what gate G-J3 tests. Fully interactive in 2-D canvas; **no WebGL anywhe
 
 ## Colour identity
 
-Plume magenta on ash — `[data-case="haze"]`, block proposed for `shared/design/tokens.css` and
-carried locally in `web/src/styles/tokens.css` until it lands there.
+Plume magenta on ash — `[data-case="haze"]`. **The block is already in
+`shared/design/tokens.css`** and `web/src/styles/tokens.css` is a byte-identical copy of that
+file, per the house convention; the "proposed, pending" note in the spec is stale.
 
 Orange is triple-booked in this portfolio (trade copper `#D9722C`, transit red-orange `#E4562E`,
 forest loss `#B4552A`); a fourth orange case would be indistinguishable in the homepage grid.
