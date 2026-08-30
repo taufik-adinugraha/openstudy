@@ -1,0 +1,18 @@
+[project]
+name = "air-quality"
+version = "0.1.0"
+description = "Case E pipeline: Jabodetabek air-quality nowcast (ERA5 + FIRMS + OpenAQ)"
+requires-python = ">=3.12"
+dependencies = [
+    "pandas>=2.2",
+    "pyarrow>=17",
+    "numpy>=1.26",
+    "requests>=2.32",
+    "cdsapi>=0.7.7",       # Copernicus CDS ERA5 (licence cc-by accepted 2026-08-30)
+    "xarray>=2024.6",
+    "netcdf4>=1.6",        # ERA5 NetCDF reader
+    "scikit-learn>=1.5",   # HistGradientBoostingRegressor — no compiled 3rd-party GBM needed
+]
+
+[tool.uv]
+package = false
