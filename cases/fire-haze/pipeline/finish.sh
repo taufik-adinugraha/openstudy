@@ -43,9 +43,11 @@ say "gap-filling pass (era5)"
 "$UV" run python pipeline/ingest_era5.py --max-minutes 20 \
   || say "gap-fill returned $? — continuing with what exists"
 
-# Fold whatever CAMS parts have landed into the tables without waiting for the rest of the queue.
+# Fold whatever CAMS and CEMS parts have landed into the tables without waiting for the queues.
 say "consolidating cams parts"
 "$UV" run python pipeline/ingest_cams.py --consolidate-only || say "cams consolidate: $?"
+say "consolidating cems fire-index parts"
+"$UV" run python pipeline/ingest_indices.py --fwi-only --consolidate-only || say "fwi consolidate: $?"
 
 for stage in features risk transport validate export_web; do
   say "stage: $stage"

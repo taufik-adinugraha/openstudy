@@ -292,7 +292,25 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--predict-only", action="store_true",
                     help="daily refresh: reuse the fitted model, score the newest days only")
+    ap.add_argument("--score-fwi-only", action="store_true",
+                    help="re-score G-J2's FWI half against the SAVED out-of-fold predictions, "
+                         "for when the EWDS backfill lands after the model has been fitted")
     args = ap.parse_args()
+    if args.score_fwi_only:
+        # Legitimate because nothing is refitted: the out-of-fold predictions are already on
+        # disk and fixed, and only the baseline they are compared against has arrived.
+        util.require(META_OUT.exists(), "no risk_meta.json — run `make risk` first")
+        util.require(any(SCRATCH.glob("oofkeep_*.parquet")),
+                     "no saved out-of-fold predictions — run `make risk` first")
+        meta = json.loads(META_OUT.read_text())
+        meta["fwi"] = score_against_fwi()
+        META_OUT.write_text(json.dumps(util_nan_safe(meta), indent=1))
+        log(f"risk --score-fwi-only: {meta['fwi'].get('status')}")
+        for lead, m in (meta["fwi"].get("per_lead") or {}).items():
+            if m.get("status") == "ok":
+                log(f"  lead {lead}d: model AUC {m['auc_model']:.3f} vs FWI {m['auc_fwi']:.3f}, "
+                    f"BSS vs FWI {m['bss_vs_fwi']:+.3f} on {m['n']:,} cell-days")
+        return
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
     util.require(PANEL_DIR.exists() and any(PANEL_DIR.glob("*.parquet")),
                  "no panel — run features first")
@@ -418,7 +436,9 @@ def main() -> None:
     keep = [pd.read_parquet(p) for p in sorted(SCRATCH.glob("oofkeep_*.parquet"))]
     if keep:
         pd.concat(keep, ignore_index=True).to_parquet(OOF_OUT, index=False, compression="zstd")
-    for p in SCRATCH.glob("oof_*.parquet"):
+    # oofkeep_*.parquet are DELIBERATELY retained: they are what `--score-fwi-only` re-scores
+    # against when the EWDS backfill lands after the model has already been fitted.
+    for p in SCRATCH.glob("oof_[0-9]*.parquet"):
         p.unlink()
 
     # ── final model on every non-anchor year, then the anchors scored blind ────────────
@@ -536,11 +556,22 @@ def score_against_fwi() -> dict:
     import pandas as pd
     p = config.DATA_DIR / "fwi.parquet"
     if not p.exists():
+        # Two very different reasons produce the same missing file, and conflating them would
+        # tell the reader to go and click something that is already clicked.
+        parts = list((config.DATA_DIR / "fwi_parts").glob("*.parquet"))
+        if parts:
+            return {"status": "PENDING",
+                    "reason": f"the EWDS queue has delivered {len(parts)} of 15 years but the "
+                              f"consolidated fwi.parquet has not been written yet — run "
+                              f"`make fwi` to drain it, then `make risk`.",
+                    "parts_on_disk": len(parts),
+                    "effect": "G-J2's climatology half is scored; its FWI half is PENDING."}
         return {"status": "PENDING",
-                "reason": "cems-fire-historical-v1 is on EWDS and the account has not accepted "
-                          "'Terms of use of the CEMS Early Warning Data Store (rev. 11)'.  The "
-                          "token authenticates (HTTP 200 on the EWDS account endpoint) — this is "
-                          "a one-time browser click, not a credential fault.",
+                "reason": "no CEMS fire-index data on disk.  If the submission returns a 403 "
+                          "mentioning site policies, the account has not accepted 'Terms of use "
+                          "of the CEMS Early Warning Data Store (rev. 11)' — a one-time browser "
+                          "click, not a credential fault, and the token authenticates either "
+                          "way (HTTP 200 on the EWDS account endpoint).",
                 "url": config.POLICY_URLS["ewds"][0],
                 "effect": "G-J2's climatology half is scored; its FWI half is PENDING."}
     # only the two columns and only the days the folds cover: the full CEMS table is 2.16 M rows

@@ -449,10 +449,21 @@ def main() -> None:
     ap.add_argument("--fwi-only", action="store_true",
                     help="drain the EWDS queue only; the rest of this stage is already on disk")
     ap.add_argument("--max-minutes", type=float, default=200.0)
+    ap.add_argument("--consolidate-only", action="store_true",
+                    help="with --fwi-only: fold the parts already on disk into fwi.parquet and "
+                         "touch no queue, so a half-drained EWDS backfill is still scorable")
     args = ap.parse_args()
     config.DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     if args.fwi_only:
+        if args.consolidate_only:
+            parts = sorted(FWI_PARTS.glob("*.parquet"))
+            util.require(bool(parts), "no CEMS parts on disk")
+            df = pd.concat([pd.read_parquet(p) for p in parts], ignore_index=True)
+            df.to_parquet(FWI_OUT, index=False, compression="zstd")
+            log(f"fwi: {len(parts)} years -> {len(df):,} cell-days, "
+                f"{df['day'].min().date()} -> {df['day'].max().date()}")
+            return
         st = pull_fwi(args.max_minutes)
         log(f"indices --fwi-only: {st['status']}")
         if META_OUT.exists():
