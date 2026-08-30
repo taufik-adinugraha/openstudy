@@ -357,15 +357,18 @@ const DEMOS = {
               </linearGradient>
               <linearGradient id="aq-veil" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stop-color="#C8B49C" stop-opacity="0"/>
-                <stop offset="100%" stop-color="#C8B49C" stop-opacity="0.30"/>
+                <stop offset="100%" stop-color="#C8B49C" stop-opacity="0.42"/>
               </linearGradient>
+              <filter id="aq-soft" x="-60%" y="-60%" width="220%" height="220%">
+                <feGaussianBlur stdDeviation="1.5"/>
+              </filter>
             </defs>
 
             <rect width="400" height="240" fill="url(#aq-sky)"/>
             <circle cx="96" cy="74" r="58" fill="url(#aq-sun)"/>
 
             <!-- suspended particulate, drifting downwind -->
-            <g class="mols">
+            <g class="mols" filter="url(#aq-soft)">
               <circle class="mol m-hi" cx="181.3" cy="137.4" r="5.1" style="--x:11.7px;--y:-19.8px;--d:19.8s;--t:-21.2s;--o:0.61"/>
               <circle class="mol m-lo" cx="250.9" cy="178.0" r="2.0" style="--x:-8.4px;--y:-31.5px;--d:23.1s;--t:-8.0s;--o:0.33"/>
               <circle class="mol m-mid" cx="389.0" cy="207.9" r="4.1" style="--x:30.3px;--y:-29.6px;--d:11.2s;--t:-12.3s;--o:0.34"/>
