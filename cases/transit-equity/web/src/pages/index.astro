@@ -1,28 +1,1183 @@
 ---
-// Case G — Transit Access & Urban Equity. Skeleton until the pipeline lands.
-// Spec: docs/spec-transit-equity.html (G5 dashboard anatomy).
+// Case G — Transit Access & Urban Equity. Spec: docs/spec-transit-equity.html (G5).
+// Signature moment: "the hour" — the 60-minute reachable area blooming outward from a
+// kelurahan along the network, on a 2-D canvas (works with WebGL off, which is the
+// designed-for case). Chapters argue the equity read; the methodology carries the gates.
 import "../styles/tokens.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 ---
+
 <html lang="en" data-case="transit" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Transit Access &amp; Urban Equity</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+    <title>The Hour · Transit Access &amp; Urban Equity in Jabodetabek</title>
+    <meta name="description" content="Who can reach work and a hospital within an hour on public transport in Greater Jakarta — and who cannot. TransJakarta, KRL, MRT and LRT on one routing graph." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
   </head>
   <body>
-    <main style="min-height:100vh;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:16px;padding:0 6vw;">
-      <span style="font-family:var(--font-data);font-size:0.72rem;letter-spacing:0.14em;color:var(--accent);">CASE G · SCAFFOLDED · PIPELINE PENDING</span>
-      <h1 style="font-size:clamp(2rem,5vw,3.2rem);margin:0;line-height:1.1;">Transit Access &amp; Urban Equity</h1>
-      <p style="color:var(--ink-muted);max-width:36rem;margin:0;">TransJakarta, KRL, MRT and LRT on one routing graph
-      with every footpath in Jabodetabek: who can reach work and a hospital within an hour on public transport —
-      and who cannot. Access per kelurahan, and how unequally it is shared.</p>
-      <!-- TODO per spec G5: hero "the hour" isochrone bloom from Bundaran HI (canvas 2-D fallback:
-           pre-rendered isochrone rings as static SVG paths with hover) → chapters (the network ·
-           an hour from home · who is left out — Lorenz curve · access vs wealth) → explore
-           (kelurahan choropleth + click-to-isochrone from precomputed matrix, mode toggles) →
-           methodology. Map rule (WebGL off): try MapLibre, catch → 2-D canvas choropleth, as in
-           cases/nightlights-pulse/web. -->
+    <!-- ───────────────────────── HERO ───────────────────────── -->
+    <header class="hero" id="hero">
+      <div class="hero-canvas" id="hero-map">
+        <canvas id="hero-c"></canvas>
+        <div class="hero-scrim"></div>
+      </div>
+      <div class="hero-copy">
+        <span class="eyebrow">Demo Lab · Case G · Jabodetabek</span>
+        <h1>The hour.</h1>
+        <p class="lede">An hour on public transport buys a Menteng resident a large share of
+        Jakarta's job-dense floorspace. Sixty minutes from a desa in Kabupaten Bogor buys a
+        walk. This is that hour, computed door-to-door over every footpath, busway, commuter
+        rail, MRT and LRT in Greater Jakarta.</p>
+        <div class="hero-hud" id="hero-hud" hidden>
+          <div class="hud-main">
+            <span class="hud-num" id="hud-clock">00:00</span>
+            <span class="hud-lab">minutes from <b id="hud-origin">—</b></span>
+          </div>
+          <div class="hud-stats">
+            <span><b id="hud-jobs">—</b> of the region's job-dense floorspace</span>
+            <span><b id="hud-hosp">—</b> hospitals · <b id="hud-pop">—</b> of its people</span>
+          </div>
+          <div class="hud-actions">
+            <button class="btn" id="hero-replay" type="button">Replay the hour</button>
+            <button class="btn ghost" id="hero-shuffle" type="button">Another origin</button>
+          </div>
+        </div>
+        <span class="stamp" id="hero-stamp">Scheduled times · weekday 07:00–09:00 departures · p50</span>
+      </div>
+      <a class="scroll-cue" href="#ch1" aria-label="Scroll to the first chapter"><span></span></a>
+    </header>
+
+    <main>
+      <!-- ─────────────────── CH 1 · the network ─────────────────── -->
+      <section class="chapter" id="ch1">
+        <div class="ch-head reveal">
+          <span class="ch-num">01</span>
+          <div>
+            <h2>One network, four systems</h2>
+            <p class="ch-lede">A busway that carries a million rides a day, 98 Mikrotrans
+            capillaries feeding it, five commuter-rail lines, one MRT and two LRTs — assembled
+            here into a single routing graph with every OSM footpath in the metro.</p>
+          </div>
+        </div>
+        <div class="net-wrap reveal">
+          <div class="net-map" id="net-map"><canvas id="net-c"></canvas>
+            <div class="map-note" id="net-note">2-D CANVAS · OSM ODbL</div>
+          </div>
+          <aside class="net-side">
+            <div class="legend" id="net-legend"></div>
+            <div class="stat-grid" id="net-stats"></div>
+            <p class="caveat"><b>Rail is hand-encoded.</b> No operator publishes a GTFS feed for
+            KRL, MRT or either LRT. Their timetables here are built from the operators' own
+            published headways and end-to-end journey times, distributed along OSM geometry —
+            so every rail time carries a ±15 % caveat. The bus layers are the official
+            TransJakarta feed.</p>
+          </aside>
+        </div>
+        <p class="sowhat reveal">So what: the network looks continuous on a map. Access is not
+        the network — it is what the network reaches inside a working hour, and that is a much
+        smaller thing.</p>
+      </section>
+
+      <!-- ─────────────────── CH 2 · an hour from home ─────────────────── -->
+      <section class="chapter" id="ch2">
+        <div class="ch-head reveal">
+          <span class="ch-num">02</span>
+          <div>
+            <h2>An hour from home</h2>
+            <p class="ch-lede">Every one of Jabodetabek's kelurahan and desa, shaded by the share
+            of the region's job-dense floorspace it can reach on public transport within the
+            cutoff. Click any unit for its own isochrone.</p>
+          </div>
+        </div>
+        <div class="controls reveal">
+          <div class="ctl">
+            <label for="cutoff">Cutoff</label>
+            <div class="seg" id="cutoff" role="group" aria-label="Travel time cutoff"></div>
+          </div>
+          <div class="ctl">
+            <label for="scenario">Network</label>
+            <div class="seg" id="scenario" role="group" aria-label="Network scenario"></div>
+          </div>
+          <div class="ctl grow">
+            <label for="search">Find a kelurahan</label>
+            <input id="search" type="search" list="kel-list" placeholder="e.g. Menteng, Cikarang, Serpong" autocomplete="off" />
+            <datalist id="kel-list"></datalist>
+          </div>
+        </div>
+        <div class="map-wrap reveal">
+          <div class="map" id="map"></div>
+          <div class="tip" id="tip" hidden></div>
+          <div class="ramp" id="ramp"></div>
+          <aside class="panel" id="panel" hidden>
+            <button class="panel-x" id="panel-close" type="button" aria-label="Close">×</button>
+            <span class="panel-eyebrow" id="p-region">—</span>
+            <h3 id="p-name">—</h3>
+            <div class="panel-stats" id="p-stats"></div>
+            <div class="panel-bars" id="p-bars"></div>
+            <p class="panel-note" id="p-note"></p>
+          </aside>
+        </div>
+        <div class="callouts reveal" id="callouts"></div>
+        <p class="sowhat reveal" id="ch2-sowhat"></p>
+      </section>
+
+      <!-- ─────────────────── CH 3 · who is left out ─────────────────── -->
+      <section class="chapter" id="ch3">
+        <div class="ch-head reveal">
+          <span class="ch-num">03</span>
+          <div>
+            <h2>Who is left out</h2>
+            <p class="ch-lede">Rank every resident by the access their kelurahan has, poorest
+            access first, and plot the cumulative share of reachable opportunity against the
+            cumulative share of people. A fair network would trace the diagonal.</p>
+          </div>
+        </div>
+        <div class="equity-wrap">
+          <div class="lorenz reveal" id="lorenz"></div>
+          <div class="equity-side reveal">
+            <div class="bigstat"><span class="bignum" id="gini">—</span><span class="biglab">Gini of population-weighted 60-minute access</span></div>
+            <div class="bigstat"><span class="bignum" id="palma">—</span><span class="biglab">Palma ratio — the top tenth's access over the bottom four tenths'</span></div>
+            <div class="bigstat"><span class="bignum" id="nohosp">—</span><span class="biglab">of Jabodetabek's people cannot reach a single hospital in an hour</span></div>
+          </div>
+        </div>
+        <div class="tables reveal">
+          <div class="tbl"><h4>Best served</h4><div id="tbl-best"></div></div>
+          <div class="tbl"><h4>Worst served (population over 5,000)</h4><div id="tbl-worst"></div></div>
+        </div>
+        <p class="sowhat reveal" id="ch3-sowhat"></p>
+      </section>
+
+      <!-- ─────────────────── CH 4 · what each layer buys ─────────────────── -->
+      <section class="chapter" id="ch4">
+        <div class="ch-head reveal">
+          <span class="ch-num">04</span>
+          <div>
+            <h2>What each layer buys</h2>
+            <p class="ch-lede">Rerun the same hour with the rail layer removed, then with no
+            public transport at all. The gap between the three is what each system is worth to
+            the median resident — and what it does to the distribution.</p>
+          </div>
+        </div>
+        <div class="layers reveal" id="layers"></div>
+        <p class="sowhat reveal" id="ch4-sowhat"></p>
+      </section>
+
+      <!-- ─────────────────── METHOD ─────────────────── -->
+      <section class="chapter method" id="method">
+        <div class="ch-head reveal">
+          <span class="ch-num">05</span>
+          <div>
+            <h2>How this was built, and where it is weak</h2>
+            <p class="ch-lede">Scheduled times, not congestion. Frequency-aware routing over a
+            two-hour morning peak. A floorspace proxy standing in for jobs. Every one of those
+            choices is stated here, with the gates that tested them.</p>
+          </div>
+        </div>
+        <div class="method-grid">
+          <div class="reveal"><h4>Validation gates</h4><div id="gates"></div></div>
+          <div class="reveal"><h4>Hand-encoded rail timetables</h4><div id="rail-table"></div></div>
+          <div class="reveal"><h4>Sources &amp; licences</h4><div id="sources"></div></div>
+          <div class="reveal"><h4>Known limits</h4>
+            <ul class="limits">
+              <li><b>Jobs are a proxy.</b> The measure is non-residential built-up floorspace
+              (GHS-BUILT-S NRES, 2020) — where workplaces are, not how many people work in them.
+              It is called "job-dense floorspace" throughout and never "jobs".</li>
+              <li><b>Scheduled, not congested.</b> R5 routes the published timetable. Real
+              TransJakarta buses sit in traffic; real KRL trains hold at Manggarai.</li>
+              <li><b>Angkot are largely missing.</b> Outside the TransJakarta feed and one
+              community Bogor angkot feed, the paratransit that actually moves the periphery
+              has no open timetable anywhere. Access in the outer kabupaten is therefore a
+              floor, not an estimate.</li>
+              <li><b>Rail timetables are hand-encoded</b> from published headways (±15 %).</li>
+              <li><b>Walking access to transit is capped at 30 minutes</b>, the standard
+              assumption; ojek and feeder angkot are not modelled.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta" id="cta">
+        <h3>What this becomes for a client</h3>
+        <p>The same graph answers the questions a planning agency, an employer or a developer
+        actually asks: what a new corridor would add, which kelurahan a fare reform would reach,
+        where a campus should sit so its workforce can get there. Congestion-adjusted times,
+        fare and affordability layers, park-and-ride and future-network scenarios are the
+        obvious next build.</p>
+      </section>
     </main>
+
+    <footer class="foot">
+      <span class="stamp dim" id="foot-stamp">A DEMO-LAB CASE · STATIC SNAPSHOT</span>
+      <span class="stamp dim">TransJakarta GTFS (licence unstated — attributed, written confirmation pending) · OpenStreetMap contributors ODbL · GHSL R2023A CC BY 4.0 · HDX healthsites ODbL · HDX COD-AB (BPS) CC BY-IGO · routing by r5py / R5</span>
+    </footer>
+
+    <script>
+      import maplibregl from "maplibre-gl";
+      import * as d3 from "d3";
+
+      /* visible failure beats silent emptiness */
+      const failBanner = (msg) => {
+        let b = document.getElementById("err-banner");
+        if (!b) {
+          b = document.createElement("div"); b.id = "err-banner";
+          b.style.cssText = "position:fixed;bottom:0;left:0;right:0;z-index:99;background:#3A1E1A;color:#F2846B;font:12px ui-monospace,monospace;padding:10px 16px;border-top:1px solid #F2846B;";
+          document.body.appendChild(b);
+        }
+        b.textContent = "⚠ " + msg;
+      };
+      addEventListener("error", (e) => failBanner("Script error: " + (e.message ?? e.type)));
+      addEventListener("unhandledrejection", (e) => failBanner("Load error: " + (e.reason?.message ?? e.reason)));
+      const sect = (name, fn) => { try { return fn(); } catch (err) { console.error(name, err); failBanner(`${name} failed: ${err.message ?? err}`); return null; } };
+
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const MODE_COLOR = { brt: "#E4562E", mikrotrans: "#8C6A5D", krl: "#3E8EDE", mrt: "#57B26A", lrt: "#E0A63F" };
+      const MODE_LABEL = { brt: "TransJakarta BRT corridors", mikrotrans: "Mikrotrans (JAK) microbus", krl: "KRL Commuter Line", mrt: "MRT Jakarta", lrt: "LRT (Jabodebek · Jakarta)" };
+      const RAMP = ["#15181F", "#3A2118", "#7E3418", "#C24A20", "#E4562E", "#F79C6A"];
+      const ramp = d3.piecewise(d3.interpolateRgb, RAMP);
+      const BAND = ["#F79C6A", "#E4562E", "#C24A20", "#8E3A1B", "#5C2814"]; // 0-15, -30, -45, -60, beyond
+      const fx = (v, d = 3) => (typeof v === "number" && isFinite(v) ? v.toFixed(d) : "—");
+      const pct = (v, d = 1) => (v === null || v === undefined || !isFinite(v) ? "—" : `${(v * 100).toFixed(d)}%`);
+      const num = (v) => (v === null || v === undefined || !isFinite(v) ? "—" : d3.format(",")(Math.round(v)));
+      const bandOf = (t) => (t <= 15 ? 0 : t <= 30 ? 1 : t <= 45 ? 2 : 3);
+
+      const [geo, access, cells, net, equity, stats, hero] = await Promise.all([
+        fetch(`${base}/data/adm4.geojson`).then((r) => r.json()),
+        fetch(`${base}/data/access.json`).then((r) => r.json()),
+        fetch(`${base}/data/cells.json`).then((r) => r.json()),
+        fetch(`${base}/data/network.json`).then((r) => r.json()),
+        fetch(`${base}/data/equity.json`).then((r) => r.json()),
+        fetch(`${base}/data/stats.json`).then((r) => r.json()).catch(() => null),
+        fetch(`${base}/data/hero.json`).then((r) => r.json()).catch(() => null),
+      ]);
+
+      const state = { cutoff: 60, scenario: "all", sel: null };
+      const rows = access.rows;
+      /* Frame the mainland. Kepulauan Seribu lies ~60 km offshore; including it in the bounds
+         shrank Jabodetabek to a third of the frame. The islands stay in every number and in
+         the tables — they are simply off-frame on the maps, which is stated in the note. */
+      const B = (() => {
+        let w = 180, s = 90, e = -180, n = -90;
+        for (const f of geo.features) {
+          if (/seribu/i.test(f.properties.r ?? "")) continue;
+          const polys = f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
+          for (const poly of polys) for (const ring of poly) for (const [x, y] of ring) {
+            if (x < w) w = x; if (x > e) e = x; if (y < s) s = y; if (y > n) n = y;
+          }
+        }
+        const padLon = (e - w) * 0.015, padLat = (n - s) * 0.015;
+        return { w: w - padLon, s: s - padLat, e: e + padLon, n: n + padLat };
+      })();
+
+      const val = (id, sc = state.scenario, cut = state.cutoff) => {
+        const r = rows[id]; if (!r || !r[sc]) return null;
+        const a = r[sc][String(cut)]; return a ? a[0] : null;
+      };
+      /* Access is extremely concentrated, so the choropleth uses a square-root scale — stated
+         on the legend — or nine tenths of the region would read as a single flat black. */
+      const shadeT = (v) => Math.sqrt(Math.max(0, Math.min(1, (v ?? 0) / maxVal)));
+      const maxVal = (() => {
+        let m = 0; for (const id in rows) { const v = val(id, "all", 60); if (v > m) m = v; } return m || 1;
+      })();
+
+      /* ═════════ a reusable 2-D canvas map (the product, not a fallback) ═════════ */
+      function canvasMap(canvas, opts = {}) {
+        const ctx = canvas.getContext("2d");
+        const hitCtx = document.createElement("canvas").getContext("2d");
+        const dpr = Math.min(devicePixelRatio || 1, 2);
+        const pad = opts.pad ?? 12;
+        let W = 0, H = 0, k = 1, ox = 0, oy = 0, paths = [], boxes = [];
+        const lonC = Math.cos(((B.n + B.s) / 2) * Math.PI / 180);
+        function project() {
+          const host = canvas.parentElement;
+          W = host.clientWidth; H = host.clientHeight;
+          if (!W || !H) return false;
+          canvas.width = W * dpr; canvas.height = H * dpr;
+          canvas.style.width = W + "px"; canvas.style.height = H + "px";
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          hitCtx.canvas.width = W; hitCtx.canvas.height = H;
+          k = Math.min((W - 2 * pad) / ((B.e - B.w) * lonC), (H - 2 * pad) / (B.n - B.s));
+          ox = (W - k * (B.e - B.w) * lonC) / 2; oy = (H + k * (B.n - B.s)) / 2;
+          paths = []; boxes = [];
+          for (const f of geo.features) {
+            const p = new Path2D();
+            let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+            const polys = f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
+            for (const poly of polys) for (const ring of poly) {
+              ring.forEach(([lon, lat], j) => {
+                const px = X(lon), py = Y(lat);
+                if (px < x0) x0 = px; if (px > x1) x1 = px;
+                if (py < y0) y0 = py; if (py > y1) y1 = py;
+                j ? p.lineTo(px, py) : p.moveTo(px, py);
+              });
+              p.closePath();
+            }
+            paths.push(p); boxes.push([x0, y0, x1, y1]);
+          }
+          return true;
+        }
+        function X(lon) { return ox + (lon - B.w) * lonC * k; }
+        function Y(lat) { return oy - (lat - B.s) * k; }
+        function featureAt(ev) {
+          const r = canvas.getBoundingClientRect();
+          const px = ev.clientX - r.left, py = ev.clientY - r.top;
+          for (let i = paths.length - 1; i >= 0; i--) {
+            const b = boxes[i];
+            if (px < b[0] || px > b[2] || py < b[1] || py > b[3]) continue;
+            if (hitCtx.isPointInPath(paths[i], px, py)) return i;
+          }
+          return -1;
+        }
+        return { ctx, X, Y, project, featureAt, get paths() { return paths; },
+                 get W() { return W; }, get H() { return H; },
+                 get pxPerKm() { return k / 110.57; }, canvas };
+      }
+
+      function drawNetwork(m, { alpha = 1, modes = null, glow = true, reachedUntil = null } = {}) {
+        const { ctx } = m;
+        for (const ln of net.lines) {
+          if (modes && !modes.has(ln.m)) continue;
+          if (!ln.c || ln.c.length < 2) continue;
+          const col = MODE_COLOR[ln.m] || "#888";
+          const rail = ln.m !== "brt" && ln.m !== "mikrotrans";
+          let a = alpha * (ln.m === "mikrotrans" ? 0.5 : rail ? 1 : 0.85);
+          if (reachedUntil !== null) {
+            const d = ln.__reach ?? 999;
+            a *= d <= reachedUntil ? 1 : 0.12;
+          }
+          ctx.globalAlpha = a;
+          ctx.beginPath();
+          ln.c.forEach(([lon, lat], i) => (i ? ctx.lineTo(m.X(lon), m.Y(lat)) : ctx.moveTo(m.X(lon), m.Y(lat))));
+          if (glow && rail) { ctx.strokeStyle = col; ctx.lineWidth = 5; ctx.globalAlpha = a * 0.16; ctx.stroke(); ctx.globalAlpha = a; }
+          ctx.strokeStyle = col;
+          ctx.lineWidth = rail ? 1.7 : ln.m === "brt" ? 1.3 : 0.6;
+          ctx.lineJoin = "round"; ctx.lineCap = "round";
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      function drawOutlines(m, { fill = "#14171D", stroke = "#242A34", lw = 0.35, fillFn = null } = {}) {
+        const { ctx } = m;
+        m.paths.forEach((p, i) => {
+          ctx.fillStyle = fillFn ? fillFn(i) : fill;
+          ctx.fill(p);
+          ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(p);
+        });
+      }
+      /* the base map is not one flat grey: each kelurahan carries a whisper of its own access */
+      const baseTint = d3.piecewise(d3.interpolateRgb, ["#0F1218", "#1A1A20", "#2A1D1D", "#3A231B"]);
+      const baseFill = geo.features.map((f) => baseTint(shadeT(val(f.properties.id, "all", 60))));
+
+      /* ═════════ HERO — the hour blooming outward ═════════ */
+      sect("hero", () => {
+        const canvas = document.getElementById("hero-c");
+        const m = canvasMap(canvas, { pad: 8 });
+        if (!hero || !hero.origins || !Object.keys(hero.origins).length) {
+          document.getElementById("hero-stamp").textContent = "Isochrone data pending — the pipeline has not exported hero.json yet.";
+          if (m.project()) { drawOutlines(m); drawNetwork(m, { alpha: 0.8 }); }
+          return;
+        }
+        const ids = hero.featured.filter((i) => hero.origins[i]);
+        let cur = ids.indexOf(hero.default); if (cur < 0) cur = 0;
+
+        // pre-compute, per line, the earliest minute at which any of its vertices is reached
+        const cellLat = cells.lat, cellLon = cells.lon;
+        function annotateLines(iso) {
+          const tByCell = new Map();
+          iso.i.forEach((ci, j) => tByCell.set(ci, iso.t[j]));
+          const near = [];
+          for (const [ci, t] of tByCell) near.push([cellLon[ci], cellLat[ci], t]);
+          for (const ln of net.lines) {
+            let best = 999;
+            for (let j = 0; j < ln.c.length; j += Math.max(1, Math.floor(ln.c.length / 24))) {
+              const [lo, la] = ln.c[j];
+              for (const [x, y, t] of near) {
+                if (t >= best) continue;
+                if (Math.abs(x - lo) < 0.012 && Math.abs(y - la) < 0.012) best = t;
+              }
+            }
+            ln.__reach = best;
+          }
+        }
+
+        const hud = document.getElementById("hero-hud");
+        const clock = document.getElementById("hud-clock");
+        const cellPx = () => Math.max(2.2, m.pxPerKm * (cells.cell_m / 1000) * 1.08);
+        let raf = null;
+
+        function run(id, animate = true) {
+          const iso = hero.origins[id];
+          if (!iso) return;
+          annotateLines(iso);
+          const r = rows[id] || {};
+          document.getElementById("hud-origin").textContent = `${r.n ?? id}, ${r.r ?? ""}`.replace(/, $/, "");
+          const a60 = r.all ? r.all["60"] : null;
+          document.getElementById("hud-jobs").textContent = a60 ? pct(a60[0]) : "—";
+          document.getElementById("hud-hosp").textContent = a60 ? num(a60[1]) : "—";
+          document.getElementById("hud-pop").textContent = a60 ? pct(a60[2]) : "—";
+          hud.hidden = false;
+          const px = cellPx();
+          const oLat = r.lat, oLon = r.lon;
+          const start = performance.now();
+          const DUR = 4200;
+          cancelAnimationFrame(raf);
+          const frame = (now) => {
+            const t = reduced ? 60 : Math.min(60, ((now - start) / DUR) * 60);
+            clock.textContent = `${String(Math.floor(t)).padStart(2, "0")}:${String(Math.floor((t % 1) * 60)).padStart(2, "0")}`;
+            const { ctx } = m;
+            ctx.clearRect(0, 0, m.W, m.H);
+            ctx.fillStyle = "#0B0D11"; ctx.fillRect(0, 0, m.W, m.H);
+            drawOutlines(m, { fillFn: (i) => baseFill[i], stroke: "#1D222B", lw: 0.3 });
+            // reachable cells, igniting by band
+            ctx.globalCompositeOperation = "lighter";
+            for (let j = 0; j < iso.i.length; j++) {
+              const tt = iso.t[j]; if (tt > t) break;
+              const age = Math.min(1, (t - tt) / 6);
+              const ci = iso.i[j];
+              const x = m.X(cellLon[ci]), y = m.Y(cellLat[ci]);
+              ctx.fillStyle = BAND[bandOf(tt)];
+              const halo = px * (1.5 + 0.7 * age);             // soft spill, additively blended
+              ctx.globalAlpha = 0.1 + 0.13 * age;
+              ctx.fillRect(x - halo / 2, y - halo / 2, halo, halo);
+              const core = px * (0.5 + 0.5 * age);             // the cell itself
+              ctx.globalAlpha = 0.3 + 0.55 * age;
+              ctx.fillRect(x - core / 2, y - core / 2, core, core);
+            }
+            ctx.globalCompositeOperation = "source-over";
+            ctx.globalAlpha = 1;
+            drawNetwork(m, { alpha: 0.95, reachedUntil: t });
+            // the origin, pulsing
+            if (isFinite(oLat) && isFinite(oLon)) {
+              const x = m.X(oLon), y = m.Y(oLat);
+              const pulse = 6 + (reduced ? 0 : 3 * Math.sin(now / 300));
+              const g = ctx.createRadialGradient(x, y, 0, x, y, pulse * 3);
+              g.addColorStop(0, "rgba(247,156,106,0.9)"); g.addColorStop(1, "rgba(247,156,106,0)");
+              ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, pulse * 3, 0, 7); ctx.fill();
+              ctx.fillStyle = "#FFF3E9"; ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 7); ctx.fill();
+            }
+            const heroVisible = document.getElementById("hero").getBoundingClientRect().bottom > 0;
+            if (t < 60 || (!reduced && heroVisible)) raf = requestAnimationFrame(frame);
+          };
+          if (!animate || reduced) { clock.textContent = "60:00"; }
+          raf = requestAnimationFrame(frame);
+        }
+        const boot = () => { if (m.project()) run(ids[cur]); };
+        boot();
+        addEventListener("resize", () => { if (m.project()) run(ids[cur], false); });
+        document.getElementById("hero-replay").onclick = () => run(ids[cur]);
+        document.getElementById("hero-shuffle").onclick = () => { cur = (cur + 1) % ids.length; run(ids[cur]); };
+      });
+
+      /* ═════════ CH 1 — the assembled network ═════════ */
+      sect("network chapter", () => {
+        const canvas = document.getElementById("net-c");
+        const m = canvasMap(canvas, { pad: 10 });
+        const active = new Set(Object.keys(MODE_COLOR));
+        const counts = {}; const kms = {};
+        const R = 6371;
+        for (const ln of net.lines) {
+          counts[ln.m] = (counts[ln.m] || 0) + 1;
+          let d = 0;
+          for (let i = 1; i < ln.c.length; i++) {
+            const [x1, y1] = ln.c[i - 1], [x2, y2] = ln.c[i];
+            const dx = (x2 - x1) * Math.cos(y1 * Math.PI / 180) * 111.32, dy = (y2 - y1) * 110.57;
+            d += Math.hypot(dx, dy);
+          }
+          kms[ln.m] = (kms[ln.m] || 0) + d;
+        }
+        const legend = document.getElementById("net-legend");
+        legend.innerHTML = "";
+        for (const k of Object.keys(MODE_COLOR)) {
+          if (!counts[k]) continue;
+          const b = document.createElement("button");
+          b.type = "button"; b.className = "lg on"; b.dataset.mode = k;
+          b.innerHTML = `<i style="background:${MODE_COLOR[k]}"></i><span>${MODE_LABEL[k]}</span><em>${counts[k]} route${counts[k] > 1 ? "s" : ""} · ${Math.round(kms[k])} km</em>`;
+          b.onclick = () => { active.has(k) ? active.delete(k) : active.add(k); b.classList.toggle("on"); paint(); };
+          legend.appendChild(b);
+        }
+        const g = stats?.gtfs ?? {};
+        const tj = g["transjakarta.zip"] ?? {};
+        const rail = g["rail_handencoded.zip"] ?? {};
+        const cards = [
+          ["Bus routes in the official feed", num(tj.routes)],
+          ["Bus stops", num(tj.stops)],
+          ["Rail stations (hand-encoded)", num(rail.stops)],
+          ["Kelurahan / desa routed", num(access.order.length)],
+          ["Destination cells (1 km)", num(cells.lat.length)],
+          ["Departure window", `${access.window.from}–${access.window.to}`],
+        ];
+        document.getElementById("net-stats").innerHTML = cards
+          .map(([l, v]) => `<div class="stat"><span class="sv">${v}</span><span class="sl">${l}</span></div>`).join("");
+        function paint() {
+          if (!m.project()) return;
+          const { ctx } = m;
+          ctx.fillStyle = "#0C0F13"; ctx.fillRect(0, 0, m.W, m.H);
+          drawOutlines(m, { fillFn: (i) => baseFill[i], stroke: "#1E232C", lw: 0.3 });
+          drawNetwork(m, { modes: active, alpha: 1 });
+          labelLineEnds();
+        }
+        /* rail line names at the line ends, with bounding-box de-collision */
+        function labelLineEnds() {
+          const { ctx } = m;
+          ctx.font = "600 12px " + getComputedStyle(document.body).getPropertyValue("--font-data");
+          ctx.textBaseline = "middle";
+          const placed = [];
+          const fits = (b) => !placed.some((q) => !(b[2] < q[0] || b[0] > q[2] || b[3] < q[1] || b[1] > q[3]))
+            && b[0] > 2 && b[2] < m.W - 2 && b[1] > 2 && b[3] < m.H - 2;
+          for (const ln of net.lines) {
+            if (ln.m === "brt" || ln.m === "mikrotrans" || !active.has(ln.m) || !ln.c?.length) continue;
+            const label = (ln.n || "").replace(/Krl |Lrt |Mrt /i, (x) => x.toUpperCase());
+            const w = ctx.measureText(label).width;
+            const cx = m.W / 2, cy = m.H / 2;
+            const ends = [ln.c[ln.c.length - 1], ln.c[0]].sort((a, b) =>
+              Math.hypot(m.X(b[0]) - cx, m.Y(b[1]) - cy) - Math.hypot(m.X(a[0]) - cx, m.Y(a[1]) - cy));
+            for (const [lon, lat] of ends) {
+              const x = m.X(lon), y = m.Y(lat);
+              let done = false;
+              for (const [dx, dy] of [[9, 0], [-9 - w, 0], [9, -13], [-9 - w, 13]]) {
+                const b = [x + dx - 3, y + dy - 8, x + dx + w + 3, y + dy + 8];
+                if (!fits(b)) continue;
+                ctx.fillStyle = "rgba(12,15,19,0.78)";
+                ctx.fillRect(b[0], b[1], b[2] - b[0], b[3] - b[1]);
+                ctx.fillStyle = MODE_COLOR[ln.m];
+                ctx.fillText(label, x + dx, y + dy);
+                ctx.beginPath(); ctx.arc(x, y, 2.2, 0, 7); ctx.fill();
+                placed.push(b); done = true; break;
+              }
+              if (done) break;
+            }
+          }
+        }
+        paint();
+        addEventListener("resize", paint);
+      });
+
+      /* ═════════ CH 2 — choropleth (MapLibre where WebGL exists, canvas otherwise) ═════════ */
+      let isochrones = null, isoPending = false;
+      const tip = document.getElementById("tip");
+      const panel = document.getElementById("panel");
+
+      sect("controls", () => {
+        const cut = document.getElementById("cutoff");
+        access.cutoffs.forEach((c) => {
+          const b = document.createElement("button");
+          b.type = "button"; b.textContent = `${c} min`; b.className = c === state.cutoff ? "on" : "";
+          b.onclick = () => { state.cutoff = c; [...cut.children].forEach((x) => x.classList.toggle("on", x === b)); repaint(); };
+          cut.appendChild(b);
+        });
+        const sc = document.getElementById("scenario");
+        const LAB = { all: "Everything", no_rail: "Without rail", walk: "Walking only" };
+        access.scenarios.forEach((s) => {
+          const b = document.createElement("button");
+          b.type = "button"; b.textContent = LAB[s] ?? s; b.className = s === state.scenario ? "on" : "";
+          b.onclick = () => { state.scenario = s; [...sc.children].forEach((x) => x.classList.toggle("on", x === b)); repaint(); };
+          sc.appendChild(b);
+        });
+        const dl = document.getElementById("kel-list");
+        for (const id of access.order) {
+          const r = rows[id]; if (!r) continue;
+          const o = document.createElement("option"); o.value = `${r.n} · ${r.k}, ${r.r}`; o.dataset.id = id; dl.appendChild(o);
+        }
+        document.getElementById("search").addEventListener("change", (e) => {
+          const opt = [...dl.options].find((o) => o.value === e.target.value);
+          if (opt) select(opt.dataset.id);
+        });
+        const rampEl = document.getElementById("ramp");
+        rampEl.innerHTML = `<span class="rlab">0%</span><i></i><span class="rlab" id="ramp-max">${pct(maxVal, 0)}</span>
+          <span class="rcap">share of the region's job-dense floorspace reachable · square-root scale ·
+          mid-tone ≈ ${pct(maxVal * 0.25, 1)} · Kepulauan Seribu is off-frame</span>`;
+        rampEl.querySelector("i").style.background = `linear-gradient(90deg, ${RAMP.join(",")})`;
+      });
+
+      function tipHTML(id) {
+        const r = rows[id]; if (!r) return "";
+        const a = r[state.scenario]?.[String(state.cutoff)];
+        return `<b>${r.n}</b><span class="t-sub">${r.k} · ${r.r}</span>
+          <span class="t-row"><span>Jobs reachable</span><b>${a ? pct(a[0]) : "—"}</b></span>
+          <span class="t-row"><span>Hospitals</span><b>${a ? num(a[1]) : "—"}</b></span>
+          <span class="t-row"><span>People reachable</span><b>${a ? pct(a[2]) : "—"}</b></span>
+          <span class="t-row"><span>Population</span><b>${num(r.pop)}</b></span>
+          <span class="t-foot">${state.cutoff} min · scheduled, ${access.window.from}–${access.window.to} weekday</span>`;
+      }
+
+      async function loadIsochrones() {
+        if (isochrones || isoPending) return isochrones;
+        isoPending = true;
+        try { isochrones = await fetch(`${base}/data/isochrones.json`).then((r) => r.json()); }
+        catch (e) { console.warn("isochrones unavailable", e); }
+        isoPending = false; return isochrones;
+      }
+
+      async function select(id) {
+        state.sel = id;
+        tip.hidden = true;
+        const r = rows[id]; if (!r) return;
+        panel.hidden = false;
+        document.getElementById("p-region").textContent = `${r.k} · ${r.r}`;
+        document.getElementById("p-name").textContent = r.n;
+        const a = r[state.scenario]?.[String(state.cutoff)] ?? [null, null, null, null];
+        const x = r[`${state.scenario}_x`] ?? {};
+        document.getElementById("p-stats").innerHTML = [
+          ["Job-dense floorspace", pct(a[0])],
+          ["Hospitals", num(a[1])],
+          ["Clinics · puskesmas", num(a[3])],
+          ["People reachable", pct(a[2])],
+          ["Nearest hospital", x.nh == null ? "—" : `${Math.round(x.nh)} min`],
+          ["Population", num(r.pop)],
+        ].map(([l, v]) => `<div class="ps"><span class="pv">${v}</span><span class="pl">${l}</span></div>`).join("");
+        const bars = access.cutoffs.map((c) => {
+          const v = r[state.scenario]?.[String(c)]?.[0] ?? 0;
+          return `<div class="bar"><span class="bl">${c} min</span><i style="width:${Math.min(100, (v / maxVal) * 100)}%"></i><b>${pct(v)}</b></div>`;
+        }).join("");
+        document.getElementById("p-bars").innerHTML = bars;
+        const note = document.getElementById("p-note");
+        repaint();
+        if (!isochrones) note.textContent = "Loading this kelurahan's isochrone…";
+        const iso = await loadIsochrones();
+        note.textContent = `Scheduled p50 over ${access.window.from}–${access.window.to} on ${access.window.date}. Rail legs carry a ±15 % caveat (hand-encoded timetables).`;
+        if (iso && iso[id]) repaint();
+        syncHash();
+      }
+      document.getElementById("panel-close").onclick = () => { panel.hidden = true; state.sel = null; repaint(); syncHash(); };
+      const syncHash = () => { history.replaceState(null, "", state.sel ? `#k=${state.sel}` : " "); };
+
+      let repaint = () => {};
+      sect("choropleth", () => {
+        const host = document.getElementById("map");
+        let webgl = false;
+        try {
+          const c = document.createElement("canvas");
+          webgl = !!(c.getContext("webgl2") || c.getContext("webgl"));
+        } catch (e) { webgl = false; }
+        if (webgl) { try { return webglMap(); } catch (e) { console.warn("WebGL map failed, using canvas:", e); } }
+        return canvasChoropleth();
+
+        function shadeGeo() {
+          for (const f of geo.features) {
+            const v = val(f.properties.id);
+            f.properties.v = shadeT(v);
+          }
+        }
+
+        function webglMap() {
+          shadeGeo();
+          const map = new maplibregl.Map({
+            container: "map", attributionControl: false, dragRotate: false,
+            style: { version: 8, sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": "#0C0F13" } }] },
+            bounds: [[B.w, B.s], [B.e, B.n]], fitBoundsOptions: { padding: 18 },
+          });
+          map.addControl(new maplibregl.AttributionControl({ customAttribution: "COD-AB (BPS) · OSM ODbL · GHSL", compact: true }));
+          map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
+          map.on("load", () => {
+            map.addSource("adm4", { type: "geojson", data: geo, promoteId: "id" });
+            map.addLayer({ id: "fill", type: "fill", source: "adm4",
+              paint: { "fill-color": ["interpolate", ["linear"], ["get", "v"], 0, RAMP[0], 0.2, RAMP[1], 0.4, RAMP[2], 0.6, RAMP[3], 0.8, RAMP[4], 1, RAMP[5]], "fill-opacity": 0.94 } });
+            map.addLayer({ id: "line", type: "line", source: "adm4", paint: { "line-color": "#20252E", "line-width": 0.3 } });
+            map.addLayer({ id: "sel", type: "line", source: "adm4", paint: { "line-color": "#F79C6A", "line-width": 1.8 }, filter: ["==", ["get", "id"], ""] });
+            const lineFC = { type: "FeatureCollection", features: net.lines.map((l) => ({ type: "Feature", properties: { m: l.m }, geometry: { type: "LineString", coordinates: l.c } })) };
+            map.addSource("net", { type: "geojson", data: lineFC });
+            map.addSource("iso", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+            map.addLayer({ id: "iso", type: "circle", source: "iso",
+              paint: { "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 8, 2.5, 12, 26],
+                       "circle-color": ["step", ["get", "t"], BAND[0], 15, BAND[1], 30, BAND[2], 45, BAND[3]],
+                       "circle-opacity": 0.5, "circle-blur": 0.35 } });
+            map.addLayer({ id: "net", type: "line", source: "net",
+              paint: { "line-color": ["match", ["get", "m"], "brt", MODE_COLOR.brt, "mikrotrans", MODE_COLOR.mikrotrans, "krl", MODE_COLOR.krl, "mrt", MODE_COLOR.mrt, "lrt", MODE_COLOR.lrt, "#888"],
+                       "line-width": 0.9, "line-opacity": 0.5 } });
+          });
+          map.on("mousemove", "fill", (e) => {
+            const f = e.features[0];
+            map.setFilter("sel", ["==", ["get", "id"], f.properties.id]);
+            map.getCanvas().style.cursor = "pointer";
+            tip.hidden = false; tip.style.left = e.point.x + 16 + "px"; tip.style.top = e.point.y + 16 + "px";
+            tip.innerHTML = tipHTML(f.properties.id);
+          });
+          map.on("mouseleave", "fill", () => { map.setFilter("sel", ["==", ["get", "id"], ""]); tip.hidden = true; map.getCanvas().style.cursor = ""; });
+          map.on("click", "fill", (e) => select(e.features[0].properties.id));
+          repaint = () => {
+            shadeGeo();
+            map.getSource("adm4")?.setData(geo);
+            map.setFilter?.("sel", ["==", ["get", "id"], state.sel ?? ""]);
+            const iso = isochrones?.[state.sel]?.[state.scenario] ?? (state.scenario === "all" && state.sel ? hero?.origins?.[state.sel] : null);
+            const feats = [];
+            if (iso) for (let j = 0; j < iso.i.length; j++) {
+              const tt = iso.t[j]; if (tt > state.cutoff) break;
+              feats.push({ type: "Feature", properties: { t: tt },
+                geometry: { type: "Point", coordinates: [cells.lon[iso.i[j]], cells.lat[iso.i[j]]] } });
+            }
+            map.getSource("iso")?.setData({ type: "FeatureCollection", features: feats });
+          };
+          return map;
+        }
+
+        function canvasChoropleth() {
+          host.innerHTML = "";
+          const canvas = document.createElement("canvas");
+          canvas.style.cssText = "display:block;cursor:crosshair;";
+          host.appendChild(canvas);
+          const note = document.createElement("div");
+          note.className = "map-note";
+          note.textContent = "2-D CANVAS MAP (BROWSER GPU OFF) · FULLY INTERACTIVE";
+          host.appendChild(note);
+          const m = canvasMap(canvas, { pad: 14 });
+          let hover = -1;
+          const cellPx = () => Math.max(2.4, m.pxPerKm * (cells.cell_m / 1000) * 1.04);
+          function paint() {
+            if (!m.project()) return;
+            const { ctx } = m;
+            ctx.fillStyle = "#0C0F13"; ctx.fillRect(0, 0, m.W, m.H);
+            geo.features.forEach((f, i) => {
+              const v = val(f.properties.id);
+              ctx.fillStyle = v == null ? "#12151B" : ramp(shadeT(v));
+              ctx.fill(m.paths[i]);
+              ctx.strokeStyle = "#1B2029"; ctx.lineWidth = 0.3; ctx.stroke(m.paths[i]);
+            });
+            drawNetwork(m, { alpha: 0.45, glow: false });
+            const iso = isochrones?.[state.sel]?.[state.scenario] ?? (state.scenario === "all" && state.sel ? hero?.origins?.[state.sel] : null);
+            if (iso) {
+              const px = cellPx();
+              ctx.globalCompositeOperation = "lighter";
+              for (let j = 0; j < iso.i.length; j++) {
+                const t = iso.t[j]; if (t > state.cutoff) break;
+                const x = m.X(cells.lon[iso.i[j]]), y = m.Y(cells.lat[iso.i[j]]);
+                ctx.fillStyle = BAND[bandOf(t)];
+                ctx.globalAlpha = 0.16;
+                ctx.fillRect(x - px, y - px, px * 2, px * 2);
+                ctx.globalAlpha = 0.62;
+                ctx.fillRect(x - px / 2, y - px / 2, px, px);
+              }
+              ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+              const r = rows[state.sel];
+              if (r && isFinite(r.lat)) {                       // where the hour starts
+                const x = m.X(r.lon), y = m.Y(r.lat);
+                ctx.strokeStyle = "#FFF3E9"; ctx.lineWidth = 1.6;
+                ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.stroke();
+                ctx.fillStyle = "#FFF3E9";
+                ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 7); ctx.fill();
+              }
+            }
+            const selIdx = state.sel ? geo.features.findIndex((f) => f.properties.id === state.sel) : -1;
+            if (selIdx >= 0) { ctx.strokeStyle = "#F79C6A"; ctx.lineWidth = 1.8; ctx.stroke(m.paths[selIdx]); }
+            if (hover >= 0) { ctx.strokeStyle = "#FFF3E9"; ctx.lineWidth = 1.2; ctx.stroke(m.paths[hover]); }
+          }
+          canvas.addEventListener("mousemove", (e) => {
+            const i = m.featureAt(e);
+            if (i !== hover) { hover = i; paint(); }
+            if (i < 0) { tip.hidden = true; return; }
+            const r = host.getBoundingClientRect();
+            const blocked = panel && !panel.hidden && getComputedStyle(panel).position === "absolute"
+              ? panel.offsetWidth + 28 : 0;
+            tip.hidden = false;
+            tip.style.left = Math.max(8, Math.min(e.clientX - r.left + 16,
+              host.clientWidth - 250 - blocked)) + "px";
+            tip.style.top = Math.min(e.clientY - r.top + 16, host.clientHeight - 160) + "px";
+            tip.innerHTML = tipHTML(geo.features[i].properties.id);
+          });
+          canvas.addEventListener("mouseleave", () => { hover = -1; tip.hidden = true; paint(); });
+          canvas.addEventListener("click", (e) => { const i = m.featureAt(e); if (i >= 0) select(geo.features[i].properties.id); });
+          canvas.tabIndex = 0;
+          repaint = paint;
+          paint();
+          addEventListener("resize", paint);
+          return { paint };
+        }
+      });
+
+      /* callouts + so-whats driven by the data, never hard-coded */
+      sect("narrative", () => {
+        const sAll = equity.scenarios?.all ?? {};
+        const pair = equity.pairing ?? {};
+        const co = document.getElementById("callouts");
+        const items = [];
+        const hosp = (v) => (typeof v === "number" ? `${Math.round(v)} min to a hospital` : "no hospital within an hour");
+        if (pair.menteng) items.push(["Menteng, Central Jakarta", pct(pair.menteng.pop_weighted_jobs_share, 2), hosp(pair.menteng.median_nearest_hospital_min)]);
+        if (pair.bekasi) items.push(["Bekasi", pct(pair.bekasi.pop_weighted_jobs_share, 2), hosp(pair.bekasi.median_nearest_hospital_min)]);
+        items.push(["DKI Jakarta, median resident", pct(sAll.dki_median, 2), "population-weighted"]);
+        items.push(["Bodetabek, median resident", pct(sAll.bodetabek_median, 2), "population-weighted"]);
+        co.innerHTML = items.map(([l, v, s]) => `<div class="callout"><span class="co-v">${v}</span><span class="co-l">${l}</span><span class="co-s">${s}</span></div>`).join("");
+        const ratio = sAll.bodetabek_median > 0 ? (sAll.dki_median / sAll.bodetabek_median) : null;
+        document.getElementById("ch2-sowhat").textContent =
+          `So what: the median resident of DKI Jakarta reaches ${pct(sAll.dki_median, 2)} of the region's job-dense floorspace in an hour; the median resident of Bodetabek reaches ${pct(sAll.bodetabek_median, 2)}` +
+          (ratio && isFinite(ratio) ? ` — a gap of ${ratio.toFixed(0)}×, which no amount of individual effort closes.` : ".");
+        document.getElementById("foot-stamp").textContent =
+          `A DEMO-LAB CASE · STATIC SNAPSHOT · ROUTED ${access.window.date} ${access.window.from}–${access.window.to} · GENERATED ${(stats?.generated ?? "").slice(0, 10)}`;
+      });
+
+      /* ═════════ CH 3 — Lorenz ═════════ */
+      sect("lorenz", () => {
+        const sAll = equity.scenarios?.all;
+        if (!sAll) return;
+        document.getElementById("gini").textContent = fx(sAll.gini);
+        document.getElementById("palma").textContent = typeof sAll.palma === "number" ? fx(sAll.palma, 1) + "×" : "∞";
+        if (typeof sAll.palma !== "number" && sAll.palma_note)
+          document.querySelector("#palma").nextElementSibling.textContent =
+            "Palma ratio — undefined here: the bottom four tenths of the population reach essentially nothing";
+        document.getElementById("nohosp").textContent = pct(sAll.pop_share_no_hospital_60min, 0);
+        const el = document.getElementById("lorenz");
+        const W = Math.max(320, (el.clientWidth || 560) - 18), H = Math.min(420, Math.max(300, W * 0.72));
+        const M = { t: 18, r: 18, b: 44, l: 52 };
+        const x = d3.scaleLinear([0, 1], [M.l, W - M.r]), y = d3.scaleLinear([0, 1], [H - M.b, M.t]);
+        const svg = d3.select(el).append("svg").attr("width", W).attr("height", H).attr("role", "img")
+          .attr("aria-label", `Lorenz curve of transit access; Gini ${fx(sAll.gini)}`);
+        const defs = svg.append("defs");
+        const grad = defs.append("linearGradient").attr("id", "lz").attr("x1", 0).attr("y1", 1).attr("x2", 0).attr("y2", 0);
+        grad.append("stop").attr("offset", "0%").attr("stop-color", "#E4562E").attr("stop-opacity", 0.02);
+        grad.append("stop").attr("offset", "100%").attr("stop-color", "#E4562E").attr("stop-opacity", 0.34);
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`)
+          .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format(".0%")));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`)
+          .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".0%")));
+        svg.append("text").attr("class", "axlab").attr("x", (W + M.l) / 2).attr("y", H - 8)
+          .attr("text-anchor", "middle").text("cumulative share of people, worst-served first");
+        svg.append("text").attr("class", "axlab").attr("transform", `translate(14,${(H - M.b + M.t) / 2}) rotate(-90)`)
+          .attr("text-anchor", "middle").text("cumulative share of reachable jobs");
+        svg.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(1)).attr("y2", y(1))
+          .attr("stroke", "#4A5260").attr("stroke-dasharray", "3 4").attr("stroke-width", 1);
+        const line = d3.line().x((d) => x(d[0])).y((d) => y(d[1])).curve(d3.curveMonotoneX);
+        const area = d3.area().x((d) => x(d[0])).y0((d) => y(d[0])).y1((d) => y(d[1])).curve(d3.curveMonotoneX);
+        const others = ["no_rail", "walk"].filter((s) => equity.scenarios[s]);
+        others.forEach((s) => {
+          svg.append("path").datum(equity.scenarios[s].lorenz).attr("d", line)
+            .attr("fill", "none").attr("stroke", s === "walk" ? "#5A6270" : "#8C6A5D")
+            .attr("stroke-width", 1.2).attr("stroke-dasharray", "4 4").attr("opacity", 0.9)
+            .append("title").text(`${s === "walk" ? "Walking only" : "Without rail"} · Gini ${fx(equity.scenarios[s].gini)}`);
+        });
+        const fill = svg.append("path").datum(sAll.lorenz).attr("d", area).attr("fill", "url(#lz)").attr("opacity", 0);
+        const path = svg.append("path").datum(sAll.lorenz).attr("d", line).attr("fill", "none")
+          .attr("stroke", "#E4562E").attr("stroke-width", 2.4).attr("stroke-linecap", "round");
+        const len = path.node().getTotalLength();
+        const focus = svg.append("g").attr("opacity", 0);
+        focus.append("circle").attr("r", 4.5).attr("fill", "#F79C6A");
+        const ft = focus.append("text").attr("class", "focus-t").attr("x", 10).attr("y", -10);
+        const draw = () => {
+          if (reduced) { fill.attr("opacity", 1); return; }
+          path.attr("stroke-dasharray", `${len} ${len}`).attr("stroke-dashoffset", len)
+            .transition().duration(1400).ease(d3.easeCubicOut).attr("stroke-dashoffset", 0);
+          fill.transition().delay(700).duration(700).attr("opacity", 1);
+        };
+        new IntersectionObserver((es, o) => es.forEach((e) => { if (e.isIntersecting) { draw(); o.disconnect(); } }), { threshold: 0.35 }).observe(el);
+        svg.append("rect").attr("x", M.l).attr("y", M.t).attr("width", W - M.l - M.r).attr("height", H - M.t - M.b)
+          .attr("fill", "transparent")
+          .on("mousemove", (ev) => {
+            const px = d3.pointer(ev)[0], xv = Math.max(0, Math.min(1, x.invert(px)));
+            const c = sAll.lorenz;
+            const i = Math.min(c.length - 1, Math.max(0, Math.round(xv * (c.length - 1))));
+            focus.attr("opacity", 1).attr("transform", `translate(${x(c[i][0])},${y(c[i][1])})`);
+            ft.text(`${d3.format(".0%")(c[i][0])} of people → ${d3.format(".1%")(c[i][1])} of reachable jobs`);
+            ft.attr("x", c[i][0] > 0.5 ? -10 : 10).attr("text-anchor", c[i][0] > 0.5 ? "end" : "start");
+          })
+          .on("mouseleave", () => focus.attr("opacity", 0));
+
+        const tbl = (arr, el2) => {
+          document.getElementById(el2).innerHTML = `<table><thead><tr><th>Kelurahan</th><th>Kabupaten / kota</th><th class="r">Jobs in 60 min</th><th class="r">Hospitals</th></tr></thead><tbody>` +
+            arr.map((r) => `<tr><td>${r.adm4_name}</td><td class="dim">${r.adm2_name}</td><td class="r num">${pct(r.jobs_share)}</td><td class="r num">${num(r.hospitals)}</td></tr>`).join("") +
+            `</tbody></table>`;
+        };
+        tbl(equity.best ?? [], "tbl-best");
+        tbl(equity.worst ?? [], "tbl-worst");
+        const pl = equity.poverty_link ?? {};
+        document.getElementById("ch3-sowhat").textContent =
+          `So what: a Gini of ${fx(sAll.gini)} on access means the hour is shared about as unevenly as income is in many countries — and ${pct(sAll.pop_share_no_hospital_60min, 0)} of the region's people cannot reach a hospital in it at all. ` +
+          (pl.available ? `Against Case F's poverty surface the rank correlation is ${pl.spearman_rho.toFixed(2)}, and ${num(pl.double_disadvantage_count)} kelurahan are both poor and disconnected.`
+                        : `The poverty cross-link is pending: ${(pl.reason ?? "Case F has not published its estimates yet").replace(/\.$/, "")}.`);
+      });
+
+      /* ═════════ CH 4 — what each layer buys ═════════ */
+      sect("layers", () => {
+        const el = document.getElementById("layers");
+        const S = equity.scenarios ?? {};
+        const order = ["all", "no_rail", "walk"].filter((s) => S[s]);
+        const LAB = { all: "Everything: bus + rail + walking", no_rail: "Without rail (bus + walking)", walk: "Walking only" };
+        const maxM = Math.max(...order.map((s) => S[s].mean_jobs_share), 0.0001);
+        el.innerHTML = order.map((s) => {
+          const v = S[s];
+          return `<div class="layer">
+            <div class="layer-h"><span class="layer-n">${LAB[s]}</span><span class="layer-v">${pct(v.mean_jobs_share, 2)}</span></div>
+            <div class="layer-bar"><i data-w="${Math.max(1.5, (v.mean_jobs_share / maxM) * 100)}"></i></div>
+            <div class="layer-m"><span>average resident, population-weighted</span><span>median resident <b>${pct(v.median_jobs_share, 2)}</b></span><span>Gini <b>${fx(v.gini)}</b></span><span>DKI <b>${pct(v.dki_median, 2)}</b></span><span>Bodetabek <b>${pct(v.bodetabek_median, 2)}</b></span><span>hospital <b>${typeof v.median_nearest_hospital_min === "number" ? Math.round(v.median_nearest_hospital_min) + " min" : "—"}</b></span></div>
+          </div>`;
+        }).join("");
+        const bars = el.querySelectorAll(".layer-bar i");
+        const run = () => bars.forEach((b, i) => setTimeout(() => { b.style.width = b.dataset.w + "%"; }, reduced ? 0 : 120 * i));
+        new IntersectionObserver((es, o) => es.forEach((e) => { if (e.isIntersecting) { run(); o.disconnect(); } }), { threshold: 0.3 }).observe(el);
+        const rc = equity.rail_contribution, tc = equity.transit_contribution;
+        document.getElementById("ch4-sowhat").textContent =
+          (rc ? `So what: removing the rail layer costs the average resident ${pct(Math.abs(rc.mean_access_delta ?? 0), 2)} of reachable floorspace${typeof rc.gini_delta === "number" ? ` and moves the Gini by ${fx(Math.abs(rc.gini_delta))}` : ""}. ` : "So what: ") +
+          (tc ? `The whole public-transport system is worth ${pct(Math.abs(tc.mean_access_delta ?? 0), 2)} over walking alone — which is the honest size of the prize, and of the gap left to close.` : "");
+      });
+
+      /* ═════════ METHOD ═════════ */
+      sect("method", () => {
+        const g = document.getElementById("gates");
+        if (!stats) { g.innerHTML = `<p class="pending">Gate results pending — validate.py has not run for this build.</p>`; }
+        else {
+          const rowsG = [];
+          const mk = (id, title, body, ok) => rowsG.push(`<div class="gate ${ok === true ? "ok" : ok === false ? "bad" : "na"}">
+            <span class="g-id">${id}</span><div><b>${title}</b><p>${body}</p></div>
+            <span class="g-flag">${ok === true ? "PASS" : ok === false ? "FAIL" : "PENDING"}</span></div>`);
+          const g1 = stats["G-G1"] ?? {};
+          mk("G-G1", "Timetable sanity", ((g1.ods ?? []).map((o) =>
+            (typeof o.scheduled_kmh === "number"
+              ? `${o.name}: published corridor average <b>${o.published_kmh} km/h</b>, the operator's own feed schedules <b>${o.scheduled_kmh} km/h</b> across ${num(o.trips_matched)} trips`
+              : `${o.name}: operator publishes <b>${o.published_min} min</b>, our timetable schedules <b>${o.scheduled_in_vehicle_min ?? "—"} min</b>`) +
+            `${typeof o.router_door_to_door_min === "number" ? ` (router door-to-door, incl. walk + wait: ${Math.round(o.router_door_to_door_min)} min)` : ""}` +
+            `${o.note ? ` — ${o.note}` : ""}`).join("<br>") || "not evaluated") +
+            (g1.method ? `<br><span class="dim">${g1.method}.</span>` : ""), g1.pass);
+          const g2 = stats["G-G2"] ?? {};
+          mk("G-G2", "External routing check", g2.reason ?? "not evaluated", null);
+          const g3 = stats["G-G3"] ?? {};
+          mk("G-G3", "Network integrity",
+            `${num(g3.stops)} GTFS stops; ${g3.snap_share == null ? (g3.snap_note ?? "snap test unavailable") : pct(g3.snap_share, 2) + " snap to the street graph within 200 m"}. ` +
+            `${num(g3.unreachable_origins)} of ${num(g3.origins)} origins could not be routed at all` +
+            `${g3.unreachable_kepulauan_seribu ? ` (${g3.unreachable_kepulauan_seribu} of them Kepulauan Seribu, which has no road link to the mainland and sits outside the routable clip; ${num(g3.unreachable_mainland)} on the mainland)` : ""}. ` +
+            `<span class="dim">${g3.note ?? ""}</span>`, g3.pass);
+          const g4 = stats["G-G4"] ?? {};
+          const pnt = g4.people_near_transit ?? {};
+          mk("G-G4", "Plausibility", [
+            g4.monotonicity ? `Rail ≥ no-rail everywhere: ${num(g4.monotonicity.violations_material ?? g4.monotonicity.violations)} material violations of ${num(g4.monotonicity.origins)} origins` +
+              `${g4.monotonicity.violations_exact != null ? ` (${num(g4.monotonicity.violations_exact)} below the ${pct(g4.monotonicity.tolerance_share, 1)} tolerance — R5 samples frequency headways by Monte Carlo)` : ""}.` : "",
+            g4.core_periphery ? `DKI median ${pct(g4.core_periphery.dki_median, 2)} vs Bodetabek ${pct(g4.core_periphery.bodetabek_median, 2)}.` : "",
+            pnt.Jakarta ? `People-near-transit (≤15-min headway, 1 km): Jakarta ${pct(pnt.Jakarta.share, 0)} vs ITDP's 2016 anchor 44%; Greater Jakarta ${pct(pnt["Greater Jakarta"].share, 0)} vs 16%.` +
+              `${pnt.method ? `<br><span class="dim">${pnt.method}</span>` : ""}` : "",
+          ].filter(Boolean).join("<br>"), g4.pass);
+          g.innerHTML = rowsG.join("");
+        }
+        const rail = stats?.rail_handencoded;
+        document.getElementById("rail-table").innerHTML = rail
+          ? `<p class="dim">${rail.note}</p><table><thead><tr><th>Line</th><th>Operator</th><th class="r">Peak headway</th><th class="r">Avg speed</th><th class="r">Stations</th></tr></thead><tbody>` +
+            Object.entries(rail.lines).map(([k, v]) => `<tr><td>${k.replace(/_/g, " ")}</td><td class="dim">${v.operator}</td><td class="r num">${v.headway_peak_min} min</td><td class="r num">${v.avg_commercial_kmh} km/h</td><td class="r num">${v.stations}</td></tr>`).join("") +
+            `</tbody></table><p class="dim">Headway sources: ${[...new Set(Object.values(rail.lines).map((v) => v.headway_source))].join(" · ")}. Geometry: ${rail.geometry_licence}.</p>`
+          : `<p class="pending">Hand-encoded rail table pending.</p>`;
+        const inputs = stats?.inputs ?? {};
+        const SRC = [
+          ["TransJakarta GTFS", "Licence <b>not stated</b> by the operator, Transitland or the Mobility Database — used with attribution while written confirmation is sought.", inputs.gtfs_transjakarta?.last_modified ?? inputs.gtfs_transjakarta?.fetched],
+          ["OpenStreetMap (Geofabrik java-latest)", "ODbL 1.0 — street and footpath graph, rail geometry, station names.", inputs.osm_java_pbf?.fetched],
+          ["GHSL GHS-BUILT-S NRES E2020", "CC BY 4.0 (JRC) — the jobs proxy: non-residential built-up floorspace.", "2020 epoch"],
+          ["GHSL GHS-POP E2025", "CC BY 4.0 (JRC) — population surface.", "2025 epoch"],
+          ["HDX healthsites", "ODbL — hospitals, clinics and puskesmas.", inputs.healthsites?.fetched],
+          ["HDX COD-AB (BPS)", "CC BY-IGO — the 1,511 kelurahan / desa boundaries.", inputs.codab_adm4?.fetched],
+          ["Bogor angkot GTFS", "CC0 community feed (Mobility Database).", inputs.gtfs_bogor?.fetched],
+          ["r5py / R5", "MIT / GPL-3.0-or-later — frequency-aware RAPTOR routing.", "1.1.7"],
+        ];
+        document.getElementById("sources").innerHTML = `<table><tbody>` + SRC.map(([n, l, v]) =>
+          `<tr><td><b>${n}</b><br><span class="dim">${l}</span></td><td class="r dim num">${v ?? "—"}</td></tr>`).join("") + `</tbody></table>`;
+      });
+
+      /* entrance reveals */
+      sect("reveal", () => {
+        const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: 0.12 });
+        document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+      });
+
+      /* deep link */
+      sect("hash", () => {
+        const m = location.hash.match(/k=([\w.]+)/);
+        if (m && rows[m[1]]) select(m[1]);
+      });
+    </script>
+
+    <style is:global>
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; background: var(--ground); color: var(--ink);
+        font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+        background-image: radial-gradient(1200px 600px at 78% -8%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 62%);
+      }
+      h1, h2, h3, h4 { font-family: var(--font-display); margin: 0; text-wrap: balance; letter-spacing: -0.02em; }
+      .num, .stamp, .eyebrow, .ch-num, .bignum, .hud-num { font-variant-numeric: tabular-nums; }
+      a { color: var(--accent); }
+      :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+      button { font: inherit; }
+
+      .eyebrow { font-family: var(--font-data); font-size: 0.7rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+      .stamp { font-family: var(--font-data); font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted); }
+      .dim { color: var(--ink-muted); }
+
+      /* ── hero ── */
+      .hero { position: relative; min-height: 100svh; display: grid; align-items: end; overflow: hidden; }
+      .hero-canvas { position: absolute; inset: 0; }
+      .hero-canvas canvas { width: 100%; height: 100%; display: block; }
+      .hero-scrim { position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(180deg, rgba(11,13,17,0.86) 0%, rgba(11,13,17,0.25) 34%, rgba(11,13,17,0.55) 72%, rgba(11,13,17,0.95) 100%); }
+      .hero-copy { position: relative; padding: 0 6vw 8vh; max-width: 60rem; display: flex; flex-direction: column; gap: 14px; }
+      .hero h1 { font-size: clamp(3.2rem, 11vw, 8rem); line-height: 0.9; font-weight: 800;
+        background: linear-gradient(180deg, #FFF6F0 10%, #F79C6A 62%, #E4562E 100%);
+        -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .lede { font-size: clamp(1rem, 1.6vw, 1.22rem); color: #CFD3DA; max-width: 46ch; margin: 0; }
+      .hero-hud { display: flex; flex-wrap: wrap; gap: 10px 34px; align-items: flex-end; margin-top: 6px;
+        border-top: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); padding-top: 14px; }
+      .hud-main { display: flex; align-items: baseline; gap: 10px; }
+      .hud-num { font-family: var(--font-data); font-size: clamp(2rem, 5vw, 3rem); font-weight: 600; color: #FFD9C4;
+        text-shadow: 0 0 26px color-mix(in srgb, var(--accent) 55%, transparent); }
+      .hud-lab, .hud-stats span { font-size: 0.86rem; color: var(--ink-muted); }
+      .hud-lab b, .hud-stats b { color: var(--ink); font-weight: 600; }
+      .hud-stats { display: flex; flex-direction: column; gap: 2px; }
+      .hud-actions { display: flex; gap: 8px; }
+      .btn { background: color-mix(in srgb, var(--accent) 16%, transparent); color: #FFD9C4; border: 1px solid color-mix(in srgb, var(--accent) 46%, transparent);
+        padding: 8px 15px; border-radius: 999px; font-size: 0.78rem; letter-spacing: 0.04em; cursor: pointer; transition: transform .2s, background .2s, box-shadow .2s; }
+      .btn:hover { transform: translateY(-1px); background: color-mix(in srgb, var(--accent) 28%, transparent); box-shadow: 0 6px 22px color-mix(in srgb, var(--accent) 25%, transparent); }
+      .btn.ghost { background: transparent; color: var(--ink-muted); border-color: var(--hairline); }
+      .btn.ghost:hover { color: var(--ink); }
+      .scroll-cue { position: absolute; bottom: 18px; left: 50%; translate: -50% 0; width: 22px; height: 34px; border: 1px solid var(--hairline); border-radius: 12px; display: grid; place-items: start center; padding-top: 6px; }
+      .scroll-cue span { width: 3px; height: 7px; background: var(--accent); border-radius: 2px; animation: cue 1.8s infinite; }
+      @keyframes cue { 0%, 100% { opacity: 0; transform: translateY(0); } 40% { opacity: 1; } 80% { opacity: 0; transform: translateY(11px); } }
+
+      /* ── layout ── */
+      main { max-width: var(--content-width); margin: 0 auto; padding: 0 clamp(16px, 4vw, 40px); }
+      .chapter { padding: clamp(64px, 10vh, 128px) 0; border-top: 1px solid var(--hairline); }
+      .chapter:first-child { border-top: 0; }
+      .ch-head { display: grid; grid-template-columns: 84px 1fr; gap: 18px; align-items: start; margin-bottom: 30px; }
+      .ch-num { font-family: var(--font-data); font-size: 2.6rem; font-weight: 600; line-height: 1; color: transparent;
+        -webkit-text-stroke: 1px color-mix(in srgb, var(--accent) 70%, transparent); }
+      .ch-head h2 { font-size: clamp(1.7rem, 3.4vw, 2.6rem); margin-bottom: 8px; }
+      .ch-lede { color: var(--ink-muted); max-width: var(--prose-width); margin: 0; }
+      .sowhat { margin: 28px 0 0; padding: 16px 20px; border-left: 2px solid var(--accent);
+        background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 9%, transparent), transparent 70%);
+        font-size: 1.03rem; max-width: var(--prose-width); border-radius: 0 var(--radius) var(--radius) 0; }
+      .reveal { opacity: 0; transform: translateY(14px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.7,.3,1); }
+      .reveal.in { opacity: 1; transform: none; }
+      @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } .scroll-cue span { animation: none; } }
+
+      /* ── ch1 ── */
+      .net-wrap { display: grid; grid-template-columns: 1.5fr 1fr; gap: 20px; }
+      .net-map, .map { position: relative; background: #0C0F13; border: 1px solid var(--hairline); border-radius: var(--radius); overflow: hidden;
+        box-shadow: inset 0 0 60px rgba(0,0,0,.55); }
+      .net-map { height: 460px; }
+      .net-map canvas { width: 100%; height: 100%; display: block; }
+      .map-note { position: absolute; left: 10px; top: 9px; font-family: var(--font-data); font-size: 0.6rem; letter-spacing: 0.09em; color: var(--ink-muted); pointer-events: none; }
+      .net-side { display: flex; flex-direction: column; gap: 14px; }
+      .legend { display: flex; flex-direction: column; gap: 6px; }
+      .lg { display: grid; grid-template-columns: 12px 1fr; gap: 8px 10px; align-items: center; text-align: left; padding: 8px 10px;
+        background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius); color: var(--ink-muted); cursor: pointer; opacity: .45; transition: opacity .25s, border-color .25s, transform .2s; }
+      .lg.on { opacity: 1; border-color: color-mix(in srgb, var(--accent) 30%, var(--hairline)); }
+      .lg:hover { transform: translateX(2px); }
+      .lg i { width: 12px; height: 3px; border-radius: 2px; }
+      .lg span { color: var(--ink); font-size: 0.86rem; }
+      .lg em { grid-column: 2; font-style: normal; font-family: var(--font-data); font-size: 0.68rem; letter-spacing: .05em; }
+      .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .stat { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 10px 12px; }
+      .sv { display: block; font-family: var(--font-data); font-size: 1.15rem; color: var(--ink); }
+      .sl { display: block; font-size: 0.72rem; color: var(--ink-muted); line-height: 1.35; margin-top: 2px; }
+      .caveat { font-size: 0.84rem; color: var(--ink-muted); background: color-mix(in srgb, #E0A63F 8%, transparent);
+        border: 1px solid color-mix(in srgb, #E0A63F 26%, transparent); border-radius: var(--radius); padding: 12px 14px; margin: 0; }
+      .caveat b { color: #E0A63F; }
+
+      /* ── controls ── */
+      .controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; margin-bottom: 14px; }
+      .ctl { display: flex; flex-direction: column; gap: 6px; }
+      .ctl.grow { flex: 1 1 240px; }
+      .ctl label { font-family: var(--font-data); font-size: 0.64rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-muted); }
+      .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--hairline); border-radius: 999px; padding: 3px; }
+      .seg button { background: transparent; border: 0; color: var(--ink-muted); padding: 6px 14px; border-radius: 999px; cursor: pointer; font-size: 0.82rem; transition: color .2s, background .3s; }
+      .seg button.on { background: color-mix(in srgb, var(--accent) 22%, transparent); color: #FFD9C4; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent); }
+      .seg button:hover { color: var(--ink); }
+      #search { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius); color: var(--ink); padding: 8px 12px; font-size: 0.88rem; width: 100%; }
+
+      /* ── ch2 map ── */
+      .map-wrap { position: relative; }
+      .map { height: min(66vh, 620px); }
+      .map canvas { width: 100%; height: 100%; }
+      .tip { position: absolute; z-index: 5; pointer-events: none; background: color-mix(in srgb, var(--surface-raised) 94%, transparent);
+        border: 1px solid var(--hairline); border-radius: var(--radius); padding: 10px 12px; min-width: 210px; font-size: 0.8rem;
+        display: flex; flex-direction: column; gap: 2px; box-shadow: 0 12px 34px rgba(0,0,0,.5); backdrop-filter: blur(6px); }
+      .tip b { font-size: 0.92rem; }
+      .t-sub { color: var(--ink-muted); font-size: 0.72rem; margin-bottom: 4px; }
+      .t-row { display: flex; justify-content: space-between; gap: 16px; color: var(--ink-muted); }
+      .t-row b { color: var(--ink); font-family: var(--font-data); font-size: 0.8rem; }
+      .t-foot { margin-top: 5px; padding-top: 5px; border-top: 1px solid var(--hairline); font-family: var(--font-data); font-size: 0.62rem; color: var(--ink-muted); letter-spacing: .04em; }
+      .ramp { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+      .ramp i { height: 7px; width: min(280px, 40vw); border-radius: 4px; display: block; }
+      .rlab, .rcap { font-family: var(--font-data); font-size: 0.66rem; color: var(--ink-muted); letter-spacing: .05em; }
+      .panel { position: absolute; right: 12px; top: 12px; width: min(330px, 82vw); background: color-mix(in srgb, var(--surface-raised) 96%, transparent);
+        border: 1px solid var(--hairline); border-radius: var(--radius); padding: 16px 16px 14px; box-shadow: 0 20px 50px rgba(0,0,0,.55); backdrop-filter: blur(8px); z-index: 6; }
+      .panel-x { position: absolute; right: 8px; top: 6px; background: transparent; border: 0; color: var(--ink-muted); font-size: 1.2rem; cursor: pointer; }
+      .panel-eyebrow { font-family: var(--font-data); font-size: 0.64rem; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+      .panel h3 { font-size: 1.24rem; margin: 2px 0 10px; }
+      .panel-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+      .ps { background: var(--surface); border: 1px solid var(--hairline); border-radius: 5px; padding: 7px 9px; }
+      .pv { display: block; font-family: var(--font-data); font-size: 1rem; }
+      .pl { display: block; font-size: 0.66rem; color: var(--ink-muted); }
+      .bar { display: grid; grid-template-columns: 52px 1fr 52px; gap: 8px; align-items: center; margin-bottom: 5px; }
+      .bl, .bar b { font-family: var(--font-data); font-size: 0.7rem; color: var(--ink-muted); }
+      .bar b { text-align: right; color: var(--ink); }
+      .bar i { height: 7px; background: linear-gradient(90deg, #7E3418, var(--accent)); border-radius: 4px; display: block; transition: width .7s cubic-bezier(.2,.7,.3,1); }
+      .panel-note { font-size: 0.68rem; color: var(--ink-muted); margin: 10px 0 0; }
+      .callouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-top: 18px; }
+      .callout { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 14px;
+        background-image: linear-gradient(160deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 60%); }
+      .co-v { display: block; font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; color: #FFD9C4; }
+      .co-l { display: block; font-size: 0.84rem; }
+      .co-s { display: block; font-family: var(--font-data); font-size: 0.64rem; color: var(--ink-muted); letter-spacing: .05em; margin-top: 3px; }
+
+      /* ── ch3 ── */
+      .equity-wrap { display: grid; grid-template-columns: 1.35fr 1fr; gap: 24px; align-items: start; }
+      .lorenz { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 8px; }
+      .lorenz svg { display: block; width: 100%; height: auto; }
+      .axis text { fill: var(--ink-muted); font-family: var(--font-data); font-size: 12px; }
+      .axis path, .axis line { stroke: var(--hairline); }
+      .axlab { fill: var(--ink-muted); font-size: 12px; font-family: var(--font-body); }
+      .focus-t { fill: #FFD9C4; font-family: var(--font-data); font-size: 12px; }
+      .equity-side { display: flex; flex-direction: column; gap: 14px; }
+      .bigstat { border-left: 2px solid color-mix(in srgb, var(--accent) 60%, transparent); padding-left: 14px; }
+      .bignum { display: block; font-family: var(--font-display); font-weight: 800; font-size: clamp(2.4rem, 5vw, 3.4rem); line-height: 1;
+        background: linear-gradient(180deg, #FFF1E8, #E4562E); -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .biglab { display: block; color: var(--ink-muted); font-size: 0.88rem; margin-top: 4px; max-width: 34ch; }
+      .tables { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 26px; }
+      .tbl h4 { font-size: 0.82rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 8px; }
+      table { border-collapse: collapse; width: 100%; font-size: 0.82rem; }
+      th { text-align: left; font-family: var(--font-data); font-size: 0.62rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-muted); border-bottom: 1px solid var(--hairline); padding: 6px 8px 6px 0; font-weight: 500; }
+      td { padding: 7px 8px 7px 0; border-bottom: 1px solid color-mix(in srgb, var(--hairline) 60%, transparent); vertical-align: top; }
+      td.num { font-family: var(--font-data); }
+      .r { text-align: right; }
+      tbody tr:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+
+      /* ── ch4 ── */
+      .layers { display: flex; flex-direction: column; gap: 14px; }
+      .layer { background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius); padding: 14px 16px; }
+      .layer-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+      .layer-n { font-size: 0.96rem; }
+      .layer-v { font-family: var(--font-data); font-size: 1.3rem; color: #FFD9C4; }
+      .layer-bar { height: 9px; background: #14181F; border-radius: 5px; overflow: hidden; margin: 9px 0 8px; }
+      .layer-bar i { display: block; height: 100%; width: 0; border-radius: 5px;
+        background: linear-gradient(90deg, #5C2814, #E4562E 70%, #F79C6A); transition: width 1s cubic-bezier(.2,.7,.3,1);
+        box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 45%, transparent); }
+      .layer-m { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 0.76rem; color: var(--ink-muted); }
+      .layer-m b { color: var(--ink); font-family: var(--font-data); }
+
+      /* ── method ── */
+      .method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+      .method-grid h4 { font-size: 0.82rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-muted); margin-bottom: 10px; }
+      .gate { display: grid; grid-template-columns: 54px 1fr 66px; gap: 10px; align-items: start; padding: 11px 12px; margin-bottom: 8px;
+        background: var(--surface); border: 1px solid var(--hairline); border-left: 2px solid var(--ink-muted); border-radius: var(--radius); }
+      .gate.ok { border-left-color: #4BB8A9; } .gate.bad { border-left-color: #E4562E; } .gate.na { border-left-color: #E0A63F; }
+      .g-id { font-family: var(--font-data); font-size: 0.7rem; color: var(--ink-muted); }
+      .gate p { margin: 3px 0 0; font-size: 0.78rem; color: var(--ink-muted); }
+      .g-flag { font-family: var(--font-data); font-size: 0.62rem; letter-spacing: .08em; text-align: right; }
+      .gate.ok .g-flag { color: #4BB8A9; } .gate.bad .g-flag { color: #E4562E; } .gate.na .g-flag { color: #E0A63F; }
+      .limits { margin: 0; padding-left: 1.1em; display: flex; flex-direction: column; gap: 8px; font-size: 0.86rem; color: var(--ink-muted); }
+      .limits b { color: var(--ink); }
+      .limits li::marker { color: var(--accent); }
+      .pending { font-size: 0.84rem; color: #E0A63F; background: color-mix(in srgb, #E0A63F 8%, transparent);
+        border: 1px dashed color-mix(in srgb, #E0A63F 35%, transparent); border-radius: var(--radius); padding: 10px 12px; }
+
+      .cta { max-width: var(--prose-width); padding: 0 0 clamp(56px, 8vh, 96px); }
+      .cta h3 { font-size: 1.3rem; margin-bottom: 8px; }
+      .cta p { color: var(--ink-muted); margin: 0; }
+      .foot { border-top: 1px solid var(--hairline); padding: 20px clamp(16px, 4vw, 40px); display: flex; flex-direction: column; gap: 6px; }
+
+      @media (max-width: 900px) {
+        .net-wrap, .equity-wrap, .tables, .method-grid { grid-template-columns: 1fr; }
+        .ch-head { grid-template-columns: 54px 1fr; }
+        .panel { position: static; width: auto; margin-top: 10px; }
+        .map { height: auto; aspect-ratio: 4 / 3; }
+      }
+      .maplibregl-ctrl-attrib { background: color-mix(in srgb, var(--ground) 70%, transparent) !important; color: var(--ink-muted); font-size: 10px; }
+      .maplibregl-ctrl-group { background: var(--surface); border: 1px solid var(--hairline); }
+    </style>
   </body>
 </html>

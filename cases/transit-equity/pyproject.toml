@@ -8,16 +8,14 @@ dependencies = [
     "numpy>=1.26",
     "pandas>=2.2",
     "pyarrow>=17",
-    "duckdb>=1.1",
     "geopandas>=1.0",
     "shapely>=2.0",
     "pyogrio>=0.10",
     "rasterio>=1.3",
-    "exactextract>=0.2",
     "r5py>=1.0",          # needs a JDK 21 on PATH; downloads the R5 jar on first use
-    "gtfs-kit>=6.0",
-    "osmium>=4.0",        # pyosmium: bbox extract + POI/facility extraction
     "scipy>=1.14",
+    # osmium is used as the CLI (osmium-tool), not pyosmium; duckdb/exactextract/gtfs-kit
+    # dropped — the GTFS work is plain pandas and zonal stats are rasterize+bincount (util.py).
 ]
 
 [tool.uv]
