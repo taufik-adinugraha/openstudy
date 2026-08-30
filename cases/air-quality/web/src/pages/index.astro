@@ -210,6 +210,14 @@ const pending = !S;
       }
       .toggle button:hover { color: var(--ink); background: rgba(111,199,214,.07); }
       .toggle button.on { color: var(--accent-ink); background: var(--accent); font-weight: 600; }
+      .dl {
+        appearance: none; cursor: pointer;
+        border: 1px solid var(--hairline); border-radius: 999px; background: var(--surface);
+        color: var(--ink-muted); font-family: var(--font-data); font-size: 12px;
+        letter-spacing: .11em; text-transform: uppercase; padding: 7px 14px;
+        transition: color .25s, border-color .25s, background .25s;
+      }
+      .dl:hover { color: var(--accent); border-color: rgba(111,199,214,.45); background: rgba(111,199,214,.07); }
 
       /* ── charts ───────────────────────────────────────────────────── */
       .cv-wrap { position: relative; width: 100%; }
@@ -399,8 +407,11 @@ const pending = !S;
       <div class="panel">
         <div class="panel-head">
           <h3>Error by horizon · held-out period</h3>
-          <div class="toggle" role="group" aria-label="metric" id="skill-toggle">
-            <button data-m="mae" class="on">MAE</button><button data-m="rmse">RMSE</button>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button class="dl" id="dl-skill" type="button">⤓ CSV</button>
+            <div class="toggle" role="group" aria-label="metric" id="skill-toggle">
+              <button data-m="mae" class="on">MAE</button><button data-m="rmse">RMSE</button>
+            </div>
           </div>
         </div>
         <div class="cv-wrap"><svg id="s-skill" class="chart" height="330" role="img"
@@ -518,8 +529,11 @@ const pending = !S;
       <div class="panel">
         <div class="panel-head">
           <h3>24-hour forecast vs observation · held-out period</h3>
-          <div class="toggle" role="group" aria-label="series" id="bt-toggle">
-            <button data-m="model" class="on">MODEL</button><button data-m="both">+ PERSISTENCE</button>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button class="dl" id="dl-bt" type="button">⤓ CSV</button>
+            <div class="toggle" role="group" aria-label="series" id="bt-toggle">
+              <button data-m="model" class="on">MODEL</button><button data-m="both">+ PERSISTENCE</button>
+            </div>
           </div>
         </div>
         <div class="cv-wrap"><canvas id="c-bt" class="chart" height="330" role="img"
@@ -640,6 +654,16 @@ const pending = !S;
         ctx.fillStyle = MUTED; ctx.font = '500 12px "IBM Plex Mono", ui-monospace, monospace';
         ctx.fillText(hint, w / 2, h / 2 + 16);
         ctx.restore();
+      };
+      /* one-click data download — the numbers behind a chart should be
+         takeable, not just lookable (plan §3, Grapher affordances) */
+      const downloadCSV = (name, rows, cols) => {
+        const esc = (v) => (v == null ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : v);
+        const body = [cols.join(","), ...rows.map((r) => cols.map((c) => esc(r[c])).join(","))].join("\n");
+        const url = URL.createObjectURL(new Blob([body], { type: "text/csv;charset=utf-8" }));
+        const a = document.createElement("a");
+        a.href = url; a.download = name; document.body.appendChild(a); a.click();
+        a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
       };
       const debounce = (fn, ms = 140) => { let h; return () => { clearTimeout(h); h = setTimeout(fn, ms); }; };
 
@@ -1208,6 +1232,12 @@ const pending = !S;
           document.querySelectorAll("#skill-toggle button").forEach((x) => x.classList.toggle("on", x === b));
           metric = b.dataset.m; anim.arm(); draw();
         });
+        document.getElementById("dl-skill").addEventListener("click", () => downloadCSV(
+          "jabodetabek-forecast-skill-by-horizon.csv", rows,
+          ["horizon_h", "model_mae", "persistence_mae", "climatology_mae",
+           "model_rmse", "persistence_rmse", "climatology_rmse",
+           "skill_mae_vs_persistence", "skill_rmse_vs_persistence",
+           "pi80_coverage", "model_episode_recall", "model_episode_precision", "model_n"]));
         addEventListener("resize", debounce(draw));
         load("summary.json").then((S) => {
           rows = (S.model?.eval ?? []).slice().sort((a, b) => a.horizon_h - b.horizon_h);
@@ -1794,6 +1824,11 @@ const pending = !S;
           document.querySelectorAll("#bt-toggle button").forEach((x) => x.classList.toggle("on", x === b));
           mode = b.dataset.m; draw();
         });
+        document.getElementById("dl-bt").addEventListener("click", () => downloadCSV(
+          "jabodetabek-24h-backtest.csv",
+          rows.map((d) => ({ valid_utc: d.t.toISOString(), observed: d.y, predicted: d.p,
+                             pi80_lo: d.lo, pi80_hi: d.hi, persistence: d.b })),
+          ["valid_utc", "observed", "predicted", "pi80_lo", "pi80_hi", "persistence"]));
         addEventListener("resize", debounce(draw));
         load("backtest.json").then((B) => {
           rows = (B.rows ?? []).map((d) => ({ t: new Date(d.t), y: d.y, p: d.p, lo: d.lo, hi: d.hi, b: d.b }));
