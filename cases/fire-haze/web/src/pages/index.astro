@@ -997,7 +997,11 @@ const CHAPTERS = [
           }
 
           function renderAttr(d) {
-            const rows = Object.entries(d.attribution ?? {}).sort((a, b) => b[1] - a[1]);
+            // attribution values are {share, agreement, n_parcels}; older exports were bare
+            // numbers, so normalise rather than assume
+            const norm = Object.fromEntries(Object.entries(d.attribution ?? {}).map(
+              ([k, v]) => [k, typeof v === "number" ? { share: v, agreement: null } : v]));
+            const rows = Object.entries(norm).sort((a, b) => b[1].share - a[1].share);
             if (!rows.length || rows[0][0] === "no attributable source") {
               attr.innerHTML = `<h3>Attribution</h3>
                 <p class="muted" style="font-size:13px">
@@ -1007,20 +1011,30 @@ const CHAPTERS = [
                   transboundary — and saying so is the point of publishing it.</p>`;
               return;
             }
-            const max = rows[0][1];
+            const max = rows[0][1].share;
+            const nP = d.parcels.length;
             attr.innerHTML = `<h3>Where the air came from</h3>
               <p class="muted" style="font-size:12.5px;margin-bottom:10px">
-                ${title(state.rec)} · ${d.day} · 72 h back · ${d.parcels.length} parcels</p>` +
-              rows.slice(0, 8).map(([p, v]) => `
-                <div style="margin-bottom:8px">
+                ${title(state.rec)} · ${d.day} · 72 h back · ${nP} parcels</p>` +
+              rows.slice(0, 8).map(([p, v]) => {
+                const ag = v.agreement;
+                return `
+                <div style="margin-bottom:9px">
                   <div style="display:flex;justify-content:space-between;font-family:var(--font-data);font-size:12px">
-                    <span>${p}</span><span class="muted">${(v * 100).toFixed(1)}%</span></div>
+                    <span>${p}</span><span class="muted">${(v.share * 100).toFixed(1)}%</span></div>
                   <div style="height:7px;background:var(--surface-raised);border-radius:4px;overflow:hidden;margin-top:3px">
-                    <div style="height:100%;width:${(v / max) * 100}%;background:${C.accent};border-radius:4px"></div>
-                  </div></div>`).join("") +
+                    <div style="height:100%;width:${(v.share / max) * 100}%;background:${C.accent};border-radius:4px"></div>
+                  </div>
+                  ${ag == null ? "" : `<div class="muted" style="font-family:var(--font-data);font-size:12px;margin-top:3px">
+                    ${Math.round(ag * nP)} of ${nP} parcels crossed its fires</div>`}
+                </div>`;
+              }).join("") +
               `<p class="muted" style="font-size:12px;margin-top:12px;margin-bottom:0">
-                 Province shares are a statement about where the air came from, weighted by the
-                 fire radiative power under each parcel — not about who lit the fire.</p>`;
+                 Province shares are a statement about where the air came from, weighted by
+                 residence time times the fire radiative power beneath — not about who lit the
+                 fire. The parcel count beneath each bar is the ensemble's agreement: a large
+                 share carried by three parcels of thirty is a weaker claim than a smaller one
+                 carried by twenty-eight.</p>`;
           }
 
           function renderFwd(d) {
@@ -1638,13 +1652,16 @@ const CHAPTERS = [
             const rows = eps.slice().sort((a, b) =>
               sort === "exp" ? (b.exposure ?? 0) - (a.exposure ?? 0) : b.day.localeCompare(a.day));
             tb.innerHTML = `<tr><th>Receptor</th><th>Day</th><th class="n">Exposure</th>
-              <th>Top source province</th><th class="n">Share</th></tr>` +
+              <th>Top source province</th><th class="n">Share</th>
+              <th class="n">Ensemble agreement</th></tr>` +
               rows.map((e) => `<tr>
                 <td>${title(e.receptor)}${e.anchor ? ' <span class="tier tier-3">ANCHOR</span>' : ""}</td>
                 <td>${e.day}</td>
                 <td class="n">${(e.exposure ?? 0).toFixed(2)}</td>
                 <td>${e.top_province ?? '<span class="muted">no attributable source</span>'}</td>
                 <td class="n">${e.top_share != null ? (e.top_share * 100).toFixed(1) + "%" : "—"}</td>
+                <td class="n">${e.top_agreement != null
+                  ? (e.top_agreement * 100).toFixed(0) + "% of parcels" : "—"}</td>
               </tr>`).join("");
           }
           document.getElementById("sort-exp").onclick = () => {
@@ -1660,9 +1677,11 @@ const CHAPTERS = [
             render();
           };
           document.getElementById("dl").onclick = () => {
-            const csv = "receptor,day,exposure,top_province,top_share,anchor\n" +
-              eps.map((e) => [e.receptor, e.day, e.exposure ?? "", e.top_province ?? "",
-                              e.top_share ?? "", e.anchor].join(",")).join("\n");
+            const q = (v) => (v == null ? "" : /[",]/.test(String(v))
+              ? `"${String(v).replace(/"/g, '""')}"` : String(v));
+            const csv = "receptor,day,exposure,top_province,top_share,ensemble_agreement,anchor\n" +
+              eps.map((e) => [e.receptor, e.day, e.exposure ?? "", q(e.top_province),
+                              e.top_share ?? "", e.top_agreement ?? "", e.anchor].join(",")).join("\n");
             const a = document.createElement("a");
             a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
             a.download = "fire-haze-episodes.csv";

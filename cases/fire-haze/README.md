@@ -207,6 +207,32 @@ passes CVD separation and the normal-vision floor. The `observed / modelled` pai
 geometry (solid vs dashed). `--fire` is never used for a series, only for point detections, so the
 house rule that "a red dot means something burned here" holds everywhere.
 
+**B10 · GFAS does not carry injection heights for the whole archive, and the gap lands on 2015.**
+A request for `injection_height` over 2019 Q1 returns `injh` (FRP-weighted median ≈ 200 m over
+the AOI, max ≈ 1.9 km — low, which is the physical story: smouldering peat does not loft, so the
+smoke stays in the boundary layer). The **identical** request over 2015 Q1 is accepted and comes
+back with the variable simply absent — in a two-variable request as well as a four-variable one.
+This is an archive boundary, not a truncation bug, and it falls on the anchor year the case is
+most about. It is handled by the mechanism the spec already designed: the column is NaN,
+`transport.py` falls back to `config.PLUME_RISE`, and **the fallback share is printed on the
+page** rather than absorbed. Two related corrections were needed to get even this far:
+`wildfire_flux_of_particulate_matter_d_2_5_um` is not a valid GFAS variable name (ADS answers
+400), and a seven-variable request is accepted and then silently returns four — so the request
+was narrowed to the four variables this case actually reads.
+
+**B10a · Measured coverage.** Consolidating the GFAS parts shows a usable injection height only
+from **2019 onward** (2019, 2020, 2023, 2024, 2025 in the parts drained so far; median 952 m over
+the fire-season quarters). So the 2019 anchor gets published release heights and the **2015 anchor
+does not** — and that asymmetry is printed on the page as the plume-rise fallback share rather
+than smoothed over.
+
+**B11 · The heights had to be FRP-weighted, and that changed the number by two orders of
+magnitude.** GFAS is 0.1° and the model grid is 0.25°, so six or seven GFAS cells fall inside
+each model cell and most have no fire at all. A plain mean of `injh` over them reported **3 m**
+where the FRP-weighted value is **248 m** — and 3 m would have been handed to the trajectory
+model as a release height, putting every parcel in the surface layer. Worth stating because it is
+the kind of aggregation bug that produces a plausible-looking map.
+
 **B9 · OpenStreetMap's volcano nodes were unavailable on the first run.** All four Overpass
 mirrors refused (406 / 502 / 500 / 504), so the geometric half of the static mask did not run and
 the mask was carried entirely by the empirical persistent-source detector — which is the half the

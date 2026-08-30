@@ -74,6 +74,7 @@ EXPOSURE_OUT = config.DATA_DIR / "receptor_exposure.parquet"
 ATTR_OUT = config.DATA_DIR / "attribution.parquet"
 BACK_OUT = config.DATA_DIR / "back_traj.parquet"
 META_OUT = config.DATA_DIR / "transport_meta.json"
+PARTS_T = config.DATA_DIR / "transport_parts"
 
 N_SOURCE_CELLS = 120        # the strongest fire cells per day, by summed FRP
 N_PARCELS_FWD = 12          # per source cell, jittered in height and release hour
@@ -332,14 +333,18 @@ def attribute(back_lat, back_lon, fires_window, cell_prov):
     """
     import numpy as np
     import pandas as pd
+    n_parcels = back_lat.shape[1]
     lat = back_lat.ravel()
     lon = back_lon.ravel()
+    parcel_of = np.tile(np.arange(n_parcels), back_lat.shape[0])
     ok = np.isfinite(lat) & np.isfinite(lon)
     if not ok.any() or fires_window.empty:
         return {}, 0.0
     clat, clon = util.snap_cell(lat[ok], lon[ok])
     keys = util.cell_key(clat, clon)
-    visits = pd.Series(keys).value_counts()
+    pts = pd.DataFrame({"cell": keys, "parcel": parcel_of[ok]})
+    visits = pts["cell"].value_counts()
+    # residence time x emission, the standard receptor-model weighting (PSCF/CWT family)
     f = fires_window.groupby("cell", as_index=False)["frp_sum"].sum()
     f["visits"] = f["cell"].map(visits).fillna(0.0)
     f["score"] = f["frp_sum"] * f["visits"]
@@ -347,8 +352,17 @@ def attribute(back_lat, back_lon, fires_window, cell_prov):
     if tot <= 0:
         return {}, 0.0
     f["prov"] = f["cell"].map(cell_prov)
+    # ENSEMBLE AGREEMENT, which is the honest uncertainty statement on a province share.
+    # A 95 % share carried by 3 of 30 parcels and a 60 % share carried by 28 of 30 are very
+    # different claims, and a bar chart alone cannot tell them apart.
+    fire_cells = set(f.loc[f["frp_sum"] > 0, "cell"].astype("int64"))
+    over = pts[pts["cell"].isin(fire_cells)].copy()
+    over["prov"] = over["cell"].map(cell_prov)
+    agree = (over.groupby("prov")["parcel"].nunique() / max(n_parcels, 1)).to_dict()
     shares = (f.groupby("prov")["score"].sum() / tot).sort_values(ascending=False)
-    return {str(k): float(v) for k, v in shares.items() if v > 0.005}, tot
+    out = {str(k): {"share": float(v), "agreement": float(agree.get(k, 0.0))}
+           for k, v in shares.items() if v > 0.005}
+    return out, tot
 
 
 # ── driver ────────────────────────────────────────────────────────────────────────────
@@ -380,11 +394,19 @@ def main() -> None:
         log("  gfas absent — every parcel uses the PLUME_RISE fallback, and the share is "
             "reported rather than hidden")
 
-    days = sorted(set(fires["day"]) & set(
-        pd.to_datetime([d for d in fires["day"].unique()
-                        if pd.Timestamp(d).year in yrs
-                        and pd.Timestamp(d).month in config.ERA5_PL_MONTHS])))
-    log(f"transport: {len(days):,} fire-season days with a steering field")
+    # ── incremental by steering-field year ────────────────────────────────────────────
+    # The ERA5 queue delivers pressure-level years one at a time over hours, so this stage is
+    # re-run repeatedly.  Each year's trajectories are cached; a rerun integrates only the years
+    # that have arrived since.  Deleting a part is the way to force a recompute.
+    PARTS_T.mkdir(parents=True, exist_ok=True)
+    done_years = {int(p.stem.split("_")[1]) for p in PARTS_T.glob("traj_*.parquet")}
+    todo_years = [y for y in yrs if y not in done_years]
+    if done_years:
+        log(f"transport: {sorted(done_years)} already integrated; doing {todo_years}")
+    days = sorted(d for d in pd.to_datetime(sorted(fires["day"].unique()))
+                  if d.year in todo_years and d.month in config.ERA5_PL_MONTHS)
+    log(f"transport: {len(days):,} fire-season days to integrate "
+        f"({len(yrs)} steering-field years available)")
 
     exp_rows, attr_rows, back_rows, fwd_rows, bearing_rows = [], [], [], [], []
     n_gfas, n_parcels_total, n_escaped = 0, 0, 0
@@ -454,11 +476,14 @@ def main() -> None:
                                       blat, blon, h_to_p(bh),
                                       np.ones(N_PARCELS_BACK, bool), -1, config.TRAJ_HOURS)
             shares, score = attribute(BLAT, BLON, fw, cell_prov)
-            for prov, sh in shares.items():
-                attr_rows.append({"receptor": name, "day": day, "province": prov, "share": sh})
+            for prov, v in shares.items():
+                attr_rows.append({"receptor": name, "day": day, "province": prov,
+                                  "share": v["share"], "agreement": v["agreement"],
+                                  "n_parcels": N_PARCELS_BACK})
             if not shares:
                 attr_rows.append({"receptor": name, "day": day,
-                                  "province": "no attributable source", "share": 1.0})
+                                  "province": "no attributable source", "share": 1.0,
+                                  "agreement": 1.0, "n_parcels": N_PARCELS_BACK})
             # G-J3: the two directions must agree on where the smoke came from
             if score > 0 and arrive > 0:
                 ok = np.isfinite(BLAT.ravel())
@@ -499,25 +524,52 @@ def main() -> None:
             log(f"  {di}/{len(days)} {day.date()}: {len(fd)} source cells, "
                 f"{len(src_lat)} parcels, GFAS height on {from_gfas.mean():.0%}")
 
-    exp = pd.DataFrame(exp_rows)
-    exp.to_parquet(EXPOSURE_OUT, index=False, compression="zstd")
-    attr = pd.DataFrame(attr_rows)
-    attr.to_parquet(ATTR_OUT, index=False, compression="zstd")
-    back = pd.DataFrame(back_rows)
+    # cache this run's years, then rebuild the consolidated tables from EVERY cached year
+    for y in todo_years:
+        for name, rows in (("exp", exp_rows), ("attr", attr_rows), ("back", back_rows),
+                           ("fwd", fwd_rows), ("bear", bearing_rows)):
+            sub = [r for r in rows if pd.Timestamp(r["day"]).year == y]
+            pd.DataFrame(sub).to_parquet(PARTS_T / f"{name}_{y}.parquet", index=False)
+        # a marker part so `done_years` sees the year even if it produced no episodes at all
+        pd.DataFrame({"year": [y], "days": [sum(1 for d in days if d.year == y)],
+                      "parcels": [n_parcels_total]}).to_parquet(
+            PARTS_T / f"traj_{y}.parquet", index=False)
+
+    def gather(name):
+        ps = sorted(PARTS_T.glob(f"{name}_*.parquet"))
+        fr = [pd.read_parquet(p) for p in ps]
+        fr = [f for f in fr if len(f)]
+        return pd.concat(fr, ignore_index=True) if fr else pd.DataFrame()
+
+    exp = gather("exp")
+    if len(exp):
+        exp.to_parquet(EXPOSURE_OUT, index=False, compression="zstd")
+    attr = gather("attr")
+    if len(attr):
+        attr.to_parquet(ATTR_OUT, index=False, compression="zstd")
+    back = gather("back")
     if len(back):
         back.to_parquet(BACK_OUT, index=False, compression="zstd")
-    fwd = pd.DataFrame(fwd_rows)
+    fwd = gather("fwd")
     if len(fwd):
         fwd.to_parquet(config.DATA_DIR / "fwd_traj.parquet", index=False, compression="zstd")
-    bear = pd.DataFrame(bearing_rows)
+    bear = gather("bear")
 
     cams_p = config.DATA_DIR / "cams_forecast.parquet"
     cams = pd.read_parquet(cams_p) if cams_p.exists() else None
+    prev = json.loads(META_OUT.read_text()) if META_OUT.exists() else {}
+    # running totals across cached years, so a re-run reports the whole archive, not one pass
+    tot_parcels = int(prev.get("parcels", 0)) + int(n_parcels_total)
+    tot_gfas = int(prev.get("parcels_gfas_height", 0)) + int(n_gfas)
+    tot_escaped = int(prev.get("parcels_escaped", 0)) + int(n_escaped)
     meta = {
-        "days": len(days), "parcels": int(n_parcels_total),
-        "gfas_height_share": float(n_gfas / max(n_parcels_total, 1)),
-        "plume_rise_fallback_share": float(1 - n_gfas / max(n_parcels_total, 1)),
-        "escaped_domain_share": float(n_escaped / max(n_parcels_total, 1)),
+        "years_integrated": sorted(done_years | set(todo_years)),
+        "days": int(prev.get("days", 0)) + len(days),
+        "parcels": tot_parcels,
+        "parcels_gfas_height": tot_gfas, "parcels_escaped": tot_escaped,
+        "gfas_height_share": float(tot_gfas / max(tot_parcels, 1)),
+        "plume_rise_fallback_share": float(1 - tot_gfas / max(tot_parcels, 1)),
+        "escaped_domain_share": float(tot_escaped / max(tot_parcels, 1)),
         "levels": config.TRAJ_LEVELS, "hours": config.TRAJ_HOURS,
         "dt_min": config.TRAJ_DT_MIN, "scheme": "Petterssen 2nd-order, 2 corrector passes",
         "receptor_km": config.RECEPTOR_KM, "decay_halflife_h": config.DECAY_HALFLIFE_H,

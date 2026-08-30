@@ -175,15 +175,22 @@ def build(con) -> None:
     tp = sorted(parts.glob("tp_*.parquet"))
     util.require(bool(sl), "no ERA5 single-level parts — run era5 first")
     if not tp:
-        log("  WARNING: no precipitation parts yet — rain_mm will be zero everywhere, which "
-            "makes every dryness feature meaningless.  Do not train on this panel.")
+        log("  WARNING: no precipitation parts yet — every rain feature will be NaN (never 0), "
+            "so the model simply has no daily rainfall.  SPI-1/3/6 from 46 years of CHIRPS still "
+            "carries the drought signal at monthly scale, but the daily dryness family is gone; "
+            "rerun `make era5` then `make features risk` once tp has drained.")
     log(f"  era5 coverage: sl {[p.stem[3:] for p in sl]}")
     log(f"                 tp {[p.stem[3:] for p in tp]}")
 
     lc_cols = [c for c in pd.read_parquet(static_p, columns=None).columns if c.startswith("lc_")]
     lc_select = ", ".join(f"COALESCE({c}, 0) AS {c}" for c in lc_cols) or "0 AS lc_none"
     if tp:
-        rain_expr = "COALESCE(r.rain_mm, 0) AS rain_mm, r.rain_mm IS NULL AS rain_missing"
+        # NOT COALESCE(..., 0).  A precipitation year that has not drained yet is missing, and
+        # zero is the single most dangerous value to substitute for it: it reads as "no rain",
+        # which is the strongest possible fire signal.  NULL propagates instead, the rolling
+        # sums ignore it, and write_parts masks the whole family to NaN — which LightGBM handles
+        # natively as missing rather than as a drought.
+        rain_expr = "r.rain_mm AS rain_mm, r.rain_mm IS NULL AS rain_missing"
         tp_join = (f"LEFT JOIN read_parquet('{parts / 'tp_*.parquet'}') r "
                    "ON r.cell = w.cell AND CAST(r.day AS DATE) = CAST(w.day AS DATE)")
     else:
@@ -275,12 +282,21 @@ def write_parts(con, lc_cols) -> dict:
         doy = df["day"].dt.dayofyear.to_numpy()
         df["doy_sin"] = np.sin(2 * np.pi * doy / 365.25).astype("float32")
         df["doy_cos"] = np.cos(2 * np.pi * doy / 365.25).astype("float32")
-        # consecutive dry days ending at t-lag: derived from rain_1d/rain_7d is not enough, so
-        # it is computed here per cell on the sorted year plus a carry-in from the previous part
+        # consecutive dry days ending at t-lag, computed per cell on the sorted year
         df = df.sort_values(["cell", "day"])
         wet = (df["rain_1d"].fillna(0) >= config.WET_DAY_MM)
         grp = wet.groupby(df["cell"]).cumsum()
-        df["dry_days"] = (df.groupby(["cell", grp]).cumcount()).astype("int16")
+        df["dry_days"] = df.groupby(["cell", grp]).cumcount().astype("float32")
+        # If precipitation has not landed for this year, EVERY rain feature is unknown — and
+        # unknown must not be spelled "zero rain for 365 days", which is what a fillna(0) dry-day
+        # counter would produce.  NaN is the honest value and the model treats it as missing.
+        miss = df["rain_missing"].astype(bool) if "rain_missing" in df.columns else None
+        if miss is not None and miss.any():
+            for c in ("rain_1d", "rain_7d", "rain_30d", "rain_90d", "dry_days"):
+                if c in df.columns:
+                    df.loc[miss, c] = np.nan
+            log(f"  panel {y}: no precipitation for this year — rain_* and dry_days written as "
+                f"NaN on {int(miss.sum()):,} rows rather than as a drought")
         for L in config.LEAD_DAYS:
             df[f"y{L}"] = (df[f"y{L}_n"].fillna(0) > 0).astype("int8")
         df["is_anchor"] = df["day"].dt.year.isin(config.ANCHOR_YEARS)

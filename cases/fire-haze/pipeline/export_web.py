@@ -228,7 +228,13 @@ def main() -> None:
             a = {}
             if attr is not None:
                 sub = attr[(attr["receptor"] == r.receptor) & (attr["day"] == r.day)]
-                a = {str(p): float(s) for p, s in zip(sub["province"], sub["share"])}
+                for row in sub.itertuples():
+                    a[str(row.province)] = {
+                        "share": float(row.share),
+                        # how many of the ensemble's parcels actually crossed this province's
+                        # fires — the difference between a confident share and a lucky one
+                        "agreement": float(getattr(row, "agreement", float("nan"))),
+                        "n_parcels": int(getattr(row, "n_parcels", 0) or 0)}
             fires_win = []
             if fdaily is not None:
                 w = fdaily[(fdaily["day"] >= r.day - pd.Timedelta(days=3))
@@ -248,8 +254,13 @@ def main() -> None:
             episodes.append({"receptor": r.receptor, "day": r.day.date().isoformat(),
                              "exposure": float(getattr(r, "exposure", 0) or 0),
                              "anchor": bool(r.anchor),
-                             "top_province": max(a, key=a.get) if a else None,
-                             "top_share": max(a.values()) if a else None})
+                             "top_province": (max(a, key=lambda k: a[k]["share"])
+                                              if a else None),
+                             "top_share": (max(v["share"] for v in a.values())
+                                           if a else None),
+                             "top_agreement": (
+                                 a[max(a, key=lambda k: a[k]["share"])]["agreement"]
+                                 if a else None)})
         log(f"  back-trajectory episodes: {len(episodes)}")
 
     # ── the same engine, flipped: forward polylines for the episode days ──────────────
