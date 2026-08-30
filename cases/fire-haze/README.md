@@ -65,6 +65,55 @@ Everything downstream is built for that: `ingest_era5.py` records job ids in
 *runs* on a partial drain and simply reports a shorter record; re-running `make era5` then
 `make features risk transport validate export` lengthens it.
 
+## Running it again — units and resume commands
+
+Every long stage runs as a transient systemd unit under the `hz-` prefix and every one of them is
+idempotent, so the resume command is just the command. Nothing here needs to be run in order
+except that `features` needs `fires`, `static` and at least one ERA5 single-level year.
+
+| Unit | What it does | Resume it with | Watch it with |
+|---|---|---|---|
+| `hz-era5` | the CDS backfill — the long pole | `make era5` | `journalctl -u hz-era5 -f` |
+| `hz-cams` | ADS: EAC4 → forecasts → GFAS | `make cams` | `journalctl -u hz-cams -f` |
+| `hz-fwi` | EWDS: the CEMS baseline | `make fwi` | `journalctl -u hz-fwi -f` |
+| `hz-fires` | FIRMS bulk + tail + the mask | `make fires` | `journalctl -u hz-fires -f` |
+| `hz-static` | peat, land cover, boundaries | `make static` | `journalctl -u hz-static -f` |
+| `hz-ground` | NEA + OpenAQ receptors | `make ground` | `journalctl -u hz-ground -f` |
+| `hz-indices` | CHIRPS/SPI/ENSO | `make indices` | `journalctl -u hz-indices -f` |
+| `hz-pass` | the whole downstream chain | `bash pipeline/finish.sh` | `journalctl -u hz-pass -f` |
+
+The pattern for launching one:
+
+```sh
+sudo -n systemd-run --unit hz-<name> --uid ubuntu --gid ubuntu \
+  -p MemoryMax=3G -p Restart=on-failure -p WorkingDirectory=/home/ubuntu/demo-lab/cases/fire-haze \
+  --setenv=HOME=/home/ubuntu --setenv=PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin \
+  /home/ubuntu/.local/bin/uv run python pipeline/<stage>.py
+```
+
+**To lengthen the record**, which is the only thing still growing: let `hz-era5` keep draining,
+then `bash pipeline/finish.sh` (or `make features risk transport validate export`). Everything
+rebuilds from whatever years are on disk and the page's fold count, vintages and gate numbers
+update with it. `data/cads_jobs.json` is the ledger; deleting an entry re-queues that request.
+
+## What the base rates say before any model runs
+
+The share of 0.25° land cells with at least one retained detection, per year, straight out of
+`features.py`:
+
+| year | base rate | |
+|---|---|---|
+| 2015 | **10.24 %** | El Niño — the worst season in the VIIRS record |
+| 2012 | 7.51 % | |
+| 2019 | **6.87 %** | the positive-IOD season |
+| 2018 | 4.65 % | |
+| 2016 | 3.89 % | La Niña |
+| 2017 | 2.80 % | |
+
+The two anchor years are the two worst of the six drained so far, and 2015 is nearly four times
+2017. That ordering is what gate G-J5 asks the model — which never saw either year — to
+reproduce.
+
 ## Six premises that did not survive reconnaissance
 
 Recorded here because each one changes the build, and because the third is a live bug in another
