@@ -240,9 +240,15 @@ def export_themes(df: pd.DataFrame) -> dict:
     return {"months": months, "indonesia_vol": m["api_vol"], "order": order, "themes": themes, "era_rank": era_rank}
 
 
+def _clean_series(s: pd.Series) -> pd.Series:
+    """GDELT names facet series '<Name> Volume Intensity' — keep just the name."""
+    return s.str.replace(r"\s*Volume Intensity\s*$", "", regex=True).str.strip()
+
+
 def export_sources(df: pd.DataFrame, cur: pd.DataFrame | None, con) -> dict:
     out: dict = {"countries": [], "languages": [], "outlets": {}}
     if cur is not None:
+        cur = cur.assign(series=_clean_series(cur["series"].astype(str)))
         sc = cur[(cur["qid"] == "indonesia") & (cur["mode"] == "TimelineSourceCountry")]
         if not sc.empty:
             w = sc.pivot_table(index="date", columns="series", values="value", aggfunc="first")

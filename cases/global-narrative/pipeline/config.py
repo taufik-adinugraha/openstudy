@@ -29,7 +29,7 @@ DOC_API = "https://api.gdeltproject.org/api/v2/doc/doc"
 DOCAPI_CACHE = RAW / "docapi"           # one JSON per (query, mode, window) — reruns cost 0 calls
 DOCAPI_MIN_SPACING_S = 15.0             # polite spacing between live requests
 DOCAPI_TIMEOUT_S = 180
-DOCAPI_MAX_RETRIES = 10                 # the API's penalty box can last many minutes
+DOCAPI_MAX_RETRIES = 4                  # per battery pass; the unit re-runs (cache-first) until complete
 CURVES = DATA_DIR / "docapi_curves.parquet"   # long table: qid, mode, series, date, value, norm
 WINDOW_START = "20170101000000"          # DOC API archive starts 2017-01-01 exactly (D22)
 

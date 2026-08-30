@@ -195,8 +195,9 @@ def g_d4(df: pd.DataFrame) -> dict:
                                             (both["api_foreign_vol"] / both["api_vol"]).clip(upper=1).groupby(both.index.year).mean().items()}
     if config.CURVES.exists():
         cur = pd.read_parquet(config.CURVES)
-        lang = cur[(cur["qid"] == "indonesia") & (cur["mode"] == "TimelineLang")]
+        lang = cur[(cur["qid"] == "indonesia") & (cur["mode"] == "TimelineLang")].copy()
         if not lang.empty:
+            lang["series"] = lang["series"].astype(str).str.replace(r"\s*Volume Intensity\s*$", "", regex=True).str.strip()
             m = lang.groupby("series")["value"].mean().sort_values(ascending=False)
             out["api_language_mean_intensity"] = {k: round(float(v), 4) for k, v in m.head(12).items()}
     verdict = "PASS" if out.get("api_foreign_share_mean") is not None else "PENDING"

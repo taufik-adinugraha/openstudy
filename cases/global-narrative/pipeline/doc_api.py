@@ -79,11 +79,16 @@ def fetch(label: str, params: dict) -> dict | None:
         if r.status_code == 200:
             text = r.text.strip()
             if not text.startswith("{"):
-                # The API returns 200 + plain text for empty/invalid queries. Cache the
-                # verdict so we do not hammer it, but return None to the caller.
+                low = text.lower()
+                if "too many" in low or "rate" in low or "quota" in low or "throttl" in low:
+                    backoff = min(60 * 2 ** attempt, 900)   # throttle disguised as 200
+                    print(f"[doc_api] {label}: throttle text reply; backing off {backoff}s", flush=True)
+                    time.sleep(backoff)
+                    continue
+                # a deterministic verdict (empty/invalid query): cache it, never re-ask
                 print(f"[doc_api] {label}: non-JSON reply: {text[:120]!r}", flush=True)
                 path.write_text(json.dumps({"_error": text[:500], "_params": params}))
-                return None
+                return {"_error": text[:500]}
             try:
                 js = r.json()
             except ValueError:
@@ -99,8 +104,11 @@ def fetch(label: str, params: dict) -> dict | None:
             print(f"[doc_api] {label}: HTTP {r.status_code}; backing off {backoff}s", flush=True)
             time.sleep(backoff)
             continue
-        raise RuntimeError(f"[doc_api] {label}: HTTP {r.status_code}: {r.text[:200]}")
-    raise RuntimeError(f"[doc_api] {label}: gave up after {config.DOCAPI_MAX_RETRIES} attempts")
+        print(f"[doc_api] {label}: HTTP {r.status_code}: {r.text[:200]}", flush=True)
+        return None
+    # skip for this pass — the battery reports it missing and the unit re-runs later
+    print(f"[doc_api] {label}: still refused after {config.DOCAPI_MAX_RETRIES} attempts — skipping for now", flush=True)
+    return None
 
 
 def fetch_timeline(qid: str, query: str, mode: str) -> dict | None:
@@ -135,20 +143,31 @@ def fetch_anchor_articles(day: str, window: int) -> dict | None:
     return fetch(f"artlist__{day}", params)
 
 
-def battery() -> None:
+def battery() -> int:
+    """Returns the number of queries still missing after this pass."""
     t0 = time.monotonic()
-    n = 0
+    n = missing = 0
     for qid, (query, modes) in config.QUERIES.items():
         for mode in modes:
             js = fetch_timeline(qid, query, mode)
             n += 1
-            npts = sum(len(s.get("data", [])) for s in (js or {}).get("timeline", []))
-            print(f"[doc_api] {qid:22s} {mode:22s} series={len((js or {}).get('timeline', []))} points={npts}", flush=True)
+            if js is None:            # refused this pass — retried on the next unit run
+                missing += 1
+                continue
+            if "_error" in js:        # deterministic empty/invalid verdict — done, not missing
+                print(f"[doc_api] {qid:22s} {mode:22s} EMPTY/INVALID (cached verdict)", flush=True)
+                continue
+            npts = sum(len(s.get("data", [])) for s in js.get("timeline", []))
+            print(f"[doc_api] {qid:22s} {mode:22s} series={len(js.get('timeline', []))} points={npts}", flush=True)
     for day, spec in config.ANCHORS.items():
         js = fetch_anchor_articles(day, spec["window"])
-        print(f"[doc_api] artlist {day}: {len((js or {}).get('articles', []))} articles", flush=True)
-    print(f"[doc_api] battery done: {n} timelines + {len(config.ANCHORS)} article lists, "
-          f"{_live_calls} live calls, {time.monotonic() - t0:.0f}s")
+        if js is None:
+            missing += 1
+            continue
+        print(f"[doc_api] artlist {day}: {len(js.get('articles', []))} articles", flush=True)
+    print(f"[doc_api] battery pass done: {n} timelines + {len(config.ANCHORS)} article lists, "
+          f"{missing} still missing, {_live_calls} live calls, {time.monotonic() - t0:.0f}s", flush=True)
+    return missing
 
 
 def _parse_date(s: str) -> dt.date:
@@ -201,11 +220,13 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("stage", nargs="?", default="all", choices=["battery", "curves", "all"])
     a = ap.parse_args()
+    missing = 0
     if a.stage in ("battery", "all"):
-        battery()
+        missing = battery()
     if a.stage in ("curves", "all"):
         curves()
-    return 0
+    # nonzero => a Restart=on-failure unit re-runs the pass (cache makes it cheap)
+    return 1 if missing else 0
 
 
 if __name__ == "__main__":
