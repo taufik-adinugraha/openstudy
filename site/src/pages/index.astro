@@ -8,6 +8,7 @@ const DEMOS = {
   nightlights: "http://localhost:4322/nightlights", // TODO prod: /nightlights
   knowledge: "http://localhost:4324/knowledge",     // TODO prod: /knowledge
   trade: "http://localhost:4325/trade",             // TODO prod: /trade
+  jakarta: "http://localhost:4327/jakarta",         // TODO prod: /jakarta
 };
 ---
 <html lang="en" data-theme="dark">
@@ -83,7 +84,7 @@ const DEMOS = {
         </div>
       </div>
 
-      <div class="case building" data-case="sinking">
+      <a class="case live" data-case="sinking" href={DEMOS.jakarta} target="_blank" rel="noopener">
         <div class="case-visual sinking-visual" aria-hidden="true">
           <!-- Jakarta skyline (Monas at centre) with the waterline rising over it -->
           <svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMax meet">
@@ -122,14 +123,13 @@ const DEMOS = {
           </svg>
         </div>
         <div class="case-body">
-          <span class="badge">IN BUILD — PHASE 2</span>
           <h2>Jakarta Is Sinking</h2>
-          <p>Sentinel-1 radar interferometry measures the ground under Jakarta
-          dropping by centimetres a year. Fused with elevation and population, it
-          becomes a flood-exposure map by kelurahan — and a clock.</p>
-          <span class="meta">INSAR · SENTINEL-1 · EXPOSURE MODELLING</span>
+          <p>Sentinel-1 InSAR 2017–2023 fused with elevation, population and
+          observed floods: 442,000 people live on ground sinking faster than
+          2&nbsp;cm a year — mapped for all 267 kelurahan, with a clock to 2050.</p>
+          <span class="meta">INSAR · SENTINEL-1 · 267 KELURAHAN · CLOCK TO 2050</span>
         </div>
-      </div>
+      </a>
 
       <div class="case building" data-case="narrative">
         <div class="case-visual narrative-visual" aria-hidden="true">
@@ -162,7 +162,7 @@ const DEMOS = {
       </div>
 
       <div class="queued-head">
-        <span class="stamp">PHASE 3 — DESIGNED, IN THE QUEUE</span>
+        <span class="stamp">PHASE 3 — SPEC’D &amp; SCAFFOLDED, IN THE QUEUE</span>
       </div>
       <div class="queued-grid">
         <div class="mini-case" data-case="poverty">
@@ -170,8 +170,9 @@ const DEMOS = {
             <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
           </div>
           <h3>Poverty Mapping from Space</h3>
-          <p>Rooftops, lights, and building footprints as welfare signals —
-          village-level estimates checked against BPS statistics.</p>
+          <p>Rooftops, lights and roads as welfare signals — kecamatan-level
+          poverty estimates, benchmarked to official BPS rates and validated
+          out-of-province.</p>
           <span class="meta">GEO-ML · OPEN BUILDINGS · SMALL-AREA ESTIMATION</span>
         </div>
         <div class="mini-case" data-case="transit">
@@ -187,8 +188,8 @@ const DEMOS = {
             </svg>
           </div>
           <h3>Transit Access &amp; Urban Equity</h3>
-          <p>TransJakarta + rail + roads as one routing graph: who can reach
-          jobs and healthcare in an hour — and who can’t.</p>
+          <p>Four transit systems, one routing graph: who reaches jobs and
+          hospitals in an hour — and how unequally that hour is shared.</p>
           <span class="meta">GTFS · OSM · GRAPH ROUTING · EQUITY</span>
         </div>
         <div class="mini-case" data-case="forest">
@@ -207,8 +208,8 @@ const DEMOS = {
             </svg>
           </div>
           <h3>Forest &amp; Commodity Watch</h3>
-          <p>Where Global Forest Watch stops: alerts linked to concessions
-          and supply chains, not just pixels of loss.</p>
+          <p>Where Global Forest Watch stops: weekly radar alerts linked to palm
+          estates, mills and peat — deforestation as a supply-chain question.</p>
           <span class="meta">SENTINEL-2 · RADD ALERTS · SUPPLY-CHAIN LINKAGE</span>
         </div>
       </div>
