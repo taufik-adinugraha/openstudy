@@ -400,7 +400,8 @@ const pending = !S;
     <!-- ══ 03 · what drives it ═════════════════════════════════════════ -->
     <section class="chapter rv">
       <span class="eyebrow">03 · What drives it</span>
-      <h2>Mostly the sky, not the traffic</h2>
+      <h2>What the model actually leans on</h2>
+      <p class="big-stat" id="drivers-lead">Feature attribution pending.</p>
       <p>Permutation importance at the 24-hour horizon: how much worse the model gets when
       each feature is shuffled. Features are grouped by what they represent, because the
       interesting question is not <em>which column</em> wins but <em>which physics</em> does —
@@ -1193,7 +1194,24 @@ const pending = !S;
         };
         addEventListener("resize", debounce(draw));
         load("drivers.json").then((D) => {
-          rows = (D.features ?? []).slice(0, 12); draw();
+          rows = (D.features ?? []).slice(0, 12);
+          draw();
+          /* The headline is written from the result, not the other way round. */
+          const all = D.features ?? [];
+          if (!all.length) return;
+          const top = all[0];
+          const tot = d3.sum(all, (d) => Math.max(0, d.importance)) || 1;
+          const byFam = d3.rollup(all, (v) => d3.sum(v, (d) => Math.max(0, d.importance)),
+                                  (d) => FAMILY(d.feature)[0]);
+          const met = ["Mixing depth", "Wind", "Weather", "Upwind fire"]
+            .reduce((a, k) => a + (byFam.get(k) ?? 0), 0);
+          const mem = byFam.get("Air's own memory") ?? 0;
+          document.getElementById("drivers-lead").innerHTML =
+            `The single strongest feature at 24 hours is <b>${niceName(top.feature)}</b>. ` +
+            `Weather and fire together account for <b>${((met / tot) * 100).toFixed(0)}%</b> of ` +
+            `total attributed importance, the sensor's own recent history for ` +
+            `<b>${((mem / tot) * 100).toFixed(0)}%</b>, and the calendar and station identity ` +
+            `for the rest.`;
         }).catch((e) => { draw(); console.warn(e); });
       });
 
