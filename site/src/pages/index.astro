@@ -15,6 +15,7 @@ const DEMOS = {
   poverty: "http://localhost:4332/poverty",         // TODO prod: /poverty
   airquality: "http://localhost:4328/airquality",   // TODO prod: /airquality
   rice: "http://localhost:4333/rice",               // TODO prod: /rice
+  haze: "http://localhost:4334/haze",               // TODO prod: /haze
 };
 ---
 <html lang="en" data-theme="dark">
@@ -223,6 +224,49 @@ const DEMOS = {
           regency-months. <b>All five gates published red</b>, with the reason
           measured: we find the rice, but one crop where there are two.</p>
           <span class="meta">SENTINEL-1 RTC · 6 KABUPATEN · 1.18M CROP CYCLES · 5 GATES RED</span>
+        </div>
+      </a>
+
+      <a class="case live" data-case="haze" href={DEMOS.haze} target="_blank" rel="noopener">
+        <div class="case-visual haze-visual" aria-hidden="true">
+          <svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="hz-plume" x1="0" y1="1" x2="1" y2="0">
+                <stop offset="0%" stop-color="#FF7A45" stop-opacity="0.85"/>
+                <stop offset="45%" stop-color="#E2569E" stop-opacity="0.55"/>
+                <stop offset="100%" stop-color="#E2569E" stop-opacity="0.05"/>
+              </linearGradient>
+              <radialGradient id="hz-glow" cx="22%" cy="76%" r="34%">
+                <stop offset="0%" stop-color="#FF7A45" stop-opacity="0.5"/>
+                <stop offset="100%" stop-color="#FF7A45" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <rect width="400" height="240" fill="#16110F"/>
+            <rect width="400" height="240" fill="url(#hz-glow)"/>
+            <!-- smoke carried downwind from the ignitions to a receptor -->
+            <path d="M78 186 C150 168 196 140 246 108 C288 82 322 66 372 54 L372 96 C322 108 288 122 248 146 C200 174 148 200 84 214 Z"
+                  fill="url(#hz-plume)"/>
+            <g fill="#FF7A45">
+              <circle cx="62" cy="196" r="6"/><circle cx="88" cy="182" r="4.5"/>
+              <circle cx="46" cy="178" r="4"/><circle cx="104" cy="200" r="3.5"/>
+              <circle cx="74" cy="164" r="3"/>
+            </g>
+            <!-- receptor -->
+            <g transform="translate(360 58)">
+              <circle r="7" fill="none" stroke="#7FB2C9" stroke-width="2"/>
+              <circle r="2.5" fill="#7FB2C9"/>
+            </g>
+            <text x="18" y="222" fill="#E2569E" opacity="0.95" font-size="12" letter-spacing="1.5" font-family="ui-monospace,monospace">BLAME THE WIND · AUC 0.875</text>
+          </svg>
+        </div>
+        <div class="case-body">
+          <span class="badge">LIVE DEMO</span>
+          <h2>Fire &amp; Haze Early Warning</h2>
+          <p>Where fire starts days ahead — scored against the operational Canadian
+          Fire Weather Index, not a coin flip — then the smoke run backward from a
+          bad-air day in Singapore to the fires it came from. <b>The index decays
+          with lead time; the model doesn’t.</b> That gap is the finding.</p>
+          <span class="meta">FIRMS · ERA5 · CAMS GFAS · AUC 0.875 @1D · BEATS THE FWI</span>
         </div>
       </a>
 
