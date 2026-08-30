@@ -117,6 +117,11 @@ import "../styles/tokens.css";
           </div>
           <div class="tabs" id="ledger-tabs" role="tablist"></div>
           <figure id="ledger" class="chart"></figure>
+          <figcaption class="note">The first week of January 2020 is inflated: RADD's Indonesian
+          archive starts on 2020-01-01, so the initial detection batch all carries that date. It
+          is left in rather than smoothed away. Events are dated by their <em>first</em> alert;
+          the counts are clipped to Indonesian province polygons, because the 10-degree radar
+          tiles also cover Malaysia, Brunei, Papua New Guinea and Timor-Leste.</figcaption>
         </div>
 
         <p class="sowhat reveal"><b>So what.</b> Alerts arrive as a continuous stream, not an annual
@@ -347,9 +352,12 @@ import "../styles/tokens.css";
               grid-template-rows: 1fr auto; overflow: hidden; }
       .hero-canvas-wrap { position: absolute; inset: 0; }
       #ignition { width: 100%; height: 100%; display: block; }
+      /* three scrims: a vignette, a top/bottom fade, and a left scrim that keeps the headline
+         legible over whatever the ignition happens to be burning behind it */
       .hero-vignette { position: absolute; inset: 0; pointer-events: none;
-        background: radial-gradient(120% 80% at 50% 40%, transparent 30%, var(--ground) 96%),
-                    linear-gradient(180deg, color-mix(in srgb, var(--ground) 82%, transparent) 0%, transparent 26%, transparent 58%, var(--ground) 100%); }
+        background: linear-gradient(90deg, var(--ground) 0%, color-mix(in srgb, var(--ground) 88%, transparent) 26%, transparent 56%),
+                    radial-gradient(120% 80% at 55% 40%, transparent 34%, var(--ground) 98%),
+                    linear-gradient(180deg, color-mix(in srgb, var(--ground) 78%, transparent) 0%, transparent 22%, transparent 60%, var(--ground) 100%); }
       .hero-copy { position: relative; align-self: center; max-width: 46rem;
                    padding: 0 clamp(20px, 6vw, 84px); }
       .hero-copy h1 { font-size: clamp(2rem, 4.1vw, 3.35rem); line-height: 1.05; margin: 14px 0 20px;
@@ -540,6 +548,7 @@ import "../styles/tokens.css";
       .detail { grid-area: det; border: 1px solid var(--hairline); border-radius: 10px; padding: 18px;
                 background: linear-gradient(180deg, var(--surface-raised), var(--surface));
                 min-height: 260px; }
+      [hidden] { display: none !important; }   /* beats the display:flex below */
       .detail-empty { color: var(--ink-muted); display: flex; flex-direction: column; gap: 12px;
                       align-items: flex-start; padding-top: 12px; }
       .detail-empty p { margin: 0; font-size: 13.5px; max-width: 22rem; }
@@ -786,7 +795,9 @@ import "../styles/tokens.css";
           k.fillStyle = rg; k.fillRect(0, 0, 64, 64);
           return c;
         };
-        const sprLk = sprite(214, 105, 52), sprUn = sprite(138, 156, 140);
+        // Umber is the signal; unlinked embers are deliberately dimmer and cooler so the eye
+        // reads the supply-chain link, not the noise floor.
+        const sprLk = sprite(226, 112, 54), sprUn = sprite(104, 124, 108);
 
         function paint(wi) {
           ctx.clearRect(0, 0, W, H);
@@ -807,7 +818,7 @@ import "../styles/tokens.css";
             const alpha = 1 - e.age / DECAY;
             if (alpha <= 0.02) continue;
             const r = cell * (1.1 + Math.min(3.0, Math.sqrt(e.ha) / 4.5)) * (1 + (1 - alpha) * 0.6);
-            ctx.globalAlpha = alpha * 0.9;
+            ctx.globalAlpha = alpha * (e.lk > 0.5 ? 0.95 : 0.42);
             const sp = e.lk > 0.5 ? sprLk : sprUn;
             ctx.drawImage(sp, e.px - r, e.py - r, r * 2, r * 2);
           }
@@ -912,10 +923,12 @@ import "../styles/tokens.css";
             .attr("dy", "0.35em").attr("text-anchor", "end").attr("fill", css("--ink-muted"))
             .style("font-size", "12px").style("font-family", "var(--font-data)")
             .text(s.k === "gfw" ? `${d.year} · ${s.short}` : s.short);
-          if (v) g.append("text").attr("x", x(v) + 8).attr("y", y(key) + y.bandwidth() / 2)
-            .attr("dy", "0.35em").attr("fill", css("--ink")).style("font-size", "12px")
-            .style("font-variant-numeric", "tabular-nums").style("opacity", 0)
-            .text(`${fmt(v)} ha`)
+          g.append("text").attr("x", v ? x(v) + 8 : m.l + 8).attr("y", y(key) + y.bandwidth() / 2)
+            .attr("dy", "0.35em").attr("fill", v ? css("--ink") : css("--ink-muted"))
+            .style("font-size", "12px").style("opacity", 0)
+            .style("font-variant-numeric", "tabular-nums")
+            .style("font-style", v ? "normal" : "italic")
+            .text(v ? `${fmt(v)} ha` : "not published for this year")
             .transition().duration(REDUCED ? 0 : 500).delay(REDUCED ? 0 : 700).style("opacity", 1);
           g.on("pointermove", (ev) => showTip(ev, `<b>${s.label}</b>` + rows([[String(d.year), v ? fmt(v) + " ha" : "not published"]])))
             .on("pointerleave", hideTip);
@@ -971,7 +984,7 @@ import "../styles/tokens.css";
         const tiles = [
           ["events detected", c ? fmt(c.n) : "—", c ? `≥ ${c.min_cluster_ha} ha · ${c.first_date} → ${c.last_date}` : "pipeline pending"],
           ["hectares in those events", c ? fmt(c.ha) : "—",
-           keep != null ? `${pct(keep, 0)} of all alerted hectares — the rest are detections below the ${c?.min_cluster_ha} ha event floor` : "geodetic pixel area, cos-latitude weighted"],
+           keep != null ? `${pct(keep, 0)} of every alerted hectare in the three reconciliation provinces — the rest are detections below the ${c?.min_cluster_ha} ha event floor` : "geodetic pixel area, cos-latitude weighted"],
           ["linked to palm or a mill", stats?.linkage ? pct(stats.linkage.linked_share, 1) : "—", "of alerted hectares — a floor, see below"],
           ["on peat", stats?.linkage ? pct(stats.linkage.peat_share, 1) : "—", "Miettinen et al. via gfw_peatlands"],
         ];
@@ -1177,7 +1190,7 @@ import "../styles/tokens.css";
         }
         const rowsD = mills.rows.filter((m) => m.latitude != null && m.longitude != null);
         const maxHa = d3.max(rowsD, (m) => m.alert_ha_12m ?? 0) || 1;
-        const rad = d3.scaleSqrt().domain([0, maxHa]).range([1.6, 15]);
+        const rad = d3.scaleSqrt().domain([0, maxHa]).range([1.4, 10]);
         let proj = null, land = null, ctx = null, W = 0, H = 0, hover = -1;
         function layout() {
           const f = fitCanvas(cv); ctx = f.ctx; W = f.w; H = f.h;
@@ -1197,11 +1210,13 @@ import "../styles/tokens.css";
               const r = rad(m.alert_ha_12m ?? 0);
               const hot = (m.alert_ha_12m ?? 0) > 0;
               ctx.beginPath(); ctx.arc(px, py, r, 0, 6.2832);
-              ctx.fillStyle = hot ? "rgba(180,85,42,0.55)" : "rgba(122,138,124,0.35)";
+              ctx.fillStyle = hot ? "rgba(180,85,42,0.42)" : "rgba(122,138,124,0.28)";
               ctx.fill();
-              ctx.lineWidth = 1; ctx.strokeStyle = hot ? "rgba(224,166,63,0.85)" : "rgba(122,138,124,0.6)";
+              ctx.lineWidth = 0.9;
+              ctx.strokeStyle = hot ? "rgba(224,166,63,0.7)" : "rgba(122,138,124,0.5)";
               ctx.stroke();
-              if (String(m.rspo_statu ?? "").toLowerCase().includes("certified")) {
+              // NB: "Not RSPO Certified" also contains "certified" — anchor the test.
+              if (/^\s*rspo certified/i.test(String(m.rspo_statu ?? ""))) {
                 ctx.beginPath(); ctx.arc(px, py, r + 2.6, 0, 6.2832);
                 ctx.strokeStyle = "rgba(75,184,169,0.75)"; ctx.setLineDash([2, 2]); ctx.stroke();
                 ctx.setLineDash([]);
@@ -1521,14 +1536,38 @@ import "../styles/tokens.css";
           const r = g[id];
           const st = r?.status ?? "pending";
           let num = "";
-          if (id === "G-H1" && r?.max_abs_pct_diff != null)
-            num = `Worst deviation ${r.max_abs_pct_diff.toFixed(2)} % across ${fmt(r.n_comparisons)} province-years; median ${r.median_abs_pct_diff?.toFixed(2)} %.`;
+          if (id === "G-H1" && r?.max_abs_pct_diff != null) {
+            num = `Median deviation ${r.median_abs_pct_diff?.toFixed(2)} % across
+              ${fmt(r.n_comparisons)} province-years; ${pct(r.within_tolerance_share, 1)} inside
+              ±${r.tolerance_pct} %.`;
+            const ex = r.exceedances ?? [];
+            if (ex.length) {
+              num += ` <b style="display:inline;color:var(--loss)">${ex.length}
+                ${ex.length === 1 ? "comparison exceeds" : "comparisons exceed"} the
+                tolerance</b>: ` + ex.slice(0, 3).map((e) =>
+                  `${e.province} ${e.year} — ${fmt(e.ours_ha, 2)} ha against ${fmt(e.gfw_ha, 2)} ha
+                   (${e.pct_diff > 0 ? "+" : ""}${e.pct_diff.toFixed(1)} %)`).join("; ") + ".";
+              if (r.status_material === "pass")
+                num += ` Every province-year above ${fmt(r.materiality_floor_ha)} ha of loss
+                  (${fmt(r.n_material)} of ${fmt(r.n_comparisons)}) is inside tolerance, worst
+                  ${r.max_abs_pct_diff_material?.toFixed(2)} % — so the exceedance is a rounding
+                  artefact at the floor of the measurement, not a plumbing error. The gate is
+                  reported as it computed, not re-cut to pass.`;
+            }
+          }
           if (id === "G-H2" && r?.max_abs_pct_diff != null)
             num = `Worst deviation ${r.max_abs_pct_diff.toFixed(2)} % over ${r.window_start} → ${r.window_end}. ${r.note ?? ""}`;
           if (id === "G-H3" && r?.agreement_share != null)
             num = `${pct(r.agreement_share, 1)} of ${fmt(r.n_clusters)} high-confidence events ≥ 5 ha. ${r.note ?? ""}`;
-          if (id === "G-H4" && r?.riau_linked_share != null)
-            num = `Riau linked share ${pct(r.riau_linked_share, 1)} of ${fmt(r.riau_alert_ha)} alerted ha. ${r.note ?? ""}`;
+          if (id === "G-H4" && r?.riau_linked_share != null) {
+            const bc = r.by_class ?? {};
+            num = `Riau linked share ${pct(r.riau_linked_share, 1)} of ${fmt(r.riau_alert_ha)}
+              alerted ha — comfortably over the floor, but read the composition before quoting it:
+              ` + CLS_ORDER.filter((k) => bc[k]).map((k) => `${CLS[k].label} ${pct(bc[k], 1)}`).join(", ") +
+              `. The mill catchment does nearly all the work, and a 50 km radius is a wide net;
+              the palm-extent classes stay small because RADD cannot see inside land that was
+              already plantation in 2001. ${r.note ?? ""}`;
+          }
           if (!num) num = r?.reason ? `Not evaluated: ${r.reason}` : "Not evaluated yet.";
           return `<div class="gate"><span class="id">${id}</span>
             <div><b>${DESC[id][0]}</b><p>${DESC[id][1]}</p><p>${num}</p></div>

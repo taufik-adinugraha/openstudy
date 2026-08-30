@@ -21,11 +21,19 @@ projection, not from gfw_universal_mill_list_buffered_50_km: that pre-buffered r
 403 on a free key, and points additionally give the distance and the identity of the nearest
 mill, which the pre-buffered mask cannot.
 
-Outputs: data/linked.parquet (cluster level), data/mills_scored.parquet.
+Scope: the 10-degree RADD tiles are not country-clipped, so they carry Malaysia,
+Brunei, Papua New Guinea and Timor-Leste too.  Events that fall outside every
+Indonesian province polygon (allowing a ~2 km coastal snap) are dropped here and the
+count is published -- without the clip about a quarter of the "national" hectares
+belong to somebody else's country.
+
+Outputs: data/linked.parquet (cluster level), data/mills_scored.parquet,
+         data/link_summary.json.
 """
 
 from __future__ import annotations
 
+import json
 import sys
 
 import geopandas as gpd
@@ -37,6 +45,7 @@ import config
 from alerts import log
 
 PALM_INTERNAL_SHARE = 0.5
+COAST_TOL_DEG = 0.02          # ~2 km: snap coastal events to the nearest province
 CLASSES = ("PALM-INTERNAL", "PALM-EDGE", "MILL-CATCHMENT", "UNLINKED")
 
 
@@ -61,12 +70,27 @@ def main(argv: list[str]) -> None:
     df = pd.concat(frames, ignore_index=True)
     log(f"{len(df):,} clusters, {df.ha.sum():,.0f} ha")
 
-    # --- province attribution --------------------------------------------------------
+    # --- province attribution, and the national clip ---------------------------------
+    # The 10-degree RADD tiles cover whole squares, so they carry Peninsular Malaysia, Sarawak,
+    # Sabah, Brunei, Papua New Guinea and Timor-Leste as well as Indonesia.  Without this clip
+    # roughly a quarter of the "national" hectares are somebody else's country.  Points that miss
+    # every province polygon by less than COAST_TOL_DEG are snapped to the nearest one (coastal
+    # clearings against a generalised coastline); anything further out is dropped and counted.
     prov = gpd.read_parquet(config.BOUNDARIES)[["province", "geometry"]]
     pts = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df.lon, df.lat), crs=4326)
-    df = gpd.sjoin(pts, prov, how="left", predicate="within").drop(columns=["index_right"])
-    df["province"] = df.province.fillna("Offshore / unattributed")
-    df = pd.DataFrame(df.drop(columns="geometry"))
+    j = gpd.sjoin(pts, prov, how="left", predicate="within").drop(columns=["index_right"])
+    miss = j.province.isna()
+    if miss.any():
+        near = gpd.sjoin_nearest(pts.loc[miss.to_numpy()], prov, how="left",
+                                 max_distance=COAST_TOL_DEG)
+        near = near[~near.index.duplicated()]
+        j.loc[miss.to_numpy(), "province"] = near.province.reindex(j.index[miss.to_numpy()])
+    outside = j.province.isna()
+    dropped_ha = float(j.loc[outside].ha.sum())
+    log(f"clipped to Indonesia: dropped {int(outside.sum()):,} events / {dropped_ha:,.0f} ha "
+        f"({dropped_ha / df.ha.sum():.1%}) falling in Malaysia, Brunei, PNG or Timor-Leste "
+        f"— the 10-degree tiles are not country-clipped")
+    df = pd.DataFrame(j.loc[~outside].drop(columns="geometry")).reset_index(drop=True)
 
     # --- mills ------------------------------------------------------------------------
     mills = pd.read_parquet(config.MILLS_PARQUET)
@@ -103,6 +127,12 @@ def main(argv: list[str]) -> None:
         log(f"    {k:<15} {v:6.1%}  ({sh[k]:>12,.0f} ha)")
     log(f"    on peat        {df.loc[df.on_peat].ha.sum()/df.ha.sum():6.1%}")
     log(f"    in primary     {df.loc[df.in_primary].ha.sum()/df.ha.sum():6.1%}")
+
+    (config.DATA_DIR / "link_summary.json").write_text(json.dumps({
+        "dropped_outside_indonesia_events": int(outside.sum()),
+        "dropped_outside_indonesia_ha": round(dropped_ha, 1),
+        "coast_snap_tolerance_deg": COAST_TOL_DEG,
+    }, indent=1))
 
     # --- per-mill alert pressure --------------------------------------------------------
     latest = pd.to_datetime(df.last_date).max()

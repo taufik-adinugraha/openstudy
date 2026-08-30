@@ -61,6 +61,35 @@ So no concession boundary is stored or redistributed anywhere in this case. The 
 is plantation extent + mill catchments + peat + primary forest, all cleanly licensed. That is
 the honest version of the spec's compromise, and it is stated verbatim on the page.
 
+## Results (RADD v20260823, 2020-01-01 → 2026-08-19)
+
+**404,287 disturbance events, 763,643 ha, clipped to Indonesia. 75.0 % of those hectares fall
+inside at least one palm-mill sourcing catchment or mapped oil-palm estate; 13.6 % are on peat.**
+
+| Class | Share of alerted ha | ha |
+|---|---:|---:|
+| Mill catchment (≤ 50 km, outside mapped palm) | 70.7 % | 540,015 |
+| Unlinked (frontier) | 25.0 % | 191,138 |
+| Palm — edge | 2.5 % | 18,913 |
+| Palm — internal | 1.8 % | 13,577 |
+
+| Gate | Result | Numbers |
+|---|---|---|
+| **G-H1** Hansen reconciliation ±5 % | **fail** (diagnosed) | 335 province-years; median deviation **0.69 %**, 99.7 % inside tolerance. The single exceedance is **Jakarta 2017: 1.08 ha against 1.15 ha** — a 0.07 ha difference. All 324 province-years above 100 ha pass, worst 3.98 %. Reported as computed, not re-cut. |
+| **G-H2** RADD reconciliation ±10 % | **pass** | Riau +8.2 %, Central Kalimantan +1.8 %, Papua +0.9 %, on unfiltered alert hectares |
+| **G-H3** GLAD-L agreement ≥ 60 % | **pass** | **78.6 %** of 17,062 high-confidence events ≥ 5 ha |
+| **G-H4** Riau linked share ≥ 25 % | **pass** | **97.9 %** of 61,455 ha — but 87.1 pp of that is mill-catchment, so read the composition before quoting it |
+
+Two findings that change the story rather than decorate it:
+
+1. **RADD's detection domain in Indonesia is the UMD 2001 primary-forest mask.** 100 % of alert
+   pixels fall inside a mask covering 6–28 % of the land in these tiles, and Java and Nusa
+   Tenggara return no alerts at all. So the in-primary flag carries no information, and the
+   palm-linked share is a **floor**: an estate that was already plantation in 2001 is outside
+   RADD's domain and can never raise an alert. Both are stated on the page.
+2. **The 0.5 ha event floor keeps only 18–31 % of alerted hectares.** The page publishes that
+   ratio next to the event count instead of quietly reporting the filtered total as "the" number.
+
 ## Decisions pending user verification
 
 1. **`gfw_planted_forests` (SDPT v2) replaces Descals-from-Zenodo as the palm layer.** It is

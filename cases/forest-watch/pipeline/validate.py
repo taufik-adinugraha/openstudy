@@ -31,6 +31,10 @@ import config
 from alerts import RAW_GRID, log
 
 TOL_YEARS = range(2015, 2025)
+# Province-years below this many hectares of reference loss are still compared and
+# still counted in the headline verdict; they are additionally reported separately
+# because a percentage tolerance carries no information at that scale.
+MATERIALITY_HA = 100.0
 
 
 def _nan_safe(o):
@@ -100,12 +104,26 @@ def gate_h1(prov: gpd.GeoDataFrame, ours: pd.DataFrame) -> dict:
         return {"status": "pending", "reason": "no reference years returned", "errors": fails}
     df = pd.DataFrame(rows)
     worst = df.loc[df.pct_diff.abs().idxmax()]
+    # A +/- 5 % relative tolerance is meaningless on a province-year with a couple of hectares
+    # of loss, so the material subset is reported ALONGSIDE the raw verdict -- never instead of
+    # it.  The headline status stays whatever the unfiltered comparison says.
+    mat = df.loc[df.gfw_ha >= MATERIALITY_HA]
     return {"status": "pass" if df.pct_diff.abs().max() <= config.GATE_LOSS_TOL_PCT else "fail",
             "tolerance_pct": config.GATE_LOSS_TOL_PCT, "n_comparisons": len(df),
             "max_abs_pct_diff": float(df.pct_diff.abs().max()),
             "median_abs_pct_diff": float(df.pct_diff.abs().median()),
             "within_tolerance_share": float((df.pct_diff.abs()
                                              <= config.GATE_LOSS_TOL_PCT).mean()),
+            "materiality_floor_ha": MATERIALITY_HA,
+            "n_material": int(len(mat)),
+            "max_abs_pct_diff_material": (float(mat.pct_diff.abs().max()) if len(mat)
+                                          else None),
+            "status_material": ("pass" if len(mat) and mat.pct_diff.abs().max()
+                                <= config.GATE_LOSS_TOL_PCT else "fail"),
+            "exceedances": _nan_safe(
+                df.loc[df.pct_diff.abs() > config.GATE_LOSS_TOL_PCT]
+                  .sort_values("pct_diff", key=abs, ascending=False)
+                  .head(10).to_dict("records")),
             "worst": _nan_safe(worst.to_dict()),
             "comparator": f"{spec['dataset']} {spec['version']} raster analysis over COD-AB "
                           "province geometry",
@@ -266,6 +284,10 @@ def main(argv: list[str]) -> None:
             "first_date": str(pd.to_datetime(linked.first_date).min())[:10],
             "last_date": str(pd.to_datetime(linked.last_date).max())[:10],
             "min_cluster_ha": config.MIN_CLUSTER_HA,
+            "scope": "clipped to Indonesian province polygons; the 10-degree RADD tiles also "
+                     "cover Malaysia, Brunei, Papua New Guinea and Timor-Leste",
+            **(json.loads((config.DATA_DIR / "link_summary.json").read_text())
+               if (config.DATA_DIR / "link_summary.json").exists() else {}),
         },
         "linkage": {
             "by_class_ha": _nan_safe(linked.groupby("link_class").ha.sum().to_dict()),
