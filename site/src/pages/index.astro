@@ -9,6 +9,7 @@ const DEMOS = {
   knowledge: "http://localhost:4324/knowledge",     // TODO prod: /knowledge
   trade: "http://localhost:4325/trade",             // TODO prod: /trade
   jakarta: "http://localhost:4327/jakarta",         // TODO prod: /jakarta
+  narrative: "http://localhost:4326/narrative",     // TODO prod: /narrative
 };
 ---
 <html lang="en" data-theme="dark">
@@ -131,19 +132,20 @@ const DEMOS = {
         </div>
       </a>
 
-      <div class="case building" data-case="narrative">
+      <a class="case live" data-case="narrative" href={DEMOS.narrative} target="_blank" rel="noopener">
         <div class="case-visual narrative-visual" aria-hidden="true">
           <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
         </div>
         <div class="case-body">
-          <span class="badge">IN BUILD — PHASE 2</span>
           <h2>Indonesia in the Global Narrative</h2>
           <p>Every 15 minutes, the world’s news mentions Indonesia somewhere. GDELT
           watches all of it — 65 languages, a decade back. This case turns that
-          firehose into attention, tone, and theme signals a strategy team can read.</p>
-          <span class="meta">GDELT OPEN FEED · 65 LANGUAGES · NLP AT FIREHOSE SCALE</span>
+          firehose into attention, tone, and theme signals a strategy team can read —
+          validated against nine dated events, from the 2018 tsunamis to the 2025
+          protests.</p>
+          <span class="meta">GDELT OPEN FEED · 65 LANGUAGES · 9 ANCHOR EVENTS · 50 GB STREAMED</span>
         </div>
-      </div>
+      </a>
 
       <div class="case building" data-case="airquality">
         <div class="case-visual aq-visual" aria-hidden="true">

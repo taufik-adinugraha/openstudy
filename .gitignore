@@ -30,3 +30,6 @@ dist/
 
 # third-party tool checkouts (LiCSBAS etc.)
 cases/*/tools/
+
+# agent worktrees (managed by the harness)
+.claude/worktrees/
