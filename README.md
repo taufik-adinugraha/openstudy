@@ -12,6 +12,7 @@ Source HTML lives in `docs/` (the durable copy); published views:
 - Flagship A spec — Nighttime-Lights Pulse: https://claude.ai/code/artifact/becd92dc-5dfe-4ba8-9627-56a00a470ce1
 - Flagship B spec — Trade Complexity: https://claude.ai/code/artifact/6f1db914-d986-48a3-8708-b15535c927a0
 - Platform spec — Pustaka knowledge assistant: https://claude.ai/code/artifact/6b8a2784-27c9-48cf-ac8b-d9faa14ecd4c
+- Case C spec — Jakarta Is Sinking: https://claude.ai/code/artifact/648a23f4-8bfe-4e47-a8dc-25859e9963a5
 
 ## Architecture rule
 
