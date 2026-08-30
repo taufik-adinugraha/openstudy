@@ -1704,12 +1704,20 @@ const CHAPTERS = [
                <span class="r">modelled mean risk ${(modelled[yy] ?? 0).toFixed(4)}</span>`,
               e.clientX, e.clientY))
             .on("pointerleave", tip.hide);
-          svg.append("path").datum(years.filter((yy) => modelled[yy] != null))
+          // Only some seasons have a model — the ERA5 record is shorter than the FIRMS record —
+          // and drawing a line across the missing ones would assert a value that does not exist.
+          svg.append("path").datum(years)
             .attr("fill", "none").attr("stroke", C.up).attr("stroke-width", 2)
-            .attr("d", d3.line().x((yy) => x(yy) + x.bandwidth() / 2).y((yy) => ym(modelled[yy])));
+            .attr("d", d3.line().defined((yy) => modelled[yy] != null)
+              .x((yy) => x(yy) + x.bandwidth() / 2).y((yy) => ym(modelled[yy] ?? 0)));
+          svg.selectAll("circle.mk").data(years.filter((yy) => modelled[yy] != null))
+            .join("circle").attr("class", "mk")
+            .attr("cx", (yy) => x(yy) + x.bandwidth() / 2).attr("cy", (yy) => ym(modelled[yy]))
+            .attr("r", 4).attr("fill", C.up).attr("stroke", C.ground).attr("stroke-width", 2);
           svg.append("text").attr("x", W - m.r).attr("y", m.t + 2).attr("text-anchor", "end")
             .attr("fill", C.up).attr("font-family", "var(--font-data)").attr("font-size", 12)
-            .text("modelled seasonal risk (right-hand shape, indexed)");
+            .text(`modelled seasonal risk · ${
+              years.filter((yy) => modelled[yy] != null).length} of ${years.length} seasons`);
         }
 
         /* ── explore ────────────────────────────────────────────────────────────── */

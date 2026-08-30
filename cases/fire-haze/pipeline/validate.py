@@ -336,7 +336,7 @@ def gate_j5() -> dict:
         "seasons_admitted_by_threshold": admits,
         "structurally_unsatisfiable": structural,
         "structural_note": (
-            f"the modelled series is {n_seasons} seasons long — bounded by the Copernicus ERA5 "
+            f"The modelled series is {n_seasons} seasons long — bounded by the Copernicus ERA5 "
             f"queue, not by the method — and a {config.GATE_ANCHOR_DECILE:.0%} percentile "
             f"threshold over {n_seasons} values admits {admits} season(s).  Two anchors cannot "
             f"both occupy one slot, so this gate cannot be satisfied at this record length "
@@ -344,10 +344,12 @@ def gate_j5() -> dict:
             f"the ERA5 record is what makes it answerable."
             if structural else None),
         "observed_reference": (
-            "against the FULL 15-season FIRMS record the two anchors sit at percentile "
-            f"{res.get('2015', {}).get('observed_percentile')} and "
-            f"{res.get('2019', {}).get('observed_percentile')} — which is the ordering the model "
-            "is being asked to reproduce"),
+            f"Against the full {len(observed)}-season FIRMS record the two anchors sit at the "
+            + " and ".join(
+                f"{(res[str(a)]['observed_percentile'] * 100):.0f}th"
+                for a in config.ANCHOR_YEARS
+                if res.get(str(a), {}).get("observed_percentile") is not None)
+            + " percentile — which is the ordering the model is being asked to reproduce"),
         "seasonal_series_modelled": {int(k): float(v) for k, v in modelled.items()},
         "seasonal_series_observed": {int(k): int(v) for k, v in observed.items()},
         "reason": "; ".join(fails) or None,
