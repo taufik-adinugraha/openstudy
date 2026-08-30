@@ -214,6 +214,12 @@ def fit_fold(train_years, calib_year, test_year, lead, path):
     cal = cal[cal[f"y{lead}"].notna()]
     pc = booster.predict(cal[cols])
     iso = isotonic_fit(pc, cal[f"y{lead}"].to_numpy())
+    # PERSISTENCE IS CALIBRATED TOO, on the same held-out season, for the same reason the FWI is.
+    # "It burned here in the last 7 days" scored as a bare 0/1 probability collects an appalling
+    # Brier score and hands the model a skill score of +0.79 that means nothing.  Turning the
+    # trailing count into a probability by isotonic regression is what an operator using
+    # persistence would actually get, and it is the only version worth beating.
+    iso_p = isotonic_fit(cal["fire_7d"].fillna(0).to_numpy(), cal[f"y{lead}"].to_numpy())
     del cal
 
     te = load_year(test_year)
@@ -222,7 +228,9 @@ def fit_fold(train_years, calib_year, test_year, lead, path):
     out = te[["cell", "day", "clat", "clon", "adm1_name", f"y{lead}"]].copy()
     out = out.rename(columns={f"y{lead}": "y"})
     out["p"] = np.clip(iso.predict(p_raw), 1e-6, 1 - 1e-6).astype("float32")
-    out["p_persist"] = (te["fire_7d"].fillna(0) > 0).astype("float32")
+    out["p_persist"] = np.clip(iso_p.predict(te["fire_7d"].fillna(0).to_numpy()),
+                               1e-6, 1 - 1e-6).astype("float32")
+    out["persist_hit"] = (te["fire_7d"].fillna(0) > 0).astype("int8")
     out["lead"] = lead
     out["path"] = path
     out["fold"] = test_year
@@ -387,6 +395,10 @@ def main() -> None:
                 "bss_vs_climatology": bss(s["p"], s["y"], s["p_clim"]),
                 "bss_vs_persistence": bss(s["p"], s["y"], s["p_persist"]),
                 "auc_climatology": auc(s["p_clim"], s["y"]),
+                "auc_persistence": auc(s["p_persist"], s["y"]),
+                "persistence_note": ("persistence is the trailing 7-day fire count, isotonically "
+                                     "calibrated to a probability on the same held-out season as "
+                                     "the model — a bare 0/1 baseline would flatter us"),
                 "reliability": reliability(s["p"], s["y"]),
             }
             meta["leads"][str(lead)][path] = m
@@ -531,7 +543,10 @@ def score_against_fwi() -> dict:
                           "a one-time browser click, not a credential fault.",
                 "url": config.POLICY_URLS["ewds"][0],
                 "effect": "G-J2's climatology half is scored; its FWI half is PENDING."}
-    fwi = pd.read_parquet(p)
+    # only the two columns and only the days the folds cover: the full CEMS table is 2.16 M rows
+    # a year, and merging fifteen years of it against the out-of-fold sample is a gigabyte of
+    # join for a correlation
+    fwi = pd.read_parquet(p, columns=["cell", "day", "fwi"])
     fwi["day"] = pd.to_datetime(fwi["day"])
     out = {}
     for lead in config.LEAD_DAYS:
@@ -541,7 +556,8 @@ def score_against_fwi() -> dict:
             continue
         s = pd.read_parquet(keep)
         s["day"] = pd.to_datetime(s["day"])
-        s = s.merge(fwi[["cell", "day", "fwi"]], on=["cell", "day"], how="left")
+        f = fwi[fwi["day"].isin(set(s["day"].unique()))]
+        s = s.merge(f, on=["cell", "day"], how="left")
         s = s[s["fwi"].notna()]
         if s.empty:
             out[str(lead)] = {"status": "no overlap"}

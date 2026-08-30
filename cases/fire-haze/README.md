@@ -243,10 +243,19 @@ SPI's name" — and ERA5 supplies the daily rain. SPI is computed here (gamma pe
 month with a zero point mass) so the identical code can run on a forecast.
 
 **B7 · G-J3's bearing check is a bearing check, and it may ship red.** A first pass over a single
-year with no GFAS heights gave **60.1 % agreement within ±30°, median difference 21.5°** — below
-the 70 % threshold. The threshold is not moving. Re-running with GFAS injection heights is the
-honest next step, and if it still fails it ships failing with that number and a diagnosis, per
-Case C's G-C5 precedent.
+year with no GFAS heights gave **60.1 % agreement within ±30°, median difference 21.5°**; three
+years gave 62.7 % at a median of 18.9°. Both are below the 70 % threshold. **The threshold is not
+moving.** The median difference being well inside ±30° while the share is not tells you the shape
+of the failure: the two directions usually agree closely and disagree badly on a minority of days,
+which is what you would expect when a light, rotating flow makes the trajectory unstable. If it
+still fails with GFAS heights and the full record, it ships failing with that number and that
+diagnosis, per Case C's G-C5 precedent.
+
+**B7a · Persistence is calibrated before it is beaten.** "It burned here in the last 7 days"
+scored as a bare 0/1 probability collects an appalling Brier score and hands the model a skill
+score around **+0.79** that means nothing at all. The trailing 7-day count is therefore isotonically
+calibrated to a probability on the same held-out season the model is, exactly as the CEMS FWI is —
+because the only version of a baseline worth beating is its best one.
 
 **B8 · Chart colours were validated, and one pair carries a documented WARN.** Against the dark
 surface, `model / climatology / persistence / CEMS FWI` (`#E2569E / #E0A63F / #6B7CA6 / #4BB8A9`)
