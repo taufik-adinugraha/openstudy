@@ -175,9 +175,13 @@ FREQUENT_HEADWAY_MIN = 15                    # for the ITDP "People Near Transit
 # Blok M-Kota 15.48 km → ~49 min at 19 km/h. MRT official end-to-end < 30 min.
 # from/to are (lat, lon) of the published termini; published_min is the operator's own figure.
 VALIDATION_OD = [
+    # The official feed encodes Corridor 1 as overlapping partial trips, so no single trip runs
+    # Blok M → Kota end to end. The corridor is therefore checked on the quantity the published
+    # figure actually comes from: its scheduled commercial speed.
     {"name": "TJ Corridor 1 Blok M → Kota", "mode": "bus", "km": 15.48, "published_min": 49,
      "from": (-6.2440, 106.7983), "to": (-6.1376, 106.8133),
-     "source": "brtdata.org avg commercial speed 19 km/h × corridor length"},
+     "route_long_name": "Blok M - Kota", "published_kmh": 19,
+     "source": "brtdata.org: Jakarta BRT average commercial speed 19 km/h; corridor 1 is 15.48 km"},
     {"name": "MRT Lebak Bulus → Bundaran HI", "mode": "subway", "published_min": 30,
      "from": (-6.2895, 106.7745), "to": (-6.1950, 106.8231),
      "source": "jakartamrt.co.id (official < 30 min end-to-end)"},

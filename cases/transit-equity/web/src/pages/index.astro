@@ -614,6 +614,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
       async function select(id) {
         state.sel = id;
+        tip.hidden = true;
         const r = rows[id]; if (!r) return;
         panel.hidden = false;
         document.getElementById("p-region").textContent = `${r.k} · ${r.r}`;
@@ -742,11 +743,22 @@ import "maplibre-gl/dist/maplibre-gl.css";
               ctx.globalCompositeOperation = "lighter";
               for (let j = 0; j < iso.i.length; j++) {
                 const t = iso.t[j]; if (t > state.cutoff) break;
-                ctx.globalAlpha = 0.5; ctx.fillStyle = BAND[bandOf(t)];
                 const x = m.X(cells.lon[iso.i[j]]), y = m.Y(cells.lat[iso.i[j]]);
+                ctx.fillStyle = BAND[bandOf(t)];
+                ctx.globalAlpha = 0.16;
+                ctx.fillRect(x - px, y - px, px * 2, px * 2);
+                ctx.globalAlpha = 0.62;
                 ctx.fillRect(x - px / 2, y - px / 2, px, px);
               }
               ctx.globalCompositeOperation = "source-over"; ctx.globalAlpha = 1;
+              const r = rows[state.sel];
+              if (r && isFinite(r.lat)) {                       // where the hour starts
+                const x = m.X(r.lon), y = m.Y(r.lat);
+                ctx.strokeStyle = "#FFF3E9"; ctx.lineWidth = 1.6;
+                ctx.beginPath(); ctx.arc(x, y, 7, 0, 7); ctx.stroke();
+                ctx.fillStyle = "#FFF3E9";
+                ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 7); ctx.fill();
+              }
             }
             const selIdx = state.sel ? geo.features.findIndex((f) => f.properties.id === state.sel) : -1;
             if (selIdx >= 0) { ctx.strokeStyle = "#F79C6A"; ctx.lineWidth = 1.8; ctx.stroke(m.paths[selIdx]); }
@@ -757,9 +769,12 @@ import "maplibre-gl/dist/maplibre-gl.css";
             if (i !== hover) { hover = i; paint(); }
             if (i < 0) { tip.hidden = true; return; }
             const r = host.getBoundingClientRect();
+            const blocked = panel && !panel.hidden && getComputedStyle(panel).position === "absolute"
+              ? panel.offsetWidth + 28 : 0;
             tip.hidden = false;
-            tip.style.left = Math.min(e.clientX - r.left + 16, host.clientWidth - 240) + "px";
-            tip.style.top = Math.min(e.clientY - r.top + 16, host.clientHeight - 150) + "px";
+            tip.style.left = Math.max(8, Math.min(e.clientX - r.left + 16,
+              host.clientWidth - 250 - blocked)) + "px";
+            tip.style.top = Math.min(e.clientY - r.top + 16, host.clientHeight - 160) + "px";
             tip.innerHTML = tipHTML(geo.features[i].properties.id);
           });
           canvas.addEventListener("mouseleave", () => { hover = -1; tip.hidden = true; paint(); });
@@ -787,7 +802,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
         const ratio = sAll.bodetabek_median > 0 ? (sAll.dki_median / sAll.bodetabek_median) : null;
         document.getElementById("ch2-sowhat").textContent =
           `So what: the median resident of DKI Jakarta reaches ${pct(sAll.dki_median, 2)} of the region's job-dense floorspace in an hour; the median resident of Bodetabek reaches ${pct(sAll.bodetabek_median, 2)}` +
-          (ratio && isFinite(ratio) ? ` — a ${ratio.toFixed(1)}× gap that no amount of individual effort closes.` : ".");
+          (ratio && isFinite(ratio) ? ` — a gap of ${ratio.toFixed(0)}×, which no amount of individual effort closes.` : ".");
         document.getElementById("foot-stamp").textContent =
           `A DEMO-LAB CASE · STATIC SNAPSHOT · ROUTED ${access.window.date} ${access.window.from}–${access.window.to} · GENERATED ${(stats?.generated ?? "").slice(0, 10)}`;
       });
@@ -868,7 +883,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
         document.getElementById("ch3-sowhat").textContent =
           `So what: a Gini of ${fx(sAll.gini)} on access means the hour is shared about as unevenly as income is in many countries — and ${pct(sAll.pop_share_no_hospital_60min, 0)} of the region's people cannot reach a hospital in it at all. ` +
           (pl.available ? `Against Case F's poverty surface the rank correlation is ${pl.spearman_rho.toFixed(2)}, and ${num(pl.double_disadvantage_count)} kelurahan are both poor and disconnected.`
-                        : `The poverty cross-link is pending: ${pl.reason ?? "Case F has not published its estimates yet"}.`);
+                        : `The poverty cross-link is pending: ${(pl.reason ?? "Case F has not published its estimates yet").replace(/\.$/, "")}.`);
       });
 
       /* ═════════ CH 4 — what each layer buys ═════════ */
@@ -906,7 +921,9 @@ import "maplibre-gl/dist/maplibre-gl.css";
             <span class="g-flag">${ok === true ? "PASS" : ok === false ? "FAIL" : "PENDING"}</span></div>`);
           const g1 = stats["G-G1"] ?? {};
           mk("G-G1", "Timetable sanity", ((g1.ods ?? []).map((o) =>
-            `${o.name}: operator publishes <b>${o.published_min} min</b>, our timetable schedules <b>${o.scheduled_in_vehicle_min ?? "—"} min</b>` +
+            (typeof o.scheduled_kmh === "number"
+              ? `${o.name}: published corridor average <b>${o.published_kmh} km/h</b>, the operator's own feed schedules <b>${o.scheduled_kmh} km/h</b> across ${num(o.trips_matched)} trips`
+              : `${o.name}: operator publishes <b>${o.published_min} min</b>, our timetable schedules <b>${o.scheduled_in_vehicle_min ?? "—"} min</b>`) +
             `${typeof o.router_door_to_door_min === "number" ? ` (router door-to-door, incl. walk + wait: ${Math.round(o.router_door_to_door_min)} min)` : ""}` +
             `${o.note ? ` — ${o.note}` : ""}`).join("<br>") || "not evaluated") +
             (g1.method ? `<br><span class="dim">${g1.method}.</span>` : ""), g1.pass);
@@ -1157,7 +1174,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
         .net-wrap, .equity-wrap, .tables, .method-grid { grid-template-columns: 1fr; }
         .ch-head { grid-template-columns: 54px 1fr; }
         .panel { position: static; width: auto; margin-top: 10px; }
-        .map { height: 58vh; }
+        .map { height: auto; aspect-ratio: 4 / 3; }
       }
       .maplibregl-ctrl-attrib { background: color-mix(in srgb, var(--ground) 70%, transparent) !important; color: var(--ink-muted); font-size: 10px; }
       .maplibregl-ctrl-group { background: var(--surface); border: 1px solid var(--hairline); }

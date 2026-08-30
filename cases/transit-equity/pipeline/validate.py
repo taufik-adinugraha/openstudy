@@ -53,6 +53,10 @@ def _scheduled_run_time(od: dict) -> dict:
     time. Reading it from the feed answers exactly that, deterministically — r5py's
     DetailedItineraries leg accounting proved unreliable here (it reported 936 min for the
     Bogor line), so the router is reported alongside as door-to-door context, not as the test.
+
+    The search is per route: TransJakarta gives each direction its own stop_id and each rail
+    line its own copy of a shared station, so picking the globally nearest stops to the two
+    coordinates lands on stops no single trip ever serves in order.
     """
     from math import asin, cos, pi, sqrt
 
@@ -63,52 +67,113 @@ def _scheduled_run_time(od: dict) -> dict:
              + cos(la1 * q) * cos(la2 * q) * (1 - cos((lo2 - lo1) * q)) / 2)
         return 12742000 * asin(sqrt(max(h, 0.0)))
 
+    def secs(x):
+        try:
+            h, m, sec = (int(v) for v in str(x).split(":"))
+        except ValueError:
+            return float("nan")
+        return h * 3600 + m * 60 + sec
+
     want_bus = od["mode"] == "bus"
     best = None
     for z in sorted(config.GTFS_DIR.glob("*.zip")):
         t = _feed_tables(z)
         if t is None:
             continue
-        types = set(t["routes"].route_type.unique())
-        if want_bus and 3 not in types:
+        routes = t["routes"]
+        routes = routes[routes.route_type == 3] if want_bus else routes[routes.route_type != 3]
+        if routes.empty:
             continue
-        if not want_bus and types <= {3}:
-            continue
-        stops = t["stops"].dropna(subset=["stop_lat", "stop_lon"])
-        if not want_bus:
-            keep = set(t["routes"][t["routes"].route_type != 3].route_id)
-            tids = set(t["trips"][t["trips"].route_id.isin(keep)].trip_id)
-            sids = set(t["stop_times"][t["stop_times"].trip_id.isin(tids)].stop_id)
-            stops = stops[stops.stop_id.isin(sids)]
-        if stops.empty:
-            continue
-        d_from = stops.apply(lambda r: hav(od["from"], (r.stop_lat, r.stop_lon)), axis=1)
-        d_to = stops.apply(lambda r: hav(od["to"], (r.stop_lat, r.stop_lon)), axis=1)
-        s_from, s_to = stops.loc[d_from.idxmin()], stops.loc[d_to.idxmin()]
-        if d_from.min() > 2000 or d_to.min() > 2000:
-            continue
-        st = t["stop_times"]
-        a = st[st.stop_id == s_from.stop_id][["trip_id", "stop_sequence", "departure_time"]]
-        b = st[st.stop_id == s_to.stop_id][["trip_id", "stop_sequence", "arrival_time"]]
-        j = a.merge(b, on="trip_id", suffixes=("_a", "_b"))
-        j = j[j.stop_sequence_b > j.stop_sequence_a]
-        if j.empty:
-            continue
+        stops = t["stops"].dropna(subset=["stop_lat", "stop_lon"]).set_index("stop_id")
+        st = t["stop_times"].dropna(subset=["stop_id", "stop_sequence"])
+        trips = t["trips"]
+        for rid in routes.route_id.unique():
+            tids = set(trips[trips.route_id == rid].trip_id)
+            sr = st[st.trip_id.isin(tids)]
+            sids = [i for i in sr.stop_id.unique() if i in stops.index]
+            if len(sids) < 2:
+                continue
+            coords = [(i, stops.at[i, "stop_lat"], stops.at[i, "stop_lon"]) for i in sids]
+            s_from = min(coords, key=lambda c: hav(od["from"], (c[1], c[2])))
+            s_to = min(coords, key=lambda c: hav(od["to"], (c[1], c[2])))
+            d_from = hav(od["from"], (s_from[1], s_from[2]))
+            d_to = hav(od["to"], (s_to[1], s_to[2]))
+            if s_from[0] == s_to[0] or d_from > 2000 or d_to > 2000:
+                continue
+            a = sr[sr.stop_id == s_from[0]][["trip_id", "stop_sequence", "departure_time"]].dropna()
+            b = sr[sr.stop_id == s_to[0]][["trip_id", "stop_sequence", "arrival_time"]].dropna()
+            j = a.merge(b, on="trip_id", suffixes=("_a", "_b"))
+            j = j[j.stop_sequence_b > j.stop_sequence_a]
+            if j.empty:
+                continue
+            mins = (j.arrival_time.map(secs) - j.departure_time.map(secs)) / 60.0
+            mins = mins[mins.notna() & (mins > 0)]
+            if mins.empty:
+                continue
+            cand = {"feed": z.name, "route": str(rid),
+                    "from_stop": str(stops.at[s_from[0], "stop_name"]),
+                    "to_stop": str(stops.at[s_to[0], "stop_name"]),
+                    "from_stop_m": round(d_from), "to_stop_m": round(d_to),
+                    "trips_matched": int(len(mins)),
+                    "scheduled_in_vehicle_min": round(float(mins.median()), 1),
+                    "_score": d_from + d_to}
+            if best is None or cand["_score"] < best["_score"]:
+                best = cand
+    if best:
+        best.pop("_score", None)
+        return best
+    if od.get("published_kmh"):
+        return _corridor_speed(od, hav, secs)
+    return {"note": "no trip on any single route serves this pair of stops in order"}
 
-        def secs(x):
-            h, m, sec = (int(v) for v in str(x).split(":"))
-            return h * 3600 + m * 60 + sec
 
-        mins = (j.arrival_time.map(secs) - j.departure_time.map(secs)) / 60.0
-        mins = mins[mins > 0]
-        if mins.empty:
+def _corridor_speed(od: dict, hav, secs) -> dict:
+    """Fallback for a corridor the feed encodes as overlapping partial trips.
+
+    TransJakarta's Corridor 1 has no end-to-end trip in the official feed, so the published
+    49 minutes (brtdata.org's 19 km/h commercial speed × 15.48 km) cannot be read off a single
+    trip. The same published quantity — the corridor's scheduled commercial speed — can be, and
+    that is what is tested: median over the route's trips of (distance between consecutive
+    stops) / (last arrival − first departure).
+    """
+    for z in sorted(config.GTFS_DIR.glob("*.zip")):
+        t = _feed_tables(z)
+        if t is None:
             continue
-        cand = {"feed": z.name, "from_stop": str(s_from.stop_name), "to_stop": str(s_to.stop_name),
-                "from_stop_m": round(float(d_from.min())), "to_stop_m": round(float(d_to.min())),
-                "trips_matched": int(len(mins)), "scheduled_in_vehicle_min": round(float(mins.median()), 1)}
-        if best is None or cand["trips_matched"] > best["trips_matched"]:
-            best = cand
-    return best or {"note": "no trip in any feed serves this pair of stops in order"}
+        r = t["routes"]
+        r = r[(r.route_type == 3) & (r.route_long_name.astype(str).str.strip()
+                                     == od["route_long_name"])]
+        if r.empty:
+            continue
+        stops = t["stops"].dropna(subset=["stop_lat", "stop_lon"]).set_index("stop_id")
+        tids = set(t["trips"][t["trips"].route_id.isin(r.route_id)].trip_id)
+        sr = t["stop_times"][t["stop_times"].trip_id.isin(tids)].dropna(subset=["stop_id"])
+        speeds, spans = [], []
+        for tid, grp in sr.groupby("trip_id"):
+            grp = grp.sort_values("stop_sequence")
+            pts = [(stops.at[i, "stop_lat"], stops.at[i, "stop_lon"])
+                   for i in grp.stop_id if i in stops.index]
+            if len(pts) < 3:
+                continue
+            dist = sum(hav(pts[k - 1], pts[k]) for k in range(1, len(pts)))
+            dur = secs(grp.arrival_time.iloc[-1]) - secs(grp.departure_time.iloc[0])
+            if not (dur and dur > 0) or dist < 2000:
+                continue
+            speeds.append(dist / dur * 3.6)
+            spans.append(dist / 1000)
+        if speeds:
+            speeds.sort()
+            return {"feed": z.name, "route": str(r.route_id.iloc[0]),
+                    "note": ("no end-to-end trip exists in the official feed, so the corridor is "
+                             "tested on its scheduled commercial speed. Distance is summed "
+                             "straight-line between consecutive stops, so this figure is a lower "
+                             "bound by roughly 10-15 %. Even so the operator's own schedule is "
+                             "well below brtdata.org's 19 km/h corridor average, which means the "
+                             "bus times routed here are conservative, not optimistic."),
+                    "trips_matched": len(speeds),
+                    "median_trip_km": round(sorted(spans)[len(spans) // 2], 2),
+                    "scheduled_kmh": round(speeds[len(speeds) // 2], 1)}
+    return {"note": "no trip on any single route serves this pair of stops in order"}
 
 
 def _router_door_to_door(tn, od: dict) -> float | None:
@@ -142,11 +207,21 @@ def gate_g1(tn) -> dict:
             continue
         sched = _scheduled_run_time(od)
         v = sched.get("scheduled_in_vehicle_min")
+        kmh = sched.get("scheduled_kmh")
         tol = max(od["published_min"] * config.GATE_TT_TOL_PCT / 100, config.GATE_TT_TOL_MIN)
         rec = {**_od_meta(od), **sched, "tolerance_min": round(tol, 1),
                "router_door_to_door_min": _router_door_to_door(tn, od)}
-        rec["deviation_min"] = None if v is None else round(v - od["published_min"], 1)
-        rec["pass"] = bool(v is not None and abs(v - od["published_min"]) <= tol)
+        if v is not None:
+            rec["deviation_min"] = round(v - od["published_min"], 1)
+            rec["pass"] = bool(abs(v - od["published_min"]) <= tol)
+        elif kmh is not None:
+            rec["published_kmh"] = od["published_kmh"]
+            rec["deviation_kmh"] = round(kmh - od["published_kmh"], 1)
+            rec["pass"] = bool(abs(kmh - od["published_kmh"])
+                               <= od["published_kmh"] * config.GATE_TT_TOL_PCT / 100)
+        else:
+            rec["deviation_min"] = None
+            rec["pass"] = False
         results.append(rec)
     passed = [r for r in results if r["pass"]]
     return {"gate": "G-G1", "hard": True, "ods": results,

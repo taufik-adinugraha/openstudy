@@ -9,6 +9,57 @@ Status: **BUILT.** Ingest → rail GTFS → network → matrix (3 scenarios) →
 validate → export all run on the dev server; the dashboard is served at
 `http://52.77.253.154:4329/transit`. Spec (governing document): `docs/spec-transit-equity.html`.
 
+## What the build found (2026-08-30 run, `data/stats.json` + `data/equity.json`)
+
+Access = share of Jabodetabek's job-dense floorspace (GHS-BUILT-S NRES) reachable within
+60 minutes door-to-door on scheduled public transport, weekday 07:00–09:00 departures, p50.
+
+| | |
+|---|---|
+| DKI Jakarta, median resident | **4.29 %** |
+| Bodetabek, median resident | **0.05 %** — a gap of ~86× |
+| Menteng (pop-weighted) | 9.98 %, 9 min to a hospital |
+| Bekasi (pop-weighted) | 0.31 %, 20 min to a hospital |
+| Gini of population-weighted access | **0.743** (0.737 without rail, 0.629 walking only) |
+| Palma ratio | 109.5 — the bottom 40 % reach almost nothing |
+| People who cannot reach any hospital in an hour | **38 %** of the region |
+| Kelurahan reaching no measured job-dense floorspace at all | 430 of 1,511 |
+| What rail adds to the average resident | +0.26 pp of reachable floorspace |
+| What all public transport adds over walking | +1.32 pp |
+
+The headline is not "Jakarta has good transit and the periphery has less". It is that an hour
+of *mapped* public transport buys a central Jakarta resident about a tenth of the region's
+job-dense floorspace and buys most of Kabupaten Bogor nothing at all — and that a large part
+of the periphery's zero is a **data** fact as much as a transport fact, because the angkot
+that actually move those residents publish no timetable anywhere. Access outside the
+corridors should be read as a floor.
+
+### Gate results
+
+- **G-G1 · timetable sanity — FAIL (3 of 4).** MRT Lebak Bulus→Bundaran HI: published 30 min,
+  our timetable schedules 27.6. KRL Bogor→Jakarta Kota: 95 published, 88.8 scheduled. LRT
+  Jabodebek Harjamukti→Dukuh Atas: 45 published, 42.4 scheduled. The TransJakarta corridor
+  fails: the official feed has **no end-to-end Corridor 1 trip** (it is encoded as overlapping
+  partial trips), so the corridor is tested on its scheduled commercial speed — **11.2 km/h in
+  the operator's own feed against brtdata.org's published 19 km/h**. Straight-line inter-stop
+  distance makes 11.2 a lower bound by ~10–15 %, so the gap is real: the bus times routed here
+  are conservative, not optimistic.
+- **G-G2 · external routing check — NOT EVALUATED.** It requires live Google Routes API calls,
+  which the user has not authorised. Recorded as pending with that reason.
+- **G-G3 · network integrity — FAIL.** 99.44 % of 8,568 GTFS stops snap to the street graph
+  within 200 m (gate needs 98 %), but 15 of 1,511 origins cannot be routed at all: 5 in
+  Kepulauan Seribu (no road link, outside the routable clip) and **10 on the mainland**
+  (Bitung Jaya, Katulampa, Sentul, Srimukti and six smaller desa — their population-weighted
+  centre snaps onto an isolated street fragment). The gate requires zero, so it fails; the
+  affected population is 142k, under 0.4 % of the region.
+- **G-G4 · plausibility — PASS.** Rail ≥ no-rail at every origin (0 material violations of
+  1,511; 21 differences below the 0.5 pp tolerance are R5's Monte Carlo sampling of frequency
+  headways). DKI median 4.29 % > Bodetabek 0.05 %. People-near-transit replication: Jakarta
+  98 % and Greater Jakarta 42 % of population within 1 km of ≤15-min-headway service, both
+  above the ITDP 2016 anchors (44 % / 16 %) as expected — though the Jakarta figure is high
+  because this is a straight-line buffer over every TransJakarta and Mikrotrans stop, not
+  ITDP's street-network methodology; that caveat is on the dashboard.
+
 ## Non-negotiables from the spec
 
 - **Scheduled times, not congestion** — weekday 07:00–09:00 departure window, frequency-aware
@@ -88,7 +139,24 @@ Added during this build (all deviations from the spec's letter, taken for stated
 14. **`krl_tanjung_priok` and the two LRT Jabodebek branches** were resolved from OSM by name
     regex (`config.RAIL_OSM_MATCH`); OSM spells the station "Tanjung Priuk". LRT Jabodebek is
     two relations (Cibubur and Bekasi lines) sharing a trunk, so it is encoded as two routes.
-15. **Angkot are largely absent from the data.** Only the community Bogor angkot feed (CC0)
+16. **Rail run times add no separate dwell.** `RAIL_SPEED_KMH` are *commercial* speeds derived
+    from published end-to-end journey times, so dwell is already inside them; an earlier build
+    added 45 s per station on top and made the MRT run 39 min against its published 30.
+    `RAIL_DWELL_S = 0` and G-G1 now passes on all three rail lines.
+17. **G-G1 is evaluated on the timetable, not on r5py's itinerary legs.** r5py's
+    `DetailedItineraries` leg accounting produced nonsense here (936 min for Bogor→Jakarta
+    Kota), so the gate compares the scheduled in-vehicle time in the GTFS the router uses with
+    the operator's published journey time; the router's door-to-door p50 is published alongside
+    as context.
+18. **Monotonicity is evaluated with a 0.5 pp tolerance.** R5 samples frequency-based headways
+    by Monte Carlo and the scenarios draw independently, so a handful of tiny negative
+    differences are sampling noise. Both the exact count (21) and the material count (0) are
+    published; the gate uses the material one. A fixed R5 seed would remove the need.
+19. **Maps frame the mainland and shade on a square-root scale.** Kepulauan Seribu is 60 km
+    offshore and was shrinking Jabodetabek to a third of the frame; access is so concentrated
+    that a linear ramp painted nine tenths of the region flat black. Both choices are stated on
+    the page, and the islands stay in every number and table.
+20. **Angkot are largely absent from the data.** Only the community Bogor angkot feed (CC0)
     exists. Access in the outer kabupaten is therefore a *floor*: the paratransit that actually
     moves those residents has no open timetable. This is stated on the dashboard.
 
