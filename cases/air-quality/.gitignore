@@ -1,0 +1,5 @@
+cases/air-quality/data/
+cases/air-quality/web/node_modules/
+cases/air-quality/web/dist/
+cases/air-quality/web/.astro/
+cases/air-quality/web/public/data/

@@ -1,0 +1,1512 @@
+---
+// Case E — Jabodetabek Air Quality Nowcast.
+// Anatomy (README §E6): hero (the next 72 hours breathing over the city) →
+// 01 the air today → 02 the forecast → 03 what drives it → 04 the airshed →
+// 05 one live sensor → 06 validation → methodology.
+// Identity: washed sky cyan on a dark ground. The AQI ramp is DATA ONLY and
+// never doubles as the accent. No WebGL anywhere — every canvas is 2-D with
+// its own hit testing (README decision 4).
+import "../styles/tokens.css";
+
+const S = (await import("../data/summary.json").catch(() => null))?.default ?? null;
+
+const n0 = (v) => (v == null ? "—" : Math.round(v).toLocaleString("en-US"));
+const n1 = (v) => (v == null ? "—" : v.toFixed(1));
+const pct = (v, d = 0) => (v == null ? "—" : `${(v * 100).toFixed(d)}%`);
+const dt = (s) => (s ? String(s).slice(0, 16).replace("T", " ") + " UTC" : "pending");
+
+const gates = S?.gates ?? [];
+const passed = S?.gates_passed ?? 0;
+const total = S?.gates_total ?? 6;
+const net = S?.network ?? null;
+const obs = S?.observed ?? null;
+const evalRows = S?.model?.eval ?? [];
+const e24 = evalRows.find((r) => r.horizon_h === 24) ?? null;
+const generated = S?.generated_utc ?? null;
+const groundLast = S?.vintage?.ground_last_utc ?? null;
+const pending = !S;
+---
+
+<html lang="en" data-case="airquality" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jabodetabek Air Quality Nowcast</title>
+    <meta name="description" content="A 24–72 hour PM2.5 forecast for Greater Jakarta from ERA5 meteorology, NASA FIRMS fire hotspots and OpenAQ ground sensors — validated against persistence." />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+
+    <style>
+      /* ── ramp: AQI, data only ─────────────────────────────────────── */
+      :root {
+        --aqi-0: #63C08A;   /* good        0–12    */
+        --aqi-1: #E3C74A;   /* moderate    12–35.4 */
+        --aqi-2: #E8934A;   /* sensitive   35.5–55.4 */
+        --aqi-3: #E0605E;   /* unhealthy   55.5–150.4 */
+        --aqi-4: #A56ACB;   /* very bad    150.5–250.4 */
+        --aqi-5: #8C4A5E;   /* hazardous   250.5+ */
+        --glow: 0 0 0 1px rgba(111,199,214,.14), 0 18px 44px -22px rgba(111,199,214,.45);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0; background: var(--ground); color: var(--ink);
+        font-family: var(--font-body); font-size: 16px; line-height: 1.62;
+        -webkit-font-smoothing: antialiased;
+        background-image:
+          radial-gradient(1100px 620px at 78% -8%, rgba(111,199,214,.10), transparent 62%),
+          radial-gradient(760px 460px at 4% 30%, rgba(111,199,214,.045), transparent 60%);
+        background-attachment: fixed;
+      }
+      :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+      b, strong { font-weight: 600; }
+      .cy { color: var(--accent); }
+      .num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1; }
+
+      /* ── chrome ───────────────────────────────────────────────────── */
+      .stamp-bar {
+        position: sticky; top: 0; z-index: 40;
+        display: flex; gap: var(--space-3); align-items: baseline; flex-wrap: wrap;
+        padding: 10px clamp(16px, 4vw, 48px);
+        border-bottom: 1px solid var(--hairline);
+        background: color-mix(in srgb, var(--ground) 82%, transparent);
+        backdrop-filter: blur(14px) saturate(1.3);
+      }
+      .stamp {
+        font-family: var(--font-data); font-size: 11.5px; letter-spacing: .13em;
+        text-transform: uppercase; color: var(--ink);
+      }
+      .stamp.dim { color: var(--ink-muted); }
+      .pulse { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+        background: var(--accent); margin-right: 7px; vertical-align: middle;
+        box-shadow: 0 0 0 0 rgba(111,199,214,.6); animation: beat 2.6s ease-out infinite; }
+      @keyframes beat { 0% { box-shadow: 0 0 0 0 rgba(111,199,214,.55);} 70% { box-shadow: 0 0 0 9px rgba(111,199,214,0);} 100% { box-shadow: 0 0 0 0 rgba(111,199,214,0);} }
+
+      /* ── layout ───────────────────────────────────────────────────── */
+      .chapter, .wide {
+        max-width: var(--content-width);
+        margin: 0 auto; padding: clamp(48px, 8vh, 104px) clamp(16px, 4vw, 48px) 0;
+      }
+      .chapter p, .chapter h2, .chapter .big-stat { max-width: var(--prose-width); }
+      .eyebrow {
+        display: block; font-family: var(--font-data); font-size: 11.5px;
+        letter-spacing: .17em; text-transform: uppercase; color: var(--accent);
+        margin-bottom: var(--space-3);
+      }
+      .eyebrow::before {
+        content: ""; display: inline-block; width: 22px; height: 1px;
+        background: var(--accent); vertical-align: middle; margin-right: 10px; opacity: .7;
+      }
+      h1 {
+        font-family: var(--font-display); font-weight: 800;
+        font-size: clamp(2.6rem, 7.2vw, 5.1rem); line-height: .98;
+        letter-spacing: -.032em; margin: 0 0 var(--space-3);
+      }
+      h2 {
+        font-family: var(--font-display); font-weight: 700;
+        font-size: clamp(1.7rem, 3.6vw, 2.7rem); line-height: 1.08;
+        letter-spacing: -.022em; margin: 0 0 var(--space-4);
+      }
+      h3 { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; margin: 0 0 var(--space-2); letter-spacing: -.01em; }
+      .chapter p { color: var(--ink-muted); margin: 0 0 var(--space-3); }
+      .chapter p b { color: var(--ink); }
+      .big-stat {
+        font-family: var(--font-display); font-weight: 600;
+        font-size: clamp(1.2rem, 2.5vw, 1.62rem); line-height: 1.36;
+        letter-spacing: -.015em; color: var(--ink) !important; margin-bottom: var(--space-4) !important;
+      }
+      .big-stat b { color: var(--accent); font-weight: 700; }
+      .sowhat {
+        border-left: 2px solid var(--accent); padding: 2px 0 2px var(--space-3);
+        margin: var(--space-4) 0 0; color: var(--ink) !important;
+        font-size: 1.02rem;
+      }
+      .footnote { font-size: 13.5px; color: var(--ink-muted); line-height: 1.55; }
+      .panel {
+        margin-top: var(--space-4); padding: var(--space-4);
+        border: 1px solid var(--hairline); border-radius: var(--radius);
+        background: linear-gradient(168deg, var(--surface-raised), var(--surface) 62%);
+        box-shadow: 0 22px 48px -34px rgba(0,0,0,.9);
+      }
+      .panel-head {
+        display: flex; justify-content: space-between; align-items: baseline;
+        gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-3);
+      }
+
+      /* reveal */
+      .rv { opacity: 0; transform: translateY(18px); transition: opacity .7s cubic-bezier(.22,.8,.3,1), transform .7s cubic-bezier(.22,.8,.3,1); }
+      .rv.in { opacity: 1; transform: none; }
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        .rv { opacity: 1; transform: none; transition: none; }
+        .pulse { animation: none; }
+      }
+
+      /* ── hero ─────────────────────────────────────────────────────── */
+      .hero { position: relative; min-height: min(92vh, 860px); overflow: hidden;
+        border-bottom: 1px solid var(--hairline); }
+      #sky { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+      .hero-grid {
+        position: relative; z-index: 2; max-width: var(--content-width);
+        margin: 0 auto; padding: clamp(40px, 9vh, 96px) clamp(16px, 4vw, 48px) 0;
+        pointer-events: none;
+      }
+      .hero-copy { max-width: 40rem; }
+      .hero-copy p { color: var(--ink-muted); font-size: 1.06rem; max-width: 34rem; }
+      .hero-copy p b { color: var(--ink); }
+      .hud {
+        position: absolute; z-index: 3; right: clamp(16px, 4vw, 48px);
+        bottom: clamp(88px, 13vh, 132px); text-align: right;
+        pointer-events: none; min-width: 15rem;
+      }
+      .hud-cat { font-family: var(--font-data); font-size: 11.5px; letter-spacing: .15em;
+        text-transform: uppercase; display: block; margin-bottom: 2px; }
+      .hud-num {
+        font-family: var(--font-display); font-weight: 800; letter-spacing: -.04em;
+        font-size: clamp(3.4rem, 9vw, 6rem); line-height: .88; display: block;
+        font-variant-numeric: tabular-nums; text-shadow: 0 8px 40px rgba(0,0,0,.7);
+      }
+      .hud-unit { font-size: .3em; letter-spacing: 0; font-weight: 600; color: var(--ink-muted); }
+      .hud-when { font-family: var(--font-data); font-size: 11.5px; letter-spacing: .1em;
+        color: var(--ink-muted); display: block; margin-top: 6px; text-transform: uppercase; }
+      .scrub-wrap {
+        position: absolute; z-index: 3; left: 0; right: 0; bottom: 0;
+        padding: 0 clamp(16px, 4vw, 48px) 18px;
+        max-width: var(--content-width); margin: 0 auto;
+      }
+      .scrub-labels { display: flex; justify-content: space-between;
+        font-family: var(--font-data); font-size: 11px; letter-spacing: .12em;
+        color: var(--ink-muted); text-transform: uppercase; margin-bottom: 6px; }
+      input[type="range"].scrub {
+        -webkit-appearance: none; appearance: none; width: 100%; height: 26px;
+        background: transparent; cursor: ew-resize; pointer-events: auto;
+      }
+      input.scrub::-webkit-slider-runnable-track { height: 3px; border-radius: 2px;
+        background: linear-gradient(90deg, rgba(111,199,214,.75), rgba(111,199,214,.16)); }
+      input.scrub::-moz-range-track { height: 3px; border-radius: 2px;
+        background: linear-gradient(90deg, rgba(111,199,214,.75), rgba(111,199,214,.16)); }
+      input.scrub::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px;
+        margin-top: -6px; border-radius: 50%; background: var(--accent);
+        box-shadow: 0 0 0 4px rgba(111,199,214,.2), 0 2px 10px rgba(0,0,0,.6); }
+      input.scrub::-moz-range-thumb { width: 15px; height: 15px; border: none;
+        border-radius: 50%; background: var(--accent);
+        box-shadow: 0 0 0 4px rgba(111,199,214,.2); }
+
+      /* ── controls ─────────────────────────────────────────────────── */
+      .toggle { display: inline-flex; border: 1px solid var(--hairline); border-radius: 999px;
+        overflow: hidden; background: var(--surface); }
+      .toggle button {
+        appearance: none; border: 0; background: transparent; color: var(--ink-muted);
+        font-family: var(--font-data); font-size: 11px; letter-spacing: .11em;
+        text-transform: uppercase; padding: 7px 14px; cursor: pointer;
+        transition: color .25s, background .25s;
+      }
+      .toggle button:hover { color: var(--ink); background: rgba(111,199,214,.07); }
+      .toggle button.on { color: var(--accent-ink); background: var(--accent); font-weight: 600; }
+
+      /* ── charts ───────────────────────────────────────────────────── */
+      .cv-wrap { position: relative; width: 100%; }
+      canvas.chart, svg.chart { display: block; width: 100%; }
+      .axis text { font-family: var(--font-data); font-size: 12px; fill: var(--ink-muted); }
+      .axis line, .axis path { stroke: var(--hairline); shape-rendering: crispEdges; }
+      .gridline { stroke: var(--hairline); stroke-opacity: .55; shape-rendering: crispEdges; }
+      .lbl { font-family: var(--font-data); font-size: 12px; fill: var(--ink-muted); }
+      .lbl.strong { fill: var(--ink); }
+
+      #tip {
+        position: fixed; z-index: 90; pointer-events: none; max-width: 20rem;
+        padding: 9px 12px; border-radius: var(--radius);
+        border: 1px solid var(--hairline);
+        background: color-mix(in srgb, var(--surface-raised) 94%, transparent);
+        backdrop-filter: blur(10px);
+        box-shadow: 0 20px 44px -20px rgba(0,0,0,.95);
+        font-family: var(--font-data); font-size: 12px; line-height: 1.55; color: var(--ink);
+      }
+      #tip .t-h { font-weight: 600; letter-spacing: .05em; margin-bottom: 3px; display: block; }
+      #tip .t-r { display: flex; justify-content: space-between; gap: 14px; color: var(--ink-muted); }
+      #tip .t-r b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+      /* ── legend ───────────────────────────────────────────────────── */
+      .ramp-legend { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+        font-family: var(--font-data); font-size: 11px; letter-spacing: .09em;
+        text-transform: uppercase; color: var(--ink-muted); }
+      .ramp-legend i { width: 13px; height: 13px; border-radius: 3px; display: inline-block;
+        margin-right: 5px; vertical-align: -2px; }
+      .ramp-legend span { white-space: nowrap; }
+
+      /* ── gates ────────────────────────────────────────────────────── */
+      .gates { list-style: none; margin: 0; padding: 0; }
+      .gates li {
+        display: grid; grid-template-columns: auto 1fr; gap: var(--space-3);
+        padding: var(--space-3) 0; border-top: 1px solid var(--hairline);
+      }
+      .gates li:first-child { border-top: 0; }
+      .chip {
+        font-family: var(--font-data); font-size: 10.5px; letter-spacing: .12em;
+        text-transform: uppercase; padding: 4px 9px; border-radius: 999px;
+        border: 1px solid currentColor; white-space: nowrap; align-self: start; font-weight: 600;
+      }
+      .chip.pass { color: var(--official); }
+      .chip.fail { color: var(--alert); }
+      .chip.insufficient { color: var(--ink-muted); }
+      .gate-name { font-weight: 600; color: var(--ink); display: block; }
+      .gate-detail { font-size: 13.5px; color: var(--ink-muted); }
+      .gate-id { font-family: var(--font-data); color: var(--ink-muted); font-size: 12px; margin-right: 8px; }
+
+      /* ── station gantt / table ────────────────────────────────────── */
+      .lifelines { width: 100%; }
+      .kpis { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        margin-top: var(--space-4); }
+      .kpi { padding: var(--space-3); border: 1px solid var(--hairline); border-radius: var(--radius);
+        background: linear-gradient(165deg, var(--surface-raised), var(--surface));
+        transition: transform .3s cubic-bezier(.22,.8,.3,1), box-shadow .3s, border-color .3s; }
+      .kpi:hover { transform: translateY(-3px); border-color: rgba(111,199,214,.35); box-shadow: var(--glow); }
+      .kpi .k-v { font-family: var(--font-display); font-weight: 700; font-size: 1.9rem;
+        letter-spacing: -.03em; font-variant-numeric: tabular-nums; display: block; line-height: 1.05; }
+      .kpi .k-l { font-family: var(--font-data); font-size: 10.5px; letter-spacing: .12em;
+        text-transform: uppercase; color: var(--ink-muted); display: block; margin-top: 5px; }
+
+      /* ── empty / pending state ────────────────────────────────────── */
+      .pending {
+        border: 1px dashed var(--hairline); border-radius: var(--radius);
+        padding: var(--space-5); text-align: center; color: var(--ink-muted);
+        background: repeating-linear-gradient(135deg, transparent, transparent 9px, rgba(255,255,255,.014) 9px, rgba(255,255,255,.014) 18px);
+        font-family: var(--font-data); font-size: 12.5px; letter-spacing: .09em; text-transform: uppercase;
+      }
+
+      footer.method {
+        max-width: var(--content-width); margin: var(--space-6) auto 0;
+        padding: var(--space-5) clamp(16px, 4vw, 48px) var(--space-6);
+        border-top: 1px solid var(--hairline); color: var(--ink-muted); font-size: 13.5px;
+      }
+      footer.method h3 { color: var(--ink); }
+      .meth-grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+      footer.method a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(111,199,214,.3); }
+      footer.method a:hover { border-bottom-color: var(--accent); }
+
+      @media (max-width: 720px) {
+        .hud { position: static; text-align: left; margin-top: var(--space-4);
+          padding: 0 clamp(16px, 4vw, 48px); }
+        .hero { min-height: auto; padding-bottom: var(--space-5); }
+        #sky { position: relative; height: 46vh; }
+        .hero-grid { padding-top: var(--space-5); }
+        .scrub-wrap { position: static; margin-top: var(--space-3); }
+      }
+    </style>
+  </head>
+
+  <body>
+    <header class="stamp-bar">
+      <span class="stamp"><span class="pulse" aria-hidden="true"></span>JABODETABEK AIR QUALITY NOWCAST</span>
+      <span class="stamp dim">CASE E · OPERATIONAL PIPELINE</span>
+      <span class="stamp dim" style="margin-left:auto">
+        GROUND {dt(groundLast)} · BUILT {dt(generated)} · {passed}/{total} GATES
+      </span>
+    </header>
+
+    <!-- ══ HERO — the signature moment: 72 hours breathing over the city ══ -->
+    <section class="hero" aria-label="72-hour PM2.5 forecast">
+      <canvas id="sky" aria-hidden="true"></canvas>
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow">Case E · Sensor fusion + ML forecasting</span>
+          <h1>How bad will<br />the air be<br />tomorrow?</h1>
+          <p>Greater Jakarta gets its air quality the way it gets its weather: after the
+          fact. This case turns three open feeds — <b>ERA5 meteorology</b>, <b>NASA fire
+          detections</b> and <b>one working ground sensor</b> — into a PM2.5 forecast with
+          a horizon and an error bar, graded against the only baseline that matters:
+          assuming tomorrow looks like today.</p>
+        </div>
+      </div>
+      <div class="hud" id="hud">
+        <span class="hud-cat" id="hud-cat">FORECAST</span>
+        <span class="hud-num num" id="hud-num">—<span class="hud-unit"> µg/m³</span></span>
+        <span class="hud-when" id="hud-when">loading forecast…</span>
+      </div>
+      <div class="scrub-wrap">
+        <div class="scrub-labels"><span>Now</span><span>+24 h</span><span>+48 h</span><span>+72 h</span></div>
+        <input class="scrub" id="scrub" type="range" min="0" max="72" value="0" step="1"
+               aria-label="Forecast hour ahead" />
+      </div>
+    </section>
+
+    <!-- ══ 01 · the air today ══════════════════════════════════════════ -->
+    <section class="chapter rv">
+      <span class="eyebrow">01 · The air today</span>
+      <h2>Jakarta's air is not occasionally bad. It is usually bad.</h2>
+      <p class="big-stat">Across every hour on record at the city's ground monitors,
+      <b>{pct(obs?.hours_above_who_daily_15, 1)}</b> sat above the WHO 24-hour guideline of
+      15&nbsp;µg/m³, at a mean of <b>{n1(obs?.mean_pm25)}&nbsp;µg/m³</b>. The 95th percentile
+      hour reaches <b>{n1(obs?.p95_pm25)}</b>.</p>
+      <p>The last three weeks of measurement, hour by hour, with the AQI bands behind it.
+      The daily rhythm is the story: a pre-dawn peak as the night's boundary layer traps the
+      previous evening's traffic, then collapse through the late morning as the sun mixes
+      the column out to a kilometre or more.</p>
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Observed PM2.5 · last 21 days · <span id="live-station" class="stamp dim">station</span></h3>
+          <div class="ramp-legend" id="ramp-legend"></div>
+        </div>
+        <div class="cv-wrap"><canvas id="c-live" class="chart" height="300" role="img"
+          aria-label="Hourly PM2.5 for the last 21 days at the live station"></canvas></div>
+        <p class="footnote" style="margin-top:12px">Hover for the hour. Gaps are real: the
+        sensor's own uptime, not smoothing.</p>
+      </div>
+      <div class="kpis" id="kpi-row"></div>
+      <p class="sowhat"><b>So what:</b> a dial showing the current number is worthless to
+      anyone who has to <em>schedule</em> something. The value is in the next 72 hours.</p>
+    </section>
+
+    <!-- ══ 02 · the forecast ═══════════════════════════════════════════ -->
+    <section class="chapter rv">
+      <span class="eyebrow">02 · The forecast</span>
+      <h2>Beating "tomorrow looks like today"</h2>
+      <p class="big-stat">At the 24-hour horizon the model's mean absolute error is
+      <b class="num">{n1(e24?.model_mae)}&nbsp;µg/m³</b> against persistence's
+      <b class="num">{n1(e24?.persistence_mae)}</b> — a
+      <b class="num">{e24 ? pct(e24.skill_mae_vs_persistence, 1) : "—"}</b> improvement on the
+      held-out future.</p>
+      <p>Every number here comes from a single <b>time-based</b> split: the model never sees
+      an hour later than the cut, and is then asked about the months that follow. A random
+      split would leak tomorrow into today's training set and inflate every figure on this
+      page. Two baselines are shown, because one is not enough: <b>persistence</b> (carry the
+      last reading forward) and <b>diurnal climatology</b> (the average for this hour of day).</p>
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Error by horizon · held-out period</h3>
+          <div class="toggle" role="group" aria-label="metric" id="skill-toggle">
+            <button data-m="mae" class="on">MAE</button><button data-m="rmse">RMSE</button>
+          </div>
+        </div>
+        <div class="cv-wrap"><svg id="s-skill" class="chart" height="330" role="img"
+          aria-label="Forecast error by horizon, model versus persistence and climatology"></svg></div>
+      </div>
+      <p class="sowhat" id="skill-sowhat"><b>So what:</b> skill is not a single number. It
+      decays with horizon, and where it crosses the baseline is exactly where an operational
+      warning stops being worth sending.</p>
+    </section>
+
+    <!-- ══ 03 · what drives it ═════════════════════════════════════════ -->
+    <section class="chapter rv">
+      <span class="eyebrow">03 · What drives it</span>
+      <h2>Mostly the sky, not the traffic</h2>
+      <p>Permutation importance at the 24-hour horizon: how much worse the model gets when
+      each feature is shuffled. Features are grouped by what they represent, because the
+      interesting question is not <em>which column</em> wins but <em>which physics</em> does —
+      the air's own memory, the depth of the layer it mixes into, the wind that ventilates
+      it, the fires upwind, or the clock.</p>
+      <div class="panel">
+        <div class="panel-head"><h3>Feature importance · 24 h model · permutation, 5 repeats</h3>
+          <span class="stamp dim">Δ MAE ON LOG SCALE</span></div>
+        <div class="cv-wrap"><svg id="s-drivers" class="chart" height="420" role="img"
+          aria-label="Permutation feature importance for the 24-hour model"></svg></div>
+      </div>
+      <p class="sowhat"><b>So what:</b> if this chart were pure autoregression — lagged PM2.5
+      and nothing else — the model would be a clock, not an air-quality forecast, and it
+      would fail the moment conditions changed. Gate G-E6 exists to check exactly that.</p>
+    </section>
+
+    <!-- ══ 04 · the airshed ════════════════════════════════════════════ -->
+    <section class="chapter rv">
+      <span class="eyebrow">04 · The airshed</span>
+      <h2>Where the bad air comes from</h2>
+      <p>Jakarta does not breathe alone. The rose below splits every measured hour by the
+      direction the wind was blowing <em>from</em>: petal length is how often, petal colour is
+      the mean PM2.5 that arrived on it. Switch to <b>fires</b> and the same eight sectors
+      show NASA's VIIRS hotspot counts across the airshed — Sumatra's peatlands, the length
+      of Java, the southern edge of Kalimantan — split into three distance rings.</p>
+      <div class="panel">
+        <div class="panel-head">
+          <h3 id="rose-title">Wind rose · mean PM2.5 by arrival direction</h3>
+          <div class="toggle" role="group" aria-label="rose layer" id="rose-toggle">
+            <button data-m="wind" class="on">WIND × PM2.5</button><button data-m="fire">FIRE HOTSPOTS</button>
+          </div>
+        </div>
+        <div class="cv-wrap"><canvas id="c-rose" class="chart" height="440" role="img"
+          aria-label="Airshed rose: PM2.5 by wind direction, and fire hotspots by sector and distance"></canvas></div>
+        <p class="footnote" style="margin-top:12px">Hover a petal for the numbers. Fires are
+        attributed to a three-sector arc around the bearing from Jakarta and lagged one day,
+        so an afternoon satellite overpass never informs that morning's forecast.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Fire hotspots detected across the airshed, by month</h3>
+          <span class="stamp dim">VIIRS S-NPP · 95–119°E · 9°S–6°N</span></div>
+        <div class="cv-wrap"><svg id="s-fire" class="chart" height="220" role="img"
+          aria-label="Monthly fire hotspot counts across the airshed"></svg></div>
+      </div>
+      <p class="sowhat"><b>So what:</b> the same fire is worth a lot or nothing depending on
+      where the wind is. That is why the model sees <em>upwind</em> fire counts, not a
+      regional total.</p>
+    </section>
+
+    <!-- ══ 05 · one live sensor ════════════════════════════════════════ -->
+    <section class="chapter rv">
+      <span class="eyebrow">05 · The finding nobody publishes</span>
+      <h2>A metropolis of 32 million is watched by one working public sensor.</h2>
+      <p class="big-stat">The open record lists <b class="num">{net?.n_stations_total ?? "—"}</b>
+      PM2.5 stations inside Jabodetabek. <b class="num">{net?.n_live ?? "—"}</b> have reported in
+      the last fortnight. <b class="num">{net?.n_stale ?? "—"}</b> went quiet and stayed quiet;
+      <b class="num">{net?.n_silent ?? "—"}</b> are registered but have never returned a reading.</p>
+      <p>Each line below is one station's life: when it started reporting, when it stopped.
+      Read left to right and the network does not grow — it flickers. This is not a data-access
+      problem that a bigger API key would fix; the instruments are simply not there, and the
+      ones that are there are mostly low-cost units run by embassies, NGOs and volunteers.</p>
+      <div class="panel">
+        <div class="panel-head"><h3>Station lifetimes · every PM2.5 station in the bbox</h3>
+          <div class="ramp-legend">
+            <span><i style="background:var(--official)"></i>Live</span>
+            <span><i style="background:var(--up)"></i>Stale</span>
+            <span><i style="background:var(--hairline)"></i>Never reported</span>
+          </div>
+        </div>
+        <div class="cv-wrap"><svg id="s-lives" class="chart lifelines" role="img"
+          aria-label="Reporting period of every PM2.5 station in Jabodetabek"></svg></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Where they are</h3>
+          <span class="stamp dim">2-D CANVAS · NO WEBGL · HOVER OR TAB FOR DETAIL</span></div>
+        <div class="cv-wrap"><canvas id="c-map" class="chart" height="380" role="img"
+          aria-label="Map of PM2.5 station locations across Jabodetabek"></canvas></div>
+      </div>
+      <p class="sowhat"><b>So what:</b> a dense city-wide nowcast grid cannot be honestly
+      validated here, so this case does not claim one. The forecast is scoped to the stations
+      that exist, and gate <b>G-E4</b> is published failed rather than quietly relaxed.</p>
+    </section>
+
+    <!-- ══ 06 · validation ═════════════════════════════════════════════ -->
+    <section class="chapter rv">
+      <span class="eyebrow">06 · Validation</span>
+      <h2>The held-out months, unedited</h2>
+      <p>The 24-hour forecast plotted against what actually happened, for every hour after
+      the training cut. The shaded band is the model's own 80% prediction interval — quantile
+      regression, so it is allowed to be lopsided, which for pollution it always is. Toggle
+      persistence to see the baseline the model has to beat.</p>
+      <div class="panel">
+        <div class="panel-head">
+          <h3>24-hour forecast vs observation · held-out period</h3>
+          <div class="toggle" role="group" aria-label="series" id="bt-toggle">
+            <button data-m="model" class="on">MODEL</button><button data-m="both">+ PERSISTENCE</button>
+          </div>
+        </div>
+        <div class="cv-wrap"><canvas id="c-bt" class="chart" height="330" role="img"
+          aria-label="Backtest: 24-hour forecast versus observed PM2.5 over the held-out period"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Gates · thresholds fixed before the first model run</h3>
+          <span class="stamp dim">{passed}/{total} PASS</span></div>
+        {gates.length ? (
+          <ul class="gates">
+            {gates.map((g) => (
+              <li>
+                <span class={`chip ${g.status}`}>{g.status === "insufficient" ? "N/A" : g.status}</span>
+                <span>
+                  <span class="gate-name"><span class="gate-id">{g.id}</span>{g.name}</span>
+                  <span class="gate-detail">{g.detail}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (<div class="pending">Gates pending — run <code>make validate</code></div>)}
+      </div>
+      <p class="sowhat"><b>So what:</b> a failed gate published with its diagnosis is worth
+      more to a client than six green ticks they cannot audit.</p>
+    </section>
+
+    <!-- ══ methodology ═════════════════════════════════════════════════ -->
+    <footer class="method">
+      <div class="meth-grid">
+        <div>
+          <h3>What this is</h3>
+          <p>Direct multi-horizon gradient boosting (one model per horizon, 1–72 h), trained
+          on log1p PM2.5 with issue-time-only features: lagged PM2.5 and its rolling
+          statistics, ERA5 boundary-layer height, wind, temperature, humidity, precipitation
+          and solar radiation, upwind VIIRS fire counts in three distance rings, and
+          local-time diurnal and seasonal terms. Uncertainty is 10th/90th-percentile quantile
+          regression. Evaluation is one time-based split; nothing here is cross-validated at
+          random.</p>
+        </div>
+        <div>
+          <h3>Limits, stated plainly</h3>
+          <p>The forecast applies to the stations that report, not to a grid, and not to the
+          whole metropolitan area. ERA5 reanalysis publishes with roughly five days' latency,
+          so the operational issue time is bounded by meteorology rather than by the sensor —
+          both timestamps are shown. The hero curve is interpolated between the model's seven
+          discrete horizons. Low-cost sensors drift and are not reference-grade. Sentinel-5P
+          column data is not ingested in this build.</p>
+        </div>
+        <div>
+          <h3>Sources &amp; attribution</h3>
+          <p>Contains modified <b>Copernicus Climate Change Service</b> information (ERA5
+          hourly single levels, 2026), CC BY 4.0; neither the European Commission nor ECMWF is
+          responsible for any use of it. Fire data courtesy of <b>NASA FIRMS</b> (VIIRS S-NPP,
+          LANCE / University of Maryland). Ground measurements via <b>OpenAQ</b> and their
+          originating providers — Clarity, AirGradient, Vital Strategies and the US Department
+          of State AirNow programme.</p>
+        </div>
+        <div>
+          <h3>Freshness</h3>
+          <p class="num">Ground observation: {dt(groundLast)}<br />
+          Fire detections: {dt(S?.vintage?.fire_last_date)}<br />
+          Page built: {dt(generated)}<br />
+          Refresh: <code>make refresh</code> — every ingest stage is resumable and
+          idempotent, so the schedule can be as tight as the sources allow.</p>
+        </div>
+      </div>
+    </footer>
+
+    <div id="tip" hidden></div>
+
+    <script>
+      import * as d3 from "d3";
+
+      /* visible failure beats silent emptiness (same pattern as the other cases) */
+      const failBanner = (msg) => {
+        let b = document.getElementById("err-banner");
+        if (!b) {
+          b = document.createElement("div"); b.id = "err-banner";
+          b.style.cssText = "position:fixed;bottom:0;left:0;right:0;z-index:99;background:#3A1E1A;color:#E8934A;font:12px ui-monospace,monospace;padding:10px 16px;border-top:1px solid #E8934A;";
+          document.body.appendChild(b);
+        }
+        b.textContent = "⚠ " + msg;
+      };
+      addEventListener("error", (e) => failBanner("Script error: " + (e.message ?? e.type)));
+      addEventListener("unhandledrejection", (e) => failBanner("Load error: " + (e.reason?.message ?? e.reason)));
+      const sect = (name, fn) => { try { return fn(); } catch (err) { console.error(name, err); failBanner(`${name} failed: ${err.message ?? err}`); return null; } };
+
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+      const ACCENT = css("--accent") || "#6FC7D6";
+      const INK = css("--ink") || "#E9EBEE";
+      const MUTED = css("--ink-muted") || "#97A1AC";
+      const HAIR = css("--hairline") || "#262E3A";
+      const SURF = css("--surface") || "#181D26";
+      const GROUND = css("--ground") || "#10131A";
+      const OFFICIAL = css("--official") || "#4BB8A9";
+      const WARN = css("--up") || "#E0A63F";
+
+      /* AQI ramp — data only, never the accent (US EPA PM2.5 breakpoints) */
+      const AQI = [
+        { lo: 0,     c: "#63C08A", n: "Good" },
+        { lo: 12.1,  c: "#E3C74A", n: "Moderate" },
+        { lo: 35.5,  c: "#E8934A", n: "Unhealthy · sensitive" },
+        { lo: 55.5,  c: "#E0605E", n: "Unhealthy" },
+        { lo: 150.5, c: "#A56ACB", n: "Very unhealthy" },
+        { lo: 250.5, c: "#8C4A5E", n: "Hazardous" },
+      ];
+      const aqiBand = (v) => { let b = AQI[0]; for (const a of AQI) if (v >= a.lo) b = a; return b; };
+      const aqiColor = (v) => (v == null || Number.isNaN(v) ? HAIR : aqiBand(v).c);
+
+      const load = (f) => fetch(`${base}/data/${f}`).then((r) => { if (!r.ok) throw new Error(`${f} ${r.status}`); return r.json(); });
+      const f1 = (v) => (v == null || Number.isNaN(v) ? "—" : v.toFixed(1));
+      const f0 = (v) => (v == null || Number.isNaN(v) ? "—" : Math.round(v).toLocaleString("en-US"));
+
+      /* ── shared tooltip ─────────────────────────────────────────── */
+      const tipEl = document.getElementById("tip");
+      const showTip = (x, y, title, rows) => {
+        tipEl.innerHTML = `<span class="t-h">${title}</span>` +
+          rows.map(([k, v]) => `<span class="t-r"><span>${k}</span><b>${v}</b></span>`).join("");
+        tipEl.hidden = false;
+        const r = tipEl.getBoundingClientRect();
+        let px = x + 16, py = y + 16;
+        if (px + r.width > innerWidth - 8) px = x - r.width - 16;
+        if (py + r.height > innerHeight - 8) py = y - r.height - 16;
+        tipEl.style.left = Math.max(8, px) + "px";
+        tipEl.style.top = Math.max(8, py) + "px";
+      };
+      const hideTip = () => { tipEl.hidden = true; };
+
+      /* ── hi-dpi canvas ──────────────────────────────────────────── */
+      const fitCanvas = (cv, h) => {
+        const dpr = Math.min(devicePixelRatio || 1, 2);
+        const w = cv.clientWidth || cv.parentElement.clientWidth || 800;
+        const hh = h ?? cv.clientHeight ?? 300;
+        cv.width = Math.round(w * dpr); cv.height = Math.round(hh * dpr);
+        cv.style.height = hh + "px";
+        const ctx = cv.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx, w, h: hh };
+      };
+
+      /* ── entrance reveals ───────────────────────────────────────── */
+      sect("reveals", () => {
+        const els = document.querySelectorAll(".rv");
+        if (reduced || !("IntersectionObserver" in window)) { els.forEach((e) => e.classList.add("in")); return; }
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); } });
+        }, { rootMargin: "0px 0px -12% 0px", threshold: 0.06 });
+        els.forEach((e) => io.observe(e));
+      });
+
+      sect("ramp legend", () => {
+        document.getElementById("ramp-legend").innerHTML = AQI.slice(0, 5)
+          .map((a, i) => `<span><i style="background:${a.c}"></i>${a.n}${i === 0 ? " (0–12)" : ""}</span>`).join("");
+      });
+
+      /* ════════════════════════════════════════════════════════════
+         HERO — 72 hours breathing over a procedural Jakarta skyline
+         ════════════════════════════════════════════════════════════ */
+      const heroState = { hours: [], idx: 0, playing: false, started: false };
+
+      function skyline(w, h, seed) {
+        // deterministic PRNG so the city is the same city on every repaint
+        let s = seed;
+        const rnd = () => (s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296;
+        const layers = [];
+        for (let L = 0; L < 3; L++) {
+          const pts = []; let x = -20;
+          const baseH = [0.13, 0.2, 0.3][L], varH = [0.07, 0.12, 0.2][L];
+          while (x < w + 40) {
+            const bw = 16 + rnd() * (26 + L * 22);
+            const bh = h * (baseH + rnd() * varH);
+            pts.push({ x, w: bw, h: bh, lit: rnd() });
+            x += bw + 2 + rnd() * 7;
+          }
+          layers.push(pts);
+        }
+        return layers;
+      }
+
+      function drawHero(cv, hours, idx) {
+        const { ctx, w, h } = fitCanvas(cv, cv.clientHeight || 640);
+        const cur = hours[Math.min(idx, hours.length - 1)] ?? { v: 0, lo: 0, hi: 0, t: null, h: 0 };
+        const band = aqiBand(cur.v);
+        const haze = Math.max(0, Math.min(1, cur.v / 120));
+
+        // sky
+        const g = ctx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, GROUND);
+        g.addColorStop(0.55, d3.interpolateRgb(GROUND, band.c)(0.06 + haze * 0.1));
+        g.addColorStop(1, d3.interpolateRgb(GROUND, band.c)(0.16 + haze * 0.34));
+        ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+
+        // horizon glow
+        const glow = ctx.createRadialGradient(w * 0.72, h * 0.86, 0, w * 0.72, h * 0.86, w * 0.62);
+        glow.addColorStop(0, d3.color(band.c).copy({ opacity: 0.1 + haze * 0.28 }) + "");
+        glow.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = glow; ctx.fillRect(0, 0, w, h);
+
+        // skyline, three depth layers veiled by haze
+        const L = skyline(w, h, 20260830);
+        const bases = [h * 0.985, h * 0.995, h * 1.005];
+        L.forEach((pts, i) => {
+          const depth = (2 - i) / 2;
+          const veil = 0.22 + depth * 0.5 * (0.35 + haze * 0.75);
+          ctx.fillStyle = d3.interpolateRgb("#05070B", band.c)(0.05 + depth * 0.16 * (0.4 + haze));
+          ctx.globalAlpha = 1;
+          pts.forEach((b) => {
+            const y = bases[i] - b.h;
+            ctx.fillRect(b.x, y, b.w, b.h + 40);
+            if (i === 2 && b.lit > 0.55) {           // windows on the near layer only
+              ctx.fillStyle = d3.color(WARN).copy({ opacity: 0.10 + (1 - haze) * 0.3 }) + "";
+              for (let wy = y + 7; wy < bases[i] - 6; wy += 11)
+                for (let wx = b.x + 4; wx < b.x + b.w - 5; wx += 9)
+                  if (((wx * 7 + wy * 13) % 11) > 6) ctx.fillRect(wx, wy, 3, 4.5);
+              ctx.fillStyle = d3.interpolateRgb("#05070B", band.c)(0.05 + depth * 0.16 * (0.4 + haze));
+            }
+          });
+          // haze veil in front of this layer
+          ctx.fillStyle = d3.color(band.c).copy({ opacity: veil * 0.16 }) + "";
+          ctx.fillRect(0, bases[i] - h * 0.42, w, h);
+        });
+
+        // the Monas obelisk — the one landmark that says Jakarta
+        const mx = w * 0.2, mBase = bases[2], mh = h * 0.34;
+        ctx.fillStyle = d3.interpolateRgb("#05070B", band.c)(0.2 + haze * 0.2);
+        ctx.fillRect(mx - 5, mBase - mh, 10, mh);
+        ctx.fillRect(mx - 26, mBase - 26, 52, 26);
+        ctx.beginPath(); ctx.moveTo(mx - 9, mBase - mh); ctx.lineTo(mx, mBase - mh - 22); ctx.lineTo(mx + 9, mBase - mh); ctx.closePath();
+        ctx.fillStyle = d3.color(WARN).copy({ opacity: 0.5 - haze * 0.34 }) + ""; ctx.fill();
+
+        // suspended particles — more of them as the air worsens
+        const np = Math.round(haze * 190);
+        ctx.fillStyle = d3.color(band.c).copy({ opacity: 0.3 }) + "";
+        for (let i = 0; i < np; i++) {
+          const px = ((i * 2654435761) % 100000) / 100000 * w;
+          const py = ((i * 40503) % 100000) / 100000 * h * 0.92;
+          const drift = reduced ? 0 : Math.sin(idx * 0.09 + i) * 5;
+          ctx.globalAlpha = 0.10 + (((i * 7919) % 100) / 100) * 0.3;
+          ctx.fillRect(px + drift, py, 1.6, 1.6);
+        }
+        ctx.globalAlpha = 1;
+
+        /* ── the forecast curve, drawn across the upper canvas ── */
+        if (!hours.length) return;
+        const m = { l: 46, r: 22, t: h * 0.2, b: h * 0.52 };
+        const iw = w - m.l - m.r, ih = h - m.t - m.b;
+        const maxV = Math.max(40, d3.max(hours, (d) => d.hi ?? d.v) * 1.15);
+        const x = (i) => m.l + (i / 72) * iw;
+        const y = (v) => m.t + ih - (v / maxV) * ih;
+
+        // AQI reference lines
+        ctx.font = '500 12px "IBM Plex Mono", ui-monospace, monospace';
+        AQI.slice(1, 4).forEach((a) => {
+          if (a.lo > maxV) return;
+          ctx.strokeStyle = d3.color(a.c).copy({ opacity: 0.26 }) + "";
+          ctx.setLineDash([2, 4]); ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(m.l, y(a.lo)); ctx.lineTo(w - m.r, y(a.lo)); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = d3.color(a.c).copy({ opacity: 0.75 }) + "";
+          ctx.fillText(String(a.lo), 6, y(a.lo) + 4);
+        });
+
+        const shown = Math.max(1, idx + 1);
+        // uncertainty cone
+        ctx.beginPath();
+        for (let i = 0; i < shown; i++) ctx.lineTo(x(i), y(hours[i].hi));
+        for (let i = shown - 1; i >= 0; i--) ctx.lineTo(x(i), y(hours[i].lo));
+        ctx.closePath();
+        const cg = ctx.createLinearGradient(m.l, 0, w - m.r, 0);
+        cg.addColorStop(0, d3.color(ACCENT).copy({ opacity: 0.3 }) + "");
+        cg.addColorStop(1, d3.color(ACCENT).copy({ opacity: 0.07 }) + "");
+        ctx.fillStyle = cg; ctx.fill();
+
+        // central line
+        ctx.beginPath();
+        for (let i = 0; i < shown; i++) (i ? ctx.lineTo : ctx.moveTo).call(ctx, x(i), y(hours[i].v));
+        ctx.strokeStyle = ACCENT; ctx.lineWidth = 2.2; ctx.lineJoin = "round";
+        ctx.shadowColor = d3.color(ACCENT).copy({ opacity: 0.65 }) + ""; ctx.shadowBlur = 14;
+        ctx.stroke(); ctx.shadowBlur = 0;
+
+        // head marker
+        const hx = x(idx), hy = y(cur.v);
+        ctx.strokeStyle = d3.color(ACCENT).copy({ opacity: 0.34 }) + ""; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(hx, m.t); ctx.lineTo(hx, m.t + ih); ctx.stroke();
+        ctx.beginPath(); ctx.arc(hx, hy, 5.5, 0, Math.PI * 2);
+        ctx.fillStyle = band.c; ctx.fill();
+        ctx.strokeStyle = GROUND; ctx.lineWidth = 2; ctx.stroke();
+
+        // axis ticks
+        ctx.fillStyle = MUTED;
+        [0, 24, 48, 72].forEach((hh) => {
+          ctx.fillText(hh === 0 ? "NOW" : "+" + hh + "h", x(hh) - (hh === 0 ? 12 : 16), m.t + ih + 20);
+        });
+      }
+
+      sect("hero", () => {
+        const cv = document.getElementById("sky");
+        const hudNum = document.getElementById("hud-num");
+        const hudCat = document.getElementById("hud-cat");
+        const hudWhen = document.getElementById("hud-when");
+        const scrub = document.getElementById("scrub");
+
+        const paint = () => drawHero(cv, heroState.hours, heroState.idx);
+        const setIdx = (i) => {
+          heroState.idx = Math.max(0, Math.min(72, i));
+          const d = heroState.hours[heroState.idx];
+          if (d) {
+            const b = aqiBand(d.v);
+            hudNum.innerHTML = `${d.v.toFixed(0)}<span class="hud-unit"> µg/m³</span>`;
+            hudNum.style.color = b.c;
+            hudCat.textContent = b.n.toUpperCase();
+            hudCat.style.color = b.c;
+            hudWhen.textContent = (heroState.idx === 0 ? "NOW · " : `+${heroState.idx} H · `) +
+              (d.t ? new Date(d.t).toISOString().slice(0, 13).replace("T", " ") + ":00 UTC" : "");
+          }
+          scrub.value = String(heroState.idx);
+          paint();
+        };
+
+        scrub.addEventListener("input", () => { heroState.playing = false; setIdx(+scrub.value); });
+        addEventListener("resize", () => paint());
+
+        load("live.json").then((live) => {
+          const fc = (live.forecast ?? []).slice().sort((a, b) => a.h - b.h);
+          if (!fc.length) {
+            hudWhen.textContent = "FORECAST PENDING — RUN make model";
+            paint(); return;
+          }
+          const now = live.pm25_now ?? fc[0].pm25;
+          const pts = [{ h: 0, v: now, lo: now, hi: now, t: live.issue_utc }]
+            .concat(fc.map((d) => ({ h: d.h, v: d.pm25, lo: d.lo, hi: d.hi, t: d.t })));
+          // monotone interpolation to hourly — the model itself emits 7 horizons
+          const iv = d3.scaleLinear().domain(pts.map((p) => p.h));
+          const mk = (key) => d3.scaleLinear().domain(pts.map((p) => p.h)).range(pts.map((p) => p[key])).clamp(true);
+          const sv = mk("v"), sl = mk("lo"), sh = mk("hi");
+          const t0 = live.issue_utc ? new Date(live.issue_utc).getTime() : Date.now();
+          heroState.hours = d3.range(0, 73).map((i) => ({
+            h: i, v: Math.max(0, sv(i)), lo: Math.max(0, sl(i)), hi: Math.max(0, sh(i)),
+            t: new Date(t0 + i * 3600e3).toISOString(),
+          }));
+          setIdx(0);
+
+          if (!reduced) {           // one deliberate reveal: the 72 hours unrolling
+            const io = new IntersectionObserver((en) => {
+              if (!en[0].isIntersecting || heroState.started) return;
+              heroState.started = true; heroState.playing = true;
+              let i = 0;
+              const tick = () => {
+                if (!heroState.playing) return;
+                setIdx(i); i += 1;
+                if (i <= 72) setTimeout(tick, 26); else heroState.playing = false;
+              };
+              tick();
+            }, { threshold: 0.25 });
+            io.observe(cv);
+          }
+        }).catch((e) => { hudWhen.textContent = "FORECAST PENDING"; paint(); console.warn(e); });
+
+        paint();
+      });
+
+      /* ════════════════════════════════════════════════════════════
+         01 · live series + KPI row
+         ════════════════════════════════════════════════════════════ */
+      sect("live series", () => {
+        const cv = document.getElementById("c-live");
+        let data = [], meteo = [];
+        const draw = () => {
+          const { ctx, w, h } = fitCanvas(cv, 300);
+          ctx.clearRect(0, 0, w, h);
+          const m = { l: 48, r: 14, t: 14, b: 30 };
+          const iw = w - m.l - m.r, ih = h - m.t - m.b;
+          if (!data.length) {
+            ctx.fillStyle = MUTED; ctx.font = '500 12px "IBM Plex Mono", monospace';
+            ctx.fillText("AWAITING GROUND DATA", m.l, h / 2); return;
+          }
+          const x = d3.scaleTime().domain(d3.extent(data, (d) => d.t)).range([m.l, m.l + iw]);
+          const maxV = Math.max(40, d3.max(data, (d) => d.v) * 1.1);
+          const y = d3.scaleLinear().domain([0, maxV]).range([m.t + ih, m.t]);
+
+          AQI.forEach((a, i) => {                      // AQI bands behind the line
+            const top = y(Math.min(maxV, AQI[i + 1] ? AQI[i + 1].lo : maxV));
+            const bot = y(a.lo);
+            if (bot <= m.t || a.lo > maxV) return;
+            ctx.fillStyle = d3.color(a.c).copy({ opacity: 0.055 }) + "";
+            ctx.fillRect(m.l, top, iw, bot - top);
+          });
+          ctx.strokeStyle = HAIR; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(m.l, m.t + ih); ctx.lineTo(m.l + iw, m.t + ih); ctx.stroke();
+          ctx.font = '500 12px "IBM Plex Mono", ui-monospace, monospace'; ctx.fillStyle = MUTED;
+          y.ticks(4).forEach((t) => {
+            ctx.strokeStyle = d3.color(HAIR).copy({ opacity: 0.6 }) + "";
+            ctx.beginPath(); ctx.moveTo(m.l, y(t)); ctx.lineTo(m.l + iw, y(t)); ctx.stroke();
+            ctx.fillText(String(t), 8, y(t) + 4);
+          });
+          x.ticks(6).forEach((t) => ctx.fillText(d3.timeFormat("%d %b")(t), x(t) - 20, h - 9));
+
+          // segmented line so real gaps stay gaps
+          ctx.lineWidth = 1.7; ctx.lineJoin = "round";
+          let open = false;
+          ctx.beginPath();
+          for (let i = 0; i < data.length; i++) {
+            const d = data[i], prev = data[i - 1];
+            const gap = prev && d.t - prev.t > 3 * 3600e3;
+            if (!open || gap) { ctx.moveTo(x(d.t), y(d.v)); open = true; } else ctx.lineTo(x(d.t), y(d.v));
+          }
+          ctx.strokeStyle = d3.color(ACCENT).copy({ opacity: 0.9 }) + "";
+          ctx.shadowColor = d3.color(ACCENT).copy({ opacity: 0.45 }) + ""; ctx.shadowBlur = 9;
+          ctx.stroke(); ctx.shadowBlur = 0;
+          // colour the points by AQI band — the ramp does the data work
+          data.forEach((d) => { ctx.fillStyle = aqiColor(d.v); ctx.fillRect(x(d.t) - 1, y(d.v) - 1, 2.2, 2.2); });
+          cv._hit = { x, y, m, iw, ih };
+        };
+
+        cv.addEventListener("pointermove", (ev) => {
+          if (!data.length || !cv._hit) return;
+          const r = cv.getBoundingClientRect();
+          const px = ev.clientX - r.left;
+          const t = cv._hit.x.invert(px);
+          const i = d3.bisector((d) => d.t).center(data, t);
+          const d = data[i];
+          if (!d) return hideTip();
+          const mt = meteo[d3.bisector((m2) => m2.t).center(meteo, d.t)];
+          showTip(ev.clientX, ev.clientY, d3.timeFormat("%a %d %b · %H:00 UTC")(d.t), [
+            ["PM2.5", `${f1(d.v)} µg/m³`],
+            ["Category", aqiBand(d.v).n],
+            ...(mt ? [["Boundary layer", `${f0(mt.blh)} m`], ["Wind", `${f1(mt.wind)} m/s`]] : []),
+          ]);
+        });
+        cv.addEventListener("pointerleave", hideTip);
+        addEventListener("resize", draw);
+
+        load("live.json").then((live) => {
+          data = (live.observed ?? []).map((d) => ({ t: new Date(d.t), v: d.pm25 }));
+          meteo = (live.meteo ?? []).map((d) => ({ t: new Date(d.t), blh: d.blh, wind: d.wind }));
+          draw();
+          return load("network.json").then((nw) => {
+            const st = (nw.stations ?? []).find((s) => s.location_id === live.location_id);
+            if (st) document.getElementById("live-station").textContent =
+              `${st.name} · ${st.provider ?? "—"}`.toUpperCase();
+          });
+        }).catch((e) => { draw(); console.warn(e); });
+
+        // KPI row from the summary payload
+        load("summary.json").then((S) => {
+          const o = S.observed ?? {}, n = S.network ?? {}, ev = (S.model?.eval ?? []).find((r) => r.horizon_h === 24);
+          const kpis = [
+            [f1(o.mean_pm25), "MEAN PM2.5 µg/m³"],
+            [(o.hours_above_who_daily_15 * 100).toFixed(0) + "%", "HOURS ABOVE WHO 15"],
+            [f0(n.n_modelled), "STATIONS MODELLED"],
+            [ev ? (ev.skill_mae_vs_persistence * 100).toFixed(0) + "%" : "—", "24 H SKILL VS PERSISTENCE"],
+          ];
+          document.getElementById("kpi-row").innerHTML = kpis
+            .map(([v, l]) => `<div class="kpi"><span class="k-v">${v}</span><span class="k-l">${l}</span></div>`).join("");
+        }).catch((e) => console.warn(e));
+      });
+
+      /* ════════════════════════════════════════════════════════════
+         02 · skill by horizon
+         ════════════════════════════════════════════════════════════ */
+      sect("skill", () => {
+        const svg = d3.select("#s-skill");
+        let rows = [], metric = "mae";
+        const draw = () => {
+          const node = svg.node(); if (!node) return;
+          const w = node.clientWidth || 800, h = 330;
+          svg.attr("viewBox", `0 0 ${w} ${h}`).selectAll("*").remove();
+          if (!rows.length) {
+            svg.append("text").attr("class", "lbl").attr("x", 20).attr("y", h / 2)
+               .text("AWAITING MODEL EVALUATION"); return;
+          }
+          const m = { l: 54, r: 16, t: 18, b: 46 };
+          const iw = w - m.l - m.r, ih = h - m.t - m.b;
+          const g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
+          const x = d3.scaleBand().domain(rows.map((d) => d.horizon_h)).range([0, iw]).padding(0.28);
+          const keys = [["model", ACCENT, "Model"], ["persistence", MUTED, "Persistence"], ["climatology", WARN, "Climatology"]];
+          const maxV = d3.max(rows, (d) => d3.max(keys, (k) => d[`${k[0]}_${metric}`])) * 1.12;
+          const y = d3.scaleLinear().domain([0, maxV]).range([ih, 0]);
+          const xs = d3.scaleBand().domain(keys.map((k) => k[0])).range([0, x.bandwidth()]).padding(0.12);
+
+          g.append("g").selectAll("line").data(y.ticks(5)).join("line")
+            .attr("class", "gridline").attr("x1", 0).attr("x2", iw)
+            .attr("y1", (d) => y(d)).attr("y2", (d) => y(d));
+          g.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(5).tickSize(0)).select(".domain").remove();
+          g.append("g").attr("class", "axis").attr("transform", `translate(0,${ih})`)
+            .call(d3.axisBottom(x).tickFormat((d) => `${d} h`).tickSize(0)).select(".domain").remove();
+          g.append("text").attr("class", "lbl").attr("x", -m.l + 4).attr("y", -6)
+            .text(metric.toUpperCase() + " µg/m³");
+
+          rows.forEach((r) => {
+            keys.forEach(([k, c, label]) => {
+              const v = r[`${k}_${metric}`];
+              const bx = x(r.horizon_h) + xs(k);
+              const bar = g.append("rect")
+                .attr("x", bx).attr("width", xs.bandwidth())
+                .attr("y", ih).attr("height", 0)
+                .attr("rx", 2)
+                .attr("fill", k === "model"
+                  ? `url(#gm)` : d3.color(c).copy({ opacity: k === "persistence" ? 0.42 : 0.34 }) + "")
+                .style("cursor", "pointer");
+              bar.on("pointermove", (ev) => showTip(ev.clientX, ev.clientY, `${label} · ${r.horizon_h} h ahead`, [
+                  ["MAE", `${f1(r[`${k}_mae`])} µg/m³`],
+                  ["RMSE", `${f1(r[`${k}_rmse`])} µg/m³`],
+                  ...(k === "model" ? [["Skill vs persistence", `${(r.skill_mae_vs_persistence * 100).toFixed(1)}%`]] : []),
+                  ["Test hours", f0(r[`${k}_n`] ?? r.model_n)],
+                ]))
+                .on("pointerleave", hideTip);
+              bar.transition().duration(reduced ? 0 : 700).delay(reduced ? 0 : x(r.horizon_h) * 0.5)
+                 .ease(d3.easeCubicOut)
+                 .attr("y", y(v)).attr("height", Math.max(0, ih - y(v)));
+            });
+            // skill label above the group
+            const sk = r.skill_mae_vs_persistence;
+            g.append("text").attr("class", "lbl")
+              .attr("x", x(r.horizon_h) + x.bandwidth() / 2).attr("y", -4)
+              .attr("text-anchor", "middle")
+              .attr("fill", sk > 0 ? OFFICIAL : css("--alert") || "#E08B54")
+              .style("font-size", "12px")
+              .text(`${sk > 0 ? "+" : ""}${(sk * 100).toFixed(0)}%`);
+          });
+
+          const defs = svg.append("defs");
+          const lg = defs.append("linearGradient").attr("id", "gm").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 1);
+          lg.append("stop").attr("offset", "0%").attr("stop-color", ACCENT).attr("stop-opacity", 0.95);
+          lg.append("stop").attr("offset", "100%").attr("stop-color", ACCENT).attr("stop-opacity", 0.35);
+
+          const leg = svg.append("g").attr("transform", `translate(${m.l},${h - 12})`);
+          keys.forEach(([k, c, label], i) => {
+            const gx = i * 130;
+            leg.append("rect").attr("x", gx).attr("y", -10).attr("width", 11).attr("height", 11).attr("rx", 2)
+               .attr("fill", k === "model" ? ACCENT : d3.color(c).copy({ opacity: 0.5 }) + "");
+            leg.append("text").attr("class", "lbl").attr("x", gx + 17).attr("y", 0).text(label);
+          });
+        };
+        document.getElementById("skill-toggle").addEventListener("click", (e) => {
+          const b = e.target.closest("button"); if (!b) return;
+          document.querySelectorAll("#skill-toggle button").forEach((x) => x.classList.toggle("on", x === b));
+          metric = b.dataset.m; draw();
+        });
+        addEventListener("resize", draw);
+        load("summary.json").then((S) => {
+          rows = (S.model?.eval ?? []).slice().sort((a, b) => a.horizon_h - b.horizon_h);
+          draw();
+          const neg = rows.filter((r) => r.skill_mae_vs_persistence <= 0);
+          if (neg.length) document.getElementById("skill-sowhat").innerHTML =
+            `<b>So what:</b> persistence wins at ${neg.map((r) => r.horizon_h + " h").join(", ")}. ` +
+            `That is published, not buried — at those horizons the honest operational answer is ` +
+            `"assume it stays as it is", and the model earns its place only further out.`;
+        }).catch((e) => { draw(); console.warn(e); });
+      });
+
+      /* ════════════════════════════════════════════════════════════
+         03 · drivers
+         ════════════════════════════════════════════════════════════ */
+      const FAMILY = (f) => {
+        if (/^pm25/.test(f)) return ["The air's own memory", "#8AA0B4"];
+        if (/blh|ventilation/.test(f)) return ["Mixing depth", ACCENT];
+        if (/wind/.test(f)) return ["Wind", "#7FD3B6"];
+        if (/fire|frp/.test(f)) return ["Upwind fire", "#E8934A"];
+        if (/precip|rh|t2m|d2m|ssrd/.test(f)) return ["Weather", "#9E8AD6"];
+        return ["Clock & place", "#6E7A88"];
+      };
+      const NICE = {
+        pm25: "PM2.5 now", pm25_roll24: "24 h mean", pm25_roll6: "6 h mean", pm25_std24: "24 h spread",
+        pm25_d1: "1 h change", pm25_d24: "24 h change", blh: "Boundary-layer height",
+        log_blh: "Boundary layer (log)", ventilation: "Ventilation (wind × BLH)",
+        wind_speed: "Wind speed", wind_from_sin: "Wind direction (E–W)", wind_from_cos: "Wind direction (N–S)",
+        rh: "Relative humidity", t2m_c: "Temperature", d2m_c: "Dewpoint", precip_mm: "Rain this hour",
+        precip_24h: "Rain, 24 h", ssrd_wm2: "Solar radiation", fire_region_3d: "Fires region-wide, 3 d",
+        hour_sin: "Hour of day", hour_cos: "Hour of day", doy_sin: "Season", doy_cos: "Season",
+        hour_local: "Hour of day", dow: "Day of week", doy: "Day of year", location_id: "Station",
+      };
+      const niceName = (f) => NICE[f] ?? f
+        .replace(/^pm25_lag(\d+)$/, "PM2.5, $1 h ago")
+        .replace(/^fire_up_(\w+?)_(\d)d$/, "Upwind fires ($1, $2 d)")
+        .replace(/^frp_up_(\w+?)_(\d)d$/, "Upwind fire power ($1, $2 d)")
+        .replace(/_roll24$/, ", 24 h mean").replace(/_/g, " ");
+
+      sect("drivers", () => {
+        const svg = d3.select("#s-drivers");
+        let rows = [];
+        const draw = () => {
+          const node = svg.node(); if (!node) return;
+          const w = node.clientWidth || 800, h = 420;
+          svg.attr("viewBox", `0 0 ${w} ${h}`).selectAll("*").remove();
+          if (!rows.length) {
+            svg.append("text").attr("class", "lbl").attr("x", 20).attr("y", h / 2).text("AWAITING MODEL"); return;
+          }
+          const m = { l: Math.min(210, w * 0.38), r: 60, t: 10, b: 26 };
+          const iw = w - m.l - m.r, ih = h - m.t - m.b;
+          const g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
+          const y = d3.scaleBand().domain(rows.map((d) => d.feature)).range([0, ih]).padding(0.32);
+          const x = d3.scaleLinear().domain([0, d3.max(rows, (d) => d.importance) * 1.05]).range([0, iw]);
+          g.selectAll("line.gridline").data(x.ticks(4)).join("line").attr("class", "gridline")
+            .attr("y1", 0).attr("y2", ih).attr("x1", (d) => x(d)).attr("x2", (d) => x(d));
+          rows.forEach((r) => {
+            const [fam, col] = FAMILY(r.feature);
+            const bar = g.append("rect").attr("x", 0).attr("y", y(r.feature))
+              .attr("height", y.bandwidth()).attr("width", 0).attr("rx", 2)
+              .attr("fill", d3.color(col).copy({ opacity: 0.82 }) + "").style("cursor", "pointer");
+            bar.on("pointermove", (ev) => showTip(ev.clientX, ev.clientY, niceName(r.feature), [
+                ["Family", fam], ["Δ MAE when shuffled", r.importance.toFixed(4)],
+                ["± sd", (r.sd ?? 0).toFixed(4)]]))
+              .on("pointerleave", hideTip);
+            bar.transition().duration(reduced ? 0 : 750).ease(d3.easeCubicOut).attr("width", x(r.importance));
+            g.append("text").attr("class", "lbl strong").attr("x", -10).attr("y", y(r.feature) + y.bandwidth() / 2 + 4)
+              .attr("text-anchor", "end").text(niceName(r.feature));
+            g.append("text").attr("class", "lbl").attr("x", iw + 8)
+              .attr("y", y(r.feature) + y.bandwidth() / 2 + 4)
+              .attr("fill", col).style("font-size", "11.5px").text(fam);
+          });
+          g.append("g").attr("class", "axis").attr("transform", `translate(0,${ih})`)
+            .call(d3.axisBottom(x).ticks(4)).select(".domain").remove();
+        };
+        addEventListener("resize", draw);
+        load("drivers.json").then((D) => {
+          rows = (D.features ?? []).slice(0, 12); draw();
+        }).catch((e) => { draw(); console.warn(e); });
+      });
+
+      /* ════════════════════════════════════════════════════════════
+         04 · the airshed rose (2-D canvas, hit-tested by angle+radius)
+         ════════════════════════════════════════════════════════════ */
+      sect("rose", () => {
+        const cv = document.getElementById("c-rose");
+        const SEC = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+        const RINGS = ["near", "mid", "far"];
+        const RINGC = { near: "#E0605E", mid: "#E8934A", far: "#E3C74A" };
+        let wind = [], fire = [], mode = "wind", anim = 1;
+        const geom = () => {
+          const w = cv.clientWidth || 800, h = 440;
+          return { w, h, cx: w / 2, cy: h / 2 + 6, R: Math.min(w, h) * 0.38 };
+        };
+        const draw = () => {
+          const { ctx, w, h } = fitCanvas(cv, 440);
+          const { cx, cy, R } = geom();
+          ctx.clearRect(0, 0, w, h);
+          ctx.font = '500 12px "IBM Plex Mono", ui-monospace, monospace';
+          // rings + spokes
+          ctx.strokeStyle = HAIR; ctx.lineWidth = 1;
+          [0.25, 0.5, 0.75, 1].forEach((f) => {
+            ctx.beginPath(); ctx.arc(cx, cy, R * f, 0, Math.PI * 2); ctx.stroke();
+          });
+          SEC.forEach((s, i) => {
+            const a = (i * 45 - 90) * Math.PI / 180;
+            ctx.strokeStyle = d3.color(HAIR).copy({ opacity: 0.7 }) + "";
+            ctx.beginPath(); ctx.moveTo(cx, cy);
+            ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R); ctx.stroke();
+            ctx.fillStyle = MUTED;
+            const lx = cx + Math.cos(a) * (R + 20), ly = cy + Math.sin(a) * (R + 20);
+            ctx.fillText(s, lx - ctx.measureText(s).width / 2, ly + 4);
+          });
+
+          if (mode === "wind") {
+            const maxShare = d3.max(wind, (d) => d.share) || 1;
+            wind.forEach((d, i) => {
+              if (!d.hours) return;
+              const a0 = (i * 45 - 90 - 20) * Math.PI / 180, a1 = (i * 45 - 90 + 20) * Math.PI / 180;
+              const r = R * Math.sqrt(d.share / maxShare) * anim;
+              ctx.beginPath(); ctx.moveTo(cx, cy);
+              ctx.arc(cx, cy, r, a0, a1); ctx.closePath();
+              const c = aqiColor(d.mean_pm25);
+              const gr = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(r, 1));
+              gr.addColorStop(0, d3.color(c).copy({ opacity: 0.28 }) + "");
+              gr.addColorStop(1, d3.color(c).copy({ opacity: 0.86 }) + "");
+              ctx.fillStyle = gr; ctx.fill();
+              ctx.strokeStyle = d3.color(c).copy({ opacity: 0.95 }) + ""; ctx.lineWidth = 1.2; ctx.stroke();
+            });
+          } else {
+            const byS = {};
+            fire.forEach((d) => { (byS[d.sector] ??= {})[d.ring] = d.n_fire; });
+            const maxTot = d3.max(SEC, (s) => d3.sum(RINGS, (r) => (byS[s]?.[r] ?? 0))) || 1;
+            SEC.forEach((s, i) => {
+              const a0 = (i * 45 - 90 - 20) * Math.PI / 180, a1 = (i * 45 - 90 + 20) * Math.PI / 180;
+              let acc = 0;
+              RINGS.forEach((rg) => {
+                const v = byS[s]?.[rg] ?? 0; if (!v) return;
+                const r0 = R * Math.sqrt(acc / maxTot) * anim;
+                acc += v;
+                const r1 = R * Math.sqrt(acc / maxTot) * anim;
+                ctx.beginPath();
+                ctx.arc(cx, cy, r1, a0, a1);
+                ctx.arc(cx, cy, r0, a1, a0, true);
+                ctx.closePath();
+                ctx.fillStyle = d3.color(RINGC[rg]).copy({ opacity: 0.72 }) + "";
+                ctx.fill();
+                ctx.strokeStyle = d3.color(GROUND).copy({ opacity: 0.8 }) + ""; ctx.lineWidth = 1; ctx.stroke();
+              });
+            });
+            // ring legend
+            RINGS.forEach((rg, i) => {
+              ctx.fillStyle = RINGC[rg]; ctx.fillRect(14, 16 + i * 18, 11, 11);
+              ctx.fillStyle = MUTED;
+              ctx.fillText(["0–100 km", "100–400 km", "400–1200 km"][i], 32, 26 + i * 18);
+            });
+          }
+          // Jakarta at the centre
+          ctx.beginPath(); ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+          ctx.fillStyle = ACCENT; ctx.fill();
+          ctx.fillStyle = MUTED; ctx.fillText("JAKARTA", cx + 9, cy + 4);
+          cv._g = { cx, cy, R };
+        };
+
+        cv.addEventListener("pointermove", (ev) => {
+          if (!cv._g) return;
+          const r = cv.getBoundingClientRect();
+          const dx = ev.clientX - r.left - cv._g.cx, dy = ev.clientY - r.top - cv._g.cy;
+          const dist = Math.hypot(dx, dy);
+          if (dist > cv._g.R + 8) return hideTip();
+          let deg = (Math.atan2(dy, dx) * 180 / Math.PI + 90 + 360) % 360;
+          const i = Math.round(deg / 45) % 8;
+          const s = SEC[i];
+          if (mode === "wind") {
+            const d = wind.find((x) => x.sector === s);
+            if (!d || !d.hours) return hideTip();
+            showTip(ev.clientX, ev.clientY, `Wind from the ${s}`, [
+              ["Share of hours", `${(d.share * 100).toFixed(1)}%`],
+              ["Mean PM2.5", `${f1(d.mean_pm25)} µg/m³`],
+              ["90th percentile", `${f1(d.p90_pm25)} µg/m³`],
+              ["Hours ≥ 55.5", `${((d.episode_rate ?? 0) * 100).toFixed(1)}%`],
+            ]);
+          } else {
+            const rows = fire.filter((x) => x.sector === s);
+            if (!rows.length) return hideTip();
+            showTip(ev.clientX, ev.clientY, `Fires to the ${s} of Jakarta`, [
+              ["0–100 km", f0(rows.find((x) => x.ring === "near")?.n_fire ?? 0)],
+              ["100–400 km", f0(rows.find((x) => x.ring === "mid")?.n_fire ?? 0)],
+              ["400–1200 km", f0(rows.find((x) => x.ring === "far")?.n_fire ?? 0)],
+              ["Total hotspots", f0(d3.sum(rows, (x) => x.n_fire))],
+            ]);
+          }
+        });
+        cv.addEventListener("pointerleave", hideTip);
+        addEventListener("resize", draw);
+
+        document.getElementById("rose-toggle").addEventListener("click", (e) => {
+          const b = e.target.closest("button"); if (!b) return;
+          document.querySelectorAll("#rose-toggle button").forEach((x) => x.classList.toggle("on", x === b));
+          mode = b.dataset.m;
+          document.getElementById("rose-title").textContent = mode === "wind"
+            ? "Wind rose · mean PM2.5 by arrival direction"
+            : "Fire rose · VIIRS hotspots by sector and distance";
+          if (reduced) { anim = 1; draw(); return; }
+          anim = 0;
+          const t0 = performance.now();
+          const step = (t) => {
+            anim = Math.min(1, (t - t0) / 620);
+            anim = 1 - Math.pow(1 - anim, 3);
+            draw();
+            if (anim < 1) requestAnimationFrame(step);
+          };
+          requestAnimationFrame(step);
+        });
+
+        load("airshed.json").then((A) => {
+          wind = A.wind_rose ?? []; fire = A.fire_rose ?? [];
+          if (reduced) { draw(); return; }
+          anim = 0;
+          const io = new IntersectionObserver((en) => {
+            if (!en[0].isIntersecting) return; io.disconnect();
+            const t0 = performance.now();
+            const step = (t) => {
+              anim = Math.min(1, (t - t0) / 900); anim = 1 - Math.pow(1 - anim, 3);
+              draw(); if (anim < 1) requestAnimationFrame(step);
+            };
+            requestAnimationFrame(step);
+          }, { threshold: 0.2 });
+          io.observe(cv);
+          draw();
+        }).catch((e) => { draw(); console.warn(e); });
+
+        /* monthly fire bars */
+        const svg = d3.select("#s-fire");
+        let months = [];
+        const drawFire = () => {
+          const node = svg.node(); if (!node) return;
+          const w = node.clientWidth || 800, h = 220;
+          svg.attr("viewBox", `0 0 ${w} ${h}`).selectAll("*").remove();
+          if (!months.length) {
+            svg.append("text").attr("class", "lbl").attr("x", 16).attr("y", h / 2).text("AWAITING FIRE INGEST"); return;
+          }
+          const m = { l: 54, r: 12, t: 12, b: 30 };
+          const iw = w - m.l - m.r, ih = h - m.t - m.b;
+          const g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
+          const x = d3.scaleBand().domain(months.map((d) => d.m)).range([0, iw]).padding(0.22);
+          const y = d3.scaleLinear().domain([0, d3.max(months, (d) => d.n) * 1.08]).range([ih, 0]);
+          g.selectAll("line.gridline").data(y.ticks(4)).join("line").attr("class", "gridline")
+            .attr("x1", 0).attr("x2", iw).attr("y1", (d) => y(d)).attr("y2", (d) => y(d));
+          g.selectAll("rect").data(months).join("rect")
+            .attr("x", (d) => x(d.m)).attr("width", x.bandwidth()).attr("rx", 1.5)
+            .attr("y", ih).attr("height", 0)
+            .attr("fill", (d) => d3.color("#E8934A").copy({ opacity: 0.35 + 0.6 * (d.n / d3.max(months, (q) => q.n)) }) + "")
+            .style("cursor", "pointer")
+            .on("pointermove", (ev, d) => showTip(ev.clientX, ev.clientY, d.m,
+              [["Hotspots detected", f0(d.n)], ["Airshed", "95–119°E, 9°S–6°N"]]))
+            .on("pointerleave", hideTip)
+            .transition().duration(reduced ? 0 : 700).ease(d3.easeCubicOut)
+            .attr("y", (d) => y(d.n)).attr("height", (d) => ih - y(d.n));
+          g.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(4).tickFormat(d3.format("~s"))).select(".domain").remove();
+          g.append("g").attr("class", "axis").attr("transform", `translate(0,${ih})`)
+            .call(d3.axisBottom(x).tickValues(months.filter((d, i) => i % Math.ceil(months.length / 8) === 0).map((d) => d.m)))
+            .select(".domain").remove();
+        };
+        addEventListener("resize", drawFire);
+        load("airshed.json").then((A) => { months = A.fire_monthly ?? []; drawFire(); })
+          .catch(() => drawFire());
+      });
+
+      /* ════════════════════════════════════════════════════════════
+         05 · station lifetimes + 2-D map
+         ════════════════════════════════════════════════════════════ */
+      sect("network", () => {
+        const svg = d3.select("#s-lives");
+        const cv = document.getElementById("c-map");
+        let sts = [], bbox = [106.3, -6.9, 107.2, -5.9];
+        const colFor = (s) => s.status === "live" ? OFFICIAL : s.status === "stale" ? WARN : HAIR;
+
+        const drawLives = () => {
+          const node = svg.node(); if (!node) return;
+          const w = node.clientWidth || 800;
+          const rowH = 21, m = { l: Math.min(200, w * 0.34), r: 16, t: 24, b: 30 };
+          const h = m.t + m.b + sts.length * rowH;
+          svg.attr("viewBox", `0 0 ${w} ${h}`).attr("height", h).selectAll("*").remove();
+          if (!sts.length) { svg.append("text").attr("class", "lbl").attr("x", 16).attr("y", 40).text("AWAITING INVENTORY"); return; }
+          const g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
+          const iw = w - m.l - m.r;
+          const dates = sts.flatMap((s) => [s.first_utc, s.last_utc]).filter(Boolean).map((d) => new Date(d));
+          const x = d3.scaleTime().domain([d3.min(dates), d3.max(dates)]).nice().range([0, iw]);
+          g.selectAll("line.gridline").data(x.ticks(6)).join("line").attr("class", "gridline")
+            .attr("y1", -8).attr("y2", sts.length * rowH).attr("x1", (d) => x(d)).attr("x2", (d) => x(d));
+          g.append("g").attr("class", "axis").attr("transform", `translate(0,${sts.length * rowH})`)
+            .call(d3.axisBottom(x).ticks(6)).select(".domain").remove();
+
+          sts.forEach((s, i) => {
+            const yy = i * rowH + 4;
+            svg.append("text").attr("class", "lbl strong").attr("x", m.l - 10).attr("y", m.t + yy + 10)
+              .attr("text-anchor", "end").style("font-size", "12px")
+              .text(s.name.length > 26 ? s.name.slice(0, 25) + "…" : s.name);
+            const c = colFor(s);
+            if (!s.first_utc || !s.last_utc) {
+              g.append("rect").attr("x", 0).attr("y", yy).attr("width", iw).attr("height", rowH - 9)
+                .attr("fill", "none").attr("stroke", HAIR).attr("stroke-dasharray", "3 4");
+              g.append("text").attr("class", "lbl").attr("x", 6).attr("y", yy + 10)
+                .style("font-size", "11px").text("never reported");
+            } else {
+              const x0 = x(new Date(s.first_utc)), x1 = Math.max(x0 + 2, x(new Date(s.last_utc)));
+              const rect = g.append("rect").attr("x", x0).attr("y", yy).attr("height", rowH - 9).attr("rx", 2)
+                .attr("width", 0).attr("fill", d3.color(c).copy({ opacity: 0.75 }) + "")
+                .style("cursor", "pointer");
+              rect.on("pointermove", (ev) => showTip(ev.clientX, ev.clientY, s.name, [
+                  ["Status", s.status], ["Provider", s.provider ?? "—"],
+                  ["First reading", String(s.first_utc).slice(0, 10)],
+                  ["Last reading", String(s.last_utc).slice(0, 10)],
+                  ["Hours on record", f0(s.n_hours)],
+                  ["Mean PM2.5", s.mean_pm25 == null ? "—" : `${f1(s.mean_pm25)} µg/m³`],
+                ])).on("pointerleave", hideTip);
+              rect.transition().duration(reduced ? 0 : 800).delay(reduced ? 0 : i * 26)
+                  .ease(d3.easeCubicOut).attr("width", x1 - x0);
+              if (s.status === "live")
+                g.append("circle").attr("cx", x1 + 7).attr("cy", yy + (rowH - 9) / 2).attr("r", 3.2).attr("fill", OFFICIAL);
+            }
+          });
+          svg.append("text").attr("class", "lbl").attr("x", m.l).attr("y", 14)
+            .text("● = still reporting");
+        };
+
+        const drawMap = () => {
+          const { ctx, w, h } = fitCanvas(cv, 380);
+          ctx.clearRect(0, 0, w, h);
+          const pad = 46;
+          const [w0, s0, e0, n0v] = bbox;
+          const sx = d3.scaleLinear().domain([w0, e0]).range([pad, w - pad]);
+          const sy = d3.scaleLinear().domain([s0, n0v]).range([h - pad, pad]);
+          ctx.font = '500 12px "IBM Plex Mono", ui-monospace, monospace';
+          // graticule
+          ctx.strokeStyle = d3.color(HAIR).copy({ opacity: 0.75 }) + ""; ctx.lineWidth = 1;
+          d3.range(Math.ceil(w0 * 10) / 10, e0, 0.2).forEach((lon) => {
+            ctx.beginPath(); ctx.moveTo(sx(lon), pad); ctx.lineTo(sx(lon), h - pad); ctx.stroke();
+            ctx.fillStyle = MUTED; ctx.fillText(lon.toFixed(1) + "°E", sx(lon) - 16, h - pad + 18);
+          });
+          d3.range(Math.ceil(s0 * 10) / 10, n0v, 0.2).forEach((lat) => {
+            ctx.beginPath(); ctx.moveTo(pad, sy(lat)); ctx.lineTo(w - pad, sy(lat)); ctx.stroke();
+            ctx.fillStyle = MUTED; ctx.fillText(Math.abs(lat).toFixed(1) + "°S", 4, sy(lat) + 4);
+          });
+          // the coast, roughly: Jakarta Bay is the north edge
+          ctx.fillStyle = d3.color(ACCENT).copy({ opacity: 0.05 }) + "";
+          ctx.fillRect(pad, pad, w - pad * 2, sy(-6.1) - pad);
+          ctx.fillStyle = MUTED; ctx.fillText("JAKARTA BAY", pad + 8, pad + 16);
+
+          const pts = [];
+          sts.forEach((s) => {
+            if (s.lon == null || s.lat == null) return;
+            const px = sx(s.lon), py = sy(s.lat);
+            if (px < 0 || px > w) return;
+            const c = colFor(s);
+            const r = s.status === "silent" ? 3.5 : 4 + Math.min(6, Math.sqrt((s.n_hours ?? 0) / 900));
+            if (s.status === "live") {
+              const gr = ctx.createRadialGradient(px, py, 0, px, py, 26);
+              gr.addColorStop(0, d3.color(c).copy({ opacity: 0.34 }) + "");
+              gr.addColorStop(1, "rgba(0,0,0,0)");
+              ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(px, py, 26, 0, Math.PI * 2); ctx.fill();
+            }
+            ctx.beginPath(); ctx.arc(px, py, r, 0, Math.PI * 2);
+            ctx.fillStyle = s.status === "silent" ? "transparent" : d3.color(c).copy({ opacity: 0.8 }) + "";
+            ctx.fill();
+            ctx.strokeStyle = c; ctx.lineWidth = s.status === "silent" ? 1 : 1.4;
+            if (s.status === "silent") ctx.setLineDash([2, 2]);
+            ctx.stroke(); ctx.setLineDash([]);
+            pts.push({ px, py, s, r: Math.max(r, 7) });
+          });
+          cv._pts = pts;
+        };
+
+        cv.addEventListener("pointermove", (ev) => {
+          if (!cv._pts) return;
+          const r = cv.getBoundingClientRect();
+          const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+          let best = null, bd = 1e9;
+          cv._pts.forEach((p) => { const d = Math.hypot(p.px - mx, p.py - my); if (d < bd) { bd = d; best = p; } });
+          if (!best || bd > best.r + 9) return hideTip();
+          const s = best.s;
+          showTip(ev.clientX, ev.clientY, s.name, [
+            ["Status", s.status], ["Provider", s.provider ?? "—"],
+            ["Hours on record", f0(s.n_hours)],
+            ["90-day completeness", s.completeness_90d == null ? "—" : `${(s.completeness_90d * 100).toFixed(0)}%`],
+            ["Last reading", s.last_utc ? String(s.last_utc).slice(0, 10) : "never"],
+          ]);
+        });
+        cv.addEventListener("pointerleave", hideTip);
+        addEventListener("resize", () => { drawLives(); drawMap(); });
+
+        load("network.json").then((N) => {
+          bbox = N.bbox ?? bbox;
+          const order = { live: 0, stale: 1, silent: 2 };
+          sts = (N.stations ?? []).slice().sort((a, b) =>
+            (order[a.status] - order[b.status]) ||
+            (new Date(b.last_utc ?? 0) - new Date(a.last_utc ?? 0)));
+          drawLives(); drawMap();
+        }).catch((e) => { drawLives(); drawMap(); console.warn(e); });
+      });
+
+      /* ════════════════════════════════════════════════════════════
+         06 · backtest
+         ════════════════════════════════════════════════════════════ */
+      sect("backtest", () => {
+        const cv = document.getElementById("c-bt");
+        let rows = [], mode = "model";
+        const draw = () => {
+          const { ctx, w, h } = fitCanvas(cv, 330);
+          ctx.clearRect(0, 0, w, h);
+          const m = { l: 48, r: 14, t: 16, b: 32 };
+          const iw = w - m.l - m.r, ih = h - m.t - m.b;
+          ctx.font = '500 12px "IBM Plex Mono", ui-monospace, monospace';
+          if (!rows.length) {
+            ctx.fillStyle = MUTED; ctx.fillText("AWAITING BACKTEST", m.l, h / 2); return;
+          }
+          const x = d3.scaleTime().domain(d3.extent(rows, (d) => d.t)).range([m.l, m.l + iw]);
+          const maxV = d3.max(rows, (d) => Math.max(d.y, d.hi)) * 1.08;
+          const y = d3.scaleLinear().domain([0, maxV]).range([m.t + ih, m.t]);
+          ctx.fillStyle = MUTED;
+          y.ticks(4).forEach((t) => {
+            ctx.strokeStyle = d3.color(HAIR).copy({ opacity: 0.6 }) + "";
+            ctx.beginPath(); ctx.moveTo(m.l, y(t)); ctx.lineTo(m.l + iw, y(t)); ctx.stroke();
+            ctx.fillText(String(t), 8, y(t) + 4);
+          });
+          x.ticks(6).forEach((t) => ctx.fillText(d3.timeFormat("%d %b")(t), x(t) - 20, h - 10));
+
+          // 80% band
+          ctx.beginPath();
+          rows.forEach((d, i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, x(d.t), y(d.hi)));
+          for (let i = rows.length - 1; i >= 0; i--) ctx.lineTo(x(rows[i].t), y(rows[i].lo));
+          ctx.closePath();
+          ctx.fillStyle = d3.color(ACCENT).copy({ opacity: 0.16 }) + ""; ctx.fill();
+
+          const line = (key, color, width, alpha) => {
+            ctx.beginPath();
+            rows.forEach((d, i) => (i ? ctx.lineTo : ctx.moveTo).call(ctx, x(d.t), y(d[key])));
+            ctx.strokeStyle = d3.color(color).copy({ opacity: alpha }) + "";
+            ctx.lineWidth = width; ctx.lineJoin = "round"; ctx.stroke();
+          };
+          if (mode === "both") line("b", MUTED, 1, 0.55);
+          line("y", INK, 1.5, 0.72);
+          line("p", ACCENT, 1.8, 0.95);
+
+          const leg = [["Observed", INK], ["Model (24 h)", ACCENT]]
+            .concat(mode === "both" ? [["Persistence", MUTED]] : []);
+          leg.forEach(([t, c], i) => {
+            ctx.fillStyle = c; ctx.fillRect(m.l + i * 130, m.t - 6, 10, 3);
+            ctx.fillStyle = MUTED; ctx.fillText(t, m.l + i * 130 + 15, m.t - 2);
+          });
+          cv._hit = { x, y };
+        };
+        cv.addEventListener("pointermove", (ev) => {
+          if (!rows.length || !cv._hit) return;
+          const r = cv.getBoundingClientRect();
+          const t = cv._hit.x.invert(ev.clientX - r.left);
+          const d = rows[d3.bisector((q) => q.t).center(rows, t)];
+          if (!d) return hideTip();
+          showTip(ev.clientX, ev.clientY, d3.timeFormat("%a %d %b %Y · %H:00 UTC")(d.t), [
+            ["Observed", `${f1(d.y)} µg/m³`],
+            ["Model", `${f1(d.p)} µg/m³`],
+            ["80% interval", `${f1(d.lo)} – ${f1(d.hi)}`],
+            ["Persistence", `${f1(d.b)} µg/m³`],
+            ["Model error", `${(d.p - d.y > 0 ? "+" : "")}${f1(d.p - d.y)}`],
+          ]);
+        });
+        cv.addEventListener("pointerleave", hideTip);
+        document.getElementById("bt-toggle").addEventListener("click", (e) => {
+          const b = e.target.closest("button"); if (!b) return;
+          document.querySelectorAll("#bt-toggle button").forEach((x) => x.classList.toggle("on", x === b));
+          mode = b.dataset.m; draw();
+        });
+        addEventListener("resize", draw);
+        load("backtest.json").then((B) => {
+          rows = (B.rows ?? []).map((d) => ({ t: new Date(d.t), y: d.y, p: d.p, lo: d.lo, hi: d.hi, b: d.b }));
+          draw();
+        }).catch((e) => { draw(); console.warn(e); });
+      });
+    </script>
+  </body>
+</html>
