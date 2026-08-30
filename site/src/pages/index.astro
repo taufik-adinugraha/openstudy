@@ -13,6 +13,7 @@ const DEMOS = {
   transit: "http://localhost:4329/transit",         // TODO prod: /transit
   forest: "http://localhost:4331/forest",           // TODO prod: /forest
   poverty: "http://localhost:4332/poverty",         // TODO prod: /poverty
+  airquality: "http://localhost:4328/airquality",   // TODO prod: /airquality
 };
 ---
 <html lang="en" data-theme="dark">
@@ -232,21 +233,21 @@ const DEMOS = {
         </div>
       </a>
 
-      <div class="case building" data-case="airquality">
+      <a class="case live" data-case="airquality" href={DEMOS.airquality} target="_blank" rel="noopener">
         <div class="case-visual aq-visual" aria-hidden="true">
           <span class="aq-sun"></span>
           <span class="aq-haze z1"></span><span class="aq-haze z2"></span><span class="aq-haze z3"></span>
           <span class="aq-reading">PM2.5 · JAKARTA · T+48H</span>
         </div>
         <div class="case-body">
-          <span class="badge">PHASE 2 — QUEUED NEXT</span>
           <h2>Jabodetabek Air Quality Nowcast</h2>
-          <p>Satellite columns, ground sensors, weather fields, and fire hotspots
-          fused into a 24–72 hour PM2.5 forecast — the case that proves live,
-          operational pipelines rather than snapshots.</p>
-          <span class="meta">SENTINEL-5P · OPENAQ · ERA5 · ML FORECAST · NEAR-REAL-TIME</span>
+          <p>Ground sensors, ERA5 weather and fire hotspots fused into a 24–72
+          hour PM2.5 forecast that beats persistence by 18%. It also found the
+          harder truth: of 24 stations in Jabodetabek, <b>two are still
+          reporting</b>.</p>
+          <span class="meta">OPENAQ · ERA5 · FIRMS · +17.9% VS PERSISTENCE · 2 LIVE SENSORS</span>
         </div>
-      </div>
+      </a>
 
       <p class="parked-note">Parked: maritime traffic analytics — the credible open AIS source is licensed
       non-commercial; it returns if a commercial feed appears.</p>
