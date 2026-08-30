@@ -68,7 +68,9 @@ def main() -> None:
     gates.append(gate("G-E1", f"{h} h forecast beats persistence by >= 15% MAE",
                       s24 >= 0.15, round(s24, 4), 0.15,
                       f"MAE {ev.loc[h, 'model_mae']:.2f} vs persistence "
-                      f"{ev.loc[h, 'persistence_mae']:.2f} ug/m3 on the held-out future"))
+                      f"{ev.loc[h, 'persistence_mae']:.2f} \u00b5g/m\u00b3 on the held-out future "
+                      f"({s24 * 100:+.1f}%). On RMSE the same comparison is "
+                      f"{ev.loc[h, 'skill_rmse_vs_persistence'] * 100:+.1f}%."))
 
     # G-E2
     skills = ev["skill_mae_vs_persistence"]
@@ -88,13 +90,15 @@ def main() -> None:
         ok = None
     else:
         ok = bool(rec >= 0.50 and prec >= 0.40)
-    gates.append(gate("G-E3", f"Episode recall at {h} h (PM2.5 >= {config.EPISODE_THRESHOLD} ug/m3)",
+    gates.append(gate("G-E3", f"Episode recall at {h} h (PM2.5 \u2265 {config.EPISODE_THRESHOLD} \u00b5g/m\u00b3)",
                       ok, {"recall": None if np.isnan(rec) else round(rec, 3),
                            "precision": None if np.isnan(prec) else round(prec, 3),
                            "n_episode_hours": n_ep},
                       {"recall": 0.50, "precision": 0.40},
-                      f"{n_ep} episode hours in the held-out window; persistence recall "
-                      f"{ev.loc[h, 'persistence_episode_recall']:.2f}"))
+                      f"{n_ep} episode hours in the held-out window. Model recall "
+                      f"{rec:.2f} at precision {prec:.2f}; persistence recall "
+                      f"{ev.loc[h, 'persistence_episode_recall']:.2f} at precision "
+                      f"{ev.loc[h, 'persistence_episode_precision']:.2f}."))
 
     # G-E4
     cov, n_ok = coverage_90d(ground)

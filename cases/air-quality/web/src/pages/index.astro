@@ -1123,12 +1123,13 @@ const pending = !S;
          03 · drivers
          ════════════════════════════════════════════════════════════ */
       const FAMILY = (f) => {
-        if (/^pm25/.test(f)) return ["The air's own memory", "#8AA0B4"];
+        if (/^pm25/.test(f)) return ["Air's own memory", "#8AA0B4"];
         if (/blh|ventilation/.test(f)) return ["Mixing depth", ACCENT];
         if (/wind/.test(f)) return ["Wind", "#7FD3B6"];
         if (/fire|frp/.test(f)) return ["Upwind fire", "#E8934A"];
         if (/precip|rh|t2m|d2m|ssrd/.test(f)) return ["Weather", "#9E8AD6"];
-        return ["Clock & place", "#6E7A88"];
+        if (/station|location/.test(f)) return ["Which sensor", "#C2708F"];
+        return ["Clock", "#6E7A88"];
       };
       const NICE = {
         pm25: "PM2.5 now", pm25_roll24: "24 h mean", pm25_roll6: "6 h mean", pm25_std24: "24 h spread",
@@ -1139,7 +1140,9 @@ const pending = !S;
         precip_24h: "Rain, 24 h", ssrd_wm2: "Solar radiation", fire_region_3d: "Fires region-wide, 3 d",
         hour_sin: "Hour of day", hour_cos: "Hour of day", doy_sin: "Season", doy_cos: "Season",
         hour_local: "Hour of day", dow: "Day of week", doy: "Day of year",
-        location_id: "Station", station_idx: "Which station",
+        location_id: "Station", station_idx: "Station identity",
+        pm25_roll24: "PM2.5, 24 h mean", blh_roll24: "Boundary layer, 24 h mean",
+        wind_speed_roll24: "Wind speed, 24 h mean", precip_mm_roll24: "Rain, 24 h mean",
       };
       const niceName = (f) => NICE[f] ?? f
         .replace(/^pm25_lag(\d+)$/, "PM2.5, $1 h ago")
@@ -1158,7 +1161,7 @@ const pending = !S;
           if (!rows.length) {
             emptySvg(svg, w, h, "AWAITING FEATURE ATTRIBUTION", "run make model"); return;
           }
-          const m = { l: Math.min(210, w * 0.38), r: 60, t: 10, b: 26 };
+          const m = { l: Math.min(215, w * 0.34), r: Math.min(150, w * 0.17), t: 10, b: 26 };
           const iw = w - m.l - m.r, ih = h - m.t - m.b;
           const g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
           const y = d3.scaleBand().domain(rows.map((d) => d.feature)).range([0, ih]).padding(0.32);
@@ -1578,7 +1581,7 @@ const pending = !S;
         const draw = () => {
           const { ctx, w, h } = fitCanvas(cv, 330);
           ctx.clearRect(0, 0, w, h);
-          const m = { l: 48, r: 14, t: 16, b: 32 };
+          const m = { l: 48, r: 14, t: 34, b: 32 };
           const iw = w - m.l - m.r, ih = h - m.t - m.b;
           ctx.font = '500 12px "IBM Plex Mono", ui-monospace, monospace';
           if (!rows.length) {
@@ -1612,6 +1615,20 @@ const pending = !S;
           line("y", INK, 1.5, 0.72);
           line("p", ACCENT, 1.8, 0.95);
 
+          // name the biggest excursion instead of letting it just squash the axis
+          const pk = rows.reduce((a, b) => (b.y > a.y ? b : a), rows[0]);
+          if (pk && pk.y > maxV * 0.55) {
+            const px = x(pk.t), py = y(pk.y);
+            ctx.strokeStyle = d3.color(INK).copy({ opacity: 0.45 }) + ""; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + 10, py + 12); ctx.stroke();
+            ctx.fillStyle = INK; ctx.textAlign = px > m.l + iw * 0.7 ? "end" : "start";
+            ctx.fillText(`${Math.round(pk.y)} µg/m³ · ${d3.timeFormat("%d %b")(pk.t)}`,
+                         px + (px > m.l + iw * 0.7 ? 4 : 14), py + 16);
+            ctx.textAlign = "start";
+          }
+
+          ctx.fillStyle = MUTED;
+          ctx.fillText("µg/m³", m.l, m.t - 18);
           const leg = [["Observed", INK], ["Model (24 h)", ACCENT]]
             .concat(mode === "both" ? [["Persistence", MUTED]] : []);
           leg.forEach(([t, c], i) => {
