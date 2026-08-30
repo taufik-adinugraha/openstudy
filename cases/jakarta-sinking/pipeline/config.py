@@ -48,6 +48,11 @@ WORLDPOP_URL = ("https://data.worldpop.org/GIS/Population/Global_2000_2020_Const
 GHSL_URL = ("https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_POP_GLOBE_R2023A/"
             "GHS_POP_E2020_GLOBE_R2023A_54009_100/V1-0/tiles/"
             "GHS_POP_E2020_GLOBE_R2023A_54009_100_V1_0_R10_C29.zip")
+# built-up surface (m² per 100 m cell), same tile — the "built-up area" exposure variable
+GHSL_BUILT_URL = ("https://jeodpp.jrc.ec.europa.eu/ftp/jrc-opendata/GHSL/GHS_BUILT_S_GLOBE_R2023A/"
+                  "GHS_BUILT_S_E2020_GLOBE_R2023A_54009_100/V1-0/tiles/"
+                  "GHS_BUILT_S_E2020_GLOBE_R2023A_54009_100_V1_0_R10_C29.zip")
+OFFICIAL_DKI_POP_2020 = 10_562_088   # BPS Sensus Penduduk 2020, DKI Jakarta
 
 # --- admin units + observed floods (Jakarta Satu ArcGIS REST; no explicit licence — attribute) ---
 JAKSATU = "https://jakartasatu.jakarta.go.id/server/rest/services"
@@ -68,7 +73,14 @@ GATE_HOTSPOT_RANGE = (2.0, 6.0)      # cm/yr, NW-coast hotspots, deposited field
 GATE_GNSS_TOL_MM = 5.0               # mm/yr
 GATE_INSAR_CORR = 0.70
 GATE_INSAR_HOTSPOT_CM = 1.0
-GATE_FLOOD_SPEARMAN = 0.5
+GATE_FLOOD_SPEARMAN = 0.5            # G-C5 (spec's original plausibility check, renumbered)
+# G-C4 exposure sanity: WorldPop total within ±15 % of the census, GHSL within ±25 % of WorldPop,
+# 267 kelurahan, ≥ 90 % of mainland kelurahan with ≥ 30 % InSAR coverage
+GATE_POP_TOL = 0.15
+GATE_GHSL_TOL = 0.25
+GATE_KELURAHAN_N = 267
+GATE_COVERAGE_MIN = 0.30
+GATE_COVERAGE_SHARE = 0.90
 
 BROWSER_UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36"}
