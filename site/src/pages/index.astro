@@ -125,7 +125,11 @@ const DEMOS = {
 
     <script>
       // Homepage taste of Pustaka — real answers from the real API.
-      const API = "http://localhost:8600/api"; // TODO prod: /knowledge/api
+      // Host-aware: works on localhost and when served from the dev server IP.
+      const API = `http://${location.hostname}:8600/api`; // TODO prod: /knowledge/api
+      document.querySelectorAll('a[href^="http://localhost:"]').forEach((a) => {
+        a.href = a.href.replace("//localhost:", `//${location.hostname}:`);
+      });
       const chips = document.getElementById("try-chips");
       const answerEl = document.getElementById("try-answer");
       const sourcesEl = document.getElementById("try-sources");

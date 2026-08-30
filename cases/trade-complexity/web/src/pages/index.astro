@@ -399,7 +399,7 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
          semantic (local multilingual-E5 via the lab's embedding service) layered on top.
          Alternative for a fully static deploy: run the encoder in-browser with
          transformers.js — same vectors, but a 30–100 MB model download on first visit. */
-      const EMBED_API = "http://localhost:8600/api/embed"; // TODO prod: /knowledge/api/embed
+      const EMBED_API = `http://${location.hostname}:8600/api/embed`; // TODO prod: /knowledge/api/embed
       const [searchText, vectors] = await Promise.all([
         load("search_text.json").catch(() => null), load("product_vectors.json").catch(() => null)]);
       const tokenize = (s) => s.toLowerCase().normalize("NFKD").replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter((t) => t.length > 1);
