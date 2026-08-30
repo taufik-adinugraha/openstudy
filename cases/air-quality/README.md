@@ -108,6 +108,50 @@ categorical, never as its 7-digit registry number.
 
 G-E4 is expected to fail and is published red, not softened. See below.
 
+### E5b · Results — first full run, 2026-08-30
+
+Trained on 122,644 station-hours (72,171 observed, 10 stations); tested on the
+36,538 rows after the cut at **2025-04-07** (24,061 observed, 8 stations).
+
+| Horizon | Model MAE | Persistence MAE | Skill (MAE) | Skill (RMSE) | PI80 coverage |
+|---|---|---|---|---|---|
+| 1 h | 7.58 | 7.91 | +4.1% | +5.5% | 74% |
+| 3 h | 12.45 | 14.39 | +13.5% | +13.2% | 69% |
+| 6 h | 14.62 | 18.67 | +21.7% | +21.6% | 66% |
+| 12 h | 15.48 | 22.45 | +31.1% | +30.8% | 63% |
+| **24 h** | **15.99** | **19.49** | **+17.9%** | **+21.0%** | 63% |
+| 48 h | 16.76 | 21.01 | +20.2% | +22.8% | 61% |
+| 72 h | 17.38 | 21.32 | +18.5% | +21.7% | 59% |
+
+**2 of 6 gates pass.**
+
+- **G-E1 PASS** — 24 h MAE 15.99 vs persistence 19.49 µg/m³, +17.9% (threshold
+  +15%). +21.0% on RMSE.
+- **G-E2 PASS** — positive skill at all seven horizons; weakest is +4.1% at 1 h,
+  where persistence is naturally hardest to beat.
+- **G-E3 FAIL by 0.001** — episode recall 0.499 against a 0.500 threshold, at
+  precision 0.532, over 6,084 episode hours. Persistence gets 0.476 / 0.475, so
+  the model is better but not by the margin the gate demanded. The threshold was
+  fixed in advance and has not been moved to collect this one.
+- **G-E4 FAIL** — 0 stations reach 80% completeness over the trailing 90 days.
+  Expected; it is the case's central finding, not an accident.
+- **G-E5 FAIL** — the 80% prediction interval covers 62.9%, not 72–88%. The
+  quantile models are over-confident out of sample. Honest reading: the point
+  forecast is usable, the published interval is too narrow and should not be
+  relied on for planning until it is recalibrated.
+- **G-E6 FAIL** — the top-8 permutation importances at 24 h contain a wind term
+  (`wind_from_sin`) and a weather term (`precip_mm_roll24`) but no
+  boundary-layer/ventilation term, so the gate's specific requirement is unmet.
+  The model leans hardest on station identity and the sensor's own recent
+  history. That is a real result about a sparse, heterogeneous network, and the
+  dashboard's chapter 03 headline is generated from it rather than asserted
+  ahead of it.
+
+**What this adds up to.** The forecast is genuinely better than the baseline
+that matters, at every horizon a client would ask about, and it is honest about
+the two places it is not yet trustworthy: the width of its error bars, and its
+ability to call an episode before it happens.
+
 ### E6 · Dashboard anatomy
 
 Hero (the 72 h forecast unrolling as a breathing haze band with a widening

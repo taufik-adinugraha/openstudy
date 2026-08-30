@@ -96,9 +96,10 @@ def main() -> None:
                            "n_episode_hours": n_ep},
                       {"recall": 0.50, "precision": 0.40},
                       f"{n_ep} episode hours in the held-out window. Model recall "
-                      f"{rec:.2f} at precision {prec:.2f}; persistence recall "
-                      f"{ev.loc[h, 'persistence_episode_recall']:.2f} at precision "
-                      f"{ev.loc[h, 'persistence_episode_precision']:.2f}."))
+                      f"{rec:.3f} at precision {prec:.3f}; persistence recall "
+                      f"{ev.loc[h, 'persistence_episode_recall']:.3f} at precision "
+                      f"{ev.loc[h, 'persistence_episode_precision']:.3f}. "
+                      f"The threshold is not moved to meet a near miss."))
 
     # G-E4
     cov, n_ok = coverage_90d(ground)
