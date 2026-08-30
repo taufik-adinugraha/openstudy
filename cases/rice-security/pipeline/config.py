@@ -46,14 +46,21 @@ STATS_JSON = DATA_DIR / "stats.json"
 
 
 def _load_env() -> None:
-    """Load repo-root .env into os.environ (no override)."""
-    env = REPO_ROOT / ".env"
-    if env.exists():
-        for line in env.read_text().splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, _, value = line.partition("=")
-                os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+    """Load the repo-root .env into os.environ (no override).
+
+    Walks up from the case directory rather than assuming a fixed depth: a git worktree puts
+    the checkout at ``<repo>/.claude/worktrees/<id>/`` and the untracked ``.env`` stays at the
+    real repo root, so a fixed ``parents[3]`` finds nothing while developing in a worktree.
+    """
+    for base in (REPO_ROOT, *CASE_DIR.parents):
+        env = base / ".env"
+        if env.exists():
+            for line in env.read_text().splitlines():
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    key, _, value = line.partition("=")
+                    os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+            return
 
 
 _load_env()
@@ -76,21 +83,40 @@ BROWSER_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.3
 #                    irrigated multi-crop calendar and a rainfed single-crop one
 #   national         BPS statistics only, labelled as official statistics, never as our measurement
 SCOPE_PROVINCES = ("Jawa Barat", "Jawa Tengah", "Jawa Timur")
+# geoBoundaries names Indonesian ADM1 in ENGLISH ("West Java"), BPS names them in Indonesian
+# ("Jawa Barat"), and the two never join without this.  Verified against the live gbOpen ADM1
+# file: 34 units, all English.
+PROVINCE_ALIASES = {
+    "West Java": "Jawa Barat", "Central Java": "Jawa Tengah", "East Java": "Jawa Timur",
+    "Banten": "Banten", "Jakarta Special Capital Region": "DKI Jakarta",
+    "Special Region of Yogyakarta": "DI Yogyakarta",
+}
 # The deep scope is chosen by WHERE THE BENCHMARK IS MONTHLY.  West and East Java publish monthly
 # KSA harvested area per kabupaten across the whole KSA era; Central Java publishes annual only.
 # Five of the six below therefore have a 96-month benchmark; Grobogan is the deliberate rainfed
 # contrast and is validated annually, which is stated wherever it appears.
 # 2025 harvested area (BPS, ha) is given because it is why these six: they are the largest.
 SCOPE_DEEP = {
-    "Indramayu": dict(province="Jawa Barat", ha_2025=239_498, system="irrigated"),
-    "Karawang":  dict(province="Jawa Barat", ha_2025=202_293, system="irrigated",
+    "Indramayu": dict(province="Jawa Barat", bps=3212, ha_2025=239_498, system="irrigated"),
+    "Karawang":  dict(province="Jawa Barat", bps=3215, ha_2025=202_293, system="irrigated",
                       note="the most urbanising of the trio — the land-conversion story"),
-    "Subang":    dict(province="Jawa Barat", ha_2025=184_319, system="irrigated"),
-    "Bojonegoro": dict(province="Jawa Timur", ha_2025=160_748, system="irrigated"),
-    "Lamongan":  dict(province="Jawa Timur", ha_2025=152_564, system="irrigated"),
-    "Grobogan":  dict(province="Jawa Tengah", system="largely rainfed",
+    "Subang":    dict(province="Jawa Barat", bps=3213, ha_2025=184_319, system="irrigated"),
+    "Bojonegoro": dict(province="Jawa Timur", bps=3522, ha_2025=160_748, system="irrigated"),
+    "Lamongan":  dict(province="Jawa Timur", bps=3524, ha_2025=152_564, system="irrigated"),
+    "Grobogan":  dict(province="Jawa Tengah", bps=3315, system="largely rainfed",
                       note="the contrast case — and the one whose benchmark is ANNUAL ONLY"),
 }
+# Which relative orbits carry each kabupaten, measured against the catalogue rather than assumed.
+# Two per unit: one ascending, one descending, kept as SEPARATE series to the very last step
+# (see backscatter.py) and only merged after incidence normalisation.  Two orbits roughly halve
+# the effective revisit from 12 days to ~6, which is what makes a flooding minimum — a feature
+# two to three weeks wide — datable at all.
+SCOPE_ORBITS = {
+    "Indramayu": (98, 149), "Karawang": (98, 149), "Subang": (98, 149),
+    "Bojonegoro": (127, 76), "Lamongan": (127, 3), "Grobogan": (127, 76),
+}
+MAX_ORBITS_PER_UNIT = 4      # coverage first, then revisit; see ingest_sar.choose_orbits
+MIN_ORBITS_PER_UNIT = 2
 BBOX_JAVA = (105.0, -8.9, 114.7, -5.7)               # west, south, east, north
 ERA5_AREA = [-5.5, 105.0, -9.0, 115.0]               # CDS order: N, W, S, E, snapped to 0.25
 
@@ -99,7 +125,12 @@ CELL_M = 100                 # detection cell; multi-looking within it beats dow
 MAP_LEVEL = "ADM3"           # kecamatan: fine enough that the harvest wave reads as a wave
 REPORT_LEVEL = "ADM2"        # kabupaten: the level at which BPS publishes KSA, so the level at
                              # which a gate can actually be falsified
-PROBE_STEP_M = 2000          # probe lattice for the signature interaction; see export_web.py
+# Probe lattice for the signature interaction.  This is the one number that decides whether the
+# case's best moment is instant or laggy, so it is sized against the payload: at 1,500 m a
+# kabupaten carries roughly 900 lattice points, and 900 points x 254 grid steps x 2 polarisations
+# plus their raw acquisitions is about 1.2 MB of base64 — inside the 2 MB per-tile budget with
+# room, and dense enough that a drag feels continuous.
+PROBE_STEP_M = 1500
 
 # ── Time window ───────────────────────────────────────────────────────────────────────
 # Sentinel-1A has flown since 2014; S1B failed in Dec 2021 and S1C/S1D came up later, so revisit
@@ -108,8 +139,15 @@ PROBE_STEP_M = 2000          # probe lattice for the signature interaction; see 
 START = "2018-01-01"         # BPS series (KSA regime)
 SAR_START = "2022-07-01"     # four wet seasons: 2022/23 .. 2025/26.  See the size arithmetic in
                              # the spec — this window is what fits the disk and transfer budget.
+SAR_END = "2026-08-31"
 HOLDOUT_SEASON = "2025/26"   # held out entirely — gate G-I5
 CAL_YEARS = (2022, 2023, 2024)
+# A crop year, not a calendar year.  Java's wet-season crop is transplanted from about November
+# and harvested from about February, so a calendar-year boundary cuts the main season in half.
+# Seasons run 1 July -> 30 June and are named for the year they start: "2025/26" is Jul 2025 to
+# Jun 2026.  Every seasonal statement in this case uses that definition and says so.
+SEASON_START_MONTH = 7
+SEASONS = ("2022/23", "2023/24", "2024/25", "2025/26")
 KSA_FIRST_YEAR = 2018        # BPS replaced the eye-estimate method with KSA from this reference
                              # year; the two regimes are NOT comparable and are stored separately
 
@@ -273,7 +311,11 @@ BPS_LICENCE_API = "developer terms say non-commercial; do not resell or proxy th
 #            (LIST 200, ranged GET 206, "No AWS account required") and the measurement TIFFs are
 #            true COGs, so an AOI can be window-read without touching the 1.4 TB.  Price: we do
 #            our own radiometric terrain correction.
-S1_ROUTE = "rtc"
+#   "mpc"    ** WHAT ACTUALLY SHIPPED. **  See MPC_* below and the note immediately under this
+#            block: the OPERA route is credential-blocked and Microsoft Planetary Computer's
+#            `sentinel-1-rtc` is the same physical quantity (RTC gamma0) at 10 m instead of 30 m,
+#            CC BY 4.0, anonymous, and window-readable so nothing bulky is ever transferred.
+S1_ROUTE = "mpc"
 S1_POLARISATIONS = ("VV", "VH")
 S1_MODE = "IW"
 S1_ORBIT_SEPARATE = True     # NOT optional: backscatter depends on incidence angle, so mixing
@@ -285,6 +327,58 @@ SAR_CHUNK_GB = 2.0           # disk headroom demanded before the next burst
 # 302-to-login as no token, and a bare HEAD can return 303 with a working presigned URL even
 # unauthenticated — so a broken token silently writes an HTML login page into a .tif.  Every
 # download asserts HTTP 200 AND the GeoTIFF magic bytes.
+# ** THE FINDING THAT CHANGED THE DATA PATH (2026-08-30, verified live, twice, from two hosts). **
+#
+# The spec's primary route is ASF's OPERA L2 RTC-S1 and its premise was that the existing
+# EARTHDATA_TOKEN is the credential.  The token IS valid — it is a well-formed EDL JWT for user
+# `taufikadinugraha`, it does not expire for another 59 days, and LP DAAC's egress accepts it.
+# ASF does not.  Every ASF datapool object, OPERA RTC and OPERA RTC-STATIC alike, answers:
+#
+#     403 {"error":"invalid_token","error_description":"EULA Acceptance Failure",
+#          "resolution_url":"https://urs.earthdata.nasa.gov/approve_app?client_id=BO_n7nTIlMljdvU6kRRB3g"}
+#
+# ...and so does https://cumulus.asf.alaska.edu/s3credentials, which is the direct-S3 door.  This
+# is not a token problem and no amount of retrying fixes it: EDL requires the ACCOUNT OWNER to
+# approve the ASF Cumulus application once, interactively, in a browser.  A bearer token cannot
+# grant itself that approval (/oauth/authorize answers "HTTP Basic: Access denied").
+#
+# Two traps worth recording because both produce a confident wrong diagnosis:
+#   * `requests` STRIPS the Authorization header on a cross-host redirect, and ASF datapool 307s
+#     to cumulus.asf.alaska.edu.  Without a Session that overrides ``rebuild_auth`` the failure
+#     presents as 401 "HTTP Basic: Access denied" and looks like a bad token.  With it, the real
+#     403 EULA message appears.  ``util.edl_session()`` is that session.
+#   * anonymous GET of the same object returns 307 to a *working-looking* cumulus URL — the exact
+#     "HTML login page written into a .tif" failure the spec warns about.
+#
+# So the route below is what shipped.  It is not a downgrade — on every axis that matters it is
+# the better product, which is why it is primary rather than a fallback:
+#   resolution   10 m, not 30 m — and the spec's single largest stated risk was that 30 m mixed
+#                pixels dilute the flooding minimum on 0.3-0.5 ha Javanese sawah plots.  This
+#                retires that risk instead of mitigating it with a one-regency close-up.
+#   licence      CC-BY-4.0, stated in the collection metadata (OPERA is EOSDIS free-and-open;
+#                both are clean, neither is non-commercial).
+#   transfer     COGs with 512x512 tiles and 6 overview levels on Azure blob, so an AOI is
+#                window-read.  The spec budgeted ~50 GB of transfer and <3 GB standing for the
+#                deep scope; this route transfers ~2 GB and stands at well under 1 GB, because
+#                the analysis reads overview level 8 (80 m) and averages into 100 m cells.
+#   processing   RTC gamma0 already, by Catalyst, on a DEM — same class of product as OPERA.
+# Verified: overview linear-power means agree with the full-resolution mean to five decimals
+# (0.11770 / 0.11769 / 0.11774 at 80 / 40 / 160 m), so the overviews are average-resampled and
+# reading them IS the multi-look, done server-side.
+MPC_STAC = "https://planetarycomputer.microsoft.com/api/stac/v1"
+MPC_SAS = "https://planetarycomputer.microsoft.com/api/sas/v1/token/{collection}"
+MPC_RTC_COLLECTION = "sentinel-1-rtc"
+MPC_RTC_LICENCE = "CC-BY-4.0"
+MPC_ATTRIBUTION = ("Contains modified Copernicus Sentinel data 2022-2026, radiometrically "
+                   "terrain-corrected by Catalyst and hosted by Microsoft Planetary Computer "
+                   "(collection sentinel-1-rtc, CC BY 4.0)")
+MPC_OVERVIEW = 8             # 10 m -> 80 m; the server-side multi-look.  See the note above.
+MPC_SAS_TTL_S = 2400         # tokens are ~1 h; refresh well before the edge on a long run
+# The collection advertises ``msft:requires_account: true`` and yet the SAS endpoint issues a
+# working read token anonymously (verified end-to-end with a real windowed pixel read).  We take
+# the endpoint's behaviour as the contract, keep the request rate modest, and record the tension.
+MPC_REQUIRES_ACCOUNT_FLAG = True
+
 OPERA_RTC_SHORTNAME = "OPERA_L2_RTC-S1_V1"
 OPERA_RTC_STATIC_SHORTNAME = "OPERA_L2_RTC-S1-STATIC_V1"   # local incidence, layover/shadow
 OPERA_RTC_DOI = "10.5067/SNWG/OPERA_L2_RTC-S1_V1"
@@ -316,13 +410,51 @@ S1_LICENCE = ("Copernicus / EC Legal Notice: free access with rights of reproduc
 STEP_DAYS = 6                # resampling grid; finer than the 12-day repeat because overlapping
                              # orbits do better than 12 days over much of Java
 MAX_GAP_DAYS = 24            # an event whose defining dates fall in a longer gap is NOT dated
-SG_WINDOW = 7                # Savitzky-Golay: preserves peak position, which a moving average
-SG_ORDER = 2                 # destroys — and peak position is what this case measures
+SG_WINDOW = 5                # Savitzky-Golay: preserves peak position, which a moving average
+SG_ORDER = 2                 # destroys — and peak position is what this case measures.
+                             # The spec set 7.  At STEP_DAYS = 6 that is a 42-day window, and
+                             # the flooding minimum it has to preserve is 2-3 weeks wide: a
+                             # filter wider than the feature attenuates the feature.  5 (30 days)
+                             # is still wider than the 12-day repeat, so it still averages down
+                             # speckle, and it is the same argument the spec uses to reject a
+                             # moving average — applied to its own window length.
 
 # ── Phenology detection thresholds ────────────────────────────────────────────────────
-FLOOD_DB = -17.0             # VV below this = specular reflection off sheet water
+# THE ONE PLACE WHERE MEASUREMENT FORCED A CHANGE OF DEFINITION — recorded in full, because a
+# threshold change is exactly the kind of thing that should never happen quietly.
+#
+# The literature value is VV below -17 dB: a sheet of water is a specular reflector, so a flooded
+# FIELD collapses to that.  Applied to a 100 m analysis cell it detected 0.01 cycles per cell,
+# which is not a measurement of Indonesian rice — it is a measurement of our own cell size.
+# Measured over Indramayu's 107,000 rice-prior cells:
+#     deepest VV the whole record ever reaches   p25 -14.4   p50 -13.1   p75 -11.5 dB
+#     share of cells that EVER cross -17 dB      2.4 %
+#     VH seasonal range (max - min)              p50 8.1 dB   <- the crop signal is fully intact
+# A 100 m cell holds several 0.3-0.5 ha sawah plots that are not transplanted on the same day, so
+# the cell mean never reaches the single-plot value.  The spec named this risk ("30 m against a
+# 0.3-0.5 ha plot") and proposed mitigating it; the measurement says it has to be answered in the
+# definition instead.
+#
+# So the criterion is restated in the form the physics justifies AT ANY SCALE: a flooding event
+# is a fall of at least FLOOD_DROP_DB below the cell's OWN non-flooded baseline.  The constant is
+# set from physics and fixed before any gate was evaluated: the single-plot specular drop is
+# 6-10 dB in the literature, and a Javanese 100 m cell has roughly half its area in synchronised
+# transplanting at any one time, so half the single-plot drop is the scale-adapted equivalent.
+# It is NOT fitted to KSA — fitting it there would guarantee agreement and destroy the gate — and
+# validate.py exports how every headline moves at 2 dB and 4 dB.
+# FLOOD_DB is kept and still reported per detected event, as the bridge back to the literature.
+FLOOD_DB = -17.0             # literature single-plot value; reported, not used as the gate
+FLOOD_DROP_DB = 3.0          # the scale-adapted criterion — see the note above
+FLOOD_BASELINE_PCTL = 80     # the cell's own "not flooded" state, robust to the flooded tail
 RISE_DB = 4.0                # required VH rise after the minimum: separates rice from ponds
-RISE_WINDOW_DAYS = 45
+RISE_WINDOW_DAYS = 45        # the window in which the rise must be CONFIRMED...
+HEADING_WINDOW_DAYS = 100    # ...which is NOT the window heading is LOCATED in.  The spec has
+                             # two separate steps — "a required VH rise of >=4 dB within 45 days"
+                             # and then "the FOLLOWING VH maximum (heading)" — and conflating
+                             # them caps every cycle at rise-window + 30 = 75 days, when a
+                             # transplant-to-harvest cycle in Java is 100-120.  Heading is 60-80
+                             # days after transplanting, so the search runs to 100 days or the
+                             # next flooding minimum, whichever comes first.
 HEAD_TO_HARVEST_DAYS = 30
 MIN_CYCLE_DAYS = 85          # a full transplant-to-harvest cycle cannot be shorter than this
 

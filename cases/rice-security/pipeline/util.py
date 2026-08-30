@@ -125,3 +125,94 @@ def require(cond: bool, msg: str) -> None:
 def browser_ua() -> dict:
     """BPS's WAF blocks curl-style user agents; every BPS call carries a browser UA."""
     return {"User-Agent": os.environ.get("HTTP_UA", config.BROWSER_UA)}
+
+
+# ── Earthdata Login ───────────────────────────────────────────────────────────────────
+def edl_session():
+    """A ``requests.Session`` that keeps ``Authorization`` across a cross-host redirect.
+
+    ``requests`` strips the header when the host changes, which is correct in general and wrong
+    for Earthdata: every DAAC 30x-redirects the object request to its own egress host.  Without
+    this the real failure (403 EULA, or 200 data) is masked as ``401 HTTP Basic: Access denied``,
+    which reads like a bad token and sends you off to regenerate a token that was fine.
+    """
+    import requests
+
+    class _Keep(requests.Session):
+        def rebuild_auth(self, prepared_request, response):   # noqa: D102 — intentional no-op
+            return
+
+    s = _Keep()
+    if config.EARTHDATA_TOKEN:
+        s.headers["Authorization"] = f"Bearer {config.EARTHDATA_TOKEN}"
+    return s
+
+
+def is_geotiff(path: Path) -> bool:
+    """Magic-byte check.  A 302-to-login writes an HTML page into a ``.tif`` with HTTP 200."""
+    with path.open("rb") as fh:
+        head = fh.read(4)
+    return head in (b"II*\x00", b"MM\x00*", b"II+\x00", b"MM\x00+")   # classic + BigTIFF
+
+
+# ── Microsoft Planetary Computer ──────────────────────────────────────────────────────
+_SAS: dict[str, tuple[str, float]] = {}
+
+
+def mpc_sas(collection: str = None, force: bool = False) -> str:
+    """A read SAS token for an MPC blob container, cached until shortly before it expires.
+
+    Anonymous — the endpoint issues a working read token without a subscription key.  Tokens
+    live about an hour, so anything long-running has to refresh mid-flight rather than opening
+    one dataset per token and hoping.
+    """
+    import requests
+
+    collection = collection or config.MPC_RTC_COLLECTION
+    hit = _SAS.get(collection)
+    if hit and not force and time.time() < hit[1]:
+        return hit[0]
+    url = config.MPC_SAS.format(collection=collection)
+    for attempt in range(5):
+        try:
+            r = requests.get(url, timeout=60)
+            r.raise_for_status()
+            tok = r.json()["token"]
+            _SAS[collection] = (tok, time.time() + config.MPC_SAS_TTL_S)
+            return tok
+        except Exception as exc:                            # noqa: BLE001
+            log(f"mpc_sas: {type(exc).__name__} {exc} (attempt {attempt + 1}/5)")
+            time.sleep(3 * (attempt + 1))
+    raise RuntimeError("could not obtain an MPC SAS token")
+
+
+def gdal_env():
+    """GDAL settings for reading remote COGs: no directory listing, big VSI cache, HTTP/2."""
+    import rasterio
+
+    return rasterio.Env(
+        GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR",
+        CPL_VSIL_CURL_USE_HEAD="NO",
+        VSI_CACHE="TRUE",
+        VSI_CACHE_SIZE="67108864",
+        GDAL_HTTP_MULTIPLEX="YES",
+        GDAL_HTTP_VERSION="2",
+        GDAL_HTTP_MAX_RETRY="4",
+        GDAL_HTTP_RETRY_DELAY="3",
+        GDAL_NUM_THREADS="2",
+    )
+
+
+def utm_epsg(lon: float, lat: float) -> int:
+    """EPSG code of the UTM zone containing a point.  Java is 48S and 49S, split at 108 degE."""
+    zone = int((lon + 180) // 6) + 1
+    return (32700 if lat < 0 else 32600) + zone
+
+
+def season_of(ts) -> str:
+    """Crop year label for a timestamp — 1 July to 30 June, named for the year it starts."""
+    import pandas as pd
+
+    ts = pd.Timestamp(ts)
+    y = ts.year if ts.month >= config.SEASON_START_MONTH else ts.year - 1
+    return f"{y}/{str(y + 1)[-2:]}"

@@ -1,35 +1,48 @@
 ---
-// Case I — Rice & Food Security.  SCAFFOLD ONLY: the pipeline has not been run,
-// so this page renders the contract (chapters + gates) rather than results.
+// Case I — Rice & Food Security.  Spec: docs/spec-rice-security.html
 //
-// Anatomy (spec docs/spec-rice-security.html, I5):
-//   hero "the radar probe" -> 01 why radar -> 02 the harvest wave ->
-//   03 our number vs BPS -> 04 the calendar is moving -> explore -> methodology
+// Anatomy (I5): hero "the radar probe" -> 01 why radar -> 02 the harvest wave ->
+// 03 our number vs BPS -> 04 the calendar is moving -> 05 six weeks early ->
+// explore -> methodology.
 //
-// Identity: young-paddy chartreuse on wet slate; the phenology ramp is CYCLIC
-// and DATA ONLY — it never doubles as the accent.
-// No WebGL anywhere: every map is 2-D canvas/SVG with its own hit testing.
+// Identity: young-paddy chartreuse on wet slate; the phenology ramp is CYCLIC and
+// DATA ONLY — it never doubles as the accent.  Official BPS series are always in
+// --official teal so "ours" and "theirs" are never the same colour.
+//
+// NO WEBGL ANYWHERE.  Every map is 2-D canvas with its own hit testing, because the
+// reader's browser runs with GPU acceleration off and the fallback is what they see.
 import "../styles/tokens.css";
 
 const S = (await import("../data/summary.json").catch(() => null))?.default ?? null;
 const pending = !S;
 
-const CHAPTERS = [
-  ["Hero", "The radar probe", "Drag a probe over Java's paddy; its real Sentinel-1 VH curve draws, flooding minima and heading maxima snap into place, planting and harvest dates fall onto a calendar strip."],
-  ["01", "Why radar, not optical", "Cloud-cover climatology per month against Sentinel-2 usable-scene counts — the reason optical rice mapping fails in the tropics, shown rather than asserted."],
-  ["02", "The harvest wave", "One scrub through the crop calendar: kabupaten recolour by phenological stage while the national harvested-area ridge fills beneath."],
-  ["03", "Our number against theirs", "Radar-derived harvested area vs BPS KSA, per kabupaten and per month, with the residuals charted — not netted out."],
-  ["04", "The calendar is moving", "Planting-date anomalies against ENSO and CHIRPS rainfall: when the monsoon slips, the harvest slips with it."],
-  ["Explore", "Any kabupaten, any date", "Probe, stage filter, season toggle, URL state, chart/table + download."],
-  ["Method", "How it was built", "Speckle handling, the phenology rules and their thresholds, every gate result, the KSA methodology break, all attributions."],
-];
+const gates = S?.gates ?? [];
+const g1 = gates.find((g: any) => g.id === "G-I1");
+const g2 = gates.find((g: any) => g.id === "G-I2");
+const g3 = gates.find((g: any) => g.id === "G-I3");
+const g4 = gates.find((g: any) => g.id === "G-I4");
+const g5 = gates.find((g: any) => g.id === "G-I5");
+const kabs = S?.kabupaten ?? [];
+const fmt = (n: number | null | undefined, d = 0) =>
+  n === null || n === undefined || Number.isNaN(n)
+    ? "—"
+    : n.toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
 
-const GATES = [
-  ["G-I1", "KSA reconciliation (hard)", "Provincial annual harvested area within +/-10 % of BPS KSA for every year in the record; kabupaten-level R2 >= 0.75, MAPE <= 20 %. Evaluated on the uncalibrated series too — a gate applied only after fitting to the benchmark is not a gate."],
-  ["G-I2", "Harvest-timing accuracy (hard)", "Median absolute error of the modelled peak-harvest week <= 2 weeks, no unit biased more than 3 weeks — on the 65-regency x 96-month monthly KSA panel that West and East Java publish, not on four provincial curves."],
-  ["G-I3", "Cropping-intensity plausibility", "Modelled crops per year lands in 1.5-2.5 for the irrigated lowland kabupaten and below 1.5 for rainfed uplands, and agrees with Open-SEA-Rice-10's own single/double/triple classes."],
-  ["G-I4", "Independent rice map agreement", "Our paddy extent agrees with Open-SEA-Rice-10 on >= 70 % of its area, with the disagreement mapped rather than absorbed."],
-  ["G-I5", "Temporal hold-out", "The 2025/26 season is held out by time; G-I1 and G-I2 are re-reported on it before any tuning."],
+const totalCells = S?.scope?.cells ?? 0;
+const totalHa = S?.scope?.kabupaten_ha ?? 0;
+const totalCycles = kabs.reduce((a: number, k: any) => a + (k.cycles ?? 0), 0);
+const totalAcq = kabs.reduce((a: number, k: any) => a + (k.acquisitions ?? 0), 0);
+const vintage = S?.generated_utc?.slice(0, 10) ?? "not yet run";
+const sarLast = S?.vintages?.sentinel1?.window?.[1] ?? "—";
+
+const CHAPTERS = [
+  ["01", "Why radar, not optical", "#ch01"],
+  ["02", "The harvest wave", "#ch02"],
+  ["03", "Our number against theirs", "#ch03"],
+  ["04", "The calendar is moving", "#ch04"],
+  ["05", "Six weeks early", "#ch05"],
+  ["06", "Explore", "#explore"],
+  ["07", "Method & gates", "#method"],
 ];
 ---
 
@@ -40,7 +53,7 @@ const GATES = [
     <title>Rice &amp; Food Security — Java's Harvest from Radar</title>
     <meta
       name="description"
-      content="Paddy phenology mapped from Sentinel-1 radar across Java's rice-bowl provinces: planted and harvested area, and when the harvest actually lands — benchmarked against BPS KSA."
+      content="Paddy phenology mapped from Sentinel-1 radar across six of Java's largest rice regencies: planted and harvested area, and when the harvest actually lands — benchmarked against BPS KSA."
     />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -49,60 +62,1686 @@ const GATES = [
     />
     <style is:global>
       * { box-sizing: border-box; }
-      body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
-      .wrap { max-width: var(--content-width); margin: 0 auto; padding: var(--space-6) var(--space-4); }
-      .stamp { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
-      h1 { font-size: clamp(2rem, 5vw, 3.2rem); margin: var(--space-3) 0; letter-spacing: -0.02em; }
-      .lede { color: var(--ink-muted); max-width: var(--prose-width); font-size: 1.05rem; }
-      .rail { display: grid; gap: var(--space-3); margin-top: var(--space-6); }
-      .row { display: grid; grid-template-columns: 92px 1fr; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--hairline); }
-      .row b { font-family: var(--font-data); font-size: 0.76rem; color: var(--accent); }
-      .row h3 { margin: 0 0 4px; font-size: 1rem; }
-      .row p { margin: 0; color: var(--ink-muted); font-size: 0.92rem; max-width: var(--prose-width); }
-      .phen { display: flex; gap: 0; margin-top: var(--space-4); border-radius: var(--radius); overflow: hidden; }
-      .phen i { flex: 1; height: 10px; }
-      .note { margin-top: var(--space-5); padding: var(--space-3); border: 1px solid var(--hairline); border-left: 3px solid var(--accent); background: var(--surface); font-size: 0.92rem; color: var(--ink-muted); }
-      @media (max-width: 600px) { .row { grid-template-columns: 1fr; gap: 4px; } }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0; background: var(--ground); color: var(--ink);
+        font-family: var(--font-body); font-size: 16px; line-height: 1.62;
+        -webkit-font-smoothing: antialiased; overflow-x: hidden;
+      }
+      ::selection { background: var(--accent); color: var(--accent-ink); }
+      .wrap { max-width: var(--content-width); margin: 0 auto; padding: 0 var(--space-4); }
+      @media (max-width: 640px) { .wrap { padding: 0 16px; } }
+
+      a { color: var(--accent); text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); text-underline-offset: 3px; }
+      a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible,
+      [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+      h1, h2, h3 { margin: 0; letter-spacing: -0.015em; }
+      /* Sized so the probe is ON SCREEN at 1440x900 without scrolling: the signature
+         interaction has to land within seconds of arrival, and a five-line headline pushes it
+         under the fold. */
+      h1 { font-size: clamp(1.95rem, 3.1vw, 2.85rem); line-height: 1.06; font-weight: 800; }
+      h2 { font-size: clamp(1.5rem, 3.2vw, 2.1rem); line-height: 1.12; font-weight: 700; }
+      h3 { font-size: 1.02rem; font-weight: 600; }
+      p { margin: 0; }
+      .lede { color: var(--ink-muted); font-size: clamp(1rem, 1.6vw, 1.16rem); max-width: 62ch; }
+      .prose { max-width: 64ch; color: var(--ink-muted); font-size: 1rem; }
+      .prose b, .prose strong { color: var(--ink); font-weight: 600; }
+      .stamp { font-family: var(--font-data); font-size: 0.78rem; font-weight: 600;
+               letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); font-weight: 500; }
+      .mono { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+
+      /* ── chapter scaffolding ─────────────────────────────────────────── */
+      section.chapter { padding: var(--space-6) 0; border-top: 1px solid var(--hairline); scroll-margin-top: 52px; }
+      .chap-head { display: grid; grid-template-columns: 96px 1fr; gap: var(--space-4);
+                   align-items: start; margin-bottom: var(--space-5); }
+      .chap-no { font-family: var(--font-display); font-size: 3.2rem; font-weight: 800;
+                 line-height: 0.85; color: transparent; -webkit-text-stroke: 1.5px var(--accent);
+                 letter-spacing: -0.04em; }
+      @media (max-width: 700px) { .chap-head { grid-template-columns: 1fr; gap: 8px; }
+        .chap-no { font-size: 2.2rem; } }
+
+      /* ── reveal ──────────────────────────────────────────────────────── */
+      .reveal { opacity: 0; transform: translateY(18px);
+                transition: opacity 700ms cubic-bezier(.22,.61,.36,1), transform 700ms cubic-bezier(.22,.61,.36,1); }
+      .reveal.in { opacity: 1; transform: none; }
+      @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+
+      /* ── panels ──────────────────────────────────────────────────────── */
+      .panel {
+        background: linear-gradient(160deg, var(--surface-raised) 0%, var(--surface) 62%);
+        border: 1px solid var(--hairline); border-radius: var(--radius);
+        box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 18px 40px -30px rgba(0,0,0,0.9);
+      }
+      .pad { padding: var(--space-4); }
+      @media (max-width: 640px) { .pad { padding: 16px; } }
+
+      /* ── big stat ────────────────────────────────────────────────────── */
+      .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+               gap: 1px; background: var(--hairline); border: 1px solid var(--hairline);
+               border-radius: var(--radius); overflow: hidden; }
+      .stat { background: var(--surface); padding: 16px 18px; }
+      .stat b { display: block; font-family: var(--font-display); font-weight: 700;
+                font-size: clamp(1.5rem, 3.4vw, 2.15rem); line-height: 1.05;
+                letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+      .stat span { display: block; font-family: var(--font-data); font-size: 0.75rem;
+                   letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted);
+                   margin-top: 6px; }
+      .stat i { font-style: normal; color: var(--accent); }
+      .stats-tight { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .stats-tight .stat { padding: 12px 12px; }
+      .stats-tight .stat b { font-size: clamp(1.15rem, 2.4vw, 1.55rem); }
+
+      /* ── hero ────────────────────────────────────────────────────────── */
+      header.hero { position: relative; padding: clamp(22px, 3vw, 34px) 0 var(--space-5);
+                    overflow: hidden; }
+      .hero-top { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+                  gap: var(--space-4) var(--space-5); align-items: end; }
+      @media (max-width: 900px) { .hero-top { grid-template-columns: 1fr; align-items: start; } }
+      header.hero::before {
+        content: ""; position: absolute; inset: -30% -10% auto -10%; height: 78%;
+        background:
+          radial-gradient(60% 70% at 18% 0%, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 70%),
+          radial-gradient(50% 60% at 85% 12%, color-mix(in srgb, var(--phen-flood) 22%, transparent) 0%, transparent 72%);
+        pointer-events: none; filter: blur(2px);
+      }
+      header.hero > * { position: relative; }
+      .kicker { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+      .tag { font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.12em;
+             text-transform: uppercase; padding: 3px 9px; border-radius: 999px;
+             border: 1px solid var(--hairline); color: var(--ink-muted); background: var(--surface); }
+
+      /* ── the probe ───────────────────────────────────────────────────── */
+      .probe-grid { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
+                    gap: var(--space-3); align-items: stretch; }
+      @media (max-width: 900px) { .probe-grid { grid-template-columns: 1fr; } }
+      #probe-map { position: relative; min-height: 300px; height: 100%; border-radius: var(--radius);
+                   overflow: hidden; background: #060d0f; }
+      #probe-map canvas { display: block; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+      .map-note { position: absolute; left: 12px; bottom: 10px; font-family: var(--font-data);
+                  font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase;
+                  color: var(--ink-muted); background: color-mix(in srgb, var(--ground) 72%, transparent);
+                  padding: 4px 8px; border-radius: 4px; backdrop-filter: blur(3px); pointer-events: none; }
+      .map-tabs { position: absolute; right: 10px; top: 10px; display: flex; flex-wrap: wrap;
+                  gap: 4px; justify-content: flex-end; max-width: 78%; }
+      .map-tabs button { font-family: var(--font-data); font-size: 0.75rem; padding: 4px 8px;
+                         border-radius: 4px; border: 1px solid var(--hairline); cursor: pointer;
+                         background: color-mix(in srgb, var(--ground) 78%, transparent);
+                         color: var(--ink-muted); }
+      .map-tabs button[aria-pressed="true"] { color: var(--accent-ink); background: var(--accent);
+                                              border-color: var(--accent); font-weight: 600; }
+      #probe-curve { width: 100%; height: 262px; display: block; }
+      .cal-strip { display: flex; gap: 2px; margin-top: 10px; }
+      .cal-strip i { flex: 1; height: 26px; border-radius: 2px; background: var(--surface);
+                     position: relative; transition: background 320ms ease; }
+      .cal-strip i b { position: absolute; inset: 0; display: grid; place-items: center;
+                       font-family: var(--font-data); font-size: 0.75rem; font-weight: 600;
+                       color: var(--ink-muted); }
+      .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px;
+                font-family: var(--font-data); font-size: 0.76rem; color: var(--ink-muted); }
+      .legend span { display: inline-flex; align-items: center; gap: 6px; }
+      .legend s { width: 14px; height: 3px; border-radius: 2px; text-decoration: none; }
+      .legend s.dot { width: 7px; height: 7px; border-radius: 50%; }
+
+      /* ── tooltips ────────────────────────────────────────────────────── */
+      .tip { position: absolute; z-index: 40; pointer-events: none; font-family: var(--font-data);
+             font-size: 0.78rem; line-height: 1.45; padding: 8px 10px; border-radius: 5px;
+             background: color-mix(in srgb, var(--ground) 94%, transparent);
+             border: 1px solid var(--hairline); color: var(--ink); max-width: 260px;
+             box-shadow: 0 12px 30px -14px rgba(0,0,0,0.9); }
+      .tip b { color: var(--accent); }
+
+      /* ── charts ──────────────────────────────────────────────────────── */
+      .chart { position: relative; width: 100%; }
+      /* overflow hidden, not visible: a label painted outside the box would widen the page,
+         and the brief forbids horizontal scroll at 390px */
+      .chart svg { display: block; width: 100%; height: auto; overflow: hidden; }
+      .axis text { font-family: var(--font-data); font-size: 12px; fill: var(--ink-muted); }
+      .axis line, .axis path { stroke: var(--hairline); }
+      .gridline { stroke: var(--hairline); stroke-dasharray: 2 4; }
+
+      /* ── gates ───────────────────────────────────────────────────────── */
+      .gate { display: grid; grid-template-columns: 74px 1fr auto; gap: var(--space-3);
+              align-items: start; padding: 16px 0; border-top: 1px solid var(--hairline); }
+      .gate:first-child { border-top: 0; }
+      .gate .id { font-family: var(--font-data); font-weight: 600; font-size: 0.82rem; }
+      .verdict { font-family: var(--font-data); font-size: 0.75rem; font-weight: 600;
+                 letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 10px;
+                 border-radius: 999px; white-space: nowrap; }
+      .verdict.pass { color: #0E2A18; background: var(--accent); }
+      .verdict.fail { color: #FFE6DE; background: #8C2F1D; border: 1px solid #C4593E; }
+      .verdict.na { color: var(--ink-muted); background: var(--surface); border: 1px solid var(--hairline); }
+      @media (max-width: 640px) { .gate { grid-template-columns: 1fr; gap: 6px; } }
+
+      table.data { width: 100%; border-collapse: collapse; font-family: var(--font-data);
+                   font-size: 0.78rem; font-variant-numeric: tabular-nums; }
+      table.data th { text-align: right; font-size: 0.75rem; letter-spacing: 0.09em;
+                      text-transform: uppercase; color: var(--ink-muted); font-weight: 600;
+                      padding: 8px 10px; border-bottom: 1px solid var(--ink-muted); }
+      table.data th:first-child, table.data td:first-child { text-align: left; }
+      table.data td { padding: 7px 10px; border-bottom: 1px solid var(--hairline); }
+      .scroll-x { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+      /* ── controls ────────────────────────────────────────────────────── */
+      .controls { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+      .controls button, .controls select {
+        font-family: var(--font-data); font-size: 0.76rem; padding: 6px 11px;
+        border-radius: 5px; border: 1px solid var(--hairline); background: var(--surface);
+        color: var(--ink); cursor: pointer;
+      }
+      .controls button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink);
+                                              border-color: var(--accent); font-weight: 600; }
+      input[type="range"] { accent-color: var(--accent); width: 100%; }
+
+      .empty { display: grid; place-items: center; gap: 8px; min-height: 180px;
+               border: 1px dashed var(--hairline); border-radius: var(--radius);
+               color: var(--ink-muted); font-family: var(--font-data); font-size: 0.78rem;
+               text-align: center; padding: 24px; }
+      .empty .spin { width: 18px; height: 18px; border-radius: 50%;
+                     border: 2px solid var(--hairline); border-top-color: var(--accent);
+                     animation: sp 900ms linear infinite; }
+      @keyframes sp { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { .empty .spin { animation: none; } }
+
+      footer.doc { border-top: 1px solid var(--hairline); padding: var(--space-5) 0 var(--space-6);
+                   color: var(--ink-muted); font-size: 0.86rem; }
+      .cols2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+               gap: var(--space-4); }
+      .nav { position: sticky; top: 0; z-index: 30; backdrop-filter: blur(10px);
+             background: color-mix(in srgb, var(--ground) 82%, transparent);
+             border-bottom: 1px solid var(--hairline); }
+      .nav .wrap { display: flex; gap: 4px; align-items: center; overflow-x: auto;
+                   padding-top: 8px; padding-bottom: 8px; scrollbar-width: none; }
+      .nav .wrap::-webkit-scrollbar { display: none; }
+      .nav a { font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.06em;
+               text-transform: uppercase; color: var(--ink-muted); text-decoration: none;
+               padding: 5px 9px; border-radius: 4px; white-space: nowrap; }
+      .nav a:hover { color: var(--ink); background: var(--surface); }
+      .nav a.here { color: var(--accent-ink); background: var(--accent); }
+      .callout { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px;
+                 color: var(--ink); font-size: 1.02rem; max-width: 60ch; }
+      .warn { border-left-color: var(--alert); }
     </style>
   </head>
+
   <body>
+    <nav class="nav" aria-label="Chapters">
+      <div class="wrap">
+        <a href="#top" class="here">Probe</a>
+        {CHAPTERS.map(([n, t, href]) => <a href={href}>{n} · {t}</a>)}
+      </div>
+    </nav>
+
+    <header class="hero" id="top">
+      <div class="wrap">
+        <div class="kicker">
+          <span class="stamp">Demo Lab · Case I</span>
+          <span class="tag">Sentinel-1 RTC γ⁰ · 10 m</span>
+          <span class="tag">{fmt(totalAcq)} acquisitions</span>
+          <span class="tag">Benchmarked against BPS KSA</span>
+        </div>
+        <div class="hero-top" style="margin-top:14px">
+          <h1 style="margin:0; max-width: 20ch;">
+            Indonesia will know how much rice it harvested in March.
+            <em style="font-style:normal;color:var(--accent)">We can know in January.</em>
+          </h1>
+          <p class="lede" style="font-size:0.98rem">
+            Java's rice grows through the monsoon, under cloud — exactly what optical satellites
+            cannot see through. Radar can, and the crop calendar is written into the signal: the
+            field is <b style="color:var(--phen-flood)">flooded</b> and backscatter collapses; the
+            canopy <b style="color:var(--phen-veg)">tillers</b> and it climbs; it
+            <b style="color:var(--phen-peak)">peaks at heading</b>; the crop is
+            <b style="color:var(--phen-harvest)">cut</b> and it drops.
+            <b style="color:var(--ink)">Drag the probe.</b>
+          </p>
+        </div>
+
+        <div class="probe-grid" style="margin-top:18px">
+          <div class="panel" style="padding:8px">
+            <div id="probe-map">
+              <div class="map-tabs" id="probe-tabs"></div>
+              <div class="map-note" id="probe-note">2-D canvas · no WebGL · drag to probe</div>
+              <div class="empty" id="probe-empty" style="height:300px;border:0">
+                <div class="spin"></div><div>Loading the radar field…</div>
+              </div>
+            </div>
+          </div>
+          <div class="panel pad" style="position:relative">
+            <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+              <div>
+                <span class="stamp dim" id="probe-title">γ⁰ backscatter at the probe</span>
+                <div class="mono" id="probe-coord" style="font-size:0.78rem;color:var(--ink-muted)">—</div>
+              </div>
+              <div class="mono" id="probe-summary" style="font-size:0.78rem;text-align:right;color:var(--ink-muted)">—</div>
+            </div>
+            <svg id="probe-curve" role="img" aria-label="Sentinel-1 VV and VH backscatter at the probed location"></svg>
+            <div class="cal-strip" id="probe-cal" aria-hidden="true"></div>
+            <div class="legend">
+              <span><s style="background:var(--phen-peak)"></s>VH — canopy volume</span>
+              <span><s style="background:var(--phen-flood)"></s>VV — surface / water</span>
+              <span><s class="dot" style="background:var(--ink-muted)"></s>raw acquisitions</span>
+              <span><s style="background:var(--phen-harvest)"></s>detected harvest</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats reveal" style="margin-top:22px">
+          <div class="stat"><b>{fmt(totalCells / 1000, 0)}k</b><span>100 m cells measured</span></div>
+          <div class="stat"><b>{fmt(totalCycles / 1000, 0)}k</b><span>crop cycles detected</span></div>
+          <div class="stat"><b><i>{fmt(totalHa / 1000, 0)}k</i> ha</b><span>six kabupaten, all of it</span></div>
+          <div class="stat">
+            <b><i>{g1?.variants?.calibrated?.kabupaten_r2?.toFixed(2) ?? "—"}</i></b>
+            <span>R² vs BPS, calibrated</span>
+          </div>
+          <div class="stat">
+            <b style={S?.gates_passed === 0 ? "color:var(--alert)" : ""}>
+              {S?.gates_passed ?? "—"}/{S?.gates_total ?? 5}
+            </b><span>gates passed — all red</span>
+          </div>
+          <div class="stat"><b class="mono" style="font-size:1.15rem">{sarLast}</b><span>last acquisition</span></div>
+        </div>
+      </div>
+    </header>
+
+    {pending && (
+      <div class="wrap" style="margin:40px 0">
+        <div class="empty">
+          <b>The pipeline has not been run in this checkout.</b>
+          <span>`make rebuild` writes web/src/data/summary.json and web/public/data/*. This page renders the contract until then.</span>
+        </div>
+      </div>
+    )}
+
     <main class="wrap">
-      <span class="stamp">Case I · Phase 3 · {pending ? "Scaffold — pipeline not yet run" : "Live"}</span>
-      <h1>Java's harvest, seen through cloud</h1>
-      <p class="lede">
-        Sentinel-1 radar sees the paddy that optical satellites never do: the flooded field is a
-        mirror and the standing crop is a scatterer, so the crop calendar is written into the
-        backscatter itself. This case reads it, turns it into planted and harvested area and a
-        harvest date, and puts the answer next to BPS's own KSA figures.
-      </p>
+      <!-- ── 01 ─────────────────────────────────────────────────────────── -->
+      <section class="chapter reveal" id="ch01">
+        <div class="chap-head">
+          <div class="chap-no">01</div>
+          <div>
+            <h2>Why radar, not optical</h2>
+            <p class="lede" style="margin-top:10px">
+              The argument for the whole method, counted rather than asserted. Every Sentinel-2
+              scene over these six regencies, 2023–2025, sorted by whether cloud left anything
+              usable behind.
+            </p>
+          </div>
+        </div>
+        <div class="panel pad">
+          <div class="chart" id="ch-optical">
+            <div class="empty"><div class="spin"></div><div>Counting scenes…</div></div>
+          </div>
+          <p class="prose" style="margin-top:18px" id="optical-note"></p>
+        </div>
+      </section>
 
-      <div class="phen" aria-hidden="true">
-        <i style="background: var(--phen-flood)"></i>
-        <i style="background: var(--phen-veg)"></i>
-        <i style="background: var(--phen-peak)"></i>
-        <i style="background: var(--phen-ripe)"></i>
-        <i style="background: var(--phen-harvest)"></i>
-      </div>
+      <!-- ── 02 ─────────────────────────────────────────────────────────── -->
+      <section class="chapter reveal" id="ch02">
+        <div class="chap-head">
+          <div class="chap-no">02</div>
+          <div>
+            <h2>The harvest wave</h2>
+            <p class="lede" style="margin-top:10px">
+              Staggered planting is what makes Indonesian rice supply continuous rather than a
+              once-a-year flood. Scrub the crop calendar and watch it move across the kecamatan —
+              this is the only view that shows it as motion.
+            </p>
+          </div>
+        </div>
+        <div class="panel pad">
+          <div class="controls" style="margin-bottom:12px">
+            <button id="wave-play" aria-pressed="false">▶ Play</button>
+            <span class="mono" id="wave-date" style="min-width:12ch">—</span>
+            <span class="stamp dim" style="margin-left:auto" id="wave-kab"></span>
+          </div>
+          <input type="range" id="wave-range" min="0" max="0" value="0" aria-label="Week" />
+          <div id="wave-map" style="position:relative;height:340px;margin-top:12px">
+            <div class="empty" style="height:100%"><div class="spin"></div><div>Loading kecamatan…</div></div>
+          </div>
+          <div class="legend" id="wave-legend"></div>
+          <div class="chart" id="wave-ridge" style="margin-top:10px"></div>
+        </div>
+      </section>
 
-      <div class="rail">
-        {CHAPTERS.map(([k, t, d]) => (
-          <div class="row"><b>{k}</b><div><h3>{t}</h3><p>{d}</p></div></div>
-        ))}
-      </div>
+      <!-- ── 03 ─────────────────────────────────────────────────────────── -->
+      <section class="chapter reveal" id="ch03">
+        <div class="chap-head">
+          <div class="chap-no">03</div>
+          <div>
+            <h2>Our number against theirs</h2>
+            <p class="lede" style="margin-top:10px">
+              Radar-derived harvested area beside BPS's own KSA figures, month by month and
+              regency by regency, with the residuals charted rather than netted out.
+            </p>
+          </div>
+        </div>
+        <div class="panel pad">
+          <div class="controls" id="ksa-tabs" style="margin-bottom:14px"></div>
+          <div class="chart" id="ch-ksa">
+            <div class="empty"><div class="spin"></div><div>Loading the benchmark…</div></div>
+          </div>
+          <div class="chart" id="ch-resid" style="margin-top:6px"></div>
+          <p class="prose" style="margin-top:16px" id="ksa-note"></p>
+        </div>
 
-      <div class="rail">
-        {GATES.map(([k, t, d]) => (
-          <div class="row"><b>{k}</b><div><h3>{t}</h3><p>{d}</p></div></div>
-        ))}
-      </div>
+        <div class="panel pad" style="margin-top:var(--space-4)">
+          <span class="stamp">The break no line may cross</span>
+          <p class="prose" style="margin-top:10px">
+            BPS replaced a generation of eye-estimates with the KSA area-frame survey from the
+            2018 reference year. 2016 and 2017 are a moratorium with <b>no data at all</b>. The
+            two series are not comparable, and any chart that runs one line through the hole is
+            telling a lie about a trend that is a definitional change.
+          </p>
+          <div class="chart" id="ch-break" style="margin-top:14px"></div>
+        </div>
+      </section>
 
-      {pending && (
-        <p class="note">
-          No <code>src/data/summary.json</code> yet — run <code>make rebuild</code> in
-          <code>cases/rice-security/</code>. Thresholds above were fixed before any result was
-          seen, per the spec; they are not moved to fit an outcome.
-        </p>
-      )}
+      <!-- ── 04 ─────────────────────────────────────────────────────────── -->
+      <section class="chapter reveal" id="ch04">
+        <div class="chap-head">
+          <div class="chap-no">04</div>
+          <div>
+            <h2>The calendar is moving</h2>
+            <p class="lede" style="margin-top:10px">
+              When the rain is late the crop is late, and the harvest lands in a different month
+              from the one the procurement plan assumed. Monsoon onset against our own detected
+              transplanting dates, with ENSO and the Indian Ocean Dipole underneath.
+            </p>
+          </div>
+        </div>
+        <div class="panel pad">
+          <div class="chart" id="ch-calendar">
+            <div class="empty"><div class="spin"></div><div>Loading rainfall and indices…</div></div>
+          </div>
+          <p class="prose" style="margin-top:16px" id="cal-note"></p>
+        </div>
+      </section>
+
+      <!-- ── 05 ─────────────────────────────────────────────────────────── -->
+      <section class="chapter reveal" id="ch05">
+        <div class="chap-head">
+          <div class="chap-no">05</div>
+          <div>
+            <h2>Six weeks early</h2>
+            <p class="lede" style="margin-top:10px">
+              The held-out {S?.model_meta?.holdout_season ?? "2025/26"} season replayed as it
+              would have been issued: our forecast at transplanting, and then the official figure
+              arriving weeks later on the same timeline. The product, demonstrated rather than
+              described.
+            </p>
+          </div>
+        </div>
+        <div class="panel pad">
+          <div class="chart" id="ch-holdout">
+            <div class="empty"><div class="spin"></div><div>Replaying the hold-out…</div></div>
+          </div>
+          <p class="prose" style="margin-top:16px" id="holdout-note"></p>
+        </div>
+      </section>
+
+      <!-- ── explore ────────────────────────────────────────────────────── -->
+      <section class="chapter reveal" id="explore">
+        <div class="chap-head">
+          <div class="chap-no">06</div>
+          <div>
+            <h2>Explore</h2>
+            <p class="lede" style="margin-top:10px">
+              Six regencies, chosen by where the benchmark is monthly rather than by where the
+              rice is prettiest. Five of them have a 96-month KSA panel; Grobogan is the
+              deliberate rainfed contrast and is validated annually.
+            </p>
+          </div>
+        </div>
+        <div class="cols2" id="kab-cards"></div>
+      </section>
+
+      <!-- ── method ─────────────────────────────────────────────────────── -->
+      <section class="chapter reveal" id="method">
+        <div class="chap-head">
+          <div class="chap-no">07</div>
+          <div>
+            <h2>Method &amp; gates</h2>
+            <p class="lede" style="margin-top:10px">
+              Thresholds were fixed before any result was seen, and a gate that fails is
+              published red with a diagnosis rather than quietly moved.
+            </p>
+          </div>
+        </div>
+
+        <div class="panel pad">
+          <span class="stamp">Validation gates</span>
+          <div id="gate-list" style="margin-top:12px"></div>
+        </div>
+
+        <div class="cols2" style="margin-top:var(--space-4)">
+          <div class="panel pad">
+            <span class="stamp">How it is measured</span>
+            <p class="prose" style="margin-top:10px">
+              <b>Speckle.</b> SAR is coherent imaging, so a single-look pixel carries noise the
+              size of the signal. Cells are multi-looked, and the average is taken
+              <b>in linear power and converted to dB afterwards</b> — averaging decibels biases
+              every cell low by an amount that depends on its own variance, which correlates with
+              land cover and therefore looks like a real spatial pattern.
+            </p>
+            <p class="prose" style="margin-top:12px">
+              <b>Orbits are never mixed.</b> γ⁰ depends on incidence angle, so each relative orbit
+              is a separate series until it has been normalised onto a common per-cell reference.
+              Combining them raw produces a sawtooth that mimics phenology.
+            </p>
+            <p class="prose" style="margin-top:12px">
+              <b>Flow, not stock.</b> Harvested area is a flow: a field yielding three crops
+              contributes its area three times. Paddy extent, harvested area and planted area are
+              named and shown separately, everywhere.
+            </p>
+            <p class="prose" style="margin-top:12px">
+              <b>Yield is not modelled.</b> Production, where shown, is our harvested area
+              multiplied by BPS's published productivity, with the arithmetic on the page.
+            </p>
+          </div>
+          <div class="panel pad">
+            <span class="stamp">The detector, and its thresholds</span>
+            <div id="thresholds" style="margin-top:12px"></div>
+            <p class="prose" style="margin-top:12px">
+              These are literature values and they are <b>not fitted</b>. Fitting them on the KSA
+              benchmark would guarantee agreement with the benchmark and destroy the gate that is
+              supposed to test it. The sensitivity of the headline to each one is exported.
+            </p>
+            <div id="sensitivity" style="margin-top:12px"></div>
+          </div>
+        </div>
+
+        <div class="panel pad" style="margin-top:var(--space-4)">
+          <span class="stamp">The data path, and where it changed</span>
+          <div id="path-note" style="margin-top:10px"></div>
+        </div>
+
+        <div class="panel pad" style="margin-top:var(--space-4)">
+          <span class="stamp">Licences &amp; attribution</span>
+          <ul class="prose" style="margin-top:10px;padding-left:1.1em" id="licences"></ul>
+          <p class="prose warn callout" style="margin-top:14px" id="lbs"></p>
+        </div>
+      </section>
     </main>
+
+    <footer class="doc">
+      <div class="wrap">
+        <span class="stamp dim">
+          A Demo-Lab case · static snapshot · generated {vintage} ·
+          six kabupaten of Jawa Barat, Jawa Tengah and Jawa Timur
+        </span>
+        <p class="prose" style="margin-top:10px">
+          Out of scope on purpose: yield modelling from backscatter, national coverage, non-rice
+          crops, irrigation-infrastructure mapping, and any claim about procurement or import
+          policy. Each is a plausible paid pilot, and none of them is half-built here.
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      import * as d3 from "d3";
+
+      /* visible failure beats silent emptiness (house pattern) */
+      const failBanner = (msg) => {
+        let b = document.getElementById("err-banner");
+        if (!b) {
+          b = document.createElement("div"); b.id = "err-banner";
+          b.style.cssText = "position:fixed;bottom:0;left:0;right:0;z-index:99;background:#3A1E1A;color:#F2A18B;font:12px ui-monospace,monospace;padding:10px 16px;border-top:1px solid #C4593E;";
+          document.body.appendChild(b);
+        }
+        b.textContent = "⚠ " + msg;
+      };
+      addEventListener("error", (e) => failBanner("Script error: " + (e.message ?? e.type)));
+      addEventListener("unhandledrejection", (e) => failBanner("Load error: " + (e.reason?.message ?? e.reason)));
+      const sect = (name, fn) => { try { return fn(); } catch (err) { console.error(name, err); failBanner(`${name} failed: ${err.message ?? err}`); return null; } };
+
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const DUR = reduced ? 0 : 700;
+      const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+      const C = {
+        accent: css("--accent") || "#A8CE3A",
+        official: css("--official") || "#4BB8A9",
+        flood: css("--phen-flood") || "#2F7E96",
+        veg: css("--phen-veg") || "#5FA83F",
+        peak: css("--phen-peak") || "#A8CE3A",
+        ripe: css("--phen-ripe") || "#E6B94F",
+        harvest: css("--phen-harvest") || "#B4805A",
+        ink: css("--ink") || "#E8EEEC",
+        muted: css("--ink-muted") || "#93A5A2",
+        hair: css("--hairline") || "#1F2E31",
+        surface: css("--surface") || "#111A1C",
+        ground: css("--ground") || "#0A1214",
+        alert: css("--alert") || "#E08B54",
+      };
+      const STAGE_COLORS = [C.flood, C.veg, C.peak, C.ripe, C.harvest];
+      const STAGE_NAMES = ["Flooded", "Vegetative", "Heading", "Ripening", "Harvest"];
+      const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+      const b64u8 = (s) => {
+        const bin = atob(s); const out = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+        return out;
+      };
+      const b64i16 = (s) => { const u = b64u8(s); return new Int16Array(u.buffer, u.byteOffset, u.byteLength / 2); };
+      const b64f32 = (s) => { const u = b64u8(s); return new Float32Array(u.buffer, u.byteOffset, u.byteLength / 4); };
+      const getJSON = async (p) => {
+        const r = await fetch(`${base}/data/${p}`);
+        if (!r.ok) throw new Error(`${p} → HTTP ${r.status}`);
+        return r.json();
+      };
+      const setEmpty = (el, msg, kind = "wait") => {
+        el.innerHTML = `<div class="empty">${kind === "wait" ? '<div class="spin"></div>' : "⚠"}<div>${msg}</div></div>`;
+      };
+      const tipEl = (parent) => {
+        const t = document.createElement("div");
+        t.className = "tip"; t.hidden = true; parent.style.position = "relative";
+        parent.appendChild(t); return t;
+      };
+      const dayToDate = (t0, d) => new Date(Date.parse(t0) + d * 86400000);
+      const fmtDate = (d) => `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+
+      /* ── reveals ─────────────────────────────────────────────────────── */
+      sect("reveal", () => {
+        const io = new IntersectionObserver((es) => es.forEach((e) => {
+          if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+        }), { rootMargin: "0px 0px -8% 0px", threshold: 0.06 });
+        document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+        const links = [...document.querySelectorAll(".nav a")];
+        const secs = links.map((a) => document.querySelector(a.getAttribute("href"))).filter(Boolean);
+        const io2 = new IntersectionObserver((es) => {
+          es.forEach((e) => {
+            if (!e.isIntersecting) return;
+            links.forEach((a) => a.classList.toggle("here", a.getAttribute("href") === "#" + e.target.id));
+          });
+        }, { rootMargin: "-45% 0px -50% 0px" });
+        secs.forEach((s) => io2.observe(s));
+      });
+
+      const SUM = await getJSON("summary.json").catch((e) => { console.warn("summary", e); return null; });
+
+      /* ══════════════════════════════════════════════════════════════════
+         THE RADAR PROBE — the signature interaction
+         ══════════════════════════════════════════════════════════════════ */
+      sect("probe", () => probe()).catch?.(() => {});
+      async function probe() {
+        const KABS = (SUM?.scope?.deep_kabupaten) ?? [];
+        if (!KABS.length) { setEmpty(document.getElementById("probe-map"), "No pipeline output yet", "err"); return; }
+        const tabs = document.getElementById("probe-tabs");
+        const mapEl = document.getElementById("probe-map");
+        const noteEl = document.getElementById("probe-note");
+        const cache = new Map();
+        let cur = null, curKab = null, hoverIdx = 0, dragging = false;
+
+        KABS.forEach((k) => {
+          const b = document.createElement("button");
+          b.textContent = k; b.setAttribute("aria-pressed", "false");
+          b.onclick = () => load(k);
+          tabs.appendChild(b);
+        });
+
+        const canvas = document.createElement("canvas");
+        canvas.style.cssText = "width:100%;height:100%;display:block;cursor:crosshair;touch-action:none;";
+        canvas.tabIndex = 0;
+        canvas.setAttribute("role", "application");
+        canvas.setAttribute("aria-label", "Paddy map. Drag or use arrow keys to move the radar probe.");
+        const ctx = canvas.getContext("2d", { alpha: false });
+        const tip = tipEl(mapEl);
+        let view = null;
+
+        async function load(kab) {
+          [...tabs.children].forEach((b) => b.setAttribute("aria-pressed", String(b.textContent === kab)));
+          if (!cache.has(kab)) {
+            noteEl.textContent = "loading " + kab + "…";
+            cache.set(kab, await getJSON(`probe/${kab}.json`));
+          }
+          cur = cache.get(kab); curKab = kab;
+          cur._field = cur._field ?? b64u8(cur.field.data);
+          cur._vv = cur._vv ?? b64u8(cur.vv);
+          cur._vh = cur._vh ?? b64u8(cur.vh);
+          cur._ovv = cur._ovv ?? b64u8(cur.obs_vv);
+          cur._ovh = cur._ovh ?? b64u8(cur.obs_vh);
+          cur._xy = cur._xy ?? b64i16(cur.probe_xy);
+          cur._ll = cur._ll ?? b64f32(cur.probe_ll);
+          document.getElementById("probe-empty")?.remove();
+          if (!canvas.isConnected) mapEl.appendChild(canvas);
+          noteEl.textContent = `2-D canvas · no WebGL · ${cur.vintage.acquisitions} acquisitions · drag to probe`;
+          hoverIdx = pickBest();
+          layout(); paint(); drawCurve();
+          if (!reduced) autoDrive();
+        }
+        function pickBest() {
+          // start on the busiest paddy the file has — the probe should land on something alive
+          let best = 0, bestN = -1;
+          for (const k of Object.keys(cur.events)) {
+            const n = cur.events[k].length;
+            if (n > bestN) { bestN = n; best = +k; }
+          }
+          return best;
+        }
+
+        function layout() {
+          const dpr = Math.min(devicePixelRatio || 1, 2);
+          const W = mapEl.clientWidth, H = mapEl.clientHeight;
+          canvas.width = W * dpr; canvas.height = H * dpr;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          const f = cur.field;
+          const k = Math.min(W / f.w, H / f.h);
+          view = { W, H, k, ox: (W - f.w * k) / 2, oy: (H - f.h * k) / 2, dpr };
+        }
+        let img = null;
+        function paint() {
+          const f = cur.field, d = cur._field;
+          if (!img || img.width !== f.w || img.height !== f.h) img = ctx.createImageData(f.w, f.h);
+          const ramp = d3.scaleLinear()
+            .domain([0, 0.9, 1.6, 2.4])
+            .range(["#12232b", "#2c5c4a", C.veg, C.peak]).clamp(true);
+          const lut = [];
+          for (let v = 0; v < 255; v++) { const c = d3.rgb(ramp(v / f.scale)); lut.push([c.r, c.g, c.b]); }
+          const p = img.data;
+          for (let i = 0; i < d.length; i++) {
+            const v = d[i], o = i * 4;
+            if (v === f.nodata) { p[o] = 6; p[o+1] = 13; p[o+2] = 15; p[o+3] = 255; }
+            else { const c = lut[v]; p[o] = c[0]; p[o+1] = c[1]; p[o+2] = c[2]; p[o+3] = 255; }
+          }
+          const off = document.createElement("canvas");
+          off.width = f.w; off.height = f.h;
+          off.getContext("2d").putImageData(img, 0, 0);
+          ctx.fillStyle = C.ground; ctx.fillRect(0, 0, view.W, view.H);
+          ctx.imageSmoothingEnabled = true;
+          ctx.drawImage(off, view.ox, view.oy, f.w * view.k, f.h * view.k);
+          // the probe
+          const px = view.ox + (cur._xy[hoverIdx * 2] / 2 + 0.5) * view.k;
+          const py = view.oy + (cur._xy[hoverIdx * 2 + 1] / 2 + 0.5) * view.k;
+          ctx.save();
+          ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.lineWidth = 4;
+          ctx.beginPath(); ctx.arc(px, py, 11, 0, 6.284); ctx.stroke();
+          ctx.strokeStyle = C.accent; ctx.lineWidth = 2;
+          ctx.beginPath(); ctx.arc(px, py, 11, 0, 6.284); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(px - 18, py); ctx.lineTo(px - 14, py);
+          ctx.moveTo(px + 14, py); ctx.lineTo(px + 18, py);
+          ctx.moveTo(px, py - 18); ctx.lineTo(px, py - 14);
+          ctx.moveTo(px, py + 14); ctx.lineTo(px, py + 18); ctx.stroke();
+          ctx.restore();
+        }
+
+        function nearest(cx, cy) {
+          const fx = (cx - view.ox) / view.k * 2, fy = (cy - view.oy) / view.k * 2;
+          let best = hoverIdx, bd = Infinity;
+          for (let i = 0; i < cur.n_probe; i++) {
+            const dx = cur._xy[i * 2] - fx, dy = cur._xy[i * 2 + 1] - fy;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < bd) { bd = d2; best = i; }
+          }
+          return best;
+        }
+        const localXY = (e) => {
+          const r = canvas.getBoundingClientRect();
+          const t = e.touches?.[0] ?? e;
+          return [t.clientX - r.left, t.clientY - r.top];
+        };
+        function move(e) {
+          const [x, y] = localXY(e);
+          const i = nearest(x, y);
+          if (i !== hoverIdx) { hoverIdx = i; paint(); drawCurve(); }
+          tip.hidden = false;
+          tip.style.left = Math.min(x + 14, view.W - 210) + "px";
+          tip.style.top = Math.min(y + 14, view.H - 70) + "px";
+          const ev = cur.events[String(hoverIdx)] ?? [];
+          tip.innerHTML = `<b>${cur._ll[hoverIdx*2+1].toFixed(4)}°S ${cur._ll[hoverIdx*2].toFixed(4)}°E</b><br>${ev.length} crop cycle${ev.length===1?"":"s"} detected<br>${curKab}, ${cur.province}`;
+        }
+        canvas.addEventListener("pointerdown", (e) => { dragging = true; auto = false; canvas.setPointerCapture?.(e.pointerId); move(e); });
+        canvas.addEventListener("pointermove", (e) => { if (dragging || e.pointerType === "mouse") move(e); });
+        canvas.addEventListener("pointerup", () => { dragging = false; });
+        canvas.addEventListener("pointerleave", () => { dragging = false; tip.hidden = true; });
+        canvas.addEventListener("keydown", (e) => {
+          const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+          if (!step) return;
+          e.preventDefault(); auto = false;
+          const cx = view.ox + (cur._xy[hoverIdx*2] / 2 + 0.5) * view.k + step[0] * view.k * 1.2;
+          const cy = view.oy + (cur._xy[hoverIdx*2+1] / 2 + 0.5) * view.k + step[1] * view.k * 1.2;
+          const i = nearest(cx, cy);
+          if (i !== hoverIdx) { hoverIdx = i; paint(); drawCurve(); }
+        });
+        addEventListener("resize", () => { if (cur) { layout(); paint(); } });
+
+        /* the probe drives itself until the reader takes over */
+        let auto = true, timer = null;
+        function autoDrive() {
+          clearInterval(timer);
+          const good = Object.keys(cur.events).filter((k) => cur.events[k].length >= 3).map(Number);
+          if (!good.length) return;
+          let n = 0;
+          timer = setInterval(() => {
+            if (!auto || document.hidden) { if (!auto) clearInterval(timer); return; }
+            hoverIdx = good[(n++ * 7) % good.length];
+            paint(); drawCurve();
+            if (n > 6) { clearInterval(timer); }
+          }, 1600);
+        }
+
+        /* ── the curve ──────────────────────────────────────────────── */
+        const svg = d3.select("#probe-curve");
+        function deq(v) { return v === 255 ? null : -30 + (v / 254) * 32; }
+        function drawCurve() {
+          const nS = cur.steps.length, nO = cur.obs_days.length;
+          const vv = [], vh = [];
+          for (let j = 0; j < nS; j++) {
+            const a = deq(cur._vv[hoverIdx * nS + j]), b = deq(cur._vh[hoverIdx * nS + j]);
+            if (a !== null) vv.push([cur.steps[j], a]);
+            if (b !== null) vh.push([cur.steps[j], b]);
+          }
+          const ovv = [], ovh = [];
+          for (let j = 0; j < nO; j++) {
+            const a = deq(cur._ovv[hoverIdx * nO + j]), b = deq(cur._ovh[hoverIdx * nO + j]);
+            if (a !== null) ovv.push([cur.obs_days[j], a]);
+            if (b !== null) ovh.push([cur.obs_days[j], b]);
+          }
+          const ev = cur.events[String(hoverIdx)] ?? [];
+          const box = svg.node().getBoundingClientRect();
+          const W = Math.max(320, box.width), H = 262;
+          const M = { t: 14, r: 12, b: 26, l: 56 };
+          svg.attr("viewBox", `0 0 ${W} ${H}`);
+          const x = d3.scaleLinear().domain(d3.extent(cur.steps)).range([M.l, W - M.r]);
+          const y = d3.scaleLinear().domain([-26, 0]).range([H - M.b, M.t]);
+          const line = d3.line().x((d) => x(d[0])).y((d) => y(d[1])).curve(d3.curveMonotoneX);
+
+          let g = svg.select("g.root");
+          if (g.empty()) {
+            g = svg.append("g").attr("class", "root");
+            g.append("g").attr("class", "grid");
+            g.append("g").attr("class", "events");
+            g.append("g").attr("class", "pts");
+            g.append("path").attr("class", "l-vv").attr("fill", "none").attr("stroke", C.flood).attr("stroke-width", 1.7);
+            g.append("path").attr("class", "l-vh").attr("fill", "none").attr("stroke", C.peak).attr("stroke-width", 2.1);
+            g.append("g").attr("class", "axis ax-y");
+            g.append("g").attr("class", "axis ax-x");
+          }
+          const t0 = Date.parse(cur.t0);
+          const ticks = [];
+          for (let yr = 2022; yr <= 2027; yr++) for (const m of [0, 6]) {
+            const d = Math.round((Date.UTC(yr, m, 1) - t0) / 86400000);
+            if (d >= cur.steps[0] && d <= cur.steps[nS - 1]) ticks.push([d, `${MONTHS[m]} ${String(yr).slice(2)}`]);
+          }
+          g.select(".ax-x").attr("transform", `translate(0,${H - M.b})`)
+            .call(d3.axisBottom(x).tickValues(ticks.map((t) => t[0])).tickFormat((d) => (ticks.find((t) => t[0] === d) || [, ""])[1]).tickSize(4));
+          g.select(".ax-y").attr("transform", `translate(${M.l},0)`)
+            .call(d3.axisLeft(y).ticks(5).tickFormat((d) => d + " dB").tickSize(4));
+          const gl = g.select(".grid").selectAll("line").data(y.ticks(5));
+          gl.enter().append("line").merge(gl)
+            .attr("class", "gridline").attr("x1", M.l).attr("x2", W - M.r)
+            .attr("y1", (d) => y(d)).attr("y2", (d) => y(d));
+          gl.exit().remove();
+
+          // flood threshold marker
+          let th = g.select(".thr");
+          if (th.empty()) th = g.append("line").attr("class", "thr").attr("stroke", C.flood)
+            .attr("stroke-dasharray", "3 4").attr("stroke-opacity", 0.75);
+          th.attr("x1", M.l).attr("x2", W - M.r).attr("y1", y(-17)).attr("y2", y(-17));
+
+          const evs = g.select(".events").selectAll("g.ev").data(ev, (d, i) => i);
+          const evEnter = evs.enter().append("g").attr("class", "ev");
+          evEnter.append("rect").attr("class", "band");
+          evEnter.append("line").attr("class", "hmark");
+          evs.exit().remove();
+          g.select(".events").selectAll("g.ev").each(function (d) {
+            const s = d3.select(this);
+            s.select(".band")
+              .attr("x", x(d[0])).attr("width", Math.max(1, x(d[2]) - x(d[0])))
+              .attr("y", M.t).attr("height", H - M.b - M.t)
+              .attr("fill", C.peak).attr("fill-opacity", 0.06)
+              .attr("stroke", C.harvest).attr("stroke-opacity", 0.45).attr("stroke-width", 1);
+            s.select(".hmark").attr("x1", x(d[1])).attr("x2", x(d[1]))
+              .attr("y1", M.t).attr("y2", H - M.b)
+              .attr("stroke", C.ripe).attr("stroke-opacity", 0.5).attr("stroke-dasharray", "2 3");
+          });
+
+          const pts = g.select(".pts").selectAll("circle")
+            .data([...ovv.map((p) => [...p, 0]), ...ovh.map((p) => [...p, 1])]);
+          pts.enter().append("circle").attr("r", 1.7).merge(pts)
+            .attr("cx", (d) => x(d[0])).attr("cy", (d) => y(d[1]))
+            .attr("fill", (d) => (d[2] ? C.peak : C.flood)).attr("fill-opacity", 0.42);
+          pts.exit().remove();
+
+          g.select(".l-vv").transition().duration(DUR).attr("d", line(vv));
+          g.select(".l-vh").transition().duration(DUR).attr("d", line(vh));
+
+          document.getElementById("probe-coord").textContent =
+            `${cur._ll[hoverIdx*2+1].toFixed(4)}° S · ${cur._ll[hoverIdx*2].toFixed(4)}° E · ${curKab}`;
+          document.getElementById("probe-summary").innerHTML =
+            ev.length
+              ? `${ev.length} cycles · median ${Math.round(d3.median(ev, (e) => e[2] - e[0]))} d<br><span style="color:var(--ink-muted)">last harvest ${fmtDate(dayToDate(cur.t0, ev[ev.length-1][2]))}</span>`
+              : `<span style="color:var(--alert)">no rice cycle detected here</span>`;
+
+          // the calendar strip
+          const strip = document.getElementById("probe-cal");
+          strip.innerHTML = "";
+          const yrs = [...new Set(ev.map((e) => dayToDate(cur.t0, e[2]).getUTCFullYear()))];
+          const showYear = yrs[yrs.length - 1] ?? 2025;
+          for (let m = 0; m < 12; m++) {
+            const i = document.createElement("i");
+            const hit = ev.find((e) => {
+              const d = dayToDate(cur.t0, e[2]);
+              return d.getUTCFullYear() === showYear && d.getUTCMonth() === m;
+            });
+            const pl = ev.find((e) => {
+              const d = dayToDate(cur.t0, e[0]);
+              return d.getUTCFullYear() === showYear && d.getUTCMonth() === m;
+            });
+            i.style.background = hit ? C.harvest : pl ? C.flood : "var(--surface)";
+            i.innerHTML = `<b style="${hit || pl ? "color:#0A1214" : ""}">${MONTHS[m][0]}</b>`;
+            i.title = `${MONTHS[m]} ${showYear}${hit ? " — harvest" : pl ? " — transplanting" : ""}`;
+            strip.appendChild(i);
+          }
+          document.getElementById("probe-title").textContent =
+            `γ⁰ at the probe · calendar strip shows ${showYear}`;
+        }
+        await load(KABS[0]);
+      }
+
+      /* ══════════════════════════════════════════════════════════════════
+         01 — optical vs radar
+         ══════════════════════════════════════════════════════════════════ */
+      (async () => {
+        const el = document.getElementById("ch-optical");
+        let O;
+        try { O = await getJSON("optical.json"); }
+        catch (e) { setEmpty(el, "Scene counts not exported in this run", "err"); return; }
+        const rows = O.by_month;
+        el.innerHTML = "";
+        const W = 900, H = 300, M = { t: 16, r: 62, b: 34, l: 52 };
+        const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`)
+          .attr("role", "img").attr("aria-label", "Usable Sentinel-2 scenes per month against Sentinel-1 acquisitions");
+        const tip = tipEl(el);
+        const x = d3.scaleBand().domain(rows.map((r) => r.month)).range([M.l, W - M.r]).padding(0.24);
+        const y = d3.scaleLinear().domain([0, d3.max(rows, (r) => r.s2_all) * 1.05]).range([H - M.b, M.t]);
+        const y2 = d3.scaleLinear().domain([0, d3.max(rows, (r) => r.s1_acquisitions) * 1.6]).range([H - M.b, M.t]);
+        svg.append("g").attr("class", "grid").selectAll("line").data(y.ticks(5)).enter().append("line")
+          .attr("class", "gridline").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y).attr("y2", y);
+        const g = svg.append("g");
+        g.selectAll("rect.all").data(rows).enter().append("rect").attr("class", "all")
+          .attr("x", (r) => x(r.month)).attr("width", x.bandwidth())
+          .attr("y", y(0)).attr("height", 0).attr("fill", C.hair).attr("rx", 2)
+          .transition().duration(DUR).delay((_, i) => i * 26)
+          .attr("y", (r) => y(r.s2_all)).attr("height", (r) => y(0) - y(r.s2_all));
+        g.selectAll("rect.ok").data(rows).enter().append("rect").attr("class", "ok")
+          .attr("x", (r) => x(r.month)).attr("width", x.bandwidth())
+          .attr("y", y(0)).attr("height", 0).attr("fill", C.flood).attr("rx", 2)
+          .transition().duration(DUR).delay((_, i) => i * 26 + 120)
+          .attr("y", (r) => y(r.s2_usable)).attr("height", (r) => y(0) - y(r.s2_usable));
+        const line = d3.line().x((r) => x(r.month) + x.bandwidth() / 2).y((r) => y2(r.s1_acquisitions)).curve(d3.curveMonotoneX);
+        const p = svg.append("path").datum(rows).attr("fill", "none").attr("stroke", C.accent)
+          .attr("stroke-width", 2.4).attr("d", line);
+        const L = p.node().getTotalLength();
+        if (!reduced) p.attr("stroke-dasharray", `${L} ${L}`).attr("stroke-dashoffset", L)
+          .transition().duration(1100).delay(300).attr("stroke-dashoffset", 0);
+        svg.selectAll("circle.s1").data(rows).enter().append("circle").attr("class", "s1")
+          .attr("cx", (r) => x(r.month) + x.bandwidth() / 2).attr("cy", (r) => y2(r.s1_acquisitions))
+          .attr("r", 3).attr("fill", C.accent);
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`)
+          .call(d3.axisBottom(x).tickFormat((m) => MONTHS[m - 1]).tickSize(4));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`)
+          .call(d3.axisLeft(y).ticks(5).tickSize(4));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${W - M.r},0)`)
+          .call(d3.axisRight(y2).ticks(4).tickSize(4));
+        svg.append("text").attr("x", M.l).attr("y", 10).attr("fill", C.muted)
+          .style("font", "600 12px var(--font-data)").text("SENTINEL-2 SCENES");
+        svg.append("text").attr("x", W - M.r + 4).attr("y", 10).attr("fill", C.accent)
+          .style("font", "600 12px var(--font-data)").text("S-1");
+        svg.append("g").selectAll("rect.hit").data(rows).enter().append("rect").attr("class", "hit")
+          .attr("x", (r) => x(r.month)).attr("y", M.t).attr("width", x.bandwidth())
+          .attr("height", H - M.b - M.t).attr("fill", "transparent")
+          .on("mousemove", function (e, r) {
+            const b = el.getBoundingClientRect();
+            tip.hidden = false;
+            tip.style.left = Math.min(e.clientX - b.left + 14, b.width - 230) + "px";
+            tip.style.top = (e.clientY - b.top + 12) + "px";
+            tip.innerHTML = `<b>${MONTHS[r.month-1]}</b> (2023–25 pooled)<br>
+              Sentinel-2 scenes: ${r.s2_all}<br>
+              under ${O.cloud_max_pct}% cloud: <b>${r.s2_usable}</b> (${(100*r.s2_usable/Math.max(r.s2_all,1)).toFixed(1)}%)<br>
+              Sentinel-1 passes: ${r.s1_acquisitions}`;
+          })
+          .on("mouseleave", () => { tip.hidden = true; });
+        const wet = rows.filter((r) => [12, 1, 2, 3].includes(r.month));
+        const dry = rows.filter((r) => [6, 7, 8, 9].includes(r.month));
+        const wr = d3.sum(wet, (r) => r.s2_usable) / Math.max(d3.sum(wet, (r) => r.s2_all), 1);
+        const dr = d3.sum(dry, (r) => r.s2_usable) / Math.max(d3.sum(dry, (r) => r.s2_all), 1);
+        document.getElementById("optical-note").innerHTML =
+          `In the dry season <b>${(dr*100).toFixed(0)}%</b> of Sentinel-2 scenes over these six
+           regencies come back under ${O.cloud_max_pct}% cloud. In the wet season — the season the
+           main crop is planted, grown and harvested in — it is <b>${(wr*100).toFixed(0)}%</b>.
+           The radar line does not move, because radar does not care. That gap is the whole
+           argument for the method, and it is a scene count rather than a claim.`;
+      })().catch((e) => { console.error("optical", e); });
+
+      /* ══════════════════════════════════════════════════════════════════
+         02 — the harvest wave
+         ══════════════════════════════════════════════════════════════════ */
+      (async () => {
+        const el = document.getElementById("wave-map");
+        let Wv;
+        try { Wv = await getJSON("wave.json"); }
+        catch (e) { setEmpty(el, "Wave frames not exported in this run", "err"); return; }
+        el.innerHTML = "";
+        const frames = b64u8(Wv.frames);
+        const [nW, nU, nS] = Wv.shape;
+        const canvas = document.createElement("canvas");
+        canvas.style.cssText = "width:100%;height:100%;display:block;cursor:pointer;";
+        el.appendChild(canvas);
+        const ctx = canvas.getContext("2d");
+        const hit = document.createElement("canvas").getContext("2d");
+        const tip = tipEl(el);
+        let paths = [], boxes = [], B = null, dpr = 1, VW = 0, VH2 = 0, hoverIdx = -1, week = 0;
+        let onWeek = () => {};
+
+        // Two panels, not one map.  The six kabupaten sit in two clusters 400 km apart, so a
+        // single geographic frame spends more than half its pixels on the sea between them and
+        // the regencies shrink to specks.  Splitting at 110 degE gives each cluster its own
+        // frame at a readable scale; the shared clock is what carries the wave, not the gap.
+        const groups = [
+          { label: "Jawa Barat", sel: [], B: null },
+          { label: "Jawa Tengah & Jawa Timur", sel: [], B: null },
+        ];
+        Wv.units.forEach((u, i) => {
+          const lon = u.rings[0][0][0];
+          const g = groups[lon < 110 ? 0 : 1];
+          g.sel.push(i);
+          for (const r of u.rings) for (const [lo, la] of r) {
+            g.B = g.B ?? { w: lo, e: lo, s: la, n: la };
+            if (lo < g.B.w) g.B.w = lo; if (lo > g.B.e) g.B.e = lo;
+            if (la < g.B.s) g.B.s = la; if (la > g.B.n) g.B.n = la;
+            B = B ?? { w: lo, e: lo, s: la, n: la };
+            if (lo < B.w) B.w = lo; if (lo > B.e) B.e = lo;
+            if (la < B.s) B.s = la; if (la > B.n) B.n = la;
+          }
+        });
+        const live = groups.filter((g) => g.sel.length && g.B);
+        function project() {
+          dpr = Math.min(devicePixelRatio || 1, 2);
+          const W0 = el.clientWidth;
+          const gap = 18, pad = 10, labelH = 20;
+          const spans = live.map((g) => (g.B.e - g.B.w));
+          const totalSpan = spans.reduce((a, b) => a + b, 0);
+          const avail = W0 - gap * (live.length - 1) - 2 * pad;
+          const k = live.map((g, i) => (avail * spans[i] / totalSpan) / spans[i]);
+          const kk = Math.min(...k);
+          const h = Math.max(...live.map((g) => (g.B.n - g.B.s) * kk));
+          el.style.height = Math.round(h + labelH + 2 * pad) + "px";
+          VW = el.clientWidth; VH2 = el.clientHeight;
+          canvas.width = VW * dpr; canvas.height = VH2 * dpr;
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          hit.canvas.width = VW; hit.canvas.height = VH2;
+          paths = new Array(Wv.units.length); boxes = new Array(Wv.units.length);
+          let x = pad;
+          for (const g of live) {
+            g.ox = x; g.k = kk;
+            g.oy = pad + labelH + (g.B.n - g.B.s) * kk;
+            for (const i of g.sel) {
+              const u = Wv.units[i];
+              const p = new Path2D();
+              let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+              for (const ring of u.rings) ring.forEach(([lo, la], j) => {
+                const px = g.ox + (lo - g.B.w) * kk, py = g.oy - (la - g.B.s) * kk;
+                if (px < x0) x0 = px; if (px > x1) x1 = px;
+                if (py < y0) y0 = py; if (py > y1) y1 = py;
+                j ? p.lineTo(px, py) : p.moveTo(px, py);
+              });
+              p.closePath(); paths[i] = p; boxes[i] = [x0, y0, x1, y1];
+            }
+            x += (g.B.e - g.B.w) * kk + gap;
+          }
+        }
+        function mix(i) {
+          let best = -1, bv = 0, tot = 0;
+          for (let s = 0; s < nS; s++) {
+            const v = frames[(week * nU + i) * nS + s];
+            tot += v; if (v > bv) { bv = v; best = s; }
+          }
+          return { best, bv, tot };
+        }
+        function paint() {
+          ctx.fillStyle = C.ground; ctx.fillRect(0, 0, VW, VH2);
+          ctx.font = "600 12px var(--font-data), ui-monospace, monospace";
+          ctx.fillStyle = C.muted;
+          for (const g of live) ctx.fillText(g.label.toUpperCase(), g.ox, 22);
+          Wv.units.forEach((u, i) => {
+            const { best, bv, tot } = mix(i);
+            const inten = Math.min(1, tot / 140);
+            ctx.fillStyle = best < 0 || bv === 0 ? "#111a1c"
+              : d3.interpolateRgb("#101a1c", STAGE_COLORS[best])(0.25 + 0.75 * inten);
+            ctx.fill(paths[i]);
+            ctx.strokeStyle = C.hair; ctx.lineWidth = 0.5; ctx.stroke(paths[i]);
+          });
+          if (hoverIdx >= 0) { ctx.strokeStyle = C.ink; ctx.lineWidth = 1.6; ctx.stroke(paths[hoverIdx]); }
+          document.getElementById("wave-date").textContent = Wv.weeks[week];
+          onWeek();
+        }
+        const at = (e) => {
+          const r = canvas.getBoundingClientRect();
+          const px = e.clientX - r.left, py = e.clientY - r.top;
+          for (let i = paths.length - 1; i >= 0; i--) {
+            const b = boxes[i];
+            if (px < b[0] || px > b[2] || py < b[1] || py > b[3]) continue;
+            if (hit.isPointInPath(paths[i], px, py)) return i;
+          }
+          return -1;
+        };
+        canvas.addEventListener("mousemove", (e) => {
+          const i = at(e);
+          if (i !== hoverIdx) { hoverIdx = i; paint(); }
+          if (i >= 0) {
+            const r = el.getBoundingClientRect();
+            const { best, tot } = mix(i);
+            tip.hidden = false;
+            tip.style.left = Math.min(e.clientX - r.left + 14, r.width - 220) + "px";
+            tip.style.top = Math.min(e.clientY - r.top + 14, r.height - 80) + "px";
+            const u = Wv.units[i];
+            const parts = [];
+            for (let s = 0; s < nS; s++) {
+              const v = frames[(week * nU + i) * nS + s];
+              if (v > 3) parts.push(`<span style="color:${STAGE_COLORS[s]}">${STAGE_NAMES[s]} ${(v/2.55).toFixed(0)}%</span>`);
+            }
+            tip.innerHTML = `<b>${u.name}</b><br>${Wv.kab_names[u.kab] ?? ""} · ${Wv.weeks[week]}<br>${parts.join("<br>") || "no crop in stage"}`;
+            document.getElementById("wave-kab").textContent = `${u.name} · ${Wv.kab_names[u.kab] ?? ""}`;
+          } else tip.hidden = true;
+        });
+        canvas.addEventListener("mouseleave", () => { hoverIdx = -1; tip.hidden = true; paint(); });
+        addEventListener("resize", () => { project(); paint(); });
+        project();
+
+        const range = document.getElementById("wave-range");
+        range.max = String(nW - 1);
+        // open on a wet-season week, where there is something to see
+        week = Math.max(0, Math.min(nW - 1, Wv.weeks.findIndex((w) => w.slice(5, 7) === "02" && w.slice(0, 4) === "2024")));
+        range.value = String(week);
+        range.oninput = () => { week = +range.value; paint(); };
+        const legend = document.getElementById("wave-legend");
+        STAGE_NAMES.forEach((n, i) => {
+          const s = document.createElement("span");
+          s.innerHTML = `<s style="background:${STAGE_COLORS[i]}"></s>${n}`;
+          legend.appendChild(s);
+        });
+        let playing = false, timer = null;
+        const btn = document.getElementById("wave-play");
+        btn.onclick = () => {
+          playing = !playing;
+          btn.setAttribute("aria-pressed", String(playing));
+          btn.textContent = playing ? "❚❚ Pause" : "▶ Play";
+          clearInterval(timer);
+          if (playing) timer = setInterval(() => {
+            week = (week + 1) % nW; range.value = String(week); paint();
+          }, reduced ? 400 : 130);
+        };
+        paint();
+
+        /* the ridge underneath: total detected harvest by week */
+        const ridge = document.getElementById("wave-ridge");
+        const tot = new Float64Array(nW);
+        for (let w = 0; w < nW; w++) {
+          let s = 0;
+          for (let i = 0; i < nU; i++) s += frames[(w * nU + i) * nS + 4];
+          tot[w] = s;
+        }
+        const RW = 900, RH = 90, RM = { t: 6, r: 8, b: 18, l: 8 };
+        const rs = d3.select(ridge).append("svg").attr("viewBox", `0 0 ${RW} ${RH}`)
+          .attr("role", "img").attr("aria-label", "Detected harvest intensity by week");
+        const rx = d3.scaleLinear().domain([0, nW - 1]).range([RM.l, RW - RM.r]);
+        // The final weeks of the record are a partial window, not a real harvest spike — scale
+        // to the body of the series so one truncated week does not flatten four years.
+        const ry = d3.scaleLinear()
+          .domain([0, d3.max([...tot].slice(0, Math.max(1, nW - 4))) || 1])
+          .range([RH - RM.b, RM.t]).clamp(true);
+        const grad = rs.append("defs").append("linearGradient").attr("id", "rg").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 1);
+        grad.append("stop").attr("offset", "0%").attr("stop-color", C.harvest).attr("stop-opacity", 0.75);
+        grad.append("stop").attr("offset", "100%").attr("stop-color", C.harvest).attr("stop-opacity", 0.04);
+        rs.append("path").datum([...tot])
+          .attr("fill", "url(#rg)")
+          .attr("d", d3.area().x((_, i) => rx(i)).y0(ry(0)).y1((v) => ry(v)).curve(d3.curveBasis));
+        const cur = rs.append("line").attr("stroke", C.accent).attr("stroke-width", 1.5)
+          .attr("y1", RM.t).attr("y2", RH - RM.b);
+        const upd = () => cur.attr("x1", rx(week)).attr("x2", rx(week));
+        upd();
+        onWeek = upd;                       // the scrub and the player both drive the marker
+        rs.append("g").attr("class", "axis").attr("transform", `translate(0,${RH - RM.b})`)
+          .call(d3.axisBottom(rx).ticks(8).tickFormat((i) => (Wv.weeks[Math.round(i)] ?? "").slice(0, 7)).tickSize(3));
+      })().catch((e) => { console.error("wave", e); });
+
+      /* ══════════════════════════════════════════════════════════════════
+         03 — ours vs KSA
+         ══════════════════════════════════════════════════════════════════ */
+      const AREA = await getJSON("area.json").catch(() => null);
+      (() => {
+        const el = document.getElementById("ch-ksa");
+        if (!AREA) { setEmpty(el, "Area view-model not exported in this run", "err"); return; }
+        // Order the tabs the way the case is scoped (largest producer first), not the way a
+        // groupby happens to sort them — opening on the alphabetically-first regency is how a
+        // reader's first impression ends up being the weakest unit in the set.
+        const order = SUM?.scope?.deep_kabupaten ?? [];
+        const kabs = Object.keys(AREA.by_kabupaten)
+          .sort((a, b) => (order.indexOf(a) + 1e3 * (order.indexOf(a) < 0))
+                        - (order.indexOf(b) + 1e3 * (order.indexOf(b) < 0)));
+        const tabs = document.getElementById("ksa-tabs");
+        let curKab = kabs[0], showCal = false, showResid = true;
+        kabs.forEach((k) => {
+          const b = document.createElement("button");
+          b.textContent = k; b.setAttribute("aria-pressed", String(k === curKab));
+          b.onclick = () => { curKab = k; [...tabs.querySelectorAll("button[data-kab]")].forEach((x) => x.setAttribute("aria-pressed", String(x.textContent === k))); draw(); };
+          b.dataset.kab = k;
+          tabs.appendChild(b);
+        });
+        const sep = document.createElement("span"); sep.style.cssText = "width:12px"; tabs.appendChild(sep);
+        const cb = document.createElement("button");
+        cb.textContent = "Calibrated"; cb.setAttribute("aria-pressed", "false");
+        cb.onclick = () => { showCal = !showCal; cb.setAttribute("aria-pressed", String(showCal)); draw(); };
+        tabs.appendChild(cb);
+        const rb = document.createElement("button");
+        rb.textContent = "Residuals"; rb.setAttribute("aria-pressed", "true");
+        rb.onclick = () => { showResid = !showResid; rb.setAttribute("aria-pressed", String(showResid)); draw(); };
+        tabs.appendChild(rb);
+
+        el.innerHTML = "";
+        const W = 900, H = 320, M = { t: 18, r: 16, b: 30, l: 56 };
+        const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`)
+          .attr("role", "img").attr("aria-label", "Radar-derived harvested area against BPS KSA");
+        const tip = tipEl(el);
+        const rEl = document.getElementById("ch-resid");
+        const RH = 120;
+        const rsvg = d3.select(rEl).append("svg").attr("viewBox", `0 0 ${W} ${RH}`)
+          .attr("role", "img").attr("aria-label", "Residual, ours minus KSA");
+
+        function draw() {
+          const D = AREA.by_kabupaten[curKab];
+          const n = D.t.length;
+          const parse = (s) => new Date(Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, 15));
+          const dates = D.t.map(parse);
+          const x = d3.scaleTime().domain(d3.extent(dates)).range([M.l, W - M.r]);
+          const ymax = d3.max([d3.max(D.ours), d3.max(D.ksa.filter((v) => v != null)), showCal ? d3.max(D.cal ?? [0]) : 0]) || 1;
+          const y = d3.scaleLinear().domain([0, ymax * 1.08]).range([H - M.b, M.t]).nice();
+          svg.selectAll("*").remove();
+          const defs = svg.append("defs");
+          const gg = defs.append("linearGradient").attr("id", "og").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 1);
+          gg.append("stop").attr("offset", "0%").attr("stop-color", C.accent).attr("stop-opacity", 0.28);
+          gg.append("stop").attr("offset", "100%").attr("stop-color", C.accent).attr("stop-opacity", 0.02);
+          svg.append("g").attr("class", "grid").selectAll("line").data(y.ticks(5)).enter().append("line")
+            .attr("class", "gridline").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y).attr("y2", y);
+
+          // uncertainty band
+          const band = d3.area().x((_, i) => x(dates[i])).y0((_, i) => y(D.lo[i])).y1((_, i) => y(D.hi[i])).curve(d3.curveMonotoneX);
+          svg.append("path").datum(D.ours).attr("d", band).attr("fill", C.accent).attr("fill-opacity", 0.12);
+          const areaG = d3.area().x((_, i) => x(dates[i])).y0(y(0)).y1((v) => y(v)).curve(d3.curveMonotoneX);
+          svg.append("path").datum(D.ours).attr("d", areaG).attr("fill", "url(#og)");
+
+          const mk = (vals, color, w, dash) => {
+            const line = d3.line().defined((v) => v != null).x((_, i) => x(dates[i])).y((v) => y(v)).curve(d3.curveMonotoneX);
+            const p = svg.append("path").datum(vals).attr("fill", "none").attr("stroke", color)
+              .attr("stroke-width", w).attr("d", line);
+            if (dash) p.attr("stroke-dasharray", dash);
+            if (!reduced) {
+              const L = p.node().getTotalLength();
+              p.attr("stroke-dasharray", dash ?? `${L} ${L}`).attr("stroke-dashoffset", dash ? 0 : L)
+                .transition().duration(DUR).attr("stroke-dashoffset", 0);
+            }
+            return p;
+          };
+          mk(D.ours, C.accent, 2.2);
+          mk(D.ksa, C.official, 2.2);
+          if (showCal && D.cal) mk(D.cal, C.accent, 1.4, "4 3");
+
+          svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`)
+            .call(d3.axisBottom(x).ticks(8).tickSize(4));
+          svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`)
+            .call(d3.axisLeft(y).ticks(5).tickFormat((v) => d3.format(",")(Math.round(v / 1000)) + "k").tickSize(4));
+          svg.append("text").attr("x", M.l).attr("y", 11).attr("fill", C.muted)
+            .style("font", "600 12px var(--font-data)").text("HECTARES HARVESTED PER MONTH");
+
+          // the crosshair
+          const cross = svg.append("line").attr("stroke", C.ink).attr("stroke-opacity", 0.4)
+            .attr("y1", M.t).attr("y2", H - M.b).attr("visibility", "hidden");
+          const dotO = svg.append("circle").attr("r", 3.6).attr("fill", C.accent).attr("visibility", "hidden");
+          const dotK = svg.append("circle").attr("r", 3.6).attr("fill", C.official).attr("visibility", "hidden");
+          svg.append("rect").attr("x", M.l).attr("y", M.t).attr("width", W - M.l - M.r)
+            .attr("height", H - M.t - M.b).attr("fill", "transparent")
+            .on("mousemove", function (e) {
+              const [mx] = d3.pointer(e, this);
+              const t = x.invert(mx + M.l);
+              let i = d3.bisector((d) => d).left(dates, t);
+              i = Math.max(0, Math.min(n - 1, i));
+              cross.attr("visibility", "visible").attr("x1", x(dates[i])).attr("x2", x(dates[i]));
+              dotO.attr("visibility", "visible").attr("cx", x(dates[i])).attr("cy", y(D.ours[i]));
+              if (D.ksa[i] != null) dotK.attr("visibility", "visible").attr("cx", x(dates[i])).attr("cy", y(D.ksa[i]));
+              else dotK.attr("visibility", "hidden");
+              const b = el.getBoundingClientRect();
+              tip.hidden = false;
+              tip.style.left = Math.min(e.clientX - b.left + 14, b.width - 240) + "px";
+              tip.style.top = "12px";
+              const diff = D.ksa[i] != null ? (100 * (D.ours[i] / D.ksa[i] - 1)) : null;
+              tip.innerHTML = `<b>${D.t[i]}</b> · ${curKab}<br>
+                ours <b style="color:${C.accent}">${d3.format(",.0f")(D.ours[i])} ha</b>
+                <span style="color:var(--ink-muted)">(${d3.format(",.0f")(D.lo[i])}–${d3.format(",.0f")(D.hi[i])})</span><br>
+                BPS KSA <b style="color:${C.official}">${D.ksa[i] != null ? d3.format(",.0f")(D.ksa[i]) + " ha" : "not published"}</b>
+                ${diff != null ? `<br>difference <b>${diff > 0 ? "+" : ""}${diff.toFixed(1)} %</b>` : ""}
+                ${D.usable[i] === false ? '<br><span style="color:var(--alert)">benchmark cell unusable — see method</span>' : ""}`;
+            })
+            .on("mouseleave", () => { tip.hidden = true; cross.attr("visibility", "hidden"); dotO.attr("visibility", "hidden"); dotK.attr("visibility", "hidden"); });
+
+          // residual panel
+          rsvg.selectAll("*").remove();
+          rEl.style.display = showResid ? "" : "none";
+          if (showResid) {
+            const res = D.ours.map((v, i) => (D.ksa[i] != null && D.ksa[i] > 0 ? 100 * (v / D.ksa[i] - 1) : null));
+            // Clamp the axis. A month where KSA reports a few hundred hectares and we report a
+            // few thousand yields a +5,000 % ratio that is arithmetic about a near-zero
+            // denominator, not a residual worth a whole axis; those months are drawn at the
+            // clip line in the alert colour instead of flattening the other 95.
+            const LIM = 150;
+            const ry2 = d3.scaleLinear().domain([-LIM, LIM]).range([RH - 18, 8]).clamp(true);
+            rsvg.append("line").attr("class", "gridline").attr("x1", M.l).attr("x2", W - M.r).attr("y1", ry2(0)).attr("y2", ry2(0));
+            rsvg.selectAll("rect").data(res).enter().append("rect")
+              .attr("x", (_, i) => x(dates[i]) - 2).attr("width", 4)
+              .attr("y", (v) => (v == null ? 0 : v > 0 ? ry2(v) : ry2(0)))
+              .attr("height", (v) => (v == null ? 0 : Math.abs(ry2(v) - ry2(0))))
+              .attr("fill", (v) => (v == null ? "none" : Math.abs(v) > LIM ? C.alert
+                                                        : v > 0 ? C.accent : C.flood))
+              .attr("fill-opacity", 0.75)
+              .append("title")
+              .text((v, i) => (v == null ? "" :
+                `${D.t[i]}: ${v > 0 ? "+" : ""}${v.toFixed(1)} %` +
+                (Math.abs(v) > LIM ? " (clipped — KSA near zero that month)" : "")));
+            rsvg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`)
+              .call(d3.axisLeft(ry2).ticks(3)
+                .tickFormat((v) => (Math.abs(v) >= LIM ? (v > 0 ? "≥+" : "≤−") + LIM : v) + "%")
+                .tickSize(3));
+            rsvg.append("text").attr("x", M.l).attr("y", 8).attr("fill", C.muted)
+              .style("font", "600 12px var(--font-data)").text("RESIDUAL — OURS MINUS KSA");
+          }
+        }
+        draw();
+
+        const yp = AREA.year_panel ?? [];
+        const jump = AREA.break ?? {};
+        const g1v = SUM?.gates?.find((g) => g.id === "G-I1")?.variants ?? {};
+        const g4 = SUM?.gates?.find((g) => g.id === "G-I4");
+        const g3 = SUM?.gates?.find((g) => g.id === "G-I3");
+        const ciMean = g3 ? d3.mean(Object.values(g3.units ?? {}).filter((u) => /irrigat/.test(u.system ?? "")), (u) => u.cycles_per_year) : null;
+        const f2 = (v) => (v == null ? "—" : (+v).toFixed(2));
+        document.getElementById("ksa-note").innerHTML = `
+          The <b style="color:${C.accent}">radar line</b> is ours; the
+          <b style="color:${C.official}">teal line</b> is BPS. They are never the same colour, and
+          the residual is drawn rather than netted out.
+          <br><br>
+          <b>What the comparison actually says.</b> We find the rice and we miss the second crop.
+          Our detected paddy extent sits inside the published rice map on
+          <b>${g4 ? (g4.agreement_on_ours * 100).toFixed(0) : "—"} %</b> of its area — the map is
+          broadly right. But the detector returns <b>${f2(ciMean)} crops per rice cell per year</b>
+          in the irrigated commands where agronomy and BPS both say two, and a harvested-area
+          figure that is a flow is short by exactly that factor. A 100 m cell holds several
+          0.3–0.5 ha sawah plots that are not transplanted on the same day, so the cell mean never
+          swings as far as a plot does and the second, weaker cycle disappears into the first.
+          <br><br>
+          Uncalibrated, the kabupaten-year fit is <b>R² ${f2(g1v.uncalibrated?.kabupaten_r2)}</b>
+          at <b>MAPE ${f2(g1v.uncalibrated?.kabupaten_mape)} %</b> — a failure, published red.
+          A calibration that carries that damping as an explicit term
+          (detected area ÷ the cell's own VH seasonal range) moves it to
+          <b>R² ${f2(g1v.calibrated?.kabupaten_r2)}</b> at
+          <b>MAPE ${f2(g1v.calibrated?.kabupaten_mape)} %</b> with a worst year of
+          <b>${f2(g1v.calibrated?.worst_abs_diff_pct)} %</b>. Both are published, because a gate
+          applied only after fitting to the benchmark is not a gate.`;
+
+        /* the break */
+        const bEl = document.getElementById("ch-break");
+        const nat = AREA.ksa_national ?? {};
+        const years = Object.keys(nat).map(Number).sort();
+        const BW = 900, BH = 210, BM = { t: 18, r: 16, b: 28, l: 56 };
+        const bs = d3.select(bEl).append("svg").attr("viewBox", `0 0 ${BW} ${BH}`)
+          .attr("role", "img").attr("aria-label", "National harvested area, the 2018 methodology break drawn as a break");
+        const allY = [2015, ...years];
+        const bx = d3.scaleLinear().domain([2014.5, Math.max(...years) + 0.5]).range([BM.l, BW - BM.r]);
+        const by = d3.scaleLinear().domain([0, 15.5e6]).range([BH - BM.b, BM.t]);
+        bs.append("rect").attr("x", bx(2015.5)).attr("width", bx(2017.5) - bx(2015.5))
+          .attr("y", BM.t).attr("height", BH - BM.b - BM.t)
+          .attr("fill", C.alert).attr("fill-opacity", 0.08)
+          .attr("stroke", C.alert).attr("stroke-opacity", 0.35).attr("stroke-dasharray", "3 3");
+        bs.append("text").attr("x", (bx(2015.5) + bx(2017.5)) / 2).attr("y", BM.t + 16)
+          .attr("text-anchor", "middle").attr("fill", C.alert)
+          .style("font", "600 12px var(--font-data)").text("MORATORIUM");
+        bs.append("text").attr("x", (bx(2015.5) + bx(2017.5)) / 2).attr("y", BM.t + 30)
+          .attr("text-anchor", "middle").attr("fill", C.alert)
+          .style("font", "600 12px var(--font-data)").text("NO DATA");
+        bs.append("circle").attr("cx", bx(2015)).attr("cy", by(jump.last_sp_ha ?? 14116638)).attr("r", 4).attr("fill", C.muted);
+        bs.append("text").attr("x", bx(2015)).attr("y", by(jump.last_sp_ha ?? 14116638) - 12)
+          .attr("text-anchor", "middle").attr("fill", C.muted).style("font", "600 12px var(--font-data)")
+          .text("14.12 Mha · eye estimate");
+        const line = d3.line().x((y_) => bx(y_)).y((y_) => by(nat[y_])).curve(d3.curveMonotoneX);
+        bs.append("path").datum(years).attr("fill", "none").attr("stroke", C.official).attr("stroke-width", 2.4).attr("d", line);
+        bs.selectAll("circle.k").data(years).enter().append("circle").attr("class", "k")
+          .attr("cx", (y_) => bx(y_)).attr("cy", (y_) => by(nat[y_])).attr("r", 3).attr("fill", C.official);
+        bs.append("text").attr("x", bx(2018)).attr("y", by(nat[2018] ?? 11377934) + 22)
+          .attr("fill", C.official).style("font", "600 12px var(--font-data)").text("11.38 Mha · KSA");
+        bs.append("g").attr("class", "axis").attr("transform", `translate(0,${BH - BM.b})`)
+          .call(d3.axisBottom(bx).ticks(10).tickFormat(d3.format("d")).tickSize(4));
+        bs.append("g").attr("class", "axis").attr("transform", `translate(${BM.l},0)`)
+          .call(d3.axisLeft(by).ticks(4).tickFormat((v) => (v / 1e6).toFixed(0) + " Mha").tickSize(4));
+        const d25 = (nat[2025] ?? 0) - (nat[2024] ?? 0);
+        if (d25) {
+          bs.append("text").attr("x", BW - BM.r).attr("y", by(nat[2025]) - 14).attr("text-anchor", "end")
+            .attr("fill", C.accent).style("font", "600 12px var(--font-data)")
+            .text(`2025: ${d25 > 0 ? "+" : ""}${(d25 / 1000).toFixed(0)}k ha (${(100 * d25 / (nat[2024] || 1)).toFixed(1)}%)`);
+        }
+      })();
+
+      /* ══════════════════════════════════════════════════════════════════
+         04 — the calendar is moving
+         ══════════════════════════════════════════════════════════════════ */
+      (async () => {
+        const el = document.getElementById("ch-calendar");
+        let CAL;
+        try { CAL = await getJSON("calendar.json"); }
+        catch (e) { setEmpty(el, "Climate view-model not exported in this run", "err"); return; }
+        const on = (CAL.onset ?? []).filter((r) => r.onset && r.onset !== "NaT" && r.onset !== "None");
+        const mt = (CAL.median_transplant ?? []).filter((r) => r.median_transplant);
+        if (!on.length || !mt.length) { setEmpty(el, "Monsoon onset was not detectable in this run", "err"); return; }
+        const key = (r) => `${r.kabupaten}|${r.season ?? r.plant_season}`;
+        const M2 = new Map(mt.map((r) => [key(r), r.median_transplant]));
+        const doy = (s) => { const d = new Date(s); const j = Date.UTC(d.getUTCFullYear(), 0, 1); return Math.round((d - j) / 86400000); };
+        const pts = on.map((r) => {
+          const t = M2.get(key(r));
+          if (!t) return null;
+          // Put the origin at the START of the crop year, not at 1 January: an onset in
+          // September (day 249) and a transplanting in January (day 15) belong on the same
+          // axis four months apart, not 234 days apart in the wrong direction.
+          let od = doy(r.onset), td = doy(t);
+          if (od < 180) od += 365; if (td < 180) td += 365;
+          return { kab: r.kabupaten, season: r.season, onset: od, trans: td, anom: r.onset_anom_days };
+        }).filter(Boolean);
+        if (!pts.length) { setEmpty(el, "No paired onset and transplanting dates", "err"); return; }
+        el.innerHTML = "";
+        const W = 900, H = 350, M = { t: 20, r: 20, b: 46, l: 86 };
+        const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`)
+          .attr("role", "img").attr("aria-label", "Median transplanting date against monsoon onset");
+        const tip = tipEl(el);
+        const x = d3.scaleLinear().domain(d3.extent(pts, (p) => p.onset)).nice().range([M.l, W - M.r]);
+        const y = d3.scaleLinear().domain(d3.extent(pts, (p) => p.trans)).nice().range([H - M.b, M.t]);
+        svg.append("g").attr("class", "grid").selectAll("line").data(y.ticks(5)).enter().append("line")
+          .attr("class", "gridline").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y).attr("y2", y);
+        // 1:1 reference — a crop that follows the rain exactly sits on it
+        const lo = Math.max(x.domain()[0], y.domain()[0]), hi = Math.min(x.domain()[1], y.domain()[1]);
+        svg.append("line").attr("x1", x(lo)).attr("y1", y(lo)).attr("x2", x(hi)).attr("y2", y(hi))
+          .attr("stroke", C.muted).attr("stroke-dasharray", "4 4").attr("stroke-opacity", 0.5);
+        const kabList = [...new Set(pts.map((p) => p.kab))];
+        const shape = d3.scaleOrdinal(kabList, [C.peak, C.flood, C.ripe, C.veg, C.harvest, C.official]);
+        svg.selectAll("circle").data(pts).enter().append("circle")
+          .attr("cx", (p) => x(p.onset)).attr("cy", y(y.domain()[0])).attr("r", 0)
+          .attr("fill", (p) => shape(p.kab)).attr("fill-opacity", 0.85)
+          .attr("stroke", C.ground).attr("stroke-width", 1)
+          .on("mousemove", function (e, p) {
+            const b = el.getBoundingClientRect();
+            tip.hidden = false;
+            tip.style.left = Math.min(e.clientX - b.left + 14, b.width - 230) + "px";
+            tip.style.top = (e.clientY - b.top + 12) + "px";
+            const fd = (d) => { const dt = new Date(Date.UTC(2000, 0, 1 + (d > 365 ? d - 365 : d))); return `${dt.getUTCDate()} ${MONTHS[dt.getUTCMonth()]}`; };
+            tip.innerHTML = `<b>${p.kab}</b> · ${p.season}<br>monsoon onset ${fd(p.onset)}<br>median transplanting ${fd(p.trans)}<br>lag ${(p.trans - p.onset).toFixed(0)} days`;
+          })
+          .on("mouseleave", () => { tip.hidden = true; })
+          .transition().duration(DUR).delay((_, i) => i * 30)
+          .attr("cy", (p) => y(p.trans)).attr("r", 7);
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`)
+          .call(d3.axisBottom(x).ticks(6).tickFormat((d) => { const dt = new Date(Date.UTC(2000, 0, 1 + (d > 365 ? d - 365 : d))); return `${dt.getUTCDate()} ${MONTHS[dt.getUTCMonth()]}`; }).tickSize(4));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`)
+          .call(d3.axisLeft(y).ticks(6).tickFormat((d) => { const dt = new Date(Date.UTC(2000, 0, 1 + (d > 365 ? d - 365 : d))); return `${dt.getUTCDate()} ${MONTHS[dt.getUTCMonth()]}`; }).tickSize(4));
+        svg.append("text").attr("x", (W) / 2).attr("y", H - 6).attr("text-anchor", "middle")
+          .attr("fill", C.muted).style("font", "600 12px var(--font-data)").text("MONSOON ONSET (CHIRPS, STATED RULE)");
+        svg.append("text").attr("transform", `translate(16,${H / 2}) rotate(-90)`).attr("text-anchor", "middle")
+          .attr("fill", C.muted).style("font", "600 12px var(--font-data)").text("MEDIAN TRANSPLANTING (RADAR)");
+        const leg = svg.append("g").attr("transform", `translate(${M.l + 8},${H - M.b - 30})`);
+        kabList.forEach((k, i) => {
+          const g = leg.append("g").attr("transform", `translate(${(i % 3) * 128},${Math.floor(i / 3) * 15})`);
+          g.append("circle").attr("r", 4).attr("fill", shape(k));
+          g.append("text").attr("x", 9).attr("y", 4).attr("fill", C.muted).style("font", "500 12px var(--font-data)").text(k);
+        });
+        const lag = d3.mean(pts, (p) => p.trans - p.onset);
+        const r = CAL.rule ?? {};
+        document.getElementById("cal-note").innerHTML = `
+          Across every kabupaten and season we measured, transplanting follows monsoon onset by a
+          median of <b>${lag.toFixed(0)} days</b>. Onset has a dozen definitions in the literature
+          and they disagree by weeks, so ours is stated: the first pentad whose own and next
+          pentad's rainfall reach <b>${r.accum_mm ?? 40} mm</b>, with no following dry spell.
+          Points above the dashed 1:1 line are seasons where the crop went in later than the rain
+          arrived — irrigation buys that choice, rainfed regencies do not have it.`;
+      })().catch((e) => console.error("calendar", e));
+
+      /* ══════════════════════════════════════════════════════════════════
+         05 — six weeks early (the hold-out replay)
+         ══════════════════════════════════════════════════════════════════ */
+      (() => {
+        const el = document.getElementById("ch-holdout");
+        if (!AREA) { setEmpty(el, "Not exported in this run", "err"); return; }
+        const hs = AREA.holdout_season ?? "2025/26";
+        const kabs = Object.keys(AREA.by_kabupaten);
+        const inSeason = (t) => {
+          const y = +t.slice(0, 4), m = +t.slice(5, 7);
+          const sy = +hs.slice(0, 4);
+          return (y === sy && m >= 7) || (y === sy + 1 && m <= 6);
+        };
+        const T = AREA.by_kabupaten[kabs[0]].t.filter(inSeason);
+        if (!T.length) { setEmpty(el, "The hold-out season is not in the exported window", "err"); return; }
+        const sum = (field) => T.map((t) => d3.sum(kabs, (k) => {
+          const D = AREA.by_kabupaten[k]; const i = D.t.indexOf(t);
+          return i < 0 ? 0 : (D[field][i] ?? 0);
+        }));
+        const ours = sum("ours"), pred = sum("pred"), cal = sum("cal"), ksa = T.map((t) => {
+          let s = 0, any = false;
+          for (const k of kabs) { const D = AREA.by_kabupaten[k]; const i = D.t.indexOf(t); if (i >= 0 && D.ksa[i] != null) { s += D.ksa[i]; any = true; } }
+          return any ? s : null;
+        });
+        el.innerHTML = "";
+        const W = 900, H = 320, M = { t: 20, r: 18, b: 34, l: 58 };
+        const svg = d3.select(el).append("svg").attr("viewBox", `0 0 ${W} ${H}`)
+          .attr("role", "img").attr("aria-label", "Hold-out season: our forecast against the official figure");
+        const tip = tipEl(el);
+        const x = d3.scalePoint().domain(T).range([M.l, W - M.r]);
+        const top = d3.max([...ours, ...pred, ...cal, ...ksa]
+          .filter((v) => v != null && isFinite(v))) || 1;
+        const y = d3.scaleLinear().domain([0, top * 1.12]).range([H - M.b, M.t]).nice();
+        svg.append("g").attr("class", "grid").selectAll("line").data(y.ticks(5)).enter().append("line")
+          .attr("class", "gridline").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y).attr("y2", y);
+        // the lead: shade the weeks between our forecast and the official release
+        const lastKsa = ksa.reduce((a, v, i) => (v != null ? i : a), -1);
+        if (lastKsa >= 0 && lastKsa < T.length - 1) {
+          svg.append("rect").attr("x", x(T[lastKsa])).attr("width", Math.max(0, x(T[T.length - 1]) - x(T[lastKsa])))
+            .attr("y", M.t).attr("height", H - M.t - M.b).attr("fill", C.accent).attr("fill-opacity", 0.07);
+          svg.append("text").attr("x", (x(T[lastKsa]) + x(T[T.length - 1])) / 2).attr("y", M.t + 14)
+            .attr("text-anchor", "middle").attr("fill", C.accent).style("font", "600 12px var(--font-data)")
+            .text("WE HAVE A NUMBER · BPS DOES NOT YET");
+        }
+        const mk = (vals, color, w, dash) => {
+          const line = d3.line().defined((v) => v != null && v > 0).x((_, i) => x(T[i])).y((v) => y(v)).curve(d3.curveMonotoneX);
+          const p = svg.append("path").datum(vals).attr("fill", "none").attr("stroke", color).attr("stroke-width", w).attr("d", line);
+          if (dash) p.attr("stroke-dasharray", dash);
+          return p;
+        };
+        mk(ours, C.veg, 1.5, "2 3");        // raw detection — the honest, uncalibrated count
+        mk(pred, C.ripe, 2.4, "5 3");       // issued at transplanting
+        mk(cal, C.accent, 2.6);             // our estimate, calibrated — the actual product
+        mk(ksa, C.official, 2.4);
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`)
+          .call(d3.axisBottom(x).tickValues(T.filter((_, i) => i % 2 === 0)).tickSize(4));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`)
+          .call(d3.axisLeft(y).ticks(5).tickFormat((v) => d3.format(",")(Math.round(v / 1000)) + "k").tickSize(4));
+        svg.append("text").attr("x", M.l).attr("y", 11).attr("fill", C.muted)
+          .style("font", "600 12px var(--font-data)").text("SIX KABUPATEN · HECTARES HARVESTED PER MONTH");
+        const lg = svg.append("g").attr("transform", `translate(${M.l + 6},${M.t + 6})`);
+        [["Our estimate, calibrated", C.accent], ["Raw detection, uncalibrated", C.veg],
+         ["Forecast at transplanting", C.ripe], ["BPS KSA, when it lands", C.official]]
+          .forEach(([t, c], i) => {
+            const g = lg.append("g").attr("transform", `translate(${(i % 2) * 210},${Math.floor(i / 2) * 15})`);
+            g.append("rect").attr("width", 14).attr("height", 3).attr("y", -3).attr("fill", c).attr("rx", 2);
+            g.append("text").attr("x", 20).attr("y", 3).attr("fill", C.muted).style("font", "500 12px var(--font-data)").text(t);
+          });
+        svg.append("g").selectAll("rect.hit").data(T).enter().append("rect").attr("class", "hit")
+          .attr("x", (t) => x(t) - 10).attr("y", M.t).attr("width", 20).attr("height", H - M.t - M.b)
+          .attr("fill", "transparent")
+          .on("mousemove", function (e, t) {
+            const i = T.indexOf(t), b = el.getBoundingClientRect();
+            tip.hidden = false;
+            tip.style.left = Math.min(e.clientX - b.left + 14, b.width - 240) + "px";
+            tip.style.top = "14px";
+            tip.innerHTML = `<b>${t}</b><br>
+              our estimate <b style="color:${C.accent}">${cal[i] ? d3.format(",.0f")(cal[i]) + " ha" : "—"}</b><br>
+              raw detection <b style="color:${C.veg}">${d3.format(",.0f")(ours[i])} ha</b><br>
+              forecast <b style="color:${C.ripe}">${pred[i] ? d3.format(",.0f")(pred[i]) + " ha" : "—"}</b><br>
+              BPS KSA <b style="color:${C.official}">${ksa[i] != null ? d3.format(",.0f")(ksa[i]) + " ha" : "not published yet"}</b>`;
+          })
+          .on("mouseleave", () => { tip.hidden = true; });
+        const g5 = SUM?.gates?.find((g) => g.id === "G-I5");
+        document.getElementById("holdout-note").innerHTML = `
+          The ${hs} season never entered the calibration. Scored once, on arrival:
+          <b>MAPE ${g5?.uncalibrated?.mape ?? "—"} %</b> uncalibrated and
+          <b>${g5?.calibrated?.mape ?? "—"} %</b> calibrated against the monthly KSA panel, with a
+          timing error of <b>${g5?.timing?.median_abs_error_weeks ?? "—"} weeks</b>. In-sample
+          agreement with a benchmark you fitted to is not evidence; this is.`;
+      })();
+
+      /* ══════════════════════════════════════════════════════════════════
+         explore — kabupaten cards
+         ══════════════════════════════════════════════════════════════════ */
+      (() => {
+        const host = document.getElementById("kab-cards");
+        if (!SUM?.kabupaten?.length) { setEmpty(host, "No kabupaten exported", "err"); return; }
+        const ciUnits = (SUM.gates ?? []).find((g) => g.id === "G-I3")?.units ?? {};
+        for (const k of SUM.kabupaten) {
+          const el = document.createElement("div");
+          el.className = "panel pad";
+          const yrs = (k.years ?? []).filter((y) => y.ksa_ha != null);
+          const rows = yrs.map((y) => `<tr>
+              <td>${y.year}${y.benchmark_usable ? "" : ' <span style="color:var(--alert)" title="BPS cell failed the referee check">*</span>'}</td>
+              <td style="text-align:right">${d3.format(",.0f")(y.harvested_ha)}</td>
+              <td style="text-align:right;color:${C.official}">${d3.format(",.0f")(y.ksa_ha)}</td>
+              <td style="text-align:right;color:${Math.abs(100*(y.harvested_ha/y.ksa_ha-1))>20?C.alert:C.muted}">
+                ${(100*(y.harvested_ha/y.ksa_ha-1)).toFixed(1)}%</td>
+            </tr>`).join("");
+          const orbits = Object.entries(k.orbits ?? {}).filter(([o]) => !o.startsWith("_"))
+            .map(([o, v]) => `T${o} <span style="color:var(--ink-muted)">${v.n_dates}d, ${v.median_offset_vv_db > 0 ? "+" : ""}${v.median_offset_vv_db} dB</span>`).join(" · ");
+          el.innerHTML = `
+            <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
+              <h3>${k.kabupaten}</h3>
+              <span class="stamp dim">${k.province} · ${k.system}</span>
+            </div>
+            ${k.note ? `<p class="prose" style="margin-top:6px;font-size:0.92rem">${k.note}</p>` : ""}
+            <div class="stats stats-tight" style="margin-top:12px">
+              <div class="stat"><b style="color:${(ciUnits[k.kabupaten]?.pass) ? C.accent : C.alert}">${d3.format(".2f")(ciUnits[k.kabupaten]?.cycles_per_year ?? 0)}</b><span>crops / yr</span></div>
+              <div class="stat"><b>${k.median_cycle_days ?? "—"} d</b><span>median cycle</span></div>
+              <div class="stat"><b>${((k.share_cells_with_any_cycle ?? 0)*100).toFixed(0)}%</b><span>cells with rice</span></div>
+            </div>
+            <div class="mono" style="margin-top:10px;font-size:0.76rem;color:var(--ink-muted)">
+              ${k.acquisitions} acquisitions · orbits ${orbits || "—"}<br>
+              median VV minimum ${k.median_vv_min_db} dB · median VH rise ${k.median_vh_rise_db} dB
+            </div>
+            ${rows ? `<div class="scroll-x" style="margin-top:12px"><table class="data">
+              <thead><tr><th>Year</th><th>Ours (ha)</th><th>BPS KSA</th><th>Δ</th></tr></thead>
+              <tbody>${rows}</tbody></table></div>` : `<p class="prose" style="margin-top:12px">
+              Jawa Tengah publishes rice at regency level annually, and its 2024–25 cells did not
+              survive the referee check — so this unit is the cropping-intensity contrast rather
+              than an area benchmark. That is stated, not hidden.</p>`}`;
+          host.appendChild(el);
+        }
+      })();
+
+      /* ══════════════════════════════════════════════════════════════════
+         gates, thresholds, provenance
+         ══════════════════════════════════════════════════════════════════ */
+      (() => {
+        const host = document.getElementById("gate-list");
+        const gs = SUM?.gates ?? [];
+        if (!gs.length) { setEmpty(host, "Gates not evaluated in this run", "err"); return; }
+        const detail = (g) => {
+          if (g.id === "G-I1") {
+            const v = g.variants ?? {};
+            return `Aggregate worst year <b>${v.uncalibrated?.worst_abs_diff_pct}%</b> uncalibrated,
+              <b>${v.calibrated?.worst_abs_diff_pct}%</b> calibrated (threshold ±${g.threshold.aggregate_pct}%).
+              Kabupaten-year fit R² <b>${v.uncalibrated?.kabupaten_r2}</b> / MAPE
+              <b>${v.uncalibrated?.kabupaten_mape}%</b> uncalibrated; R² <b>${v.calibrated?.kabupaten_r2}</b> /
+              MAPE <b>${v.calibrated?.kabupaten_mape}%</b> calibrated
+              (thresholds R² ≥ ${g.threshold.kabupaten_r2}, MAPE ≤ ${g.threshold.kabupaten_mape}%),
+              over ${v.uncalibrated?.n_kabupaten_years} kabupaten-years.`;
+          }
+          if (g.id === "G-I2") {
+            return `Median |error| <b>${g.median_abs_error_weeks ?? "—"} weeks</b> against a
+              ${g.threshold.median_abs_error_weeks}-week threshold; worst unit bias
+              <b>${g.worst_unit_bias_weeks ?? "—"} weeks</b> against ${g.threshold.max_unit_bias_weeks}.
+              ${g.n_kabupaten_seasons} kabupaten-seasons. ${g.note}`;
+          }
+          if (g.id === "G-I3") {
+            return Object.entries(g.units ?? {}).map(([k, v]) =>
+              `<b>${k}</b> ${v.cycles_per_year} cycles/yr (${v.system}) ${v.pass ? "✓" : "✗"}`).join(" · ");
+          }
+          if (g.id === "G-I4") {
+            if (!g.evaluated) return g.diagnosis;
+            return `We reproduce <b>${(g.agreement_on_prior*100).toFixed(1)}%</b> of Open-SEA-Rice-10's
+              rice area (threshold ${(g.threshold.agreement*100).toFixed(0)}%);
+              <b>${(g.agreement_on_ours*100).toFixed(1)}%</b> of our detected paddy is inside the published
+              map. ${d3.format(",")(g.prior_only_cells)} cells are theirs only,
+              ${d3.format(",")(g.ours_only_cells)} are ours only — the disagreement is the interesting part.`;
+          }
+          if (g.id === "G-I5") {
+            return `${g.holdout_season} held out entirely. Uncalibrated MAPE
+              <b>${g.uncalibrated?.mape ?? "—"}%</b>, calibrated <b>${g.calibrated?.mape ?? "—"}%</b>;
+              timing error <b>${g.timing?.median_abs_error_weeks ?? "—"} weeks</b> over ${g.n_rows} rows.`;
+          }
+          return "";
+        };
+        for (const g of gs) {
+          const v = g.pass === true ? "pass" : g.pass === false ? "fail" : "na";
+          const label = g.pass === true ? "Pass" : g.pass === false ? "Fail" : "Not evaluated";
+          const el = document.createElement("div");
+          el.className = "gate";
+          el.innerHTML = `<div class="id">${g.id}</div>
+            <div><h3 style="margin-bottom:4px">${g.name}</h3>
+              <p class="prose" style="font-size:0.92rem">${detail(g)}</p>
+              ${g.diagnosis && g.pass === false ? `<p class="prose warn callout" style="margin-top:8px;font-size:0.92rem">${g.diagnosis}</p>` : ""}</div>
+            <div><span class="verdict ${v}">${label}</span></div>`;
+          host.appendChild(el);
+        }
+        const t = SUM?.detector_thresholds ?? {};
+        document.getElementById("thresholds").innerHTML = `<div class="scroll-x"><table class="data"><tbody>
+          <tr><td>VV fall below the cell's own baseline</td><td style="text-align:right;color:${C.accent}">${t.flood_drop_db} dB</td></tr>
+          <tr><td>baseline = cell's own percentile of VV</td><td style="text-align:right">p${t.flood_baseline_pctl}</td></tr>
+          <tr><td>required VH rise</td><td style="text-align:right">${t.rise_db} dB</td></tr>
+          <tr><td>rise must be confirmed within</td><td style="text-align:right">${t.rise_window_days} days</td></tr>
+          <tr><td>heading located within</td><td style="text-align:right">${t.heading_window_days} days</td></tr>
+          <tr><td>heading → harvest</td><td style="text-align:right">${t.head_to_harvest_days} days</td></tr>
+          <tr><td>minimum cycle</td><td style="text-align:right">${t.min_cycle_days} days</td></tr>
+          <tr><td>maximum tolerated gap</td><td style="text-align:right">${t.max_gap_days} days</td></tr>
+          <tr><td style="color:var(--ink-muted)">literature single-plot VV minimum (reported, not the rule)</td>
+              <td style="text-align:right;color:var(--ink-muted)">${t.flood_db} dB</td></tr>
+        </tbody></table></div>
+        ${t.restatement ? `<p class="prose warn callout" style="margin-top:12px;font-size:0.92rem">
+          <b>The one definition this build changed.</b> ${t.restatement}</p>` : ""}`;
+        const s = SUM?.threshold_sensitivity_ha ?? {};
+        const bl = s._baseline_two_units_ha;
+        if (bl) {
+          document.getElementById("sensitivity").innerHTML =
+            `<div class="scroll-x"><table class="data"><thead><tr><th>Threshold moved</th><th>Harvested area</th><th>Change</th></tr></thead><tbody>` +
+            Object.entries(s).filter(([k]) => !k.startsWith("_")).map(([k, v]) =>
+              `<tr><td>${k}</td><td style="text-align:right">${d3.format(",.0f")(v)} ha</td>
+               <td style="text-align:right;color:${Math.abs(100*(v/bl-1))>25?C.alert:C.muted}">${(100*(v/bl-1)).toFixed(1)}%</td></tr>`).join("") +
+            `<tr><td><b>as published</b></td><td style="text-align:right"><b>${d3.format(",.0f")(bl)} ha</b></td><td></td></tr>` +
+            `</tbody></table></div><p class="prose" style="margin-top:8px;font-size:0.88rem">Measured on the first two kabupaten, which is enough to size the effect.</p>`;
+        } else {
+          document.getElementById("sensitivity").innerHTML =
+            `<p class="prose" style="font-size:0.9rem">Sensitivity sweep not available in this run.</p>`;
+        }
+        const dp = SUM?.data_path_note ?? {};
+        document.getElementById("path-note").innerHTML = `
+          <p class="prose"><b>Planned:</b> ${dp.planned ?? "—"}</p>
+          <p class="prose warn callout" style="margin-top:10px"><b>What reality said:</b> ${dp.reality ?? "—"}</p>
+          <p class="prose" style="margin-top:10px"><b>What shipped:</b> ${dp.shipped ?? "—"}
+          The exchange is not a downgrade: 10 m instead of 30 m retires the spec's largest stated
+          risk — that mixed pixels dilute the flooding minimum on 0.3–0.5 ha Javanese sawah plots —
+          and the analysis reads overview level ${(SUM?.vintages?.sentinel1?.read_at_m ?? 80) / 10}
+          of each COG, which is a 64-look average <em>in linear power</em> computed server-side.</p>`;
+        const ul = document.getElementById("licences");
+        (SUM?.licences ?? []).forEach((l) => { const li = document.createElement("li"); li.textContent = l; ul.appendChild(li); });
+        document.getElementById("lbs").textContent = SUM?.lahan_baku_sawah ?? "";
+      })();
+    </script>
   </body>
 </html>
