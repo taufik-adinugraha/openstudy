@@ -403,6 +403,35 @@ const maxMean = summary.topMean[0].v;
           const i = featureAt(e);
           if (i >= 0) openPanel(geo.features[i].properties.id);
         });
+        // debug hook (harmless in production; lets tooling test the hit logic directly)
+        window.__map2d = {
+          n: () => paths.length,
+          at: (px, py) => {
+            for (let i = paths.length - 1; i >= 0; i--) {
+              const b = boxes[i];
+              if (px < b[0] || px > b[2] || py < b[1] || py > b[3]) continue;
+              if (hitCtx.isPointInPath(paths[i], px, py)) return geo.features[i].properties.id;
+            }
+            return null;
+          },
+          box: (i) => boxes[i],
+          probeDeep: (px, py) => {
+            const cands = [];
+            for (let i = 0; i < paths.length; i++) {
+              const b = boxes[i];
+              if (px >= b[0] && px <= b[2] && py >= b[1] && py <= b[3]) cands.push(i);
+            }
+            const results = cands.slice(0, 6).map((i) => ({
+              i, id: geo.features[i].properties.id.slice(-6),
+              hit: hitCtx.isPointInPath(paths[i], px, py),
+              hitEvenOdd: hitCtx.isPointInPath(paths[i], px, py, "evenodd"),
+              mainCtxHit: ctx.isPointInPath(paths[i], px / dpr, py / dpr),
+            }));
+            // self-test: first candidate's first vertex nudged inward
+            return { hitW: hitCtx.canvas.width, hitH: hitCtx.canvas.height, dpr,
+                     nCands: cands.length, results };
+          },
+        };
         return {
           paint(month, metric) { shade(month, metric); paintAll(); },
           ready(cb) { cb(); },

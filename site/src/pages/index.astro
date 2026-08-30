@@ -145,12 +145,75 @@ const DEMOS = {
         </div>
       </div>
 
-      <div class="coming">
-        <span class="stamp">PHASE 2 — IN THE PIPELINE</span>
-        <ul>
-          <li><b>Air Quality Nowcast</b> — Jabodetabek PM2.5, sensor fusion</li>
-        </ul>
+      <div class="case building" data-case="airquality">
+        <div class="case-visual aq-visual" aria-hidden="true">
+          <span class="aq-sun"></span>
+          <span class="aq-haze z1"></span><span class="aq-haze z2"></span><span class="aq-haze z3"></span>
+          <span class="aq-reading">PM2.5 · JAKARTA · T+48H</span>
+        </div>
+        <div class="case-body">
+          <span class="badge">PHASE 2 — QUEUED NEXT</span>
+          <h2>Jabodetabek Air Quality Nowcast</h2>
+          <p>Satellite columns, ground sensors, weather fields, and fire hotspots
+          fused into a 24–72 hour PM2.5 forecast — the case that proves live,
+          operational pipelines rather than snapshots.</p>
+          <span class="meta">SENTINEL-5P · OPENAQ · ERA5 · ML FORECAST · NEAR-REAL-TIME</span>
+        </div>
       </div>
+
+      <div class="queued-head">
+        <span class="stamp">PHASE 3 — DESIGNED, IN THE QUEUE</span>
+      </div>
+      <div class="queued-grid">
+        <div class="mini-case" data-case="poverty">
+          <div class="mini-visual roof-grid" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+          <h3>Poverty Mapping from Space</h3>
+          <p>Rooftops, lights, and building footprints as welfare signals —
+          village-level estimates checked against BPS statistics.</p>
+          <span class="meta">GEO-ML · OPEN BUILDINGS · SMALL-AREA ESTIMATION</span>
+        </div>
+        <div class="mini-case" data-case="transit">
+          <div class="mini-visual" aria-hidden="true">
+            <svg viewBox="0 0 220 120" preserveAspectRatio="xMidYMid meet">
+              <polyline points="10,95 60,95 95,60 210,60" fill="none" stroke="#E4562E" stroke-width="5" stroke-linejoin="round"/>
+              <polyline points="10,30 80,30 120,70 120,112" fill="none" stroke="#3E8EDE" stroke-width="5" stroke-linejoin="round"/>
+              <polyline points="30,112 30,75 75,45 210,22" fill="none" stroke="#57B26A" stroke-width="5" stroke-linejoin="round"/>
+              <g fill="#101216" stroke="#E9EAED" stroke-width="2.5">
+                <circle cx="95" cy="60" r="5"/><circle cx="80" cy="30" r="5"/><circle cx="120" cy="70" r="5"/>
+                <circle cx="60" cy="95" r="5"/><circle cx="75" cy="45" r="5"/>
+              </g>
+            </svg>
+          </div>
+          <h3>Transit Access &amp; Urban Equity</h3>
+          <p>TransJakarta + rail + roads as one routing graph: who can reach
+          jobs and healthcare in an hour — and who can’t.</p>
+          <span class="meta">GTFS · OSM · GRAPH ROUTING · EQUITY</span>
+        </div>
+        <div class="mini-case" data-case="forest">
+          <div class="mini-visual" aria-hidden="true">
+            <svg viewBox="0 0 220 120" preserveAspectRatio="xMidYMid meet">
+              <g fill="#57B26A">
+                <circle cx="18" cy="24" r="8"/><circle cx="42" cy="40" r="10"/><circle cx="22" cy="62" r="9"/>
+                <circle cx="50" cy="82" r="8"/><circle cx="74" cy="30" r="9"/><circle cx="70" cy="64" r="10"/>
+                <circle cx="30" cy="100" r="7"/><circle cx="92" cy="90" r="8"/><circle cx="98" cy="52" r="7"/>
+              </g>
+              <path d="M118 0 L138 120" stroke="#B4552A" stroke-width="2" stroke-dasharray="5 4" fill="none"/>
+              <g fill="#B4552A" opacity="0.75">
+                <circle cx="150" cy="34" r="5"/><circle cx="176" cy="58" r="4"/><circle cx="158" cy="86" r="4"/>
+                <circle cx="196" cy="30" r="3.5"/><circle cx="192" cy="96" r="4.5"/>
+              </g>
+            </svg>
+          </div>
+          <h3>Forest &amp; Commodity Watch</h3>
+          <p>Where Global Forest Watch stops: alerts linked to concessions
+          and supply chains, not just pixels of loss.</p>
+          <span class="meta">SENTINEL-2 · RADD ALERTS · SUPPLY-CHAIN LINKAGE</span>
+        </div>
+      </div>
+      <p class="parked-note">Parked: maritime traffic analytics — the credible open AIS source is licensed
+      non-commercial; it returns if a commercial feed appears.</p>
     </section>
 
     <footer id="contact" class="foot">
@@ -292,6 +355,39 @@ const DEMOS = {
       .narrative-visual span:nth-child(11) { height: 24px; animation-delay: 1s; }
       .narrative-visual span:nth-child(12) { height: 48px; animation-delay: 1.1s; }
       @keyframes pulse-bar { 50% { transform: scaleY(0.55); } }
+      /* air-quality visual: haze layers drifting across a hidden sun */
+      .aq-visual { position: relative; overflow: hidden; }
+      .aq-sun { position: absolute; left: 24%; top: 26%; width: 70px; height: 70px; border-radius: 50%;
+        background: radial-gradient(circle, #F3D9A4 0%, rgba(243,217,164,0.25) 55%, transparent 75%); }
+      .aq-haze { position: absolute; left: -30%; width: 160%; height: 34%; border-radius: 50%;
+        filter: blur(18px); animation: haze-drift 14s ease-in-out infinite alternate; }
+      .aq-haze.z1 { top: 8%; background: rgba(151,161,172,0.16); }
+      .aq-haze.z2 { top: 36%; background: rgba(151,161,172,0.26); animation-duration: 18s; }
+      .aq-haze.z3 { top: 64%; background: rgba(111,199,214,0.14); animation-duration: 23s; }
+      @keyframes haze-drift { to { transform: translateX(9%); } }
+      .aq-reading { position: absolute; left: 22px; bottom: 16px; font-family: var(--font-data);
+        font-size: 0.62rem; letter-spacing: 0.12em; color: var(--accent); }
+
+      /* queued phase-3 grid */
+      .queued-head { margin-top: 8px; }
+      .queued-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+      @media (max-width: 860px) { .queued-grid { grid-template-columns: 1fr; } }
+      .mini-case { border: 1px solid var(--hairline); border-radius: 8px; overflow: hidden;
+        background: var(--surface); display: flex; flex-direction: column; }
+      .mini-case h3 { margin: 0; font-size: 1.02rem; padding: 16px 18px 0; letter-spacing: -0.01em; }
+      .mini-case p { margin: 0; padding: 8px 18px 0; font-size: 0.85rem; line-height: 1.55; color: var(--ink-muted); }
+      .mini-case .meta { padding: 12px 18px 18px; margin-top: auto; }
+      .mini-visual { height: 130px; background: linear-gradient(120deg, var(--ground), var(--surface));
+        display: flex; align-items: center; justify-content: center; }
+      .mini-visual svg { width: 78%; height: 82%; }
+      .roof-grid { display: grid; grid-template-columns: repeat(10, 12px); grid-auto-rows: 12px; gap: 4px;
+        align-content: center; justify-content: center; }
+      .roof-grid i { background: var(--accent); opacity: 0.35; border-radius: 2px; }
+      .roof-grid i:nth-child(3n) { opacity: 0.7; }
+      .roof-grid i:nth-child(7n) { opacity: 0.16; }
+      .roof-grid i:nth-child(11n) { background: #6FC7D6; opacity: 0.85; }
+      .parked-note { margin: 4px 0 0; font-size: 0.8rem; color: var(--ink-muted); font-style: italic; max-width: 60ch; }
+
       .coming { border: 1px dashed var(--hairline); border-radius: 8px; padding: 24px 28px; display: flex; flex-direction: column; gap: 12px; }
       .coming ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; color: var(--ink-muted); font-size: 0.92rem; }
 

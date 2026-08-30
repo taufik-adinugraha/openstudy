@@ -110,6 +110,39 @@
   --tone-neg: #F26D5B;
 }
 
+/* ── Case: air quality — haze clearing to sky ───────────────────────── */
+[data-case="airquality"] {
+  --ground: #10131A; --surface: #181D26; --surface-raised: #202733;
+  --ink: #E9EBEE; --ink-muted: #97A1AC; --hairline: #262E3A;
+  --accent: #6FC7D6;          /* washed sky cyan — the AQI ramp stays data-only */
+  --accent-ink: #0E2A30;
+}
+
+/* ── Case: poverty mapping — ground truth, rooftops and soil ────────── */
+[data-case="poverty"] {
+  --ground: #14100C; --surface: #1E1812; --surface-raised: #281f17;
+  --ink: #F0EAE1; --ink-muted: #A99C8B; --hairline: #332921;
+  --accent: #D99A4E;          /* ochre — roofscape from above */
+  --accent-ink: #33220D;
+}
+
+/* ── Case: transit equity — metro-line chromatics on graphite ───────── */
+[data-case="transit"] {
+  --ground: #101216; --surface: #181B21; --surface-raised: #20242C;
+  --ink: #E9EAED; --ink-muted: #989DA8; --hairline: #272C36;
+  --accent: #E4562E;          /* TransJakarta red-orange as the line colour */
+  --accent-ink: #351105;
+}
+
+/* ── Case: forest watch — canopy against burn ───────────────────────── */
+[data-case="forest"] {
+  --ground: #0C120D; --surface: #141C15; --surface-raised: #1B261C;
+  --ink: #E7ECE6; --ink-muted: #93A394; --hairline: #243025;
+  --accent: #57B26A;          /* canopy green; burnt umber reserved for loss */
+  --accent-ink: #10301A;
+  --loss: #B4552A;
+}
+
 /* ── Light fallback (accessibility/print) ───────────────────────────── */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
