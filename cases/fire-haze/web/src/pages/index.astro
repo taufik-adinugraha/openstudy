@@ -1272,8 +1272,9 @@ const CHAPTERS = [
           map.canvas.addEventListener("pointerleave", () => { hoverIdx = -1; tip.hide(); map.redraw(); });
 
           document.getElementById("risk-legend").innerHTML =
-            C.ramp.map((c, i) => `<span><i style="background:${c}"></i>${
-              ["0", "", "", "", "high"][i]}</span>`).join("") +
+            `<span style="display:flex;align-items:center;gap:4px">low` +
+            C.ramp.map((c) => `<i style="background:${c};width:14px;margin:0"></i>`).join("") +
+            `high</span>` +
             '<span><i style="background:var(--fire);border-radius:50%"></i>detection</span>';
           show(idx);
         }
@@ -1309,7 +1310,7 @@ const CHAPTERS = [
           const host = document.getElementById("ch-reliability");
           const bins = skill?.leads?.["1"]?.forecast?.reliability ?? [];
           if (!bins.length) { host.innerHTML = '<div class="empty">Reliability not computed yet.</div>'; return; }
-          const W = 900, Hh = 300, m = { t: 16, r: 20, b: 42, l: 62 };
+          const W = 900, Hh = 300, m = { t: 26, r: 24, b: 46, l: 92 };
           const hi = Math.max(d3.max(bins, (d) => d.p_mean), d3.max(bins, (d) => d.observed)) * 1.1;
           const x = d3.scaleLinear().domain([0, hi]).range([m.l, W - m.r]);
           const y = d3.scaleLinear().domain([0, hi]).range([Hh - m.b, m.t]);
@@ -1320,8 +1321,9 @@ const CHAPTERS = [
             .attr("x1", m.l).attr("x2", W - m.r).attr("y1", y).attr("y2", y);
           svg.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(hi)).attr("y2", y(hi))
             .attr("stroke", C.muted).attr("stroke-dasharray", "4 4").attr("stroke-width", 1.5);
-          svg.append("text").attr("x", x(hi) - 4).attr("y", y(hi) + 16).attr("text-anchor", "end")
+          svg.append("text").attr("x", x(hi * 0.62)).attr("y", y(hi * 0.62) - 10)
             .attr("fill", C.muted).attr("font-family", "var(--font-data)").attr("font-size", 12)
+            .attr("transform", `rotate(-38, ${x(hi * 0.62)}, ${y(hi * 0.62) - 10})`)
             .text("perfect calibration");
           svg.append("g").attr("class", "axis").attr("transform", `translate(0,${Hh - m.b})`)
             .call(d3.axisBottom(x).ticks(6).tickFormat(d3.format(".1%")));
@@ -1331,9 +1333,10 @@ const CHAPTERS = [
             .attr("text-anchor", "middle").attr("fill", C.muted)
             .attr("font-family", "var(--font-data)").attr("font-size", 12)
             .text("predicted probability");
-          svg.append("text").attr("transform", `rotate(-90)`).attr("x", -(Hh - m.b + m.t) / 2)
-            .attr("y", 16).attr("text-anchor", "middle").attr("fill", C.muted)
+          svg.append("text").attr("transform", "rotate(-90)").attr("x", -(Hh - m.b + m.t) / 2)
+            .attr("y", 14).attr("text-anchor", "middle").attr("fill", C.muted)
             .attr("font-family", "var(--font-data)").attr("font-size", 12)
+            .attr("dominant-baseline", "hanging")
             .text("observed frequency");
           svg.append("path").datum(bins).attr("fill", "none").attr("stroke", C.accent)
             .attr("stroke-width", 2).attr("stroke-linejoin", "round")
