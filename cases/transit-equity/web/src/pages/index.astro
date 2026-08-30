@@ -256,21 +256,29 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
       const state = { cutoff: 60, scenario: "all", sel: null };
       const rows = access.rows;
+      /* Frame the mainland. Kepulauan Seribu lies ~60 km offshore; including it in the bounds
+         shrank Jabodetabek to a third of the frame. The islands stay in every number and in
+         the tables — they are simply off-frame on the maps, which is stated in the note. */
       const B = (() => {
         let w = 180, s = 90, e = -180, n = -90;
         for (const f of geo.features) {
+          if (/seribu/i.test(f.properties.r ?? "")) continue;
           const polys = f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
           for (const poly of polys) for (const ring of poly) for (const [x, y] of ring) {
             if (x < w) w = x; if (x > e) e = x; if (y < s) s = y; if (y > n) n = y;
           }
         }
-        return { w, s, e, n };
+        const padLon = (e - w) * 0.015, padLat = (n - s) * 0.015;
+        return { w: w - padLon, s: s - padLat, e: e + padLon, n: n + padLat };
       })();
 
       const val = (id, sc = state.scenario, cut = state.cutoff) => {
         const r = rows[id]; if (!r || !r[sc]) return null;
         const a = r[sc][String(cut)]; return a ? a[0] : null;
       };
+      /* Access is extremely concentrated, so the choropleth uses a square-root scale — stated
+         on the legend — or nine tenths of the region would read as a single flat black. */
+      const shadeT = (v) => Math.sqrt(Math.max(0, Math.min(1, (v ?? 0) / maxVal)));
       const maxVal = (() => {
         let m = 0; for (const id in rows) { const v = val(id, "all", 60); if (v > m) m = v; } return m || 1;
       })();
@@ -362,7 +370,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
       }
       /* the base map is not one flat grey: each kelurahan carries a whisper of its own access */
       const baseTint = d3.piecewise(d3.interpolateRgb, ["#0F1218", "#1A1A20", "#2A1D1D", "#3A231B"]);
-      const baseFill = geo.features.map((f) => baseTint(Math.min(1, (val(f.properties.id, "all", 60) ?? 0) / maxVal)));
+      const baseFill = geo.features.map((f) => baseTint(shadeT(val(f.properties.id, "all", 60))));
 
       /* ═════════ HERO — the hour blooming outward ═════════ */
       sect("hero", () => {
@@ -430,11 +438,14 @@ import "maplibre-gl/dist/maplibre-gl.css";
               const tt = iso.t[j]; if (tt > t) break;
               const age = Math.min(1, (t - tt) / 6);
               const ci = iso.i[j];
-              ctx.globalAlpha = 0.18 + 0.5 * age;
-              ctx.fillStyle = BAND[bandOf(tt)];
               const x = m.X(cellLon[ci]), y = m.Y(cellLat[ci]);
-              const s = px * (0.55 + 0.45 * age);
-              ctx.fillRect(x - s / 2, y - s / 2, s, s);
+              ctx.fillStyle = BAND[bandOf(tt)];
+              const halo = px * (1.5 + 0.7 * age);             // soft spill, additively blended
+              ctx.globalAlpha = 0.1 + 0.13 * age;
+              ctx.fillRect(x - halo / 2, y - halo / 2, halo, halo);
+              const core = px * (0.5 + 0.5 * age);             // the cell itself
+              ctx.globalAlpha = 0.3 + 0.55 * age;
+              ctx.fillRect(x - core / 2, y - core / 2, core, core);
             }
             ctx.globalCompositeOperation = "source-over";
             ctx.globalAlpha = 1;
@@ -521,7 +532,9 @@ import "maplibre-gl/dist/maplibre-gl.css";
             if (ln.m === "brt" || ln.m === "mikrotrans" || !active.has(ln.m) || !ln.c?.length) continue;
             const label = (ln.n || "").replace(/Krl |Lrt |Mrt /i, (x) => x.toUpperCase());
             const w = ctx.measureText(label).width;
-            const ends = [ln.c[ln.c.length - 1], ln.c[0]];
+            const cx = m.W / 2, cy = m.H / 2;
+            const ends = [ln.c[ln.c.length - 1], ln.c[0]].sort((a, b) =>
+              Math.hypot(m.X(b[0]) - cx, m.Y(b[1]) - cy) - Math.hypot(m.X(a[0]) - cx, m.Y(a[1]) - cy));
             for (const [lon, lat] of ends) {
               const x = m.X(lon), y = m.Y(lat);
               let done = false;
@@ -575,7 +588,8 @@ import "maplibre-gl/dist/maplibre-gl.css";
         });
         const rampEl = document.getElementById("ramp");
         rampEl.innerHTML = `<span class="rlab">0%</span><i></i><span class="rlab" id="ramp-max">${pct(maxVal, 0)}</span>
-          <span class="rcap">share of the region's job-dense floorspace reachable</span>`;
+          <span class="rcap">share of the region's job-dense floorspace reachable · square-root scale ·
+          mid-tone ≈ ${pct(maxVal * 0.25, 1)} · Kepulauan Seribu is off-frame</span>`;
         rampEl.querySelector("i").style.background = `linear-gradient(90deg, ${RAMP.join(",")})`;
       });
 
@@ -644,7 +658,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
         function shadeGeo() {
           for (const f of geo.features) {
             const v = val(f.properties.id);
-            f.properties.v = v == null ? 0 : v / maxVal;
+            f.properties.v = shadeT(v);
           }
         }
 
@@ -717,7 +731,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
             ctx.fillStyle = "#0C0F13"; ctx.fillRect(0, 0, m.W, m.H);
             geo.features.forEach((f, i) => {
               const v = val(f.properties.id);
-              ctx.fillStyle = v == null ? "#12151B" : ramp(Math.min(1, v / maxVal));
+              ctx.fillStyle = v == null ? "#12151B" : ramp(shadeT(v));
               ctx.fill(m.paths[i]);
               ctx.strokeStyle = "#1B2029"; ctx.lineWidth = 0.3; ctx.stroke(m.paths[i]);
             });
@@ -789,7 +803,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
             "Palma ratio — undefined here: the bottom four tenths of the population reach essentially nothing";
         document.getElementById("nohosp").textContent = pct(sAll.pop_share_no_hospital_60min, 0);
         const el = document.getElementById("lorenz");
-        const W = el.clientWidth || 560, H = Math.min(420, Math.max(300, W * 0.72));
+        const W = Math.max(320, (el.clientWidth || 560) - 18), H = Math.min(420, Math.max(300, W * 0.72));
         const M = { t: 18, r: 18, b: 44, l: 52 };
         const x = d3.scaleLinear([0, 1], [M.l, W - M.r]), y = d3.scaleLinear([0, 1], [H - M.b, M.t]);
         const svg = d3.select(el).append("svg").attr("width", W).attr("height", H).attr("role", "img")
@@ -839,7 +853,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
             const i = Math.min(c.length - 1, Math.max(0, Math.round(xv * (c.length - 1))));
             focus.attr("opacity", 1).attr("transform", `translate(${x(c[i][0])},${y(c[i][1])})`);
             ft.text(`${d3.format(".0%")(c[i][0])} of people → ${d3.format(".1%")(c[i][1])} of reachable jobs`);
-            ft.attr("x", c[i][0] > 0.6 ? -10 : 10).attr("text-anchor", c[i][0] > 0.6 ? "end" : "start");
+            ft.attr("x", c[i][0] > 0.5 ? -10 : 10).attr("text-anchor", c[i][0] > 0.5 ? "end" : "start");
           })
           .on("mouseleave", () => focus.attr("opacity", 0));
 
@@ -891,18 +905,27 @@ import "maplibre-gl/dist/maplibre-gl.css";
             <span class="g-id">${id}</span><div><b>${title}</b><p>${body}</p></div>
             <span class="g-flag">${ok === true ? "PASS" : ok === false ? "FAIL" : "PENDING"}</span></div>`);
           const g1 = stats["G-G1"] ?? {};
-          mk("G-G1", "Timetable sanity", (g1.ods ?? []).map((o) =>
-            `${o.name}: published ${o.published_min} min, routed ${o.r5_in_vehicle_min ?? "—"} min${o.note ? ` (${o.note})` : ""}`).join("<br>") || "not evaluated", g1.pass);
+          mk("G-G1", "Timetable sanity", ((g1.ods ?? []).map((o) =>
+            `${o.name}: operator publishes <b>${o.published_min} min</b>, our timetable schedules <b>${o.scheduled_in_vehicle_min ?? "—"} min</b>` +
+            `${typeof o.router_door_to_door_min === "number" ? ` (router door-to-door, incl. walk + wait: ${Math.round(o.router_door_to_door_min)} min)` : ""}` +
+            `${o.note ? ` — ${o.note}` : ""}`).join("<br>") || "not evaluated") +
+            (g1.method ? `<br><span class="dim">${g1.method}.</span>` : ""), g1.pass);
           const g2 = stats["G-G2"] ?? {};
           mk("G-G2", "External routing check", g2.reason ?? "not evaluated", null);
           const g3 = stats["G-G3"] ?? {};
-          mk("G-G3", "Network integrity", `${num(g3.stops)} GTFS stops; ${g3.snap_share == null ? (g3.snap_note ?? "snap test unavailable") : pct(g3.snap_share, 1) + " snap to the street graph within 200 m"}; ${num(g3.unreachable_origins)} unreachable origins of ${num(g3.origins)}.`, g3.pass);
+          mk("G-G3", "Network integrity",
+            `${num(g3.stops)} GTFS stops; ${g3.snap_share == null ? (g3.snap_note ?? "snap test unavailable") : pct(g3.snap_share, 2) + " snap to the street graph within 200 m"}. ` +
+            `${num(g3.unreachable_origins)} of ${num(g3.origins)} origins could not be routed at all` +
+            `${g3.unreachable_kepulauan_seribu ? ` (${g3.unreachable_kepulauan_seribu} of them Kepulauan Seribu, which has no road link to the mainland and sits outside the routable clip; ${num(g3.unreachable_mainland)} on the mainland)` : ""}. ` +
+            `<span class="dim">${g3.note ?? ""}</span>`, g3.pass);
           const g4 = stats["G-G4"] ?? {};
           const pnt = g4.people_near_transit ?? {};
           mk("G-G4", "Plausibility", [
-            g4.monotonicity ? `Rail ≥ no-rail everywhere: ${g4.monotonicity.violations ?? "—"} violations of ${num(g4.monotonicity.origins)}.` : "",
+            g4.monotonicity ? `Rail ≥ no-rail everywhere: ${num(g4.monotonicity.violations_material ?? g4.monotonicity.violations)} material violations of ${num(g4.monotonicity.origins)} origins` +
+              `${g4.monotonicity.violations_exact != null ? ` (${num(g4.monotonicity.violations_exact)} below the ${pct(g4.monotonicity.tolerance_share, 1)} tolerance — R5 samples frequency headways by Monte Carlo)` : ""}.` : "",
             g4.core_periphery ? `DKI median ${pct(g4.core_periphery.dki_median, 2)} vs Bodetabek ${pct(g4.core_periphery.bodetabek_median, 2)}.` : "",
-            pnt.Jakarta ? `People-near-transit (≤15-min headway, 1 km): Jakarta ${pct(pnt.Jakarta.share, 0)} vs ITDP's 2016 anchor 44%; Greater Jakarta ${pct(pnt["Greater Jakarta"].share, 0)} vs 16%.` : "",
+            pnt.Jakarta ? `People-near-transit (≤15-min headway, 1 km): Jakarta ${pct(pnt.Jakarta.share, 0)} vs ITDP's 2016 anchor 44%; Greater Jakarta ${pct(pnt["Greater Jakarta"].share, 0)} vs 16%.` +
+              `${pnt.method ? `<br><span class="dim">${pnt.method}</span>` : ""}` : "",
           ].filter(Boolean).join("<br>"), g4.pass);
           g.innerHTML = rowsG.join("");
         }
