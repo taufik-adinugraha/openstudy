@@ -1580,7 +1580,17 @@ const pending = !S;
               g.append("line").attr("x1", mx0).attr("x2", mx1)
                 .attr("y1", yy + (rowH - 9) / 2).attr("y2", yy + (rowH - 9) / 2)
                 .attr("stroke", d3.color(c).copy({ opacity: 0.28 }) + "").attr("stroke-width", 1);
-              const of = s.obs_first_utc ?? s.first_utc, ol = s.obs_last_utc ?? s.last_utc;
+              if (!s.obs_first_utc) {
+                // the provider says it lived, but no hours from it reach the
+                // modelling table — say which of the two reasons applies
+                const before = winStart && new Date(s.last_utc) < new Date(winStart);
+                g.append("text").attr("class", "lbl")
+                  .attr("x", Math.min(mx1 + 8, iw - 190)).attr("y", yy + 10)
+                  .style("font-size", "11px")
+                  .text(before ? "ended before the build window" : "too short to model");
+                return;
+              }
+              const of = s.obs_first_utc, ol = s.obs_last_utc;
               const x0 = x(new Date(of)), x1 = Math.max(x0 + 2, x(new Date(ol)));
               const rect = g.append("rect").attr("x", x0).attr("y", yy).attr("height", rowH - 9).attr("rx", 2)
                 .attr("width", 0).attr("fill", d3.color(c).copy({ opacity: 0.75 }) + "")
