@@ -1358,6 +1358,7 @@ const CHAPTERS = [
           }
           const fwi = skill.fwi ?? {};
           const fwiPer = fwi.per_lead ?? {};
+          skill.folds = skill.folds ?? (skill.panel?.years?.length ?? null);
           const rows = Object.keys(leads).sort((a, b) => +a - +b).map((L) => {
             const f = leads[L].forecast ?? {}, r = leads[L].reanalysis ?? {};
             const w = fwiPer[L] ?? {};
@@ -1394,9 +1395,21 @@ const CHAPTERS = [
               ? `<p class="muted" style="font-size:13px;margin-top:12px">
                    <b>The CEMS FWI half of G-J2 is PENDING.</b> ${fwi.reason ?? ""}</p>`
               : `<p class="muted" style="font-size:13px;margin-top:12px">
-                   The FWI is given the fairest possible treatment: isotonically calibrated to a
-                   probability on the same training folds, so it is compared at its best rather
-                   than as a raw index scored as if it were one.</p>`}`;
+                   <b>Both external baselines are calibrated before they are beaten.</b> The CEMS
+                   FWI and the persistence rule ("it burned here in the last 7 days") are each
+                   isotonically mapped to a probability on the same held-out season the model is,
+                   so each is compared at its best. A raw index or a bare 0/1 rule scored as if it
+                   were a probability collects an appalling Brier score and hands us a skill
+                   number that means nothing.</p>`}
+            ${skill.panel?.path_note ? `<p class="muted" style="font-size:13px">
+               ${skill.panel.path_note}</p>` : ""}
+            ${skill.fold_caveat || (skill.folds && skill.folds < 5)
+              ? `<p class="muted" style="font-size:13px">
+                   <b>${skill.folds ?? "—"} blocked-by-season folds.</b> The ERA5 record is bounded
+                   by the Copernicus queue, not by the method, so these numbers carry more sampling
+                   variance than the same numbers on a full fifteen-year record would. Re-running
+                   the pipeline lengthens the record and this figure with it.</p>`
+              : ""}`;
         }
 
         function foresightGap(skill) {

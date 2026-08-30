@@ -326,6 +326,8 @@ def main() -> None:
     total += write(WEB / "skill.json", {
         "leads": rmeta.get("leads", {}),
         "fwi": rmeta.get("fwi", {}),
+        "folds": rmeta.get("n_folds"), "fold_caveat": rmeta.get("fold_caveat"),
+        "era5_years": rmeta.get("era5_years"),
         "shap": rmeta.get("shap_families", {}),
         "importance": rmeta.get("importance", {}),
         "anchor_scores": rmeta.get("anchor_scores", {}),
