@@ -1,0 +1,164 @@
+<title>Global Narrative Spec</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper: #FAF9F5; --surface: #F1EEF6; --ink: #221C2E; --muted: #665E78;
+    --hairline: #E2DDEC; --accent: #7A3FB8; --accent-soft: #EDE3F8;
+    --teal: #177368; --warn: #A6521F; --warn-soft: #F5E4D7; --code-bg: #ECE7F3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0E0A16; --surface: #171126; --ink: #EAE6F2; --muted: #9C93B3;
+      --hairline: #2A2142; --accent: #B26DF2; --accent-soft: #26113E;
+      --teal: #4BB8A9; --warn: #E08B54; --warn-soft: #3A2413; --code-bg: #1F1733;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0E0A16; --surface: #171126; --ink: #EAE6F2; --muted: #9C93B3;
+    --hairline: #2A2142; --accent: #B26DF2; --accent-soft: #26113E;
+    --teal: #4BB8A9; --warn: #E08B54; --warn-soft: #3A2413; --code-bg: #1F1733;
+  }
+  body { background: var(--paper); color: var(--ink); font-family: "Source Serif 4", Georgia, serif; font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 56px 24px 96px; }
+  h1, h2, h3 { font-family: "Archivo", Arial, sans-serif; text-wrap: balance; margin: 0; }
+  h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
+  h2 { font-size: 1.3rem; font-weight: 700; }
+  p { margin: 0; max-width: 68ch; }
+  a { color: var(--teal); }
+  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+  header.doc { display: flex; flex-direction: column; gap: 14px; padding-bottom: 30px; border-bottom: 2px solid var(--ink); }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px 26px; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--muted); }
+  .meta-row b { color: var(--ink); font-weight: 500; }
+  section { display: flex; flex-direction: column; gap: 16px; margin-top: 48px; }
+  .lede { font-size: 1rem; color: var(--muted); }
+  .q { font-size: 1.15rem; font-style: italic; border-left: 3px solid var(--accent); padding: 6px 0 6px 18px; max-width: 62ch; }
+  table { border-collapse: collapse; width: 100%; font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; line-height: 1.55; }
+  .table-scroll { overflow-x: auto; }
+  th { text-align: left; font-weight: 600; font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 8px 14px 8px 0; border-bottom: 1px solid var(--ink); }
+  td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  code { font-family: "IBM Plex Mono", monospace; font-size: 0.82em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  ul.plain, ol.plain { margin: 0; padding-left: 1.35em; display: flex; flex-direction: column; gap: 9px; max-width: 70ch; }
+  ol.plain li::marker, ul.plain li::marker { color: var(--accent); font-family: "IBM Plex Mono", monospace; font-weight: 600; }
+  .stage { display: grid; grid-template-columns: 120px 1fr; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--hairline); }
+  .stage:last-child { border-bottom: 0; }
+  .stage .sname { font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; font-weight: 600; color: var(--accent); padding-top: 3px; }
+  .stage p { font-size: 0.95rem; }
+  @media (max-width: 600px) { .stage { grid-template-columns: 1fr; gap: 4px; } }
+  .gate { border: 1px solid var(--hairline); border-left: 3px solid var(--teal); background: var(--surface); padding: 14px 18px; font-size: 0.95rem; max-width: 70ch; }
+  .check li { list-style: none; position: relative; padding-left: 1.6em; }
+  .check li::before { content: "☐"; position: absolute; left: 0; color: var(--accent); font-family: "IBM Plex Mono", monospace; }
+  .check { padding-left: 0; }
+  footer.doc { margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--hairline); font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header class="doc">
+    <span class="eyebrow">Phase 2 · Case D · Spec v1 · decisions D20–D22</span>
+    <h1>Indonesia in the Global Narrative</h1>
+    <p class="lede">How much the world's news talks about Indonesia, how warmly, and about what —
+    a decade of attention, tone, and themes from GDELT's open feeds across 65+ languages.
+    No Google account, no API keys; runs entirely on the dev server.</p>
+    <div class="meta-row">
+      <span>DATE <b>2026-08-30</b></span>
+      <span>REFRESH <b>Nightly (API) + periodic events pull</b></span>
+      <span>IDENTITY <b>Signal violet · broadcast black</b></span>
+      <span>DATA PATH <b>Live-tested by reconnaissance 2026-08-30</b></span>
+    </div>
+  </header>
+
+  <section>
+    <span class="eyebrow">N1 · The question</span>
+    <p class="q">“When the world talks about Indonesia — how much, how warmly, and about what?”</p>
+    <p>Every strategy, IR, and communications team asks this; almost none can answer it beyond
+    anecdote. GDELT machine-reads the world's news every 15 minutes. This case distils that
+    firehose into signals with the discipline of the GPR index: attention as a <em>share</em> of
+    everything monitored (never raw counts — the crawl's size swings 2–3× across years),
+    tone with honest error bars, and event types from a deduplicated event stream.
+    Decisions: <b>D20</b> no BigQuery — open feeds only; <b>D21</b> hybrid architecture;
+    <b>D22</b> one shared window, 2017→now.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">N2 · Data contract</span>
+    <h2>Data contract</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Source</th><th>Product / access</th><th>Verified facts</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>GDELT DOC 2.0 API</td><td><code>api.gdeltproject.org/api/v2/doc/doc</code> — keyless; TimelineVol / TimelineVolRaw / TimelineTone / TimelineSourceCountry / ArtList</td><td>Archive starts 2017-01-01 exactly; one query spans the full range (daily resolution); TimelineVol is pre-normalized (share of all monitored articles); rate-limited ~1 req/10–15 s (429s observed) — every response cached to disk; ArtList caps at 250 records</td><td>Normalized curves: attention, tone, themes, source countries</td></tr>
+          <tr><td>GDELT v2 raw events</td><td><code>data.gdeltproject.org/gdeltv2/</code> — 15-min <code>export</code> zips, English + translation feeds; masterfilelist carries sizes+md5</td><td>2017→now ≈ 45 GB compressed both feeds; streamed → filtered → discarded; Indonesia rows ≈ 0.7% (EN) / 4.6% (translated); kept Parquet ≈ 1–2 GB; coding split confirmed: <code>ActionGeo_CountryCode='ID'</code> (FIPS) OR <code>Actor1/2CountryCode='IDN'</code> (ISO3)</td><td>Event-grade layer: typology (QuadClass/EventRootCode), Goldstein, actors, dedup counts</td></tr>
+          <tr><td>GDELT v2 GKG</td><td>Same feed, <code>gkg</code> files</td><td><b>7.1 TB decade — NOT bulk-downloaded.</b> Only ±2-week windows around validation anchors (~10–20 GB total) for deep dives</td><td>Anchor-window theme/entity detail</td></tr>
+          <tr><td>Normalization denominators</td><td>Computed in the same streaming pass</td><td>Daily global row counts per feed recorded before filtering — our own “share of everything” denominator for the event layer</td><td>Gate G-D1</td></tr>
+          <tr><td>Licence</td><td>GDELT: free for any use with attribution</td><td>—</td><td>Attribution in methodology</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><b>Semantic rule (load-bearing, verified in data):</b> <code>sourcecountry:</code> means the
+    <em>publisher's</em> country, not the story's subject. “Indonesia in the narrative” queries the
+    keyword/location; “who talks about Indonesia” uses source-country facets; the foreign-vs-domestic
+    split uses <code>-sourcecountry:ID</code>.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">N3 · Pipeline</span>
+    <h2>Pipeline — backfill + refresh, on the dev server</h2>
+    <div>
+      <div class="stage"><span class="sname">curves</span><p>A battery of ~40 cached DOC-API queries (overall attention, foreign-only, TimelineTone, per-theme timelines — PROTEST, ECON_*, ENV_*, CYBER, ELECTION —, TimelineSourceCountry), 2017→now, one request per ~12 s with backoff; JSON cached under <code>data/raw/api/</code>; nightly refresh re-pulls only the trailing window.</p></div>
+      <div class="stage"><span class="sname">events</span><p>Stream the 15-min <code>export</code> zips (both feeds) 2017→now from the masterfile list: download → count global rows (denominator) → keep rows where <code>ActionGeo='ID' OR Actor1/2='IDN'</code> → append Parquet → delete zip. ~45 GB through the pipe, ~2 GB kept, disk never above a few hundred MB of temp. Resumable by file timestamp.</p></div>
+      <div class="stage"><span class="sname">analyze</span><p>Daily series: attention share (API + own-denominator event share), tone, event typology (QuadClass conflict/cooperation, protest counts), Goldstein-weighted intensity, foreign-vs-domestic press split, top themes per era, source-country league table. Deduplication: unique events only (mentions kept solely as prominence weights) per Wang et al. 2016.</p></div>
+      <div class="stage"><span class="sname">validate</span><p>Gates G-D1…G-D4; results to <code>stats.json</code>.</p></div>
+      <div class="stage"><span class="sname">export</span><p>Web view-models (decade waveform with anchor annotations, era summaries, theme stacks, source-country matrix, event scatter) + insight brief per D11.</p></div>
+      <div class="stage"><span class="sname">refresh</span><p>Cron: nightly API trailing pull + hourly <code>lastupdate.txt</code> events append (~12 GB/yr). The site’s vintage stamp shows both clocks.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">N4 · Validation gates</span>
+    <h2>Validation gates</h2>
+    <div class="gate"><b>G-D1 — Normalization honesty.</b> Every attention chart is a share, never a raw count. The raw-count curve is shown once, in the methodology, next to the normalized one — with the 2–3× crawl-size drift called out as the reason.</div>
+    <div class="gate"><b>G-D2 — Anchors.</b> The pipeline must reproduce, unprompted: the 2019-05-22 protest-theme spike (~5× baseline — already live-tested), Kanjuruhan 2022-10-02 as its quarter’s most negative tone day (tested), the 2024-02-14 election and 2024-06 PDNS attention spikes, Palu 2018 and the Aug–Sep 2025 protests. <b>Explicitly not claimed:</b> a G20-Bali positive-tone spike — tested and absent (Ukraine coverage entangles it); the methodology says so.</div>
+    <div class="gate"><b>G-D3 — Two-source coherence.</b> Daily Indonesia attention from the event layer (own denominator) correlates with the API’s normalized volume, Spearman ρ ≥ 0.6 over the shared window; divergences diagnosed (feed composition, dedup) before publish.</div>
+    <div class="gate"><b>G-D4 — Language honesty.</b> Foreign-vs-domestic and translated-vs-English shares are surfaced, so no chart silently equates “the world’s narrative” with “the English-language narrative.”</div>
+  </section>
+
+  <section>
+    <span class="eyebrow">N5 · Dashboard</span>
+    <h2>Dashboard — page anatomy</h2>
+    <ol class="plain">
+      <li><b>Hero — “The pulse.”</b> Signature moment: the decade waveform of world attention to Indonesia draws itself left to right in signal violet, anchor events flaring as it passes them (reduced motion: static with annotations).</li>
+      <li><b>Chapter 1 — “The eras.”</b> Attention regimes: pre-COVID, the pandemic surge, G20/ASEAN year, the 2024 election, the 2025 protests — each with its normalized share and dominant themes.</li>
+      <li><b>Chapter 2 — “The darkest days.”</b> Tone extremes with their stories (Palu, Kanjuruhan, Cianjur) — and the honest G20 negative result as a lesson in reading tone.</li>
+      <li><b>Chapter 3 — “What the world reads about.”</b> Theme decomposition over time (economy, environment, protest, cyber, elections).</li>
+      <li><b>Chapter 4 — “Who’s talking.”</b> Source-country matrix; foreign vs domestic voice; translated-share disclosure (G-D4).</li>
+      <li><b>Explore.</b> Brushable decade timeline driving all panels; event scatter (Goldstein × tone) for the brushed window; cached headline samples per spike.</li>
+      <li><b>Methodology.</b> Normalization, dedup policy, coding gotchas, rate-limit-shaped refresh cadence, GDELT attribution, and the raw-vs-normalized comparison chart.</li>
+    </ol>
+  </section>
+
+  <section>
+    <span class="eyebrow">N6 · Acceptance</span>
+    <h2>Acceptance checklist</h2>
+    <ul class="plain check">
+      <li><code>make backfill</code> rebuilds curves + event ledger on a clean server (gate 1); resumable mid-stream.</li>
+      <li>G-D1…G-D4 evaluated and published (gates 2–3).</li>
+      <li>Interactive &lt; 3 s; charts hover-interactive with crosshair + tooltips; 60 fps (gate 4).</li>
+      <li>Dual vintage stamps (API refresh · events refresh) visible (gate 5).</li>
+      <li>GDELT attribution; media-bias caveat in plain words (gate 6).</li>
+      <li>Hero waveform passes the award test; violet identity within the lab system (gates 7, 9).</li>
+      <li>Server budget respected: ≤ ~50 GB backfill bandwidth, ≤ 5 GB disk, RAM well under the 15 GB envelope (user’s monitoring ask).</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">N7 · Risks & out of scope</span>
+    <h2>Risks &amp; out of scope</h2>
+    <ul class="plain">
+      <li><b>API throttling / IP blocks</b> — observed 429s; mitigations: ≥10 s spacing, exponential backoff, cache-first design, and the event layer as an independent fallback for attention curves.</li>
+      <li><b>Crawl drift</b> — handled by normalization (G-D1); never compare raw counts across years.</li>
+      <li><b>Automated-coding noise</b> — event types are machine-labeled; counts are indicative, framed as such (Wang et al. 2016 cited).</li>
+      <li><b>Out of scope:</b> full GKG mirror, sentiment beyond GDELT tone, social media, per-outlet bias modeling, pre-2017 curves (events-only before then, not shown by default per D22).</li>
+    </ul>
+  </section>
+
+  <footer class="doc">CASE D SPEC v1 · 2026-08-30 · DECISIONS D20–D22 · DATA PATH LIVE-TESTED · PARENT: BUILD PLAN (docs/build-plan.html)</footer>
+</div>

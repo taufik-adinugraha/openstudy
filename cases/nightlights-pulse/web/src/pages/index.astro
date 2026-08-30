@@ -139,6 +139,20 @@ const maxMean = summary.topMean[0].v;
       import maplibregl from "maplibre-gl";
       import * as d3 from "d3";
 
+      /* visible failure beats silent emptiness (same pattern as the trade page) */
+      const failBanner = (msg) => {
+        let b = document.getElementById("err-banner");
+        if (!b) {
+          b = document.createElement("div"); b.id = "err-banner";
+          b.style.cssText = "position:fixed;bottom:0;left:0;right:0;z-index:99;background:#3A1E1A;color:#F26D5B;font:12px ui-monospace,monospace;padding:10px 16px;border-top:1px solid #F26D5B;";
+          document.body.appendChild(b);
+        }
+        b.textContent = "⚠ " + msg;
+      };
+      addEventListener("error", (e) => failBanner("Script error: " + (e.message ?? e.type)));
+      addEventListener("unhandledrejection", (e) => failBanner("Load error: " + (e.reason?.message ?? e.reason)));
+      const sect = (name, fn) => { try { return fn(); } catch (err) { console.error(name, err); failBanner(`${name} failed: ${err.message ?? err}`); return null; } };
+
       const base = import.meta.env.BASE_URL.replace(/\/$/, "");
       const RAMP = ["#05070F", "#1B2447", "#7A5A22", "#E8A33D", "#FFEFC9"];
       const state = { month: null, metric: "sol", region: null };
@@ -148,6 +162,12 @@ const maxMean = summary.topMean[0].v;
         fetch(`${base}/data/ledger.json`).then((r) => r.json()),
       ]);
       state.month = ledger.months[ledger.months.length - 1];
+      // populate the month control immediately — it must not depend on the map's fate
+      {
+        const sel0 = document.getElementById("month-select");
+        for (const m of ledger.months) sel0.add(new Option(m, m));
+        sel0.value = state.month;
+      }
 
       /* ---------- chapter 2: national pulse ---------- */
       {
@@ -214,6 +234,7 @@ const maxMean = summary.topMean[0].v;
         map.getSource("regencies")?.setData(geo);
       };
 
+      sect("map explorer", () => {
       const map = new maplibregl.Map({
         container: "map",
         style: { version: 8, sources: {}, layers: [
@@ -287,10 +308,8 @@ const maxMean = summary.topMean[0].v;
         syncHash();
       }
 
-      /* controls + URL state */
+      /* controls + URL state (options already populated above) */
       const sel = document.getElementById("month-select");
-      for (const m of ledger.months) sel.add(new Option(m, m));
-      sel.value = state.month;
       sel.onchange = () => { state.month = sel.value; paint(state.month, state.metric); if (state.region) openPanel(state.region); syncHash(); };
       const bSol = document.getElementById("btn-sol"), bMean = document.getElementById("btn-mean");
       const setMetric = (metric) => {
@@ -309,6 +328,8 @@ const maxMean = summary.topMean[0].v;
       if (h.get("m") && ledger.months.includes(h.get("m"))) { state.month = h.get("m"); sel.value = state.month; }
       if (h.get("x") === "mean") setMetric("mean");
       if (h.get("r")) map.on("load", () => openPanel(h.get("r")));
+      }) ?? (document.getElementById("map").innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--ink-muted);font-family:var(--font-data);font-size:0.8rem;letter-spacing:0.08em;">THE MAP NEEDS WEBGL — CHARTS ABOVE STILL WORK</div>');
     </script>
 
     <style is:global>
