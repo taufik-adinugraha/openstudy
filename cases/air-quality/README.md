@@ -120,6 +120,35 @@ deliberate choice, not a fallback — see Decisions.
 
 ---
 
+## Operations
+
+Everything heavy runs on the dev server (`~/demo-lab/cases/air-quality`), never
+on a laptop. Units are transient `systemd-run` jobs; check any of them with
+`journalctl -u <unit> -f`.
+
+| Unit | What it does | Resume |
+|---|---|---|
+| `aq-ground` | OpenAQ inventory + hourly pull | `uv run python pipeline/ingest_ground.py` |
+| `aq-fire` | FIRMS hotspots → sector-day aggregates | `uv run python pipeline/ingest_firms.py` |
+| `aq-era5-0/1/2` | ERA5 backfill, 3 shards holding places in the CDS queue | `uv run python pipeline/ingest_era5.py --shard N --nshards 3` |
+| `aq-finish` | waits for the shards, gap-fills, then features → model → validate → export | `bash pipeline/finish.sh` (or `make finish`) |
+
+Sharding exists because CDS queues each request server-side: a single month can
+sit "accepted" for several minutes before it even starts running, so one worker
+spends most of its life idle. Three shards are three idle sockets, not three
+busy CPUs. Rerunning any stage is safe — completed work is skipped.
+
+Dashboard service: `demo-airquality.service` → `astro dev --port 4328 --host
+0.0.0.0`, enabled at boot. It serves `web/public/data/*.json` directly, so a
+pipeline rerun refreshes the page without a rebuild.
+
+Resource discipline: each stage checks free disk and exits 0 below 10 GB; the
+whole case's `data/` footprint is about 30 MB because raw ERA5 NetCDF is deleted
+after aggregation and raw FIRMS hotspots are reduced in memory and never
+written.
+
+---
+
 ## Decisions pending user verification
 
 1. **Ground truth is OpenAQ after all.** The brief said the user had no
