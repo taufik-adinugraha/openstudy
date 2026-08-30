@@ -369,7 +369,7 @@ const pending = !S;
     <!-- ══ 02 · the forecast ═══════════════════════════════════════════ -->
     <section class="chapter rv">
       <span class="eyebrow">02 · The forecast</span>
-      <h2>Beating "tomorrow looks like today"</h2>
+      <h2>Beating &ldquo;tomorrow looks like today&rdquo;</h2>
       <p class="big-stat">At the 24-hour horizon the model's mean absolute error is
       <b class="num">{n1(e24?.model_mae)}&nbsp;µg/m³</b> against persistence's
       <b class="num">{n1(e24?.persistence_mae)}</b> — a
@@ -695,7 +695,10 @@ const pending = !S;
          ════════════════════════════════════════════════════════════ */
       const heroState = { hours: [], idx: 0, playing: false, started: false };
 
+      const skylineCache = new Map();
       function skyline(w, h, seed) {
+        const key = `${Math.round(w)}x${Math.round(h)}`;
+        if (skylineCache.has(key)) return skylineCache.get(key);
         // deterministic PRNG so the city is the same city on every repaint
         let s = seed;
         const rnd = () => (s = (s * 1664525 + 1013904223) % 4294967296) / 4294967296;
@@ -711,6 +714,7 @@ const pending = !S;
           }
           layers.push(pts);
         }
+        skylineCache.set(key, layers);
         return layers;
       }
 
@@ -893,8 +897,7 @@ const pending = !S;
           const now = live.pm25_now ?? fc[0].pm25;
           const pts = [{ h: 0, v: now, lo: now, hi: now, t: live.issue_utc }]
             .concat(fc.map((d) => ({ h: d.h, v: d.pm25, lo: d.lo, hi: d.hi, t: d.t })));
-          // monotone interpolation to hourly — the model itself emits 7 horizons
-          const iv = d3.scaleLinear().domain(pts.map((p) => p.h));
+          // piecewise interpolation to hourly — the model itself emits 7 horizons
           const mk = (key) => d3.scaleLinear().domain(pts.map((p) => p.h)).range(pts.map((p) => p[key])).clamp(true);
           const sv = mk("v"), sl = mk("lo"), sh = mk("hi");
           const t0 = live.issue_utc ? new Date(live.issue_utc).getTime() : Date.now();
@@ -1109,7 +1112,7 @@ const pending = !S;
           if (neg.length) document.getElementById("skill-sowhat").innerHTML =
             `<b>So what:</b> persistence wins at ${neg.map((r) => r.horizon_h + " h").join(", ")}. ` +
             `That is published, not buried — at those horizons the honest operational answer is ` +
-            `"assume it stays as it is", and the model earns its place only further out.`;
+            `\u201Cassume it stays as it is\u201D, and the model earns its place only further out.`;
         }).catch((e) => { draw(); console.warn(e); });
       });
 
