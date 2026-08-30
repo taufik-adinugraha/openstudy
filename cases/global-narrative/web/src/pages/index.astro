@@ -23,15 +23,23 @@ const eventsLast = summary.eventsLast ?? "pending";
     </header>
 
     <section class="hero">
-      <div class="hero-copy">
-        <span class="eyebrow">Case D · GDELT open feeds · 2017 → now</span>
-        <h1>Every time the world’s news turned to Indonesia — a decade, one pulse.</h1>
-        <p>GDELT machine-reads the world’s news every fifteen minutes in 65 languages. This is the share of
-        all of it that mentioned Indonesia, day by day{summary.volMean ? ` — on average ${fmtPct(summary.volMean)} of everything monitored` : ""}.
-        The flares are the days the world could not look away.</p>
-        <span class="stamp dim" id="hero-status">LOADING THE PULSE…</span>
+      <div class="hero-top">
+        <div class="hero-copy">
+          <span class="eyebrow">Case D · GDELT open feeds · 2017 → now</span>
+          <h1>Every time the world’s news turned to Indonesia — a decade, one pulse.</h1>
+          <p>GDELT machine-reads the world’s news every fifteen minutes in 65 languages. This is the share of
+          all of it that mentioned Indonesia, day by day{summary.volMean ? ` — on average ${fmtPct(summary.volMean)} of everything monitored` : ""}.
+          The flares are the days the world could not look away.</p>
+        </div>
+        <aside class="hero-figures" id="hero-figures" aria-label="Headline figures for the attention pulse">
+          <div class="figs-pending" id="hero-status">
+            <span class="spinner" aria-hidden="true"></span>
+            <span class="stamp dim">READING THE PULSE…</span>
+          </div>
+        </aside>
       </div>
       <div id="pulse" class="pulse"></div>
+      <ol id="anchor-key" class="anchor-key" hidden></ol>
     </section>
 
     <section class="chapter wide">
@@ -175,7 +183,8 @@ const eventsLast = summary.eventsLast ?? "pending";
 
       const pending = (id, msg) => { const el = document.getElementById(id); if (el) el.innerHTML = `<div class="pending">${msg}</div>`; };
       if (!pulse) {
-        document.getElementById("hero-status").textContent = "PIPELINE STILL RUNNING — the API curves have not been exported yet. Refresh in a few minutes.";
+        document.getElementById("hero-status").innerHTML =
+          `<span class="stamp dim">PIPELINE STILL RUNNING — the API curves have not been exported yet. Refresh in a few minutes.</span>`;
       }
       if (status) {
         const v = document.getElementById("vintage");
@@ -194,6 +203,10 @@ const eventsLast = summary.eventsLast ?? "pending";
       const num = (v, d = 2) => (v == null ? "—" : (+v).toFixed(d));
       const sgn = (v, d = 2) => (v == null || Number.isNaN(+v) ? "—" : (v > 0 ? "+" : "") + (+v).toFixed(d));
       const mkSvg = (el, H) => { const W = el.clientWidth || 800; const svg = d3.select(el).append("svg").attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`); return { svg, W, H }; };
+      /* A descriptive legend is a caption, not a datum: rendered in the flow it wraps to the
+         container instead of clipping against the plot edge on a narrow screen. */
+      const capNote = (el, html) => el.insertAdjacentHTML("beforebegin", `<p class="chart-note">${html}</p>`);
+      const swatch = (c, label) => `<span class="sw"><i style="background:${c}"></i>${label}</span>`;
       const yearAxis = (x) => d3.axisBottom(x).ticks(d3.timeYear.every(1)).tickFormat(fYear).tickSizeOuter(0);
       const nearestIdx = (dates, t) => { const i = d3.bisector((d) => d).left(dates, t); return i <= 0 ? 0 : i >= dates.length ? dates.length - 1 : (t - dates[i - 1] < dates[i] - t ? i - 1 : i); };
       const hoverRect = (svg, M, W, H, onMove, onLeave) => svg.append("rect").attr("class", "hover").attr("x", M.l).attr("y", M.t).attr("width", Math.max(0, W - M.l - M.r)).attr("height", Math.max(0, H - M.t - M.b)).attr("fill", "transparent").on("mousemove", onMove).on("mouseleave", onLeave);
@@ -214,15 +227,21 @@ const eventsLast = summary.eventsLast ?? "pending";
         const { svg, W, H } = mkSvg(el, Math.max(340, Math.min(520, innerHeight * 0.58)));
         const x = d3.scaleTime(d3.extent(dates), [M.l, W - M.r]);
         const y = d3.scaleLinear([0, d3.max(vol.filter((v) => v != null)) * 1.04], [H - M.b, M.t]);
-        // era bands
+        // era bands — the label is drawn only where its own band can hold it, so
+        // narrow viewports drop labels instead of overprinting them.
         const erasG = svg.append("g");
+        const CHW = 7.4;                       // ~char width of the 12px mono annot face
         (pulse.eras ?? []).forEach((e, i) => {
-          erasG.append("rect").attr("x", x(P(e.start))).attr("y", M.t - 30).attr("width", Math.max(0, x(P(e.end)) - x(P(e.start)))).attr("height", H - M.b - M.t + 30).attr("fill", ERA_COLORS[i % ERA_COLORS.length]).attr("opacity", 0.045);
-          erasG.append("text").attr("class", "annot").attr("x", x(P(e.start)) + 6).attr("y", M.t - 16).attr("fill", ERA_COLORS[i % ERA_COLORS.length]).text(e.label.toUpperCase()).style("font-size", "10.5px").style("letter-spacing", "0.1em");
+          const x0 = x(P(e.start)), x1 = x(P(e.end)), bw = Math.max(0, x1 - x0);
+          erasG.append("rect").attr("x", x0).attr("y", M.t - 30).attr("width", bw).attr("height", H - M.b - M.t + 30).attr("fill", ERA_COLORS[i % ERA_COLORS.length]).attr("opacity", 0.045);
+          if (bw > 6) erasG.append("line").attr("x1", x0).attr("x2", x0).attr("y1", M.t - 30).attr("y2", H - M.b).attr("stroke", ERA_COLORS[i % ERA_COLORS.length]).attr("stroke-opacity", 0.3);
+          const txt = e.label.toUpperCase();
+          if (bw < txt.length * CHW * 1.12 + 12) return;   // no room: leave the band unlabelled
+          erasG.append("text").attr("class", "annot era-band").attr("x", x0 + 8).attr("y", M.t - 15).attr("fill", ERA_COLORS[i % ERA_COLORS.length]).text(txt);
         });
         svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(yearAxis(x));
         svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(4).tickFormat((v) => v + "%").tickSizeOuter(0));
-        svg.append("text").attr("class", "annot").attr("x", M.l + 6).attr("y", M.t + 8).text("share of all articles GDELT monitored, 7-day mean");
+        svg.append("text").attr("class", "annot").attr("x", M.l + 6).attr("y", M.t + 8).text(W < 760 ? "share of world news, 7-day mean" : "share of all articles GDELT monitored, 7-day mean");
         const clipId = "pulse-clip";
         const clip = svg.append("clipPath").attr("id", clipId).append("rect").attr("x", M.l).attr("y", 0).attr("height", H).attr("width", reduced ? W : 0);
         const g = svg.append("g").attr("clip-path", `url(#${clipId})`);
@@ -236,21 +255,48 @@ const eventsLast = summary.eventsLast ?? "pending";
         const anchors = (pulse.anchors ?? []).map((a, i) => ({ ...a, i, x: x(P(a.peak_day ?? a.day)), y: y(Math.min(a.peak ?? 0, y.domain()[1])) }));
         const ag = svg.append("g").attr("class", "anchors");
         const lab = ag.selectAll("g.a").data(anchors).join("g").attr("class", "a").attr("opacity", reduced ? 1 : 0);
-        // labels live in a shared top band (staggered rows); dotted lines drop to the pulse.
-        // A right-edge label renders right-anchored, so rows are assigned by the label's
-        // true horizontal interval, not just its dot's x.
-        const LW = 330;
-        const rowEnd = [];
-        [...anchors].sort((a, b) => a.x - b.x).forEach((d) => {
-          d.flip = d.x + LW > W - 4;
-          const x0 = d.flip ? d.x - LW : d.x, x1 = d.flip ? d.x : d.x + LW;
-          let r = 0; while (rowEnd[r] != null && x0 < rowEnd[r] + 10) r++;
-          rowEnd[r] = x1; d.row = r;
-        });
-        const labY = (d) => M.t + 24 + d.row * 13.5;
-        lab.append("line").attr("x1", (d) => d.x).attr("x2", (d) => d.x).attr("y1", (d) => labY(d) + 4).attr("y2", H - M.b).attr("stroke", INK).attr("stroke-opacity", 0.22).attr("stroke-dasharray", "2 3");
-        lab.append("circle").attr("cx", (d) => d.x).attr("cy", (d) => d.y).attr("r", 3.2).attr("fill", (d) => (d.verdict === "FAIL" ? NEG : INK)).attr("stroke", GROUND);
-        lab.append("text").attr("class", "annot alabel").attr("x", (d) => d.x + (d.flip ? -5 : 5)).attr("y", labY).attr("fill", INK).attr("text-anchor", (d) => (d.flip ? "end" : "start")).text((d) => `${fDay(P(d.day))} · ${d.label}`);
+        // Narrow viewports cannot hold a 300px dated caption inside the plot at a
+        // legible size, so the chart carries numbered markers and the captions move
+        // to an ordered key beneath it. Wide viewports keep the in-place callouts.
+        const KEYED = W < 760;
+        anchors.forEach((d, i) => { d.n = i + 1; d.text = `${fDay(P(d.day))} · ${d.label}`; });
+
+        lab.append("circle").attr("cx", (d) => d.x).attr("cy", (d) => d.y).attr("r", KEYED ? 8.5 : 3.4)
+          .attr("fill", (d) => (KEYED ? GROUND : d.verdict === "FAIL" ? NEG : INK))
+          .attr("stroke", (d) => (KEYED ? (d.verdict === "FAIL" ? NEG : VIOLET) : GROUND)).attr("stroke-width", KEYED ? 1.4 : 1);
+
+        if (KEYED) {
+          lab.append("text").attr("class", "annot amark").attr("x", (d) => d.x).attr("y", (d) => d.y + 4)
+            .attr("text-anchor", "middle").attr("fill", (d) => (d.verdict === "FAIL" ? NEG : INK)).text((d) => d.n);
+          const key = document.getElementById("anchor-key");
+          key.hidden = false;
+          key.innerHTML = anchors.map((d) => `<li><span class="akey-n${d.verdict === "FAIL" ? " fail" : ""}">${d.n}</span><span class="akey-t"><b>${fDay(P(d.day))}</b> · ${d.label}</span></li>`).join("");
+        } else {
+          // In-place callouts: each caption is measured, clamped inside the plot, and
+          // assigned the first stagger row whose occupied interval it clears.
+          const CW = 7.4, LH = 15.5, GAP = 14;
+          const inner0 = M.l + 2, inner1 = W - M.r - 2;
+          anchors.forEach((d) => {
+            d.w = d.text.length * CW;
+            d.flip = d.x + d.w + 6 > inner1;            // hug the right edge instead of overflowing
+            let x0 = d.flip ? d.x - d.w - 6 : d.x + 6;
+            x0 = Math.max(inner0, Math.min(x0, inner1 - d.w));
+            d.lx0 = x0; d.lx1 = x0 + d.w;
+          });
+          const rowEnd = [];
+          [...anchors].sort((a, b) => a.lx0 - b.lx0).forEach((d) => {
+            let r = 0; while (rowEnd[r] != null && d.lx0 < rowEnd[r] + GAP) r++;
+            rowEnd[r] = d.lx1; d.row = r;
+          });
+          const labY = (d) => M.t + 26 + d.row * LH;
+          // leader: down from the caption, then a jog across to the dot when clamping moved it
+          lab.append("path").attr("d", (d) => {
+            const ax = d.flip ? d.lx1 : d.lx0, y0 = labY(d) + 5;
+            return Math.abs(ax - d.x) < 3 ? `M${d.x},${y0}V${d.y - 6}` : `M${ax},${y0}V${d.y - 12}H${d.x}V${d.y - 6}`;
+          }).attr("fill", "none").attr("stroke", INK).attr("stroke-opacity", 0.28).attr("stroke-dasharray", "2 3");
+          lab.append("text").attr("class", "annot alabel").attr("x", (d) => (d.flip ? d.lx1 : d.lx0)).attr("y", labY)
+            .attr("fill", INK).attr("text-anchor", (d) => (d.flip ? "end" : "start")).text((d) => d.text);
+        }
         const flare = (d) => { ag.append("circle").attr("cx", d.x).attr("cy", d.y).attr("r", 2).attr("fill", "none").attr("stroke", VIOLET).attr("stroke-width", 2).attr("opacity", 0.9).transition().duration(900).ease(d3.easeCubicOut).attr("r", 26).attr("opacity", 0).remove(); };
         // hover
         const guide = svg.append("line").attr("y1", M.t).attr("y2", H - M.b).attr("stroke", INK).attr("stroke-opacity", 0.5).style("display", "none");
@@ -262,14 +308,21 @@ const eventsLast = summary.eventsLast ?? "pending";
           const near = anchors.find((a) => Math.abs(P(a.day) - dates[i]) < 4 * 864e5);
           showTip(e, `<b>${fDay(dates[i])}</b><br>share of world news <b>${pct(vol[i])}</b> · 7-day ${pct(vol7[i])}<br>tone ${sgn(pulse.tone?.[i])}${near ? `<br><span class="violet">◆ ${near.label}</span>` : ""}`);
         }, () => { guide.style("display", "none"); dot.style("display", "none"); hideTip(); });
-        const done = () => { document.getElementById("hero-status").textContent = `${dates.length.toLocaleString()} DAYS · PEAK ${pct(pulse.vol_peak)} ON ${fDay(P(pulse.vol_peak_day)).toUpperCase()} · MEAN ${pct(pulse.vol_mean)} · ${anchors.length} ANCHOR EVENTS`; };
-        if (reduced) { done(); return; }
+        // The figures are known the moment the data is in hand — publish them now, so the
+        // pending state never outlives the render it was standing in for.
+        const fig = (k, v, sub) => `<div class="fig"><span class="stamp dim">${k}</span><b>${v}</b>${sub ? `<span class="fig-sub">${sub}</span>` : ""}</div>`;
+        document.getElementById("hero-figures").innerHTML =
+          fig("DAYS OBSERVED", dates.length.toLocaleString(), "2017 → now, daily") +
+          fig("PEAK SHARE", pct(pulse.vol_peak), fDay(P(pulse.vol_peak_day))) +
+          fig("DECADE MEAN", pct(pulse.vol_mean), "of all world news") +
+          fig("ANCHOR EVENTS", String(anchors.length), "dated, pre-registered");
+        if (reduced) return;
         const dur = 5200, t0 = performance.now(), fired = new Set();
         const step = (t) => {
           const k = Math.min((t - t0) / dur, 1), xe = M.l + k * (W - M.l - M.r);
           clip.attr("width", Math.max(0, xe - M.l));
           anchors.forEach((a) => { if (!fired.has(a.i) && a.x <= xe) { fired.add(a.i); flare(a); lab.filter((d) => d.i === a.i).transition().duration(500).attr("opacity", 1); } });
-          if (k < 1) requestAnimationFrame(step); else done();
+          if (k < 1) requestAnimationFrame(step);
         };
         requestAnimationFrame(step);
       });
@@ -309,7 +362,7 @@ const eventsLast = summary.eventsLast ?? "pending";
         svg.append("path").datum(dates).attr("d", d3.line().defined((d, i) => t1[i] != null).x((d) => x(d)).y((d, i) => y(t1[i]))).attr("fill", "none").attr("stroke", INK).attr("stroke-width", 0.5).attr("opacity", 0.22);
         svg.append("path").datum(dates).attr("d", d3.line().defined((d, i) => t28[i] != null).x((d) => x(d)).y((d, i) => y(t28[i])).curve(d3.curveMonotoneX)).attr("fill", "none").attr("stroke", INK).attr("stroke-width", 1.2);
         svg.append("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y(mean)).attr("y2", y(mean)).attr("stroke", MUTED).attr("stroke-dasharray", "3 4");
-        svg.append("text").attr("class", "annot").attr("x", M.l + 6).attr("y", M.t + 10).text(`decade mean ${sgn(mean)} · faint line = daily · bold = 28-day`);
+        capNote(el, `Decade mean <b>${sgn(mean)}</b> · ${swatch(POS, "kinder than usual")} ${swatch(NEG, "harsher than usual")} · faint line = daily, bold = 28-day mean.`);
         const dark = (tone.darkest ?? []).slice(0, 8).map((d, i) => ({ ...d, i, x: x(P(d.day)) }));
         const dg = svg.selectAll("g.dk").data(dark).join("g").attr("class", "dk");
         dg.append("circle").attr("cx", (d) => d.x).attr("cy", (d) => y(d.tone)).attr("r", 3.5).attr("fill", NEG).attr("stroke", GROUND)
@@ -415,7 +468,7 @@ const eventsLast = summary.eventsLast ?? "pending";
         const vmax = d3.quantile(rows.flatMap((r) => r.values.filter((v) => v != null)), 0.98);
         const color = d3.scaleSequentialSqrt([0, vmax], d3.interpolateRgb(SURFACE, VIOLET)).clamp(true);
         svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(yearAxis(x));
-        svg.append("text").attr("class", "annot").attr("x", M.l).attr("y", 14).text("share of the country's own monitored articles that mention Indonesia, monthly");
+        capNote(el, "Share of the country’s own monitored articles that mention Indonesia, monthly. Right-hand figure is the decade mean.");
         const g = svg.selectAll("g.row").data(rows).join("g").attr("class", "row").attr("transform", (d, i) => `translate(0,${M.t + i * RH})`);
         g.append("text").attr("class", "annot rowlab").attr("x", M.l - 8).attr("y", RH / 2 + 4).attr("text-anchor", "end").attr("fill", INK).text((d) => d.name);
         g.append("text").attr("class", "annot").attr("x", W - M.r + 8).attr("y", RH / 2 + 4).text((d) => pct(d.mean, 2));
@@ -504,7 +557,7 @@ const eventsLast = summary.eventsLast ?? "pending";
           .attr("x", (d) => x(d.data.d) + 0.5).attr("width", (d) => Math.max(1, x(d3.timeMonth.offset(d.data.d, 1)) - x(d.data.d) - 1)).attr("y", (d) => y(d[1])).attr("height", (d) => Math.max(0, y(d[0]) - y(d[1])))
           .on("mousemove", (e, d) => showTip(e, `<b>${fMon(d.data.d)}</b> · ${d.data.tot.toLocaleString()} events<br>${keys.map((k) => `<span style="color:${colors[k]}">■</span> ${labels[k]} ${d3.format(".0%")(d.data[k])}`).join("<br>")}<br>Goldstein ${num(m.goldstein_mean?.[d.data.i], 2)} · tone ${sgn(m.tone_mean?.[d.data.i])}`))
           .on("mouseleave", hideTip);
-        svg.append("text").attr("class", "annot").attr("x", W - M.r).attr("y", M.t - 5).attr("text-anchor", "end").text("teal = cooperation · coral = conflict · darker = words, brighter = deeds");
+        capNote(el, `${swatch(colors.quad_verbal_coop, "verbal cooperation")} ${swatch(colors.quad_material_coop, "material cooperation")} ${swatch(colors.quad_verbal_conflict, "verbal conflict")} ${swatch(colors.quad_material_conflict, "material conflict")} — teal is cooperation, coral is conflict; darker is words, brighter is deeds.`);
       });
 
       sect("protest chart", () => {
@@ -554,10 +607,10 @@ const eventsLast = summary.eventsLast ?? "pending";
             ctx.fillStyle = mode === "n" ? cN(n) : mode === "protest" ? (p ? cP(p) : "#1B1430") : (t == null ? "#1B1430" : cT(t));
             ctx.fillRect(sx(lon - 0.125), sy(lat + 0.125), Math.max(1, cellW - 0.4), Math.max(1, cellH - 0.4));
           }
-          ctx.fillStyle = INK; ctx.font = "11px 'IBM Plex Mono', monospace"; ctx.globalAlpha = 0.85;
+          ctx.fillStyle = INK; ctx.font = "12px 'IBM Plex Mono', monospace"; ctx.globalAlpha = 0.85;
           for (const [name, la, lo] of CITIES) { ctx.beginPath(); ctx.arc(sx(lo), sy(la), 1.6, 0, Math.PI * 2); ctx.fill(); ctx.textAlign = sx(lo) > W - 80 ? "right" : "left"; ctx.fillText(name, sx(lo) + (sx(lo) > W - 80 ? -5 : 5), sy(la) - 4); ctx.textAlign = "left"; }
           ctx.globalAlpha = 1;
-          ctx.fillStyle = MUTED; ctx.font = "10.5px 'IBM Plex Mono', monospace";
+          ctx.fillStyle = MUTED; ctx.font = "12px 'IBM Plex Mono', monospace";
           ctx.fillText(mode === "n" ? "colour: events per cell (log)" : mode === "protest" ? "colour: protest events per cell" : "colour: mean tone (coral −6 … teal 0)", 10, H - 10);
           note.textContent = `${d3.sum(cells, (c) => c[2]).toLocaleString()} LOCATED EVENTS IN ${cells.length.toLocaleString()} CELLS${year === "all" ? ` · ${map.country_level_only?.toLocaleString()} MORE GEOCODED ONLY TO “INDONESIA” (NOT SHOWN)` : ` · ${year}`}`;
         };
@@ -625,7 +678,7 @@ const eventsLast = summary.eventsLast ?? "pending";
         const yR = d3.scaleLinear([0, d3.max(raw) * 1.1], [H - M.b, M.t]);
         svg.append("path").datum(dates).attr("d", d3.line().defined((d, i) => raw[i] != null).x((d) => x(d)).y((d, i) => yR(raw[i]))).attr("fill", "none").attr("stroke", INK).attr("stroke-width", 1).attr("opacity", 0.7);
         svg.append("path").datum(dates).attr("d", d3.line().defined((d, i) => vol[i] != null).x((d) => x(d)).y((d, i) => yV(vol[i]))).attr("fill", "none").attr("stroke", VIOLET).attr("stroke-width", 1.6);
-        svg.append("text").attr("class", "annot").attr("x", M.l + 6).attr("y", M.t + 10).text("grey area: all articles GDELT monitored per day (left axis) · white: raw Indonesia articles (own scale) · violet: normalized share (right axis) · 28-day means");
+        capNote(el, `${swatch(MUTED, "all articles GDELT monitored per day (left axis)")} ${swatch(INK, "raw Indonesia articles, own scale")} ${swatch(VIOLET, "normalized share (right axis)")} — 28-day means.`);
         const guide = svg.append("line").attr("y1", M.t).attr("y2", H - M.b).attr("stroke", INK).attr("stroke-opacity", 0.5).style("display", "none");
         hoverRect(svg, M, W, H, (e) => { const i = nearestIdx(dates, x.invert(d3.pointer(e)[0])); if (norm[i] == null) return; guide.style("display", null).attr("x1", x(dates[i])).attr("x2", x(dates[i])); showTip(e, `<b>${fDay(dates[i])}</b> (28-day means)<br>monitored ${d3.format(",.0f")(norm[i])} articles/day<br>Indonesia raw ${d3.format(",.0f")(raw[i])}/day · share ${pct(vol[i], 3)}`); }, () => { guide.style("display", "none"); hideTip(); });
       });
@@ -658,19 +711,42 @@ const eventsLast = summary.eventsLast ?? "pending";
       html { scroll-behavior: smooth; }
       body { margin: 0; }
       a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
-      .stamp { font-family: var(--font-data); font-size: 0.7rem; letter-spacing: 0.12em; color: var(--accent); }
+      /* type floor: nothing on this page renders below 12px */
+      .stamp { font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.1em; color: var(--accent); }
       .stamp.dim { color: var(--ink-muted); }
-      .eyebrow { font-family: var(--font-data); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+      .eyebrow { font-family: var(--font-data); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
       .violet { color: var(--accent); } .dim { color: var(--ink-muted); }
       .stamp-bar { position: fixed; inset: 0 0 auto 0; z-index: 20; display: flex; justify-content: space-between; gap: 16px; padding: 12px 20px; background: linear-gradient(color-mix(in srgb, var(--ground) 86%, transparent), transparent); pointer-events: none; }
       .stamp-bar .stamp { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-      .hero { position: relative; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; background: radial-gradient(ellipse at 70% 20%, #1c1330 0%, var(--ground) 55%); }
-      .hero-copy { padding: 14vh 6vw 2vh; max-width: 40rem; display: flex; flex-direction: column; gap: 14px; }
+      .hero { position: relative; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; background: radial-gradient(ellipse at 72% 18%, #221640 0%, #150f24 38%, var(--ground) 68%); }
+      .hero-top { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.85fr); gap: 4vw; align-items: end; padding: 13vh 6vw 3vh; }
+      .hero-copy { display: flex; flex-direction: column; gap: 14px; max-width: 40rem; }
       .hero-copy h1 { font-size: clamp(1.9rem, 4.4vw, 3.2rem); margin: 0; line-height: 1.08; letter-spacing: -0.015em; }
-      .hero-copy p { margin: 0; color: var(--ink-muted); font-size: 1.05rem; max-width: 36rem; }
+      .hero-copy p { margin: 0; color: var(--ink-muted); font-size: 1.05rem; max-width: 34rem; }
+
+      /* headline figures — the right half of the hero, previously dead space */
+      .hero-figures { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--hairline);
+        border: 1px solid var(--hairline); border-radius: 10px; overflow: hidden; }
+      .fig { background: linear-gradient(155deg, color-mix(in srgb, var(--surface) 92%, var(--accent) 8%), var(--ground));
+        padding: 14px 16px 15px; display: flex; flex-direction: column; gap: 3px; min-height: 84px; }
+      .fig b { font-family: var(--font-display); font-size: clamp(1.35rem, 2.1vw, 1.75rem); line-height: 1.1;
+        font-variant-numeric: tabular-nums; color: var(--ink); }
+      .fig-sub { font-family: var(--font-data); font-size: 0.75rem; color: var(--ink-muted); letter-spacing: 0.02em; }
+      .figs-pending { grid-column: 1 / -1; background: var(--surface); padding: 22px 16px; display: flex; align-items: center; gap: 10px; }
+      .spinner { width: 11px; height: 11px; border-radius: 50%; border: 1.5px solid var(--hairline);
+        border-top-color: var(--accent); animation: spin 900ms linear infinite; flex: none; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
       .pulse { width: 100%; }
       .pulse svg { display: block; }
+      /* anchor key — carries the dated captions when the plot is too narrow for callouts */
+      .anchor-key { list-style: none; margin: 0; padding: 14px 6vw 4vh; display: grid; gap: 8px; }
+      .anchor-key li { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: baseline; font-size: 0.85rem; color: var(--ink-muted); }
+      .akey-n { font-family: var(--font-data); font-size: 0.75rem; text-align: center; color: var(--accent);
+        border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 50%; line-height: 20px; height: 20px; }
+      .akey-n.fail { color: var(--tone-neg); border-color: color-mix(in srgb, var(--tone-neg) 55%, transparent); }
+      .akey-t b { color: var(--ink); font-family: var(--font-data); font-weight: 500; }
 
       .chapter { max-width: 46rem; margin: 0 auto; padding: 12vh 24px 0; display: flex; flex-direction: column; gap: 18px; }
       .chapter.wide { max-width: 72rem; }
@@ -678,15 +754,25 @@ const eventsLast = summary.eventsLast ?? "pending";
       .chapter h3, .method h3 { font-size: 1.05rem; margin: 18px 0 0; }
       .chapter p { margin: 0; line-height: 1.65; max-width: 46rem; }
       .footnote { font-size: 0.85rem; color: var(--ink-muted); }
+      /* chart caption / legend — wraps to the container, never clips against the plot edge */
+      .chart-note { margin: 0; font-family: var(--font-data); font-size: 0.78rem; line-height: 1.7;
+        color: var(--ink-muted); letter-spacing: 0.01em; max-width: 62ch; display: flex; flex-wrap: wrap; gap: 2px 14px; align-items: baseline; }
+      .chart-note b { color: var(--ink); font-weight: 500; }
+      .sw { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+      .sw i { width: 10px; height: 10px; border-radius: 2px; flex: none; }
       .chart { width: 100%; position: relative; }
       .axis { font-family: var(--font-data); font-size: 12px; color: var(--ink-muted); }
       .axis text { fill: var(--ink-muted); }
       .axis path, .axis line { stroke: var(--hairline); }
-      .axis.tiny { font-size: 10px; }
+      .axis.tiny { font-size: 12px; }
       .annot { font-family: var(--font-data); font-size: 12px; fill: var(--ink-muted); letter-spacing: 0.03em; }
-      .alabel { font-size: 11.5px; paint-order: stroke; stroke: var(--ground); stroke-width: 3px; stroke-linejoin: round; }
-      .pending { border: 1px dashed var(--hairline); border-radius: 8px; padding: 18px; font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.06em; color: var(--ink-muted); background: var(--surface); }
-      #chart-tip { position: absolute; z-index: 30; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px; font-family: var(--font-data); font-size: 0.72rem; line-height: 1.6; color: var(--ink); max-width: 280px; }
+      .annot.era-band { letter-spacing: 0.1em; }
+      .alabel { font-size: 12px; paint-order: stroke; stroke: var(--ground); stroke-width: 3.5px; stroke-linejoin: round; }
+      .amark { font-size: 12px; font-weight: 600; paint-order: stroke; stroke: var(--ground); stroke-width: 2.5px; stroke-linejoin: round; }
+      .pending { border: 1px dashed color-mix(in srgb, var(--accent) 32%, var(--hairline)); border-radius: 8px; padding: 18px 20px;
+        font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.04em; line-height: 1.6; color: var(--ink-muted);
+        background: linear-gradient(140deg, var(--surface), var(--ground)); }
+      #chart-tip { position: absolute; z-index: 30; pointer-events: none; background: var(--surface-raised); border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--hairline)); border-radius: 6px; padding: 9px 12px; font-family: var(--font-data); font-size: 0.78rem; line-height: 1.6; color: var(--ink); max-width: 300px; box-shadow: 0 10px 30px rgba(0,0,0,0.55); }
 
       .era-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
       .era { border: 1px solid var(--hairline); border-top: 2px solid var(--c); border-radius: 8px; padding: 16px; background: linear-gradient(160deg, var(--surface), var(--ground)); display: flex; flex-direction: column; gap: 10px; }
@@ -695,12 +781,12 @@ const eventsLast = summary.eventsLast ?? "pending";
       .era-row { display: flex; gap: 18px; } .era-row b { font-size: 0.95rem; }
       .bar { height: 4px; background: var(--hairline); border-radius: 2px; margin-top: 6px; } .bar i { display: block; height: 100%; background: var(--c); border-radius: 2px; }
       .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-      .chip { font-family: var(--font-data); font-size: 0.66rem; letter-spacing: 0.04em; border: 1px solid var(--hairline); border-radius: 12px; padding: 3px 8px; color: var(--ink); } .chip i { color: var(--ink-muted); font-style: normal; }
+      .chip { font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.03em; border: 1px solid var(--hairline); border-radius: 12px; padding: 3px 9px; color: var(--ink); background: color-mix(in srgb, var(--surface-raised) 70%, transparent); } .chip i { color: var(--ink-muted); font-style: normal; }
 
       .day-list { display: flex; flex-direction: column; gap: 10px; } .day-list h3 { margin-bottom: 4px; }
       .day { border-left: 2px solid var(--tone-neg); padding: 8px 14px; background: linear-gradient(90deg, color-mix(in srgb, var(--tone-neg) 8%, transparent), transparent); border-radius: 0 6px 6px 0; }
       .day-head { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; } .day-head b { font-family: var(--font-display); }
-      .day ul { margin: 6px 0 0; padding-left: 1.1em; font-size: 0.86rem; line-height: 1.5; } .day li i { color: var(--ink-muted); font-style: normal; font-family: var(--font-data); font-size: 0.68rem; margin-left: 6px; }
+      .day ul { margin: 6px 0 0; padding-left: 1.1em; font-size: 0.88rem; line-height: 1.55; } .day li i { color: var(--ink-muted); font-style: normal; font-family: var(--font-data); font-size: 0.75rem; margin-left: 6px; }
       .day a { color: var(--ink); }
 
       .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 10px; }
@@ -709,33 +795,48 @@ const eventsLast = summary.eventsLast ?? "pending";
       .panel svg { display: block; width: 100%; }
       .table-scroll { overflow-x: auto; }
       table.rank { border-collapse: collapse; width: 100%; font-family: var(--font-data); font-size: 0.78rem; }
-      table.rank th { text-align: left; font-weight: 600; font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted); padding: 8px 10px 8px 0; border-bottom: 1px solid var(--ink-muted); }
+      table.rank th { text-align: left; font-weight: 600; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); padding: 8px 10px 8px 0; border-bottom: 1px solid var(--ink-muted); }
       table.rank td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
-      table.rank td span { display: block; color: var(--ink); } table.rank td i { color: var(--ink-muted); font-style: normal; font-size: 0.68rem; }
+      table.rank td span { display: block; color: var(--ink); } table.rank td i { color: var(--ink-muted); font-style: normal; font-size: 0.75rem; }
       table.rank td.era-name { color: var(--accent); white-space: nowrap; }
-      table.rank.small { font-size: 0.74rem; } table.rank td.num { text-align: right; font-variant-numeric: tabular-nums; } table.rank th:not(:first-child) { text-align: right; } table.rank.anchors th:last-child, table.rank.anchors td:last-child { text-align: right; }
+      table.rank.small { font-size: 0.78rem; } table.rank td.num { text-align: right; font-variant-numeric: tabular-nums; } table.rank th:not(:first-child) { text-align: right; } table.rank.anchors th:last-child, table.rank.anchors td:last-child { text-align: right; }
       table.rank.anchors th:not(:first-child) { text-align: right; }
       .two-up { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px 40px; align-items: start; } .two-up h3 { margin-top: 0; }
 
       .map-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
       .toggle { display: flex; flex-wrap: wrap; }
-      .toggle button { background: var(--surface); color: var(--ink-muted); border: 1px solid var(--hairline); padding: 6px 10px; font-family: var(--font-data); font-size: 0.66rem; letter-spacing: 0.08em; cursor: pointer; margin-left: -1px; }
+      .toggle button { background: var(--surface); color: var(--ink-muted); border: 1px solid var(--hairline); padding: 0 13px; min-height: 40px; font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.08em; cursor: pointer; margin-left: -1px; transition: background 160ms ease, color 160ms ease; }
       .toggle button:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .toggle button:last-child { border-radius: 0 4px 4px 0; }
+      .toggle button:hover { color: var(--ink); background: var(--surface-raised); }
       .toggle button.on { background: var(--accent-ink); color: var(--accent); border-color: var(--accent); position: relative; z-index: 1; }
+      .toggle button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; z-index: 2; }
+      a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
       .map-wrap { position: relative; border: 1px solid var(--hairline); border-radius: 8px; overflow: hidden; }
       #map-canvas { width: 100%; display: block; cursor: crosshair; }
-      #map-tip { position: absolute; z-index: 5; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px; font-family: var(--font-data); font-size: 0.72rem; line-height: 1.55; color: var(--ink); }
+      #map-tip { position: absolute; z-index: 5; pointer-events: none; background: var(--surface-raised); border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--hairline)); border-radius: 6px; padding: 9px 12px; font-family: var(--font-data); font-size: 0.78rem; line-height: 1.55; color: var(--ink); box-shadow: 0 10px 30px rgba(0,0,0,0.55); }
       .map-note { position: absolute; right: 12px; top: 10px; }
 
       .method { max-width: 72rem; margin: 0 auto; padding: 12vh 24px 10vh; display: flex; flex-direction: column; gap: 14px; }
       .method p { margin: 0; font-size: 0.9rem; line-height: 1.7; color: var(--ink-muted); max-width: 72rem; }
-      .method code { font-size: 0.8em; background: var(--surface-raised); padding: 1px 5px; border-radius: 3px; color: var(--ink); }
+      .method code { font-size: 0.86em; background: var(--surface-raised); padding: 1px 5px; border-radius: 3px; color: var(--ink); }
       .gates { display: flex; flex-direction: column; gap: 10px; }
       .gate { display: grid; grid-template-columns: 82px 1fr; gap: 14px; border: 1px solid var(--hairline); border-radius: 8px; padding: 12px 14px; background: var(--surface); font-size: 0.88rem; line-height: 1.6; color: var(--ink-muted); }
       .gate b { color: var(--ink); }
-      .verdict { font-family: var(--font-data); font-size: 0.66rem; letter-spacing: 0.1em; border-radius: 4px; padding: 4px 8px; height: fit-content; text-align: center; border: 1px solid var(--hairline); }
+      .verdict { font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.08em; border-radius: 4px; padding: 4px 8px; height: fit-content; text-align: center; border: 1px solid var(--hairline); }
       .verdict.PASS { color: var(--tone-pos); border-color: var(--tone-pos); } .verdict.FAIL { color: var(--tone-neg); border-color: var(--tone-neg); } .verdict.PENDING { color: var(--ink-muted); }
-      @media (max-width: 640px) { .gate { grid-template-columns: 1fr; } .stamp-bar { flex-direction: column; gap: 2px; } }
+      @media (max-width: 900px) {
+        .hero-top { grid-template-columns: 1fr; gap: 26px; padding: 12vh 6vw 3vh; align-items: start; }
+        .hero-figures { max-width: 34rem; }
+      }
+      @media (max-width: 640px) {
+        .gate { grid-template-columns: 1fr; }
+        .stamp-bar { flex-direction: column; gap: 2px; }
+        .hero { min-height: auto; padding-bottom: 4vh; }
+        .fig { min-height: 74px; padding: 12px 13px 13px; }
+        .chapter { padding-top: 9vh; }
+      }
+      /* nothing may push the document sideways at any width */
+      html, body { max-width: 100%; overflow-x: hidden; }
     </style>
   </body>
 </html>
