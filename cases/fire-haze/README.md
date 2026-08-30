@@ -116,39 +116,50 @@ reproduce.
 
 ## Where it stands
 
-Numbers below are from the run on the **six ERA5 years drained so far** (2012, 2015, 2016, 2017,
-2018, 2019 — both anchors among them) and **without daily rainfall**, because `tp` sits behind
-`sl` on the same CDS dataset queue. They will move as the record lengthens; `data/stats.json` and
-the dashboard are the source of truth, not this table.
+Numbers below are from the run on the **seven ERA5 years drained so far** (2012, 2015–2019, 2026 —
+both anchors among them), with daily rainfall for one of them. They will move as the record
+lengthens; `data/stats.json` and the dashboard are the source of truth, not this table.
 
-**G-J2, the hard one, passes on both halves.** Against per-cell day-of-year climatology, and
-against the operational CEMS Canadian Fire Weather Index — an index we did not design and cannot
-tune, isotonically calibrated to a probability on the same folds so that it is compared at its
-best:
+**Three of five gates pass, and all three hard gates pass.** The two that fail ship red with
+their numbers.
 
-| lead | model AUC | CEMS FWI AUC | BSS vs FWI | BSS vs climatology |
-|---|---|---|---|---|
-| 1 day | **0.887** | 0.806 | **+0.133** | +0.134 |
-| 3 days | **0.864** | 0.774 | **+0.105** | +0.089 |
-| 7 days | **0.846** | 0.738 | **+0.086** | +0.064 |
+| gate | | result |
+|---|---|---|
+| G-J1 · hotspot hygiene | hard | **PASS** — 11.92 % of the record removed, **10.69 % of the NRT tail**, and **zero** retained detections inside the mask on any product |
+| G-J2 · ignition skill | hard | **PASS** — AUC ≥ 0.80 and BSS > 0 against climatology *and* the CEMS FWI, at every lead, on both paths |
+| G-J3 · transport direction | soft | **FAIL** — 64.5 % agreement within ±30°, threshold 70 % (median difference 17.4°) |
+| G-J4 · receptor correlation | hard | **PASS** — Singapore ρ = **0.622**, threshold 0.50 |
+| G-J5 · anchor replay | soft | **FAIL** — 2015 ranks 1st of 7 modelled seasons, 2019 ranks 2nd; the threshold admits one |
 
-The interesting part is not that the model wins; it is that **the FWI decays faster with lead
-than the model does** (0.806 → 0.738 against 0.887 → 0.846). The index is a description of today's
-fire weather, and asking it about next week is asking it something it was not built to answer.
-That gap *is* the commercial opening the spec identified.
+**G-J2 in detail.** Both external baselines are isotonically calibrated to a probability on the
+same held-out season the model is, so each is compared at its best:
+
+| lead | model AUC | CEMS FWI AUC | BSS vs FWI | BSS vs climatology | BSS vs persistence |
+|---|---|---|---|---|---|
+| 1 day | **0.875** | 0.806 | **+0.133** | +0.116 | +0.071 |
+| 3 days | **0.848** | 0.774 | **+0.105** | +0.075 | +0.048 |
+| 7 days | **0.822** | 0.738 | **+0.086** | +0.013 | +0.012 |
+
+The interesting part is not that the model wins. It is that **the FWI decays faster with lead
+than the model does** (0.806 → 0.738 against 0.875 → 0.822): the index is a description of
+*today's* fire weather, and asking it about next week asks it something it was not built to
+answer. That gap is the commercial opening the spec identified. Equally, **at seven days the model
+barely beats calibrated persistence** (+0.012) — worth saying out loud, because it bounds the
+claim.
 
 **The foresight gap is real and monotonic.** Letting the model see the weather that actually
-happened over the lead window is worth +0.003 AUC at one day, +0.023 at three, **+0.035 at seven**.
-That is the honest price of not knowing the weather, and it grows exactly where you would expect.
+happened over the lead window is worth +0.004 AUC at one day, +0.022 at three, **+0.038 at seven**.
+That is the price of not knowing the weather, and it grows exactly where you would expect.
 
-**The anchors, scored blind:** 2015 AUC **0.908**, 2019 AUC **0.904** — both higher than the
-model's own cross-validation folds, on two years it was never trained on.
+**The anchors, scored blind:** 2015 AUC **0.909**, 2019 AUC **0.904** — both higher than the
+model's own cross-validation folds, on two years it was never trained on, and the model puts them
+first and second of seven seasons, which is the observed ordering exactly.
 
 **What the model is actually using**, by mean |SHAP| aggregated to families: fire history 43 %,
 atmosphere 18 %, fuel 12 %, soil moisture 11 %, ocean state 7 %, season 7 %, dryness 3 %. The
-dryness share is low *because* daily rainfall has not drained yet — the family is currently just
-SPI. Expect it to rise and fire history to fall once `tp` lands, and that shift is itself worth
-watching.
+dryness share is low *because* daily rainfall has barely drained — the family is currently almost
+entirely SPI. Expect it to rise and fire history to fall as `tp` lands, and that shift is itself
+worth watching.
 
 ## Six premises that did not survive reconnaissance
 
@@ -280,7 +291,16 @@ proper 46-year base for SPI-1/3/6 — the difference between "SPI-3" and "a 14-y
 SPI's name" — and ERA5 supplies the daily rain. SPI is computed here (gamma per cell per calendar
 month with a zero point mass) so the identical code can run on a forecast.
 
-**B7 · G-J3's bearing check is a bearing check, and it may ship red.** A first pass over a single
+**B13 · G-J5 fails on arithmetic, and the arithmetic is published.** A percentile rank over N
+seasons takes N distinct values, so a ≥ 0.90 threshold admits `ceil(N/10)` of them — over a
+7-season modelled record that is exactly **one**, and two anchors cannot both occupy one slot
+however well the model ranks them. It ranks 2015 first and 2019 second, which is the observed
+ordering exactly. **The threshold is not moved.** What is added is the arithmetic beside it, so a
+reader can tell "the model cannot rank the crises" from "the record is not yet long enough for
+this test to be answerable". It becomes answerable at fifteen seasons, which is what the full
+ERA5 drain delivers.
+
+**B7 · G-J3's bearing check is a bearing check, and it ships red.** A first pass over a single
 year with no GFAS heights gave **60.1 % agreement within ±30°, median difference 21.5°**; three
 years gave 62.7 % at a median of 18.9°. Both are below the 70 % threshold. **The threshold is not
 moving.** The median difference being well inside ±30° while the share is not tells you the shape
