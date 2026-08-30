@@ -1,0 +1,15 @@
+[project]
+name = "global-narrative"
+version = "0.1.0"
+description = "Case D pipeline: Indonesia in the global news narrative (GDELT open feeds, no BigQuery)"
+requires-python = ">=3.12"
+dependencies = [
+    "requests>=2.32",
+    "pandas>=2.2",
+    "pyarrow>=17",
+    "duckdb>=1.1",
+    "numpy>=1.26",
+]
+
+[tool.uv]
+package = false

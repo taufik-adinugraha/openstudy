@@ -96,6 +96,20 @@
   --quote: #F1EDDF;           /* paper — verbatim quotes read as paper */
 }
 
+/* ── Case: global narrative — signal violet on broadcast black ──────── */
+[data-case="narrative"] {
+  --ground: #0E0A16;
+  --surface: #171126;
+  --surface-raised: #1F1733;
+  --ink: #EAE6F2;
+  --ink-muted: #9C93B3;
+  --hairline: #2A2142;
+  --accent: #B26DF2;          /* signal violet — the pulse of coverage */
+  --accent-ink: #26113E;
+  --tone-pos: #4BB8A9;        /* tone semantics: positive teal / negative coral */
+  --tone-neg: #F26D5B;
+}
+
 /* ── Light fallback (accessibility/print) ───────────────────────────── */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {

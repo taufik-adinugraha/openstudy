@@ -105,11 +105,24 @@ const DEMOS = {
         </div>
       </div>
 
+      <div class="case building" data-case="narrative">
+        <div class="case-visual narrative-visual" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="case-body">
+          <span class="badge">IN BUILD — PHASE 2</span>
+          <h2>Indonesia in the Global Narrative</h2>
+          <p>Every 15 minutes, the world’s news mentions Indonesia somewhere. GDELT
+          watches all of it — 65 languages, a decade back. This case turns that
+          firehose into attention, tone, and theme signals a strategy team can read.</p>
+          <span class="meta">GDELT OPEN FEED · 65 LANGUAGES · NLP AT FIREHOSE SCALE</span>
+        </div>
+      </div>
+
       <div class="coming">
         <span class="stamp">PHASE 2 — IN THE PIPELINE</span>
         <ul>
           <li><b>Air Quality Nowcast</b> — Jabodetabek PM2.5, sensor fusion</li>
-          <li><b>Global Narrative</b> — Indonesia in the world’s news, via GDELT</li>
         </ul>
       </div>
     </section>
@@ -126,7 +139,7 @@ const DEMOS = {
     <script>
       // Homepage taste of Pustaka — real answers from the real API.
       // Host-aware: works on localhost and when served from the dev server IP.
-      const API = `http://${location.hostname}:8600/api`; // TODO prod: /knowledge/api
+      const API = `http://${location.hostname}:4330/api`; // TODO prod: /knowledge/api
       document.querySelectorAll('a[href^="http://localhost:"]').forEach((a) => {
         a.href = a.href.replace("//localhost:", `//${location.hostname}:`);
       });
@@ -230,6 +243,22 @@ const DEMOS = {
       #try-q { flex: 1; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 8px; color: var(--ink); padding: 10px 14px; font-family: var(--font-body); font-size: 0.85rem; }
       #try-q:focus-visible { outline: 2px solid var(--accent); }
       #try-form button { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 0 18px; font-family: var(--font-display); font-weight: 600; cursor: pointer; }
+      .narrative-visual { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 28px; }
+      .narrative-visual span { width: 6px; border-radius: 3px; background: var(--accent); opacity: 0.75; animation: pulse-bar 1.6s ease-in-out infinite; }
+      .narrative-visual span:nth-child(odd) { background: var(--ink-muted); opacity: 0.35; }
+      .narrative-visual span:nth-child(1) { height: 18px; animation-delay: 0s; }
+      .narrative-visual span:nth-child(2) { height: 42px; animation-delay: .1s; }
+      .narrative-visual span:nth-child(3) { height: 26px; animation-delay: .2s; }
+      .narrative-visual span:nth-child(4) { height: 58px; animation-delay: .3s; }
+      .narrative-visual span:nth-child(5) { height: 34px; animation-delay: .4s; }
+      .narrative-visual span:nth-child(6) { height: 74px; animation-delay: .5s; }
+      .narrative-visual span:nth-child(7) { height: 30px; animation-delay: .6s; }
+      .narrative-visual span:nth-child(8) { height: 88px; animation-delay: .7s; }
+      .narrative-visual span:nth-child(9) { height: 40px; animation-delay: .8s; }
+      .narrative-visual span:nth-child(10) { height: 62px; animation-delay: .9s; }
+      .narrative-visual span:nth-child(11) { height: 24px; animation-delay: 1s; }
+      .narrative-visual span:nth-child(12) { height: 48px; animation-delay: 1.1s; }
+      @keyframes pulse-bar { 50% { transform: scaleY(0.55); } }
       .coming { border: 1px dashed var(--hairline); border-radius: 8px; padding: 24px 28px; display: flex; flex-direction: column; gap: 12px; }
       .coming ul { margin: 0; padding-left: 1.2em; display: flex; flex-direction: column; gap: 6px; color: var(--ink-muted); font-size: 0.92rem; }
 

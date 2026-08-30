@@ -52,7 +52,7 @@ CHAPTER_NAMES = {  # HS chapters, short display names
 }
 
 
-EMBED_API = "http://localhost:8600/api/embed"   # the lab's own embedding service (Pustaka API)
+EMBED_API = "http://localhost:4330/api/embed"   # the lab's own embedding service (Pustaka API)
 
 
 def _con():
