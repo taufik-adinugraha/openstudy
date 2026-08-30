@@ -26,14 +26,23 @@ const maxMean = summary.topMean[0].v;
     </header>
 
     <section class="hero">
-      <img src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/hero.jpg`}
+      <img id="hero-still" src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/hero.jpg`}
            alt={`Indonesia at night, ${vintage} — NASA Black Marble radiance rendered in amber`} />
+      <div class="frames" id="hero-frames" hidden aria-hidden="true">
+        <img class="f a" alt="" /><img class="f b" alt="" />
+      </div>
       <div class="hero-copy">
         <h1>From 830&nbsp;km up, Indonesia looks like this.</h1>
-        <p>Monthly satellite radiance, translated into a regency-level pulse of
-        economic activity — months before official statistics arrive.</p>
-        <span class="stamp dim">VJ146A3 · {vintage} · 15 ARC-SECOND COMPOSITE</span>
+        <p>Every year since 2012, every month since 2018: satellite radiance
+        translated into a regency-level pulse of economic activity — months
+        before official statistics arrive.</p>
+        <span class="stamp dim" id="hero-prod">VJ146A3 · {vintage} · 15 ARC-SECOND COMPOSITE</span>
       </div>
+      <div class="year-hud" id="hero-hud" hidden aria-live="off">
+        <span class="year" id="hero-year"></span>
+        <span class="stamp dim">ANNUAL COMPOSITES · ONE FIXED STRETCH</span>
+      </div>
+      <div class="year-bar" id="hero-bar" hidden aria-label="year"><b></b></div>
       <div class="scroll-hint" aria-hidden="true">▾</div>
     </section>
 
@@ -162,6 +171,53 @@ const maxMean = summary.topMean[0].v;
       const base = import.meta.env.BASE_URL.replace(/\/$/, "");
       const RAMP = ["#05070F", "#1B2447", "#7A5A22", "#E8A33D", "#FFEFC9"];
       const state = { month: null, metric: "sol", region: null };
+
+      /* ---------- hero: annual timelapse (frames from pipeline/frames.py; the still stands if absent) ---------- */
+      heroTimelapse().catch((e) => console.warn("hero timelapse unavailable:", e?.message ?? e));
+      async function heroTimelapse() {
+        const res = await fetch(`${base}/frames/index.json`);
+        if (!res.ok) return;
+        const frames = (await res.json()).years;
+        if (frames.length < 2) return;
+        const wrap = document.getElementById("hero-frames"), still = document.getElementById("hero-still");
+        const imgs = [wrap.querySelector("img.a"), wrap.querySelector("img.b")];
+        const hudEl = document.getElementById("hero-hud"), yearEl = document.getElementById("hero-year");
+        const prodEl = document.getElementById("hero-prod");
+        const bar = document.getElementById("hero-bar"), fill = bar.querySelector("b");
+        const load = (f) => new Promise((ok, no) => {
+          const im = new Image(); im.onload = () => ok(im.src); im.onerror = () => no(new Error(`frame ${f.file}`));
+          im.src = `${base}/frames/${f.file}`;
+        });
+        const srcs = new Array(frames.length);
+        srcs[0] = await load(frames[0]);
+        frames.forEach((f, i) => {
+          const t = document.createElement("i");
+          t.style.left = `${(i / (frames.length - 1)) * 100}%`; t.title = String(f.year);
+          t.onclick = () => { clearTimeout(timer); show(i).then(schedule); };
+          bar.appendChild(t);
+        });
+        const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        let cur = 0, flip = 0, timer = null;
+        async function show(i) {
+          if (!srcs[i]) srcs[i] = await load(frames[i]);
+          cur = i; flip ^= 1;
+          imgs[flip].src = srcs[i];
+          imgs[flip].classList.add("on"); imgs[flip ^ 1].classList.remove("on");
+          yearEl.textContent = frames[i].year;
+          prodEl.textContent = `${frames[i].product} · ${frames[i].year} · ANNUAL 15 ARC-SECOND COMPOSITE`;
+          fill.style.width = `${(i / (frames.length - 1)) * 100}%`;
+        }
+        function schedule() {
+          if (reduced) return;
+          const last = cur === frames.length - 1;
+          timer = setTimeout(() => show(last ? 0 : cur + 1).then(schedule).catch(() => {}), last ? 3400 : 1400);
+        }
+        wrap.hidden = false; hudEl.hidden = false; bar.hidden = false;
+        await show(reduced ? frames.length - 1 : 0);
+        setTimeout(() => { still.hidden = true; }, 900);
+        (async () => { for (let i = 1; i < frames.length; i++) if (!srcs[i]) srcs[i] = await load(frames[i]).catch(() => null); })();
+        schedule();
+      }
 
       const [geo, ledger] = await Promise.all([
         fetch(`${base}/data/regencies.geojson`).then((r) => r.json()),
@@ -549,6 +605,20 @@ const maxMean = summary.topMean[0].v;
       @keyframes fadeup { to { opacity: 1; } }
       .hero::after { content: ""; position: absolute; inset: 0;
         background: linear-gradient(78deg, rgba(5,7,15,0.88) 0%, rgba(5,7,15,0.55) 32%, transparent 58%); }
+      .hero .frames { position: absolute; inset: 0; }
+      .hero .frames[hidden], .year-hud[hidden], .year-bar[hidden] { display: none; }
+      .hero .frames img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 0.7s ease; }
+      .hero .frames img.on { opacity: 1; }
+      .hero img[hidden] { display: none; }
+      .year-hud { position: absolute; right: 6vw; bottom: 12vh; z-index: 2; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; }
+      .year-hud .year { font-family: var(--font-data); font-weight: 600; font-size: clamp(2.8rem, 7.5vw, 6rem); line-height: 1; color: var(--accent);
+        font-variant-numeric: tabular-nums; text-shadow: 0 0 28px rgba(232, 163, 61, 0.45); }
+      .year-bar { position: absolute; left: 6vw; right: 6vw; bottom: 7.5vh; height: 2px; z-index: 2; background: rgba(233, 228, 214, 0.16); }
+      .year-bar b { position: absolute; left: 0; top: 0; height: 100%; width: 0; background: var(--accent); box-shadow: 0 0 10px var(--accent); transition: width 0.7s ease; }
+      .year-bar i { position: absolute; top: -6px; width: 9px; height: 14px; margin-left: -4px; cursor: pointer; }
+      .year-bar i::after { content: ""; position: absolute; left: 4px; top: 0; width: 1px; height: 100%; background: rgba(233, 228, 214, 0.35); }
+      .year-bar i:hover::after { background: var(--accent); }
+      @media (max-width: 720px) { .year-hud { right: 6vw; bottom: auto; top: 14vh; } .hero-copy { bottom: 14vh; } }
       .hero-copy { position: absolute; left: 6vw; bottom: 12vh; max-width: 34rem; display: flex; flex-direction: column; gap: 14px; z-index: 2; }
       .hero-copy h1 { font-size: clamp(1.9rem, 4.5vw, 3.2rem); margin: 0; line-height: 1.08; letter-spacing: -0.015em; }
       .hero-copy p { margin: 0; color: var(--ink-muted); font-size: 1.05rem; max-width: 30rem; }

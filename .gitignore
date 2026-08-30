@@ -7,6 +7,7 @@
 cases/*/data/*
 !cases/*/data/.gitkeep
 !cases/*/data/crosswalk/
+cases/*/web/public/frames/
 *.duckdb
 *.duckdb.wal
 *.parquet

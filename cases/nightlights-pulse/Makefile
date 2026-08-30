@@ -21,6 +21,12 @@ rebuild-all:
 crosswalk:
 	$(PY)/crosswalk.py
 
+frames:          ## annual hero timelapse frames from data/raw/bm/YYYY-01/*A4_radiance.tif
+	$(PY)/frames.py
+
+export:          ## web view-models (ledger.json, summary.json, hero.jpg)
+	$(PY)/export_web.py
+
 validate:
 	$(PY)/models.py validate
 
