@@ -63,10 +63,11 @@ const maxMean = summary.topMean[0].v;
     <section class="chapter">
       <span class="eyebrow">02 · The pulse</span>
       <h2>The series so far</h2>
-      <p>National sum of lights per month. The ledger is backfilling 2018→present;
-      this chart grows as months land. Hollow points mark monsoon months, where
-      cloud cover leaves few clear observations — the pipeline reports what it
-      cannot see rather than guessing.</p>
+      <p>National sum of lights per month, 2018 to the latest composite; the
+      ledger grows by one month each time NASA publishes. Hollow points mark
+      monsoon months, where cloud cover leaves few clear observations — the
+      pipeline reports what it cannot see rather than guessing. Press play on the
+      map below to watch every regency move.</p>
       <div id="pulse-chart" class="chart"></div>
       <p class="footnote">Values are lights-implied activity, not GDP. Coverage-weighted
       deseasonalization arrives with the calibration stage.</p>
@@ -144,9 +145,12 @@ const maxMean = summary.topMean[0].v;
       NOAA-20 VIIRS, 15 arc-second, QA-masked at &lt;2 cloud-free observations.
       Boundaries: geoBoundaries gbOpen IDN ADM2 (CC BY 3.0 IGO), 2020 vintage, frozen.
       Regional statistics: exact area-weighted extraction, 514 regencies matched 1:1
-      to BPS codes. <b>This index measures light, not GDP</b> — calibration against
-      BPS regional accounts, with its full fit statistics, publishes here when the
-      backfill completes.</p>
+      to BPS codes. Hero timelapse: annual composites VNP46A4 (Suomi-NPP, 2012–2017)
+      and VJ146A4 (NOAA-20, 2018→), every year rendered with the same fixed log stretch
+      (ceiling 30 nW/cm²·sr, block-max downsampling) — the two sensors are
+      cross-calibrated by NASA but not identical, so read the years, not the brightness.
+      <b>This index measures light, not GDP</b> — calibration against BPS regional
+      accounts, with its full fit statistics, publishes here when the model stage lands.</p>
       <span class="stamp dim">A DEMO-LAB CASE · PIPELINE RERUNS MONTHLY · GENERATED {vintage}</span>
     </footer>
 

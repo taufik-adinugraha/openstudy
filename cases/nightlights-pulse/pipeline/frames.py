@@ -29,7 +29,9 @@ import config
 
 FRAMES = config.CASE_DIR / "web" / "public" / "frames"
 RAW_BM = config.DATA_DIR / "raw" / "bm"
-STRETCH_TOP = 60.0   # nW/cm²/sr — ramp ceiling; Jakarta's core saturates, towns stay visible
+STRETCH_TOP = 30.0   # nW/cm²/sr — ramp ceiling; Jakarta's core saturates, towns stay visible
+GAMMA = 0.85         # lifts the rural mid-tones a little without flattening the cities
+BLOOM = 0.45         # soft glow around lit areas (share of a blurred copy added back)
 BLOCK = 4            # 15-arcsecond pixels per block → ~1.85 km block-max
 LIT_THRESHOLD = 0.5  # nW/cm²/sr — "lit pixel" for the index stats
 GROUND = np.array([5, 7, 15], dtype="float32") / 255  # case midnight indigo
@@ -52,8 +54,12 @@ def block_max(a: np.ndarray, k: int) -> np.ndarray:
 
 
 def render(rad: np.ndarray) -> np.ndarray:
+    from PIL import Image, ImageFilter
+
     v = np.clip(np.nan_to_num(rad, nan=0.0), 0, None)
-    norm = np.clip(np.log1p(v) / np.log1p(STRETCH_TOP), 0, 1).astype("float32")
+    norm = np.clip(np.log1p(v) / np.log1p(STRETCH_TOP), 0, 1) ** GAMMA
+    glow = Image.fromarray((norm * 255).astype("uint8")).filter(ImageFilter.GaussianBlur(radius=5))
+    norm = np.clip(norm + BLOOM * (np.asarray(glow, dtype="float32") / 255), 0, 1).astype("float32")
     core = np.clip((norm - 0.72) / 0.28, 0, 1)  # brightest cores warm towards white
     r = norm
     g = norm * 0.64 + core * 0.36
