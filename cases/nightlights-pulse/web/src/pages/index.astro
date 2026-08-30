@@ -332,39 +332,34 @@ const maxMean = summary.topMean[0].v;
         note.textContent = "2-D MAP (BROWSER GPU OFF) · NASA BLACK MARBLE · GEOBOUNDARIES CC BY 3.0 IGO";
         container.appendChild(note);
         const ctx = canvas.getContext("2d");
-        const pick = document.createElement("canvas");
-        const pctx = pick.getContext("2d", { willReadFrequently: true });
+        const hitCtx = document.createElement("canvas").getContext("2d"); // identity-transform ctx for isPointInPath
         const dpr = Math.min(devicePixelRatio || 1, 2);
         const B = { w: 94.5, s: -11.5, e: 141.5, n: 6.5 };
-        let W, H, sx, sy, ox, oy, paths = [];
+        let W, H, sx, sy, ox, oy, paths = [], boxes = [];
         const ramp = d3.piecewise(d3.interpolateRgb, RAMP);
         function project() {
           W = container.clientWidth; H = container.clientHeight;
           canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-          pick.width = W; pick.height = H; // 1x for exact pixel reads
           const pad = 20;
           const k = Math.min((W - 2 * pad) / (B.e - B.w), (H - 2 * pad) / (B.n - B.s));
           sx = k; sy = -k;
           ox = (W - k * (B.e - B.w)) / 2; oy = (H + k * (B.n - B.s)) / 2;
-          paths = geo.features.map((f, i) => {
+          paths = []; boxes = [];
+          for (const f of geo.features) {
             const p = new Path2D();
+            let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
             const polys = f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
             for (const poly of polys) for (const ring of poly) {
               ring.forEach(([lon, lat], j) => {
                 const px = ox + (lon - B.w) * sx, py = oy + (lat - B.s) * sy;
+                if (px < x0) x0 = px; if (px > x1) x1 = px;
+                if (py < y0) y0 = py; if (py > y1) y1 = py;
                 j ? p.lineTo(px, py) : p.moveTo(px, py);
               });
               p.closePath();
             }
-            return p;
-          });
-          // picking layer: each feature in a unique flat colour (index-encoded)
-          pctx.setTransform(1, 0, 0, 1, 0, 0);
-          pctx.clearRect(0, 0, W, H);
-          paths.forEach((p, i) => {
-            pctx.fillStyle = `rgb(${(i + 1) & 255},${((i + 1) >> 8) & 255},0)`;
-            pctx.fill(p);
-          });
+            paths.push(p); boxes.push([x0, y0, x1, y1]);
+          }
         }
         let hoverIdx = -1;
         function paintAll() {
@@ -379,9 +374,16 @@ const maxMean = summary.topMean[0].v;
         project();
         addEventListener("resize", () => { project(); paintAll(); });
         const featureAt = (e) => {
+          // exact geometric hit test: bbox pre-filter, then point-in-polygon;
+          // last (topmost-painted) match wins on any overlap
           const r = canvas.getBoundingClientRect();
-          const d = pctx.getImageData(e.clientX - r.left, e.clientY - r.top, 1, 1).data;
-          return (d[0] | (d[1] << 8)) - 1;
+          const px = e.clientX - r.left, py = e.clientY - r.top;
+          for (let i = paths.length - 1; i >= 0; i--) {
+            const b = boxes[i];
+            if (px < b[0] || px > b[2] || py < b[1] || py > b[3]) continue;
+            if (hitCtx.isPointInPath(paths[i], px, py)) return i;
+          }
+          return -1;
         };
         canvas.addEventListener("mousemove", (e) => {
           const i = featureAt(e);
