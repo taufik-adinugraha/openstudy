@@ -1,6 +1,13 @@
 ---
-// Case D — Indonesia in the Global Narrative. Skeleton until the pipeline lands.
+// Case D — Indonesia in the Global Narrative. Page anatomy per spec N5:
+// pulse hero → eras → tone → themes → who's talking → event layer → methodology.
+// Identity: signal violet on broadcast black. Every chart is d3 (SVG / canvas-2D);
+// no WebGL anywhere — the user's browser has it disabled.
 import "../styles/tokens.css";
+const summary = (await import("../data/summary.json").catch(() => null))?.default ?? {};
+const fmtPct = (v) => (v == null ? "—" : (v * 1).toFixed(2) + "%");
+const apiLast = summary.apiLast ?? "—";
+const eventsLast = summary.eventsLast ?? "pending";
 ---
 <html lang="en" data-case="narrative" data-theme="dark">
   <head>
@@ -10,14 +17,725 @@ import "../styles/tokens.css";
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
   </head>
   <body>
-    <main style="min-height:100vh;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:16px;padding:0 6vw;">
-      <span style="font-family:var(--font-data);font-size:0.72rem;letter-spacing:0.14em;color:var(--accent);">CASE D · IN BUILD</span>
-      <h1 style="font-size:clamp(2rem,5vw,3.2rem);margin:0;line-height:1.1;">Indonesia in the Global Narrative</h1>
-      <p style="color:var(--ink-muted);max-width:36rem;margin:0;">Attention, tone, and themes from the world’s news —
-      GDELT’s open 15-minute feed across 65 languages, a decade deep. The pipeline is being built;
-      this page lights up when the first ledger lands.</p>
-      <!-- TODO per spec D (pending): hero pulse waveform → chapters (attention eras,
-           tone events, theme decomposition, who-talks-about-Indonesia) → explore → methodology -->
-    </main>
+    <header class="stamp-bar">
+      <span class="stamp">INDONESIA IN THE GLOBAL NARRATIVE</span>
+      <span class="stamp dim" id="vintage">GDELT · API THROUGH {apiLast} · EVENTS THROUGH {eventsLast}</span>
+    </header>
+
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow">Case D · GDELT open feeds · 2017 → now</span>
+        <h1>Every time the world’s news turned to Indonesia — a decade, one pulse.</h1>
+        <p>GDELT machine-reads the world’s news every fifteen minutes in 65 languages. This is the share of
+        all of it that mentioned Indonesia, day by day{summary.volMean ? ` — on average ${fmtPct(summary.volMean)} of everything monitored` : ""}.
+        The flares are the days the world could not look away.</p>
+        <span class="stamp dim" id="hero-status">LOADING THE PULSE…</span>
+      </div>
+      <div id="pulse" class="pulse"></div>
+    </section>
+
+    <section class="chapter wide">
+      <span class="eyebrow">01 · The eras</span>
+      <h2>Five regimes of attention</h2>
+      <p>Attention to a country is not a slope; it is a series of plateaus broken by shocks. Each era below
+      carries its average share of world coverage, its mean tone, and the themes that defined it — all
+      computed, none asserted.</p>
+      <div id="eras" class="era-grid"></div>
+    </section>
+
+    <section class="chapter">
+      <span class="eyebrow">02 · The darkest days</span>
+      <h2>How warmly the world spoke</h2>
+      <p>GDELT’s tone runs from roughly −10 (uniformly negative) to +10. Coverage of any country lives
+      below zero — news is what goes wrong — so the line is drawn against its own long-run mean: teal
+      when the world was kinder than usual to Indonesia, coral when it was harsher.</p>
+      <div id="tone-chart" class="chart"></div>
+      <div id="darkest" class="day-list"></div>
+      <p class="footnote" id="g20-note"></p>
+      <h3>When it’s loud, is it dark?</h3>
+      <p class="footnote">Each dot is a month: how much the world talked about Indonesia against how it
+      sounded. We expected loud to mean dark — the data says otherwise: across the decade the two barely
+      correlate (the r is on the chart). Sustained attention comes from summits and elections as often as
+      from catastrophe; the truly dark moments are single <em>days</em>, listed above. Notice also the colour
+      drift: months after 2023 sit warmer — a real shift in coverage, though GDELT’s shrinking source mix
+      (methodology) deserves part of the credit.</p>
+      <div id="scatter" class="chart"></div>
+    </section>
+
+    <section class="chapter wide">
+      <span class="eyebrow">03 · What the world reads about</span>
+      <h2>Twenty threads in the story</h2>
+      <p>Each panel is a keyword theme’s share of all Indonesia coverage, month by month, on its own
+      scale. Hover to read one month across every theme.</p>
+      <div id="themes" class="theme-grid"></div>
+      <div id="era-rank" class="rank-wrap"></div>
+    </section>
+
+    <section class="chapter wide">
+      <span class="eyebrow">04 · Who’s talking</span>
+      <h2>Whose news it is</h2>
+      <p>For each publishing country, the share of its <em>own</em> monitored output that mentioned
+      Indonesia — a measure of interest, not of volume. Neighbours watch closely; the Anglophone giants
+      barely glance, and when they do the tone is different.</p>
+      <div id="sources-heat" class="chart"></div>
+      <div class="two-up">
+        <div><h3>Foreign vs domestic press</h3><p class="footnote">Share of Indonesia coverage published outside Indonesia (<code>-sourcecountry:ID</code>). Gate G-D4.</p><div id="press-chart" class="chart"></div></div>
+        <div><h3>Languages</h3><p class="footnote">Intensity of Indonesia coverage by language — the world’s narrative is not only the English one.</p><div id="lang-bars" class="chart"></div></div>
+      </div>
+      <div id="outlets" class="two-up"></div>
+    </section>
+
+    <section class="chapter wide">
+      <span class="eyebrow">05 · The event layer</span>
+      <h2>What actually happened, and where</h2>
+      <p>Underneath the articles, GDELT codes discrete events — who did what to whom, where. From the raw
+      15-minute feed we keep every event that touches Indonesia (as location or as actor), count it
+      against everything the feed carried that day, and type it: cooperation or conflict, words or deeds.</p>
+      <div id="events-status" class="stamp dim"></div>
+      <h3>Cooperation and conflict, month by month</h3>
+      <div id="quad-chart" class="chart"></div>
+      <h3>Protest events</h3>
+      <p class="footnote">CAMEO root code 14. The 2019 post-election riots and the 2025 protests are the two
+      spikes the pipeline must reproduce unprompted (gate G-D2).</p>
+      <div id="protest-chart" class="chart"></div>
+      <h3>Where the news happened</h3>
+      <p class="footnote">Event locations on a 0.25° grid; the archipelago draws itself from the data — no
+      basemap. Events geocoded only to “Indonesia” (no province) are excluded and counted below.</p>
+      <div class="map-controls">
+        <div class="toggle" role="group" aria-label="colour by" id="map-mode">
+          <button data-mode="n" class="on">EVENTS</button><button data-mode="tone">TONE</button><button data-mode="protest">PROTESTS</button>
+        </div>
+        <div class="toggle" id="map-years" role="group" aria-label="year"></div>
+      </div>
+      <div class="map-wrap"><canvas id="map-canvas"></canvas><div id="map-tip" hidden></div><span class="stamp dim map-note" id="map-note"></span></div>
+      <div class="two-up">
+        <div><h3>Who Indonesia is in the news with</h3><p class="footnote">Counter-party actors in Indonesia events — CAMEO codes: ISO3 countries plus regions (SEA = Southeast Asia). All years streamed so far.</p><div id="actors" class="chart"></div></div>
+        <div><h3>Event types</h3><p class="footnote">CAMEO root codes across all kept events.</p><div id="roots" class="chart"></div></div>
+      </div>
+    </section>
+
+    <footer class="method">
+      <span class="eyebrow">Methodology &amp; sources</span>
+      <h3>Normalization (gate G-D1)</h3>
+      <p>GDELT’s crawl is not a constant: the number of articles it monitors per day has drifted by a factor
+      of about four across the decade — mostly <em>shrinking</em> since 2017. Every attention chart on this
+      page is therefore a <b>share</b> of everything monitored, never a raw count: a raw count would show
+      “the world losing interest in Indonesia” when what actually declined is the crawl. The raw count
+      appears once — here — next to the normalized share, so the drift is visible and the reason is plain.
+      (The API itself went dark 15 Jun – 1 Jul 2025; that gap is left visible, not interpolated.)</p>
+      <div id="norm-chart" class="chart"></div>
+      <h3>Sources, coding, cadence</h3>
+      <p id="method-text">Curves: GDELT DOC 2.0 API (<code>TimelineVol</code>, pre-normalized;
+      <code>TimelineVolRaw</code> with its <code>norm</code>; <code>TimelineTone</code>;
+      <code>TimelineSourceCountry</code>; <code>TimelineLang</code>), keyless, one request per ~12 s, every
+      response cached. Events: the raw 15-minute <code>export</code> feed (English + translated), 2017 → now,
+      ~50 GB streamed through a filter that keeps rows where <code>ActionGeo_CountryCode = 'ID'</code> — that is
+      the <b>FIPS</b> code — or <code>Actor1/2CountryCode = 'IDN'</code> — the <b>ISO3</b> code. The two column
+      families use different standards; matching only one silently drops a third of Indonesia’s events.
+      Events are counted once each (GDELT’s export is one row per unique event; mentions are kept only as
+      weights). The ledger keys on <code>DATEADDED</code>, the day the news carried the event, because GDELT’s
+      guessed event date mis-years undated references. <code>sourcecountry:</code> is the publisher’s country,
+      not the story’s. Tone and event types are machine-coded; counts are indicative. Media coverage is
+      itself biased — toward disaster, toward the Anglophone press, toward what is online — and this page
+      measures that coverage, not Indonesia.</p>
+      <h3>Validation gates</h3>
+      <div id="gates" class="gates"></div>
+      <p class="footnote">Data: <a href="https://www.gdeltproject.org/" rel="noopener">The GDELT Project</a> — free for any use
+      with attribution. A demo-lab case; refreshed nightly (API) and by month (events).</p>
+      <span class="stamp dim" id="foot-stamp"></span>
+    </footer>
+    <div id="chart-tip" hidden></div>
+
+    <script>
+      import * as d3 from "d3";
+
+      /* visible failure beats silent emptiness: any uncaught error paints a banner */
+      const failBanner = (msg) => {
+        let b = document.getElementById("err-banner");
+        if (!b) {
+          b = document.createElement("div"); b.id = "err-banner";
+          b.style.cssText = "position:fixed;bottom:0;left:0;right:0;z-index:99;background:#3A1E1A;color:#F26D5B;font:12px ui-monospace,monospace;padding:10px 16px;border-top:1px solid #F26D5B;";
+          document.body.appendChild(b);
+        }
+        b.textContent = "⚠ " + msg;
+      };
+      addEventListener("error", (e) => failBanner("Script error: " + (e.message ?? e.type)));
+      addEventListener("unhandledrejection", (e) => failBanner("Load error: " + (e.reason?.message ?? e.reason)));
+      /* run each section independently — one failure must not blank the page */
+      const sect = (name, fn) => { try { return fn(); } catch (err) { console.error(name, err); failBanner(`${name} failed: ${err.message ?? err}`); return null; } };
+
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const VIOLET = "#B26DF2", POS = "#4BB8A9", NEG = "#F26D5B", INK = "#EAE6F2", MUTED = "#9C93B3", GROUND = "#0E0A16", HAIR = "#2A2142", SURFACE = "#171126";
+      const ERA_COLORS = ["#7A6FA8", "#B26DF2", "#4BB8A9", "#E0A63F", "#F26D5B"];
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const load = (f) => fetch(`${base}/data/${f}`).then((r) => { if (!r.ok) throw new Error(f); return r.json(); });
+      const get = (f) => load(f).catch(() => null);
+      const [pulse, tone, themes, sources, events, map, status] = await Promise.all(
+        ["pulse.json", "tone.json", "themes.json", "sources.json", "events.json", "map.json", "status.json"].map(get));
+
+      const pending = (id, msg) => { const el = document.getElementById(id); if (el) el.innerHTML = `<div class="pending">${msg}</div>`; };
+      if (!pulse) {
+        document.getElementById("hero-status").textContent = "PIPELINE STILL RUNNING — the API curves have not been exported yet. Refresh in a few minutes.";
+      }
+      if (status) {
+        const v = document.getElementById("vintage");
+        v.textContent = `GDELT · API THROUGH ${status.api_last ?? "—"} · EVENTS ${status.events_complete ? "THROUGH" : "PARTIAL, THROUGH"} ${status.events_last ?? "PENDING"}`;
+        document.getElementById("foot-stamp").textContent =
+          `A DEMO-LAB CASE · GENERATED ${status.generated ?? ""} · ${status.api_timelines ?? 0} API TIMELINES · ${status.streamed?.files?.toLocaleString() ?? 0} FEED FILES / ${status.streamed?.gb ?? 0} GB STREAMED · ${status.streamed?.rows_kept?.toLocaleString() ?? 0} INDONESIA EVENTS KEPT`;
+      }
+
+      /* shared helpers */
+      const ctip = document.getElementById("chart-tip");
+      const showTip = (e, html) => { ctip.hidden = false; ctip.innerHTML = html; const x = Math.min(e.pageX + 14, innerWidth + scrollX - 280); ctip.style.left = x + "px"; ctip.style.top = e.pageY + 14 + "px"; };
+      const hideTip = () => { ctip.hidden = true; };
+      const P = d3.timeParse("%Y-%m-%d"), PM = d3.timeParse("%Y-%m");
+      const fDay = d3.timeFormat("%-d %b %Y"), fMon = d3.timeFormat("%b %Y"), fYear = d3.timeFormat("%Y");
+      const pct = (v, d = 2) => (v == null ? "—" : v.toFixed(d) + "%");
+      const num = (v, d = 2) => (v == null ? "—" : (+v).toFixed(d));
+      const sgn = (v, d = 2) => (v == null || Number.isNaN(+v) ? "—" : (v > 0 ? "+" : "") + (+v).toFixed(d));
+      const mkSvg = (el, H) => { const W = el.clientWidth || 800; const svg = d3.select(el).append("svg").attr("width", W).attr("height", H).attr("viewBox", `0 0 ${W} ${H}`); return { svg, W, H }; };
+      const yearAxis = (x) => d3.axisBottom(x).ticks(d3.timeYear.every(1)).tickFormat(fYear).tickSizeOuter(0);
+      const nearestIdx = (dates, t) => { const i = d3.bisector((d) => d).left(dates, t); return i <= 0 ? 0 : i >= dates.length ? dates.length - 1 : (t - dates[i - 1] < dates[i] - t ? i - 1 : i); };
+      const hoverRect = (svg, M, W, H, onMove, onLeave) => svg.append("rect").attr("class", "hover").attr("x", M.l).attr("y", M.t).attr("width", Math.max(0, W - M.l - M.r)).attr("height", Math.max(0, H - M.t - M.b)).attr("fill", "transparent").on("mousemove", onMove).on("mouseleave", onLeave);
+      const defs = d3.select("body").append("svg").attr("width", 0).attr("height", 0).style("position", "absolute").append("defs");
+      const glow = defs.append("filter").attr("id", "violet-glow").attr("x", "-40%").attr("y", "-40%").attr("width", "180%").attr("height", "180%");
+      glow.append("feDropShadow").attr("dx", 0).attr("dy", 0).attr("stdDeviation", 4).attr("flood-color", VIOLET).attr("flood-opacity", 0.55);
+      const fade = defs.append("linearGradient").attr("id", "pulse-fill").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 1);
+      fade.append("stop").attr("offset", "0%").attr("stop-color", VIOLET).attr("stop-opacity", 0.55);
+      fade.append("stop").attr("offset", "100%").attr("stop-color", VIOLET).attr("stop-opacity", 0.02);
+
+      /* ---------- hero: the pulse ---------- */
+      sect("pulse", () => {
+        if (!pulse) return;
+        const el = document.getElementById("pulse");
+        const dates = pulse.dates.map(P);
+        const vol7 = pulse.vol7, vol = pulse.vol;
+        const M = { t: 64, r: 28, b: 34, l: 40 };
+        const { svg, W, H } = mkSvg(el, Math.max(340, Math.min(520, innerHeight * 0.58)));
+        const x = d3.scaleTime(d3.extent(dates), [M.l, W - M.r]);
+        const y = d3.scaleLinear([0, d3.max(vol.filter((v) => v != null)) * 1.04], [H - M.b, M.t]);
+        // era bands
+        const erasG = svg.append("g");
+        (pulse.eras ?? []).forEach((e, i) => {
+          erasG.append("rect").attr("x", x(P(e.start))).attr("y", M.t - 30).attr("width", Math.max(0, x(P(e.end)) - x(P(e.start)))).attr("height", H - M.b - M.t + 30).attr("fill", ERA_COLORS[i % ERA_COLORS.length]).attr("opacity", 0.045);
+          erasG.append("text").attr("class", "annot").attr("x", x(P(e.start)) + 6).attr("y", M.t - 16).attr("fill", ERA_COLORS[i % ERA_COLORS.length]).text(e.label.toUpperCase()).style("font-size", "10.5px").style("letter-spacing", "0.1em");
+        });
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(yearAxis(x));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(4).tickFormat((v) => v + "%").tickSizeOuter(0));
+        svg.append("text").attr("class", "annot").attr("x", M.l + 6).attr("y", M.t + 8).text("share of all articles GDELT monitored, 7-day mean");
+        const clipId = "pulse-clip";
+        const clip = svg.append("clipPath").attr("id", clipId).append("rect").attr("x", M.l).attr("y", 0).attr("height", H).attr("width", reduced ? W : 0);
+        const g = svg.append("g").attr("clip-path", `url(#${clipId})`);
+        const area = d3.area().defined((d, i) => vol7[i] != null).x((d) => x(d)).y0(H - M.b).y1((d, i) => y(vol7[i])).curve(d3.curveMonotoneX);
+        const line = d3.line().defined((d, i) => vol7[i] != null).x((d) => x(d)).y((d, i) => y(vol7[i])).curve(d3.curveMonotoneX);
+        const daily = d3.line().defined((d, i) => vol[i] != null).x((d) => x(d)).y((d, i) => y(vol[i]));
+        g.append("path").datum(dates).attr("d", area).attr("fill", "url(#pulse-fill)");
+        g.append("path").datum(dates).attr("d", daily).attr("fill", "none").attr("stroke", VIOLET).attr("stroke-width", 0.6).attr("opacity", 0.28);
+        g.append("path").datum(dates).attr("d", line).attr("fill", "none").attr("stroke", VIOLET).attr("stroke-width", 1.8).style("filter", "url(#violet-glow)");
+        // anchors
+        const anchors = (pulse.anchors ?? []).map((a, i) => ({ ...a, i, x: x(P(a.peak_day ?? a.day)), y: y(Math.min(a.peak ?? 0, y.domain()[1])) }));
+        const ag = svg.append("g").attr("class", "anchors");
+        const lab = ag.selectAll("g.a").data(anchors).join("g").attr("class", "a").attr("opacity", reduced ? 1 : 0);
+        // labels live in a shared top band (staggered rows); dotted lines drop to the pulse.
+        // A right-edge label renders right-anchored, so rows are assigned by the label's
+        // true horizontal interval, not just its dot's x.
+        const LW = 330;
+        const rowEnd = [];
+        [...anchors].sort((a, b) => a.x - b.x).forEach((d) => {
+          d.flip = d.x + LW > W - 4;
+          const x0 = d.flip ? d.x - LW : d.x, x1 = d.flip ? d.x : d.x + LW;
+          let r = 0; while (rowEnd[r] != null && x0 < rowEnd[r] + 10) r++;
+          rowEnd[r] = x1; d.row = r;
+        });
+        const labY = (d) => M.t + 24 + d.row * 13.5;
+        lab.append("line").attr("x1", (d) => d.x).attr("x2", (d) => d.x).attr("y1", (d) => labY(d) + 4).attr("y2", H - M.b).attr("stroke", INK).attr("stroke-opacity", 0.22).attr("stroke-dasharray", "2 3");
+        lab.append("circle").attr("cx", (d) => d.x).attr("cy", (d) => d.y).attr("r", 3.2).attr("fill", (d) => (d.verdict === "FAIL" ? NEG : INK)).attr("stroke", GROUND);
+        lab.append("text").attr("class", "annot alabel").attr("x", (d) => d.x + (d.flip ? -5 : 5)).attr("y", labY).attr("fill", INK).attr("text-anchor", (d) => (d.flip ? "end" : "start")).text((d) => `${fDay(P(d.day))} · ${d.label}`);
+        const flare = (d) => { ag.append("circle").attr("cx", d.x).attr("cy", d.y).attr("r", 2).attr("fill", "none").attr("stroke", VIOLET).attr("stroke-width", 2).attr("opacity", 0.9).transition().duration(900).ease(d3.easeCubicOut).attr("r", 26).attr("opacity", 0).remove(); };
+        // hover
+        const guide = svg.append("line").attr("y1", M.t).attr("y2", H - M.b).attr("stroke", INK).attr("stroke-opacity", 0.5).style("display", "none");
+        const dot = svg.append("circle").attr("r", 4).attr("fill", VIOLET).attr("stroke", GROUND).style("display", "none");
+        hoverRect(svg, M, W, H, (e) => {
+          const i = nearestIdx(dates, x.invert(d3.pointer(e)[0])); if (vol[i] == null && vol7[i] == null) return;
+          guide.style("display", null).attr("x1", x(dates[i])).attr("x2", x(dates[i]));
+          dot.style("display", null).attr("cx", x(dates[i])).attr("cy", y(vol7[i] ?? vol[i]));
+          const near = anchors.find((a) => Math.abs(P(a.day) - dates[i]) < 4 * 864e5);
+          showTip(e, `<b>${fDay(dates[i])}</b><br>share of world news <b>${pct(vol[i])}</b> · 7-day ${pct(vol7[i])}<br>tone ${sgn(pulse.tone?.[i])}${near ? `<br><span class="violet">◆ ${near.label}</span>` : ""}`);
+        }, () => { guide.style("display", "none"); dot.style("display", "none"); hideTip(); });
+        const done = () => { document.getElementById("hero-status").textContent = `${dates.length.toLocaleString()} DAYS · PEAK ${pct(pulse.vol_peak)} ON ${fDay(P(pulse.vol_peak_day)).toUpperCase()} · MEAN ${pct(pulse.vol_mean)} · ${anchors.length} ANCHOR EVENTS`; };
+        if (reduced) { done(); return; }
+        const dur = 5200, t0 = performance.now(), fired = new Set();
+        const step = (t) => {
+          const k = Math.min((t - t0) / dur, 1), xe = M.l + k * (W - M.l - M.r);
+          clip.attr("width", Math.max(0, xe - M.l));
+          anchors.forEach((a) => { if (!fired.has(a.i) && a.x <= xe) { fired.add(a.i); flare(a); lab.filter((d) => d.i === a.i).transition().duration(500).attr("opacity", 1); } });
+          if (k < 1) requestAnimationFrame(step); else done();
+        };
+        requestAnimationFrame(step);
+      });
+
+      /* ---------- chapter 1: eras ---------- */
+      sect("eras", () => {
+        const el = document.getElementById("eras");
+        if (!pulse?.eras?.length) { pending("eras", "Pipeline still running — era summaries appear once the API curves are exported."); return; }
+        const maxVol = d3.max(pulse.eras, (e) => e.vol_mean);
+        el.innerHTML = pulse.eras.map((e, i) => `
+          <article class="era" style="--c:${ERA_COLORS[i % ERA_COLORS.length]}">
+            <span class="stamp" style="color:var(--c)">${fYear(P(e.start))}${fYear(P(e.start)) !== fYear(P(e.end)) ? "–" + fYear(P(e.end)) : ""}</span>
+            <h3>${e.label}</h3>
+            <div class="era-stat"><span class="stamp dim">SHARE OF WORLD NEWS</span><b>${pct(e.vol_mean, 3)}</b><div class="bar"><i style="width:${(100 * e.vol_mean / maxVol).toFixed(1)}%"></i></div></div>
+            <div class="era-row"><div><span class="stamp dim">TONE</span><b style="color:${e.tone_mean < (pulse.eras.reduce((s, x) => s + x.tone_mean, 0) / pulse.eras.length) ? NEG : POS}">${sgn(e.tone_mean)}</b></div>
+              <div><span class="stamp dim">PEAK DAY</span><b>${fDay(P(e.peak_day))}</b></div></div>
+            <div class="chips">${e.top_themes.map((t) => `<span class="chip">${t.label} <i>${pct(100 * t.share, 0)}</i></span>`).join("")}</div>
+            ${e.events != null ? `<span class="stamp dim">${e.events.toLocaleString()} EVENTS · ${e.protests?.toLocaleString() ?? 0} PROTEST</span>` : `<span class="stamp dim">EVENT LAYER PENDING</span>`}
+          </article>`).join("");
+      });
+
+      /* ---------- chapter 2: tone ---------- */
+      sect("tone chart", () => {
+        const el = document.getElementById("tone-chart");
+        if (!tone?.tone?.some((v) => v != null)) { pending("tone-chart", "Pipeline still running — the tone curve is not cached yet."); pending("darkest", "Darkest-day briefs follow the tone curve."); return; }
+        const dates = tone.dates.map(P), t28 = tone.tone28, t1 = tone.tone, mean = tone.mean;
+        const M = { t: 18, r: 20, b: 30, l: 40 }, { svg, W, H } = mkSvg(el, 300);
+        const x = d3.scaleTime(d3.extent(dates), [M.l, W - M.r]);
+        const ext = d3.extent(t1.filter((v) => v != null)); const y = d3.scaleLinear([Math.min(ext[0], mean - 2), Math.max(ext[1], mean + 1.5)], [H - M.b, M.t]).nice();
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(yearAxis(x));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(5).tickSizeOuter(0));
+        svg.append("clipPath").attr("id", "tone-above").append("rect").attr("x", 0).attr("y", 0).attr("width", W).attr("height", y(mean));
+        svg.append("clipPath").attr("id", "tone-below").append("rect").attr("x", 0).attr("y", y(mean)).attr("width", W).attr("height", H - y(mean));
+        const area = d3.area().defined((d, i) => t28[i] != null).x((d) => x(d)).y0(y(mean)).y1((d, i) => y(t28[i])).curve(d3.curveMonotoneX);
+        svg.append("path").datum(dates).attr("d", area).attr("fill", POS).attr("opacity", 0.55).attr("clip-path", "url(#tone-above)");
+        svg.append("path").datum(dates).attr("d", area).attr("fill", NEG).attr("opacity", 0.55).attr("clip-path", "url(#tone-below)");
+        svg.append("path").datum(dates).attr("d", d3.line().defined((d, i) => t1[i] != null).x((d) => x(d)).y((d, i) => y(t1[i]))).attr("fill", "none").attr("stroke", INK).attr("stroke-width", 0.5).attr("opacity", 0.22);
+        svg.append("path").datum(dates).attr("d", d3.line().defined((d, i) => t28[i] != null).x((d) => x(d)).y((d, i) => y(t28[i])).curve(d3.curveMonotoneX)).attr("fill", "none").attr("stroke", INK).attr("stroke-width", 1.2);
+        svg.append("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y(mean)).attr("y2", y(mean)).attr("stroke", MUTED).attr("stroke-dasharray", "3 4");
+        svg.append("text").attr("class", "annot").attr("x", M.l + 6).attr("y", M.t + 10).text(`decade mean ${sgn(mean)} · faint line = daily · bold = 28-day`);
+        const dark = (tone.darkest ?? []).slice(0, 8).map((d, i) => ({ ...d, i, x: x(P(d.day)) }));
+        const dg = svg.selectAll("g.dk").data(dark).join("g").attr("class", "dk");
+        dg.append("circle").attr("cx", (d) => d.x).attr("cy", (d) => y(d.tone)).attr("r", 3.5).attr("fill", NEG).attr("stroke", GROUND)
+          .on("mousemove", (e, d) => showTip(e, `<b>${fDay(P(d.day))}</b> · darkest day #${d.i + 1}<br>tone ${sgn(d.tone)} (${sgn(d.delta)} vs trailing month)<br>detailed below`))
+          .on("mouseleave", hideTip);
+        dg.append("text").attr("class", "annot alabel").attr("x", (d) => d.x).attr("y", (d) => y(d.tone) + 15).attr("text-anchor", "middle").attr("fill", NEG).text((d) => d.i + 1);
+        const guide = svg.append("line").attr("y1", M.t).attr("y2", H - M.b).attr("stroke", INK).attr("stroke-opacity", 0.5).style("display", "none");
+        hoverRect(svg, M, W, H, (e) => {
+          const i = nearestIdx(dates, x.invert(d3.pointer(e)[0])); if (t1[i] == null) return;
+          guide.style("display", null).attr("x1", x(dates[i])).attr("x2", x(dates[i]));
+          showTip(e, `<b>${fDay(dates[i])}</b><br>tone <b style="color:${t1[i] < mean ? NEG : POS}">${sgn(t1[i])}</b> · 28-day ${sgn(t28[i])}<br>vs decade mean ${sgn(t1[i] - mean)}`);
+        }, () => { guide.style("display", "none"); hideTip(); });
+        // darkest-day cards
+        const list = document.getElementById("darkest");
+        list.innerHTML = `<h3>The ten darkest days</h3>` + (tone.darkest ?? []).map((d, i) => `
+          <article class="day">
+            <div class="day-head"><b>${i + 1} · ${fDay(P(d.day))}</b><span class="stamp" style="color:${NEG}">TONE ${sgn(d.tone)} · ${sgn(d.delta)} VS TRAILING MONTH</span><span class="stamp dim">${pct(d.vol)} OF WORLD NEWS${d.protests != null ? ` · ${d.protests} PROTEST EVENTS` : ""}</span></div>
+            ${d.articles?.length ? `<ul>${d.articles.slice(0, 4).map((a) => `<li><a href="${a.url}" rel="noopener">${a.title}</a> <i>${a.domain}${a.country ? " · " + a.country : ""}</i></li>`).join("")}</ul>` : `<span class="stamp dim">HEADLINE SAMPLE PENDING (API CACHE)</span>`}
+          </article>`).join("");
+        const g20 = tone.g20;
+        if (g20) {
+          const rise = g20.report_only?.tone_rise, att = g20.signatures?.attention;
+          document.getElementById("g20-note").innerHTML = `<b>An honest negative result.</b> The G20 summit in Bali (15 Nov 2022) ${att?.verdict === "PASS" ? `did lift attention (${num(att.ratio, 1)}× its trailing baseline)` : "did not lift attention above 1.5× baseline"}, but the world did <em>not</em> speak more warmly: the best tone day in the window was ${sgn(rise?.delta)} against the trailing mean${rise ? "" : " (not yet computed)"} — Ukraine and the missile strike in Poland ran through the same coverage. We report the number rather than the story we expected.`;
+        }
+      });
+
+      sect("scatter", () => {
+        const el = document.getElementById("scatter");
+        const m = tone?.monthly; if (!m) { pending("scatter", "Pending API curves."); return; }
+        const pts = m.months.map((mo, i) => ({ mo, d: PM(mo), vol: m.vol?.[i], tone: m.tone?.[i] })).filter((p) => p.vol != null && p.tone != null);
+        if (pts.length < 6) { pending("scatter", "Pending API curves (monthly tone)."); return; }
+        const M = { t: 16, r: 20, b: 36, l: 44 }, { svg, W, H } = mkSvg(el, 300);
+        const x = d3.scaleLinear(d3.extent(pts, (p) => p.vol), [M.l, W - M.r]).nice();
+        const y = d3.scaleLinear(d3.extent(pts, (p) => p.tone), [H - M.b, M.t]).nice();
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(d3.axisBottom(x).ticks(6).tickFormat((v) => v + "%"));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(5));
+        svg.append("text").attr("class", "annot").attr("x", W - M.r).attr("y", H - 6).attr("text-anchor", "end").text("monthly share of world news →");
+        svg.append("text").attr("class", "annot").attr("x", M.l + 4).attr("y", M.t + 10).text("↑ monthly tone");
+        const eraOf = (d) => (pulse?.eras ?? []).findIndex((e) => P(e.start) <= d && d <= P(e.end));
+        // fit line (least squares) for the annotation
+        const mx = d3.mean(pts, (p) => p.vol), my = d3.mean(pts, (p) => p.tone);
+        const b = d3.sum(pts, (p) => (p.vol - mx) * (p.tone - my)) / d3.sum(pts, (p) => (p.vol - mx) ** 2), a = my - b * mx;
+        svg.append("line").attr("x1", x(x.domain()[0])).attr("x2", x(x.domain()[1])).attr("y1", y(a + b * x.domain()[0])).attr("y2", y(a + b * x.domain()[1])).attr("stroke", MUTED).attr("stroke-dasharray", "3 4");
+        const r = d3.sum(pts, (p) => (p.vol - mx) * (p.tone - my)) / Math.sqrt(d3.sum(pts, (p) => (p.vol - mx) ** 2) * d3.sum(pts, (p) => (p.tone - my) ** 2));
+        svg.append("text").attr("class", "annot").attr("x", W - M.r).attr("y", M.t + 10).attr("text-anchor", "end").text(`r = ${r.toFixed(2)} across ${pts.length} months`);
+        svg.selectAll("circle").data(pts).join("circle").attr("cx", (p) => x(p.vol)).attr("cy", (p) => y(p.tone)).attr("r", 4.5)
+          .attr("fill", (p) => ERA_COLORS[Math.max(0, eraOf(p.d)) % ERA_COLORS.length]).attr("opacity", 0.75).attr("stroke", GROUND).attr("stroke-width", 0.6)
+          .on("mousemove", function (e, p) { d3.select(this).attr("opacity", 1).attr("r", 6.5); showTip(e, `<b>${fMon(p.d)}</b><br>share ${pct(p.vol)} · tone ${sgn(p.tone)}<br><span style="color:${ERA_COLORS[Math.max(0, eraOf(p.d)) % 5]}">${pulse?.eras?.[eraOf(p.d)]?.label ?? ""}</span>`); })
+          .on("mouseleave", function () { d3.select(this).attr("opacity", 0.75).attr("r", 4.5); hideTip(); });
+      });
+
+      /* ---------- chapter 3: themes small multiples ---------- */
+      sect("themes", () => {
+        const el = document.getElementById("themes");
+        const keys = (themes?.order ?? []).filter((k) => themes.themes[k]?.share?.some((v) => v != null));
+        if (!keys.length) { pending("themes", "Pipeline still running — theme timelines are being fetched (one API call per theme, ~15 s apart)."); return; }
+        const months = themes.months.map(PM);
+        const panels = [];
+        el.innerHTML = "";
+        for (const k of keys) {
+          const th = themes.themes[k];
+          const wrap = document.createElement("div"); wrap.className = "panel"; wrap.dataset.theme = k;
+          wrap.innerHTML = `<div class="panel-head"><b>${th.label}</b><span class="stamp dim">${pct(100 * th.share_mean, 1)} MEAN</span></div>`;
+          el.appendChild(wrap);
+          const M = { t: 6, r: 8, b: 18, l: 8 }, { svg, W, H } = mkSvg(wrap, 96);
+          const x = d3.scaleTime(d3.extent(months), [M.l, W - M.r]);
+          const vals = th.share.map((v) => (v == null ? null : 100 * v));
+          const y = d3.scaleLinear([0, d3.max(vals) * 1.1 || 1], [H - M.b, M.t]);
+          svg.append("g").attr("class", "axis tiny").attr("transform", `translate(0,${H - M.b})`).call(d3.axisBottom(x).ticks(d3.timeYear.every(3)).tickFormat(fYear).tickSize(3));
+          svg.append("path").datum(months).attr("d", d3.area().defined((d, i) => vals[i] != null).x((d) => x(d)).y0(H - M.b).y1((d, i) => y(vals[i])).curve(d3.curveMonotoneX)).attr("fill", VIOLET).attr("opacity", 0.22);
+          svg.append("path").datum(months).attr("d", d3.line().defined((d, i) => vals[i] != null).x((d) => x(d)).y((d, i) => y(vals[i])).curve(d3.curveMonotoneX)).attr("fill", "none").attr("stroke", VIOLET).attr("stroke-width", 1.4);
+          const pk = d3.maxIndex(vals);
+          svg.append("circle").attr("cx", x(months[pk])).attr("cy", y(vals[pk])).attr("r", 2.6).attr("fill", INK);
+          svg.append("text").attr("class", "annot").attr("x", x(months[pk]) + (pk > months.length * 0.7 ? -5 : 5)).attr("text-anchor", pk > months.length * 0.7 ? "end" : "start").attr("y", Math.max(M.t + 9, y(vals[pk]) - 4)).text(`${fMon(months[pk])} · ${pct(vals[pk], 0)}`);
+          const guide = svg.append("line").attr("y1", M.t).attr("y2", H - M.b).attr("stroke", INK).attr("stroke-opacity", 0.5).style("display", "none");
+          panels.push({ k, x, guide, vals });
+        }
+        const moveAll = (e, i, k) => {
+          panels.forEach((p) => p.guide.style("display", null).attr("x1", p.x(months[i])).attr("x2", p.x(months[i])));
+          const rows = panels.map((p) => ({ k: p.k, v: p.vals[i] })).filter((r) => r.v != null).sort((a, b) => b.v - a.v).slice(0, 6);
+          showTip(e, `<b>${fMon(months[i])}</b> · share of Indonesia coverage<br>${rows.map((r) => `<span style="color:${r.k === k ? VIOLET : INK}">${themes.themes[r.k].label} ${pct(r.v, 1)}</span>`).join("<br>")}`);
+        };
+        const leaveAll = () => { panels.forEach((p) => p.guide.style("display", "none")); hideTip(); };
+        el.querySelectorAll(".panel").forEach((wrap) => {
+          const k = wrap.dataset.theme, p = panels.find((q) => q.k === k);
+          wrap.addEventListener("mousemove", (e) => { const rect = wrap.querySelector("svg").getBoundingClientRect(); const i = nearestIdx(months, p.x.invert(e.clientX - rect.left)); moveAll(e, i, k); });
+          wrap.addEventListener("mouseleave", leaveAll);
+        });
+        // era ranking table
+        const er = themes.era_rank ?? [];
+        document.getElementById("era-rank").innerHTML = er.length ? `<h3>What each era was about</h3><div class="table-scroll"><table class="rank"><thead><tr><th>Era</th>${[1, 2, 3, 4, 5, 6].map((n) => `<th>#${n}</th>`).join("")}</tr></thead><tbody>${er.map((r) => `<tr><td class="era-name">${r.era}</td>${r.themes.map((t) => `<td><span>${themes.themes[t.key]?.label ?? t.key}</span><i>${pct(100 * t.share, 0)}</i></td>`).join("")}</tr>`).join("")}</tbody></table></div><p class="footnote">Share of Indonesia coverage that also matched the theme’s keywords (themes overlap; shares do not sum to 100%). Queries are listed in the methodology.</p>` : "";
+      });
+
+      /* ---------- chapter 4: who's talking ---------- */
+      sect("sources heatmap", () => {
+        const el = document.getElementById("sources-heat");
+        if (!sources?.countries?.length) { pending("sources-heat", "Pipeline still running — the source-country timeline is not cached yet."); return; }
+        const rows = sources.countries.filter((c) => c.name !== "Indonesia").slice(0, 14);
+        const months = sources.months.map(PM);
+        const M = { t: 26, r: 60, b: 28, l: 118 }, RH = 20, { svg, W, H } = mkSvg(el, M.t + rows.length * RH + M.b);
+        const x = d3.scaleTime([months[0], d3.timeMonth.offset(months.at(-1), 1)], [M.l, W - M.r]);
+        const cw = (W - M.l - M.r) / months.length;
+        const vmax = d3.quantile(rows.flatMap((r) => r.values.filter((v) => v != null)), 0.98);
+        const color = d3.scaleSequentialSqrt([0, vmax], d3.interpolateRgb(SURFACE, VIOLET)).clamp(true);
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(yearAxis(x));
+        svg.append("text").attr("class", "annot").attr("x", M.l).attr("y", 14).text("share of the country's own monitored articles that mention Indonesia, monthly");
+        const g = svg.selectAll("g.row").data(rows).join("g").attr("class", "row").attr("transform", (d, i) => `translate(0,${M.t + i * RH})`);
+        g.append("text").attr("class", "annot rowlab").attr("x", M.l - 8).attr("y", RH / 2 + 4).attr("text-anchor", "end").attr("fill", INK).text((d) => d.name);
+        g.append("text").attr("class", "annot").attr("x", W - M.r + 8).attr("y", RH / 2 + 4).text((d) => pct(d.mean, 2));
+        g.selectAll("rect").data((d) => d.values.map((v, i) => ({ v, i, name: d.name }))).join("rect")
+          .attr("x", (c) => x(months[c.i])).attr("y", 1).attr("width", Math.max(1, cw - 0.5)).attr("height", RH - 2).attr("fill", (c) => (c.v == null ? GROUND : color(c.v)))
+          .on("mousemove", (e, c) => showTip(e, `<b>${c.name}</b> · ${fMon(months[c.i])}<br>${pct(c.v, 2)} of its monitored articles mention Indonesia`))
+          .on("mouseleave", hideTip);
+        const idn = sources.countries.find((c) => c.name === "Indonesia");
+        if (idn) el.insertAdjacentHTML("beforebegin",
+          `<p class="footnote">Indonesia’s own press mentions the country in ${pct(idn.mean, 1)} of everything it publishes — it is left off this matrix so the neighbours stay readable.</p>`);
+      });
+
+      sect("press split", () => {
+        const el = document.getElementById("press-chart");
+        const p = sources?.press; if (!p) { pending("press-chart", "Pending API curves (foreign / domestic)."); return; }
+        const months = p.months.map(PM);
+        const M = { t: 18, r: 16, b: 28, l: 40 }, { svg, W, H } = mkSvg(el, 220);
+        const x = d3.scaleTime(d3.extent(months), [M.l, W - M.r]);
+        const y = d3.scaleLinear([0, 1], [H - M.b, M.t]);
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(d3.axisBottom(x).ticks(d3.timeYear.every(2)).tickFormat(fYear));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(4).tickFormat(d3.format(".0%")));
+        const fs = p.foreign_share;
+        svg.append("path").datum(months).attr("d", d3.area().defined((d, i) => fs[i] != null).x((d) => x(d)).y0(H - M.b).y1((d, i) => y(fs[i])).curve(d3.curveMonotoneX)).attr("fill", VIOLET).attr("opacity", 0.25);
+        svg.append("path").datum(months).attr("d", d3.area().defined((d, i) => fs[i] != null).x((d) => x(d)).y0((d, i) => y(fs[i])).y1(M.t).curve(d3.curveMonotoneX)).attr("fill", MUTED).attr("opacity", 0.12);
+        svg.append("path").datum(months).attr("d", d3.line().defined((d, i) => fs[i] != null).x((d) => x(d)).y((d, i) => y(fs[i])).curve(d3.curveMonotoneX)).attr("fill", "none").attr("stroke", VIOLET).attr("stroke-width", 1.6);
+        svg.append("text").attr("class", "annot").attr("x", M.l + 6).attr("y", M.t + 10).text("domestic press (sourcecountry:ID)");
+        svg.append("text").attr("class", "annot").attr("x", M.l + 6).attr("y", H - M.b - 8).attr("fill", VIOLET).text("foreign press share");
+        const guide = svg.append("line").attr("y1", M.t).attr("y2", H - M.b).attr("stroke", INK).attr("stroke-opacity", 0.5).style("display", "none");
+        hoverRect(svg, M, W, H, (e) => { const i = nearestIdx(months, x.invert(d3.pointer(e)[0])); if (fs[i] == null) return; guide.style("display", null).attr("x1", x(months[i])).attr("x2", x(months[i])); showTip(e, `<b>${fMon(months[i])}</b><br>foreign ${d3.format(".0%")(fs[i])} · domestic ${d3.format(".0%")(1 - fs[i])}<br>tone: foreign ${sgn(p.foreign_tone?.[i])} · domestic ${sgn(p.domestic_tone?.[i])}`); }, () => { guide.style("display", "none"); hideTip(); });
+      });
+
+      sect("languages", () => {
+        const el = document.getElementById("lang-bars");
+        const L = sources?.languages; if (!L?.length) { pending("lang-bars", "Pending API curves (TimelineLang)."); return; }
+        const M = { t: 8, r: 60, b: 8, l: 96 }, BH = 22, { svg, W, H } = mkSvg(el, M.t + L.length * BH + M.b);
+        const x = d3.scaleLinear([0, d3.max(L, (l) => l.mean)], [M.l, W - M.r]);
+        const g = svg.selectAll("g").data(L).join("g").attr("transform", (d, i) => `translate(0,${M.t + i * BH})`);
+        g.append("text").attr("class", "annot").attr("x", M.l - 8).attr("y", BH / 2 + 4).attr("text-anchor", "end").attr("fill", INK).text((d) => d.name);
+        g.append("rect").attr("x", M.l).attr("y", 3).attr("height", BH - 8).attr("width", (d) => x(d.mean) - M.l).attr("fill", (d) => (d.name === "English" ? MUTED : VIOLET)).attr("rx", 2)
+          .on("mousemove", (e, d) => showTip(e, `<b>${d.name}</b><br>${pct(d.mean, 2)} of monitored ${d.name} articles mention Indonesia`)).on("mouseleave", hideTip);
+        g.append("text").attr("class", "annot").attr("x", (d) => x(d.mean) + 6).attr("y", BH / 2 + 4).text((d) => pct(d.mean, 2));
+      });
+
+      sect("outlets", () => {
+        const el = document.getElementById("outlets");
+        const o = sources?.outlets; if (!o?.en?.length) { el.innerHTML = `<div class="pending">Outlet league tables appear once the event layer has streamed.</div>`; return; }
+        const table = (rows, title) => `<div><h3>${title}</h3><div class="table-scroll"><table class="rank small"><thead><tr><th>Outlet</th><th>Events</th><th>Tone</th></tr></thead><tbody>${rows.slice(0, 12).map((r) => `<tr><td>${r.domain}</td><td class="num">${r.n.toLocaleString()}</td><td class="num" style="color:${r.tone < -2 ? NEG : INK}">${sgn(r.tone, 1)}</td></tr>`).join("")}</tbody></table></div></div>`;
+        el.innerHTML = table(o.en, "Most Indonesia events · English feed") + table(o.trans, "Most Indonesia events · translated feed");
+      });
+
+      /* ---------- chapter 5: event layer ---------- */
+      const cov = events?.coverage;
+      if (cov) {
+        const st = document.getElementById("events-status");
+        st.textContent = cov.days ? `${cov.rows?.toLocaleString()} INDONESIA EVENTS · ${cov.first} → ${cov.last} · ${cov.months_done.length}/${cov.months_total} MONTHS STREAMED${cov.complete ? "" : " · BACKFILL RUNNING (NEWEST FIRST)"} · TRANSLATED FEED ${d3.format(".0%")(cov.translated_share ?? 0)}`
+          : "EVENT LAYER PENDING — the 15-minute feed is being streamed on the server.";
+      }
+      const monthsDone = new Set(cov?.months_done ?? []);
+      const allMonths = d3.timeMonths(new Date(2017, 0, 1), new Date());
+      const gapBands = (svg, x, M, H) => {
+        const gaps = allMonths.filter((m) => !monthsDone.has(d3.timeFormat("%Y%m")(m)));
+        svg.selectAll("rect.gap").data(gaps).join("rect").attr("class", "gap").attr("x", (m) => x(m)).attr("y", M.t).attr("width", (m) => Math.max(0, x(d3.timeMonth.offset(m, 1)) - x(m))).attr("height", H - M.t - M.b).attr("fill", "url(#hatch)").attr("opacity", 0.5);
+        if (gaps.length) svg.append("text").attr("class", "annot").attr("x", x(gaps[Math.floor(gaps.length / 2)])).attr("y", M.t + 12).attr("text-anchor", "middle").text("not yet streamed");
+      };
+      const hatch = defs.append("pattern").attr("id", "hatch").attr("width", 6).attr("height", 6).attr("patternUnits", "userSpaceOnUse").attr("patternTransform", "rotate(45)");
+      hatch.append("rect").attr("width", 6).attr("height", 6).attr("fill", SURFACE);
+      hatch.append("line").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 6).attr("stroke", HAIR).attr("stroke-width", 2);
+
+      sect("quad chart", () => {
+        const el = document.getElementById("quad-chart");
+        const m = events?.monthly; if (!m?.n_events) { pending("quad-chart", "Event layer pending — QuadClass mix appears as months stream in."); return; }
+        const months = events.months.map(PM);
+        const keys = ["quad_verbal_coop", "quad_material_coop", "quad_verbal_conflict", "quad_material_conflict"];
+        const labels = { quad_verbal_coop: "verbal cooperation", quad_material_coop: "material cooperation", quad_verbal_conflict: "verbal conflict", quad_material_conflict: "material conflict" };
+        const colors = { quad_verbal_coop: "#3E9E91", quad_material_coop: POS, quad_verbal_conflict: "#C9584A", quad_material_conflict: NEG };
+        const rows = months.map((d, i) => { const tot = keys.reduce((s, k) => s + (m[k][i] ?? 0), 0) || 1; const r = { d, i, tot }; keys.forEach((k) => (r[k] = (m[k][i] ?? 0) / tot)); return r; });
+        const M = { t: 18, r: 16, b: 30, l: 40 }, { svg, W, H } = mkSvg(el, 260);
+        const x = d3.scaleTime([new Date(2017, 0, 1), d3.timeMonth.offset(allMonths.at(-1), 1)], [M.l, W - M.r]);
+        const y = d3.scaleLinear([0, 1], [H - M.b, M.t]);
+        gapBands(svg, x, M, H);
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(yearAxis(x));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(4).tickFormat(d3.format(".0%")));
+        const stack = d3.stack().keys(keys)(rows);
+        svg.selectAll("g.s").data(stack).join("g").attr("class", "s").attr("fill", (s) => colors[s.key])
+          .selectAll("rect").data((s) => s.map((d) => ({ ...d, key: s.key }))).join("rect")
+          .attr("x", (d) => x(d.data.d) + 0.5).attr("width", (d) => Math.max(1, x(d3.timeMonth.offset(d.data.d, 1)) - x(d.data.d) - 1)).attr("y", (d) => y(d[1])).attr("height", (d) => Math.max(0, y(d[0]) - y(d[1])))
+          .on("mousemove", (e, d) => showTip(e, `<b>${fMon(d.data.d)}</b> · ${d.data.tot.toLocaleString()} events<br>${keys.map((k) => `<span style="color:${colors[k]}">■</span> ${labels[k]} ${d3.format(".0%")(d.data[k])}`).join("<br>")}<br>Goldstein ${num(m.goldstein_mean?.[d.data.i], 2)} · tone ${sgn(m.tone_mean?.[d.data.i])}`))
+          .on("mouseleave", hideTip);
+        svg.append("text").attr("class", "annot").attr("x", W - M.r).attr("y", M.t - 5).attr("text-anchor", "end").text("teal = cooperation · coral = conflict · darker = words, brighter = deeds");
+      });
+
+      sect("protest chart", () => {
+        const el = document.getElementById("protest-chart");
+        const m = events?.monthly; if (!m?.protest_n) { pending("protest-chart", "Event layer pending."); return; }
+        const months = events.months.map(PM);
+        const dim = events.days_in_month;
+        const vals = m.protest_n.map((v, i) => (v == null ? null : v / Math.max(1, dim[i]) * 30));   // per-30-days, so partial months compare
+        const M = { t: 18, r: 16, b: 30, l: 44 }, { svg, W, H } = mkSvg(el, 240);
+        const x = d3.scaleTime([new Date(2017, 0, 1), d3.timeMonth.offset(allMonths.at(-1), 1)], [M.l, W - M.r]);
+        const y = d3.scaleLinear([0, d3.max(vals) * 1.15 || 1], [H - M.b, M.t]);
+        gapBands(svg, x, M, H);
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(yearAxis(x));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(4).tickFormat(d3.format("~s")));
+        svg.append("text").attr("class", "annot").attr("x", M.l + 6).attr("y", M.t + 8).text("protest events per 30 days");
+        svg.selectAll("rect.p").data(months.map((d, i) => ({ d, i }))).join("rect").attr("class", "p")
+          .attr("x", (d) => x(d.d) + 0.5).attr("width", (d) => Math.max(1, x(d3.timeMonth.offset(d.d, 1)) - x(d.d) - 1)).attr("y", (d) => y(vals[d.i] ?? 0)).attr("height", (d) => H - M.b - y(vals[d.i] ?? 0)).attr("fill", VIOLET).attr("opacity", 0.85)
+          .on("mousemove", (e, d) => showTip(e, `<b>${fMon(d.d)}</b><br>${m.protest_n[d.i]} protest events in ${dim[d.i]} days<br>${m.n_events[d.i]?.toLocaleString()} Indonesia events total`)).on("mouseleave", hideTip);
+        const top = vals.map((v, i) => ({ v, i })).filter((d) => d.v != null).sort((a, b) => b.v - a.v);
+        const picked = []; for (const t of top) { if (picked.every((p) => Math.abs(p.i - t.i) > 5)) picked.push(t); if (picked.length >= 4) break; }
+        svg.selectAll("text.pk").data(picked).join("text").attr("class", "annot pk").attr("x", (d) => x(months[d.i]) + 4).attr("y", (d) => y(d.v) - 5).attr("fill", INK).text((d) => `${fMon(months[d.i])} · ${Math.round(d.v)}`)
+          .each(function (d) { if (x(months[d.i]) > W * 0.8) d3.select(this).attr("text-anchor", "end").attr("x", x(months[d.i]) - 2); });
+      });
+
+      sect("event map", () => {
+        const canvas = document.getElementById("map-canvas"), note = document.getElementById("map-note"), tip = document.getElementById("map-tip");
+        if (!map?.all?.length) { canvas.parentElement.insertAdjacentHTML("afterbegin", `<div class="pending">Event map pending — appears once the event layer has streamed.</div>`); canvas.style.display = "none"; return; }
+        const ctx = canvas.getContext("2d"), dpr = devicePixelRatio || 1;
+        const LAT = [-11.5, 6.5], LON = [94.5, 141.5];
+        let mode = "n", year = "all", W, H, sx, sy, cellW, cellH, cells = map.all, index = new Map();
+        const CITIES = [["Jakarta", -6.2, 106.85], ["Surabaya", -7.25, 112.75], ["Medan", 3.6, 98.67], ["Makassar", -5.13, 119.42], ["Denpasar", -8.65, 115.22], ["Jayapura", -2.53, 140.72], ["Palu", -0.9, 119.87], ["Banda Aceh", 5.55, 95.32], ["Balikpapan", -1.27, 116.83], ["Ambon", -3.7, 128.18], ["Kupang", -10.17, 123.6], ["Pontianak", -0.02, 109.34]];
+        const size = () => { W = canvas.clientWidth; H = Math.round(W * (LAT[1] - LAT[0]) / (LON[1] - LON[0])); canvas.style.height = H + "px"; canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); sx = d3.scaleLinear(LON, [0, W]); sy = d3.scaleLinear(LAT, [H, 0]); cellW = sx(0.25) - sx(0); cellH = sy(0) - sy(0.25); };
+        const setData = () => { cells = year === "all" ? map.all : (map.byYear[year] ?? []); index = new Map(cells.map((c) => [c[0] + "," + c[1], c])); };
+        const draw = () => {
+          ctx.fillStyle = GROUND; ctx.fillRect(0, 0, W, H);
+          ctx.strokeStyle = HAIR; ctx.lineWidth = 0.5; ctx.beginPath();
+          for (let lo = 95; lo <= 141; lo += 5) { ctx.moveTo(sx(lo), 0); ctx.lineTo(sx(lo), H); }
+          for (let la = -10; la <= 5; la += 5) { ctx.moveTo(0, sy(la)); ctx.lineTo(W, sy(la)); }
+          ctx.stroke();
+          const nmax = d3.quantile(cells.map((c) => c[2]).sort(d3.ascending), 0.995) || 1;
+          const pmax = d3.quantile(cells.map((c) => c[4]).sort(d3.ascending), 0.995) || 1;
+          const cN = d3.scaleSequentialLog([1, nmax], d3.interpolateRgb("#2A1B45", VIOLET)).clamp(true);
+          const cP = d3.scaleSequentialSqrt([0, pmax], d3.interpolateRgb("#2A1B45", NEG)).clamp(true);
+          const cT = d3.scaleDiverging([-6, -3, 0], [NEG, "#3A2F55", POS]).clamp(true);
+          for (const c of cells) {
+            const [lat, lon, n, t, p] = c;
+            ctx.fillStyle = mode === "n" ? cN(n) : mode === "protest" ? (p ? cP(p) : "#1B1430") : (t == null ? "#1B1430" : cT(t));
+            ctx.fillRect(sx(lon - 0.125), sy(lat + 0.125), Math.max(1, cellW - 0.4), Math.max(1, cellH - 0.4));
+          }
+          ctx.fillStyle = INK; ctx.font = "11px 'IBM Plex Mono', monospace"; ctx.globalAlpha = 0.85;
+          for (const [name, la, lo] of CITIES) { ctx.beginPath(); ctx.arc(sx(lo), sy(la), 1.6, 0, Math.PI * 2); ctx.fill(); ctx.textAlign = sx(lo) > W - 80 ? "right" : "left"; ctx.fillText(name, sx(lo) + (sx(lo) > W - 80 ? -5 : 5), sy(la) - 4); ctx.textAlign = "left"; }
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = MUTED; ctx.font = "10.5px 'IBM Plex Mono', monospace";
+          ctx.fillText(mode === "n" ? "colour: events per cell (log)" : mode === "protest" ? "colour: protest events per cell" : "colour: mean tone (coral −6 … teal 0)", 10, H - 10);
+          note.textContent = `${d3.sum(cells, (c) => c[2]).toLocaleString()} LOCATED EVENTS IN ${cells.length.toLocaleString()} CELLS${year === "all" ? ` · ${map.country_level_only?.toLocaleString()} MORE GEOCODED ONLY TO “INDONESIA” (NOT SHOWN)` : ` · ${year}`}`;
+        };
+        size(); setData(); draw();
+        addEventListener("resize", () => { size(); draw(); });
+        const nameOf = (c) => (c[5] ? c[5].split(",")[0] : `${c[0].toFixed(2)}, ${c[1].toFixed(2)}`);
+        canvas.addEventListener("mousemove", (e) => {
+          const r = canvas.getBoundingClientRect(); const lon = sx.invert(e.clientX - r.left), lat = sy.invert(e.clientY - r.top);
+          const key = (Math.round(lat * 4) / 4) + "," + (Math.round(lon * 4) / 4);
+          const c = index.get(key); const all = map.all.find((a) => a[0] + "," + a[1] === key);
+          if (!c) { tip.hidden = true; return; }
+          tip.hidden = false; tip.style.left = e.clientX - r.left + 14 + "px"; tip.style.top = e.clientY - r.top + 14 + "px";
+          tip.innerHTML = `<b>${all ? nameOf(all) : nameOf(c)}</b><br>${c[2].toLocaleString()} events${year === "all" ? "" : " in " + year} · ${c[4]} protest<br>mean tone ${sgn(c[3], 1)}`;
+        });
+        canvas.addEventListener("mouseleave", () => { tip.hidden = true; });
+        document.querySelectorAll("#map-mode button").forEach((b) => b.addEventListener("click", () => { mode = b.dataset.mode; document.querySelectorAll("#map-mode button").forEach((q) => q.classList.toggle("on", q === b)); draw(); }));
+        const yb = document.getElementById("map-years");
+        yb.innerHTML = `<button data-y="all" class="on">ALL</button>` + map.years.map((y) => `<button data-y="${y}">${y}</button>`).join("");
+        yb.querySelectorAll("button").forEach((b) => b.addEventListener("click", () => { year = b.dataset.y; yb.querySelectorAll("button").forEach((q) => q.classList.toggle("on", q === b)); setData(); draw(); }));
+      });
+
+      sect("actors", () => {
+        const el = document.getElementById("actors");
+        const A = events?.actors?.rows; if (!A?.length) { pending("actors", "Event layer pending."); return; }
+        const rows = A.slice(0, 16);
+        const M = { t: 6, r: 70, b: 6, l: 48 }, BH = 20, { svg, W, H } = mkSvg(el, M.t + rows.length * BH + M.b);
+        const x = d3.scaleLinear([0, d3.max(rows, (r) => r.n)], [M.l, W - M.r]);
+        const g = svg.selectAll("g").data(rows).join("g").attr("transform", (d, i) => `translate(0,${M.t + i * BH})`);
+        g.append("text").attr("class", "annot").attr("x", M.l - 8).attr("y", BH / 2 + 4).attr("text-anchor", "end").attr("fill", INK).text((d) => d.country);
+        g.append("rect").attr("x", M.l).attr("y", 3).attr("height", BH - 7).attr("width", (d) => x(d.n) - M.l).attr("fill", VIOLET).attr("rx", 2).attr("opacity", (d, i) => 1 - i * 0.035)
+          .on("mousemove", (e, d) => showTip(e, `<b>${d.country}</b> · ${d.n.toLocaleString()} events<br>${events.actors.years.map((y, i) => `${y}: ${d.by_year[i].toLocaleString()}`).join(" · ")}`)).on("mouseleave", hideTip);
+        g.append("text").attr("class", "annot").attr("x", (d) => x(d.n) + 6).attr("y", BH / 2 + 4).text((d) => d.n.toLocaleString());
+      });
+
+      sect("root mix", () => {
+        const el = document.getElementById("roots");
+        const R = events?.root_mix; if (!R?.length) { pending("roots", "Event layer pending."); return; }
+        const rows = [...R].sort((a, b) => b.n - a.n).slice(0, 16);
+        const tot = d3.sum(R, (r) => r.n);
+        const M = { t: 6, r: 60, b: 6, l: 178 }, BH = 20, { svg, W, H } = mkSvg(el, M.t + rows.length * BH + M.b);
+        const x = d3.scaleLinear([0, d3.max(rows, (r) => r.n)], [M.l, W - M.r]);
+        const conflict = (c) => +c >= 13;
+        const g = svg.selectAll("g").data(rows).join("g").attr("transform", (d, i) => `translate(0,${M.t + i * BH})`);
+        g.append("text").attr("class", "annot").attr("x", M.l - 8).attr("y", BH / 2 + 4).attr("text-anchor", "end").attr("fill", INK).text((d) => `${d.code} ${d.label}`);
+        g.append("rect").attr("x", M.l).attr("y", 3).attr("height", BH - 7).attr("width", (d) => x(d.n) - M.l).attr("fill", (d) => (conflict(d.code) ? NEG : POS)).attr("rx", 2).attr("opacity", 0.85)
+          .on("mousemove", (e, d) => showTip(e, `<b>${d.code} · ${d.label}</b><br>${d.n.toLocaleString()} events · ${d3.format(".1%")(d.n / tot)}`)).on("mouseleave", hideTip);
+        g.append("text").attr("class", "annot").attr("x", (d) => x(d.n) + 6).attr("y", BH / 2 + 4).text((d) => d3.format(".0%")(d.n / tot));
+      });
+
+      /* ---------- methodology: raw vs normalized (G-D1) ---------- */
+      sect("norm chart", () => {
+        const el = document.getElementById("norm-chart");
+        if (!pulse?.raw?.some((v) => v != null)) { pending("norm-chart", "Pending API curve TimelineVolRaw."); return; }
+        const dates = pulse.dates.map(P);
+        const sm = (arr, w = 28) => arr.map((v, i) => { const s = arr.slice(Math.max(0, i - w), i + 1).filter((q) => q != null); return s.length ? d3.mean(s) : null; });
+        const raw = sm(pulse.raw), norm = sm(pulse.norm), vol = sm(pulse.vol);
+        const M = { t: 18, r: 56, b: 30, l: 56 }, { svg, W, H } = mkSvg(el, 260);
+        const x = d3.scaleTime(d3.extent(dates), [M.l, W - M.r]);
+        const yN = d3.scaleLinear([0, d3.max(norm) * 1.1], [H - M.b, M.t]);
+        const yV = d3.scaleLinear([0, d3.max(vol) * 1.1], [H - M.b, M.t]);
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(yearAxis(x));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(yN).ticks(4).tickFormat(d3.format("~s")));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${W - M.r},0)`).call(d3.axisRight(yV).ticks(4).tickFormat((v) => v.toFixed(1) + "%"));
+        svg.append("path").datum(dates).attr("d", d3.area().defined((d, i) => norm[i] != null).x((d) => x(d)).y0(H - M.b).y1((d, i) => yN(norm[i]))).attr("fill", MUTED).attr("opacity", 0.16);
+        const yR = d3.scaleLinear([0, d3.max(raw) * 1.1], [H - M.b, M.t]);
+        svg.append("path").datum(dates).attr("d", d3.line().defined((d, i) => raw[i] != null).x((d) => x(d)).y((d, i) => yR(raw[i]))).attr("fill", "none").attr("stroke", INK).attr("stroke-width", 1).attr("opacity", 0.7);
+        svg.append("path").datum(dates).attr("d", d3.line().defined((d, i) => vol[i] != null).x((d) => x(d)).y((d, i) => yV(vol[i]))).attr("fill", "none").attr("stroke", VIOLET).attr("stroke-width", 1.6);
+        svg.append("text").attr("class", "annot").attr("x", M.l + 6).attr("y", M.t + 10).text("grey area: all articles GDELT monitored per day (left axis) · white: raw Indonesia articles (own scale) · violet: normalized share (right axis) · 28-day means");
+        const guide = svg.append("line").attr("y1", M.t).attr("y2", H - M.b).attr("stroke", INK).attr("stroke-opacity", 0.5).style("display", "none");
+        hoverRect(svg, M, W, H, (e) => { const i = nearestIdx(dates, x.invert(d3.pointer(e)[0])); if (norm[i] == null) return; guide.style("display", null).attr("x1", x(dates[i])).attr("x2", x(dates[i])); showTip(e, `<b>${fDay(dates[i])}</b> (28-day means)<br>monitored ${d3.format(",.0f")(norm[i])} articles/day<br>Indonesia raw ${d3.format(",.0f")(raw[i])}/day · share ${pct(vol[i], 3)}`); }, () => { guide.style("display", "none"); hideTip(); });
+      });
+
+      sect("gates", () => {
+        const el = document.getElementById("gates");
+        const stats = status?.gates ? status : null;
+        if (!stats) { el.innerHTML = `<div class="pending">Gate results appear after <code>make validate</code>.</div>`; return; }
+        load("stats.json").then((s) => {
+          const g = s.gates ?? {};
+          const V = (v) => `<span class="verdict ${v}">${v}</span>`;
+          const d1 = g["G-D1"] ?? {}, d3g = g["G-D3"] ?? {}, d4 = g["G-D4"] ?? {}, d2 = g["G-D2"] ?? {};
+          el.innerHTML = `
+            <div class="gate">${V(d1.verdict)}<div><b>G-D1 Normalization honesty.</b> Crawl size drifts <b>${num(d1.crawl_size_drift_max_over_min, 2)}×</b> across years (${Object.entries(d1.monitored_articles_per_day_by_year ?? {}).map(([y, v]) => `${y}: ${d3.format(".2s")(v)}`).join(" · ")} articles/day). All attention charts are shares.</div></div>
+            <div class="gate">${V(d2.verdict)}<div><b>G-D2 Anchors.</b> ${d2.pass ?? 0} pass · ${d2.fail ?? 0} fail · ${d2.pending ?? 0} pending of ${d2.anchors?.length ?? 0}, each against a trailing ${d2.baseline_days}-day baseline.
+              <div class="table-scroll"><table class="rank small anchors"><thead><tr><th>Anchor</th><th>Attention ×</th><th>Δ tone</th><th>Protest ×</th><th>Verdict</th></tr></thead><tbody>${(d2.anchors ?? []).map((a) => { const s = a.signatures; const mark = (k) => (a.gated?.includes(k) ? (s[k].verdict === "PASS" ? "✓" : s[k].verdict === "FAIL" ? "✗" : "…") : "<i>info</i>"); const th = a.gated?.find((k) => k.startsWith("theme_")); return `<tr><td>${a.day} · ${a.label}</td><td class="num">${s.attention ? `${num(s.attention.ratio, 1)} ${mark("attention")}` : "—"}${th && s[th] ? `<br><i>${th.replace("theme_", "")} ${s[th].ratio != null ? num(s[th].ratio, 1) + "×" : "…"} ${mark(th)}</i>` : ""}</td><td class="num">${s.tone_drop ? `${sgn(-s.tone_drop.delta)} ${s.tone_drop.verdict === "PASS" ? "✓" : s.tone_drop.verdict === "FAIL" ? "✗" : "…"}` : a.report_only?.tone_rise ? `<i>${sgn(a.report_only.tone_rise.delta)} (report only)</i>` : "—"}</td><td class="num">${s.protest ? `${num(s.protest.ratio, 1)} ${s.protest.verdict === "PASS" ? "✓" : s.protest.verdict === "FAIL" ? "✗" : "…"}` : "—"}</td><td>${V(a.verdict)}</td></tr>`; }).join("")}</tbody></table></div></div></div>
+            <div class="gate">${V(d3g.verdict)}<div><b>G-D3 Two-source coherence.</b> Event-layer Indonesia share (own denominator) vs the API’s normalized volume: Spearman ρ = <b>${d3g.share_all?.spearman_rho ?? "pending"}</b> over ${d3g.share_all?.n_days ?? 0} shared days (threshold ${d3g.threshold}).${d3g.share_en ? ` English feed ρ ${d3g.share_en.spearman_rho ?? "—"}, translated ρ ${d3g.share_trans?.spearman_rho ?? "—"}.` : ""}</div></div>
+            <div class="gate">${V(d4.verdict)}<div><b>G-D4 Language honesty.</b> Foreign press carries <b>${d4.api_foreign_share_mean != null ? d3.format(".0%")(d4.api_foreign_share_mean) : "—"}</b> of Indonesia coverage; the translated (non-English) feed supplies <b>${d4.event_layer_translated_share != null ? d3.format(".0%")(d4.event_layer_translated_share) : "—"}</b> of kept events. Both are charted in chapter 04.</div></div>`;
+        }).catch(() => { el.innerHTML = `<div class="pending">stats.json not exported yet.</div>`; });
+      });
+
+      // theme query list for the methodology
+      if (themes?.themes) {
+        const q = Object.values(themes.themes).map((t) => `<code>${t.query.replace(/</g, "&lt;")}</code>`).join(" · ");
+        document.getElementById("method-text").insertAdjacentHTML("beforeend", ` <b>Theme queries:</b> ${q}.`);
+      }
+    </script>
+
+    <style is:global>
+      html { scroll-behavior: smooth; }
+      body { margin: 0; }
+      a { color: var(--accent); text-decoration: none; } a:hover { text-decoration: underline; }
+      .stamp { font-family: var(--font-data); font-size: 0.7rem; letter-spacing: 0.12em; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); }
+      .eyebrow { font-family: var(--font-data); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+      .violet { color: var(--accent); } .dim { color: var(--ink-muted); }
+      .stamp-bar { position: fixed; inset: 0 0 auto 0; z-index: 20; display: flex; justify-content: space-between; gap: 16px; padding: 12px 20px; background: linear-gradient(color-mix(in srgb, var(--ground) 86%, transparent), transparent); pointer-events: none; }
+      .stamp-bar .stamp { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+      .hero { position: relative; min-height: 100vh; display: flex; flex-direction: column; justify-content: flex-end; background: radial-gradient(ellipse at 70% 20%, #1c1330 0%, var(--ground) 55%); }
+      .hero-copy { padding: 14vh 6vw 2vh; max-width: 40rem; display: flex; flex-direction: column; gap: 14px; }
+      .hero-copy h1 { font-size: clamp(1.9rem, 4.4vw, 3.2rem); margin: 0; line-height: 1.08; letter-spacing: -0.015em; }
+      .hero-copy p { margin: 0; color: var(--ink-muted); font-size: 1.05rem; max-width: 36rem; }
+      .pulse { width: 100%; }
+      .pulse svg { display: block; }
+
+      .chapter { max-width: 46rem; margin: 0 auto; padding: 12vh 24px 0; display: flex; flex-direction: column; gap: 18px; }
+      .chapter.wide { max-width: 72rem; }
+      .chapter h2 { font-size: 1.7rem; margin: 0; }
+      .chapter h3, .method h3 { font-size: 1.05rem; margin: 18px 0 0; }
+      .chapter p { margin: 0; line-height: 1.65; max-width: 46rem; }
+      .footnote { font-size: 0.85rem; color: var(--ink-muted); }
+      .chart { width: 100%; position: relative; }
+      .axis { font-family: var(--font-data); font-size: 12px; color: var(--ink-muted); }
+      .axis text { fill: var(--ink-muted); }
+      .axis path, .axis line { stroke: var(--hairline); }
+      .axis.tiny { font-size: 10px; }
+      .annot { font-family: var(--font-data); font-size: 12px; fill: var(--ink-muted); letter-spacing: 0.03em; }
+      .alabel { font-size: 11.5px; paint-order: stroke; stroke: var(--ground); stroke-width: 3px; stroke-linejoin: round; }
+      .pending { border: 1px dashed var(--hairline); border-radius: 8px; padding: 18px; font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.06em; color: var(--ink-muted); background: var(--surface); }
+      #chart-tip { position: absolute; z-index: 30; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px; font-family: var(--font-data); font-size: 0.72rem; line-height: 1.6; color: var(--ink); max-width: 280px; }
+
+      .era-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+      .era { border: 1px solid var(--hairline); border-top: 2px solid var(--c); border-radius: 8px; padding: 16px; background: linear-gradient(160deg, var(--surface), var(--ground)); display: flex; flex-direction: column; gap: 10px; }
+      .era h3 { margin: 0; font-size: 1.05rem; }
+      .era-stat b, .era-row b { font-family: var(--font-display); font-size: 1.15rem; display: block; margin-top: 2px; font-variant-numeric: tabular-nums; }
+      .era-row { display: flex; gap: 18px; } .era-row b { font-size: 0.95rem; }
+      .bar { height: 4px; background: var(--hairline); border-radius: 2px; margin-top: 6px; } .bar i { display: block; height: 100%; background: var(--c); border-radius: 2px; }
+      .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+      .chip { font-family: var(--font-data); font-size: 0.66rem; letter-spacing: 0.04em; border: 1px solid var(--hairline); border-radius: 12px; padding: 3px 8px; color: var(--ink); } .chip i { color: var(--ink-muted); font-style: normal; }
+
+      .day-list { display: flex; flex-direction: column; gap: 10px; } .day-list h3 { margin-bottom: 4px; }
+      .day { border-left: 2px solid var(--tone-neg); padding: 8px 14px; background: linear-gradient(90deg, color-mix(in srgb, var(--tone-neg) 8%, transparent), transparent); border-radius: 0 6px 6px 0; }
+      .day-head { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; } .day-head b { font-family: var(--font-display); }
+      .day ul { margin: 6px 0 0; padding-left: 1.1em; font-size: 0.86rem; line-height: 1.5; } .day li i { color: var(--ink-muted); font-style: normal; font-family: var(--font-data); font-size: 0.68rem; margin-left: 6px; }
+      .day a { color: var(--ink); }
+
+      .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 10px; }
+      .panel { border: 1px solid var(--hairline); border-radius: 6px; padding: 8px 8px 2px; background: var(--surface); cursor: crosshair; }
+      .panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.86rem; } .panel-head b { font-family: var(--font-display); }
+      .panel svg { display: block; width: 100%; }
+      .table-scroll { overflow-x: auto; }
+      table.rank { border-collapse: collapse; width: 100%; font-family: var(--font-data); font-size: 0.78rem; }
+      table.rank th { text-align: left; font-weight: 600; font-size: 0.64rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted); padding: 8px 10px 8px 0; border-bottom: 1px solid var(--ink-muted); }
+      table.rank td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+      table.rank td span { display: block; color: var(--ink); } table.rank td i { color: var(--ink-muted); font-style: normal; font-size: 0.68rem; }
+      table.rank td.era-name { color: var(--accent); white-space: nowrap; }
+      table.rank.small { font-size: 0.74rem; } table.rank td.num { text-align: right; font-variant-numeric: tabular-nums; } table.rank th:not(:first-child) { text-align: right; } table.rank.anchors th:last-child, table.rank.anchors td:last-child { text-align: right; }
+      table.rank.anchors th:not(:first-child) { text-align: right; }
+      .two-up { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px 40px; align-items: start; } .two-up h3 { margin-top: 0; }
+
+      .map-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+      .toggle { display: flex; flex-wrap: wrap; }
+      .toggle button { background: var(--surface); color: var(--ink-muted); border: 1px solid var(--hairline); padding: 6px 10px; font-family: var(--font-data); font-size: 0.66rem; letter-spacing: 0.08em; cursor: pointer; margin-left: -1px; }
+      .toggle button:first-child { border-radius: 4px 0 0 4px; margin-left: 0; } .toggle button:last-child { border-radius: 0 4px 4px 0; }
+      .toggle button.on { background: var(--accent-ink); color: var(--accent); border-color: var(--accent); position: relative; z-index: 1; }
+      .map-wrap { position: relative; border: 1px solid var(--hairline); border-radius: 8px; overflow: hidden; }
+      #map-canvas { width: 100%; display: block; cursor: crosshair; }
+      #map-tip { position: absolute; z-index: 5; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px; font-family: var(--font-data); font-size: 0.72rem; line-height: 1.55; color: var(--ink); }
+      .map-note { position: absolute; right: 12px; top: 10px; }
+
+      .method { max-width: 72rem; margin: 0 auto; padding: 12vh 24px 10vh; display: flex; flex-direction: column; gap: 14px; }
+      .method p { margin: 0; font-size: 0.9rem; line-height: 1.7; color: var(--ink-muted); max-width: 72rem; }
+      .method code { font-size: 0.8em; background: var(--surface-raised); padding: 1px 5px; border-radius: 3px; color: var(--ink); }
+      .gates { display: flex; flex-direction: column; gap: 10px; }
+      .gate { display: grid; grid-template-columns: 82px 1fr; gap: 14px; border: 1px solid var(--hairline); border-radius: 8px; padding: 12px 14px; background: var(--surface); font-size: 0.88rem; line-height: 1.6; color: var(--ink-muted); }
+      .gate b { color: var(--ink); }
+      .verdict { font-family: var(--font-data); font-size: 0.66rem; letter-spacing: 0.1em; border-radius: 4px; padding: 4px 8px; height: fit-content; text-align: center; border: 1px solid var(--hairline); }
+      .verdict.PASS { color: var(--tone-pos); border-color: var(--tone-pos); } .verdict.FAIL { color: var(--tone-neg); border-color: var(--tone-neg); } .verdict.PENDING { color: var(--ink-muted); }
+      @media (max-width: 640px) { .gate { grid-template-columns: 1fr; } .stamp-bar { flex-direction: column; gap: 2px; } }
+    </style>
   </body>
 </html>
