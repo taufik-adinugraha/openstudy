@@ -1336,7 +1336,7 @@ const CHAPTERS = [
             .attr("font-family", "var(--font-data)").attr("font-size", 12)
             .text("observed frequency");
           svg.append("path").datum(bins).attr("fill", "none").attr("stroke", C.accent)
-            .attr("stroke-width", 2)
+            .attr("stroke-width", 2).attr("stroke-linejoin", "round")
             .attr("d", d3.line().x((d) => x(d.p_mean)).y((d) => y(d.observed)));
           svg.selectAll("circle").data(bins).join("circle")
             .attr("cx", (d) => x(d.p_mean)).attr("cy", (d) => y(d.observed))
@@ -1614,12 +1614,20 @@ const CHAPTERS = [
             .call(d3.axisBottom(x).ticks(7));
           svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`)
             .call(d3.axisLeft(y1).ticks(4));
-          svg.append("path").datum(O).attr("fill", "none").attr("stroke", C.clean)
+          // A GAP IS A GAP, NOT A LINE.  Both records have holes — OpenAQ units go offline, and
+          // the modelled series only exists on days with a steering field — and joining across
+          // them draws a straight ramp that reads as data.  Any step over 5 days breaks the path.
+          const GAP_DAYS = 5 * 864e5;
+          const broken = (rows) => rows.map((r, i) => ({
+            ...r, gap: i > 0 && r.d - rows[i - 1].d > GAP_DAYS,
+          }));
+          const Ob = broken(O), Mb = broken(M);
+          svg.append("path").datum(Ob).attr("fill", "none").attr("stroke", C.clean)
             .attr("stroke-width", 2)
-            .attr("d", d3.line().x((r) => x(r.d)).y((r) => y1(r.y)));
-          svg.append("path").datum(M).attr("fill", "none").attr("stroke", C.accent)
+            .attr("d", d3.line().defined((r) => !r.gap).x((r) => x(r.d)).y((r) => y1(r.y)));
+          svg.append("path").datum(Mb).attr("fill", "none").attr("stroke", C.accent)
             .attr("stroke-width", 2).attr("stroke-dasharray", "5 4")
-            .attr("d", d3.line().x((r) => x(r.d)).y((r) => y2(r.y)));
+            .attr("d", d3.line().defined((r) => !r.gap).x((r) => x(r.d)).y((r) => y2(r.y)));
           svg.append("text").attr("x", W - m.r + 6).attr("y", y1(O[O.length - 1].y) + 4)
             .attr("fill", C.clean).attr("font-family", "var(--font-data)").attr("font-size", 12)
             .text(v.tier === 3 ? "EAC4 (model)" : "observed");
