@@ -1,0 +1,26 @@
+[project]
+name = "poverty-map"
+version = "0.1.0"
+description = "Case F pipeline: satellite-feature poverty mapping vs BPS regency rates, small-area estimation"
+requires-python = ">=3.12"
+dependencies = [
+    "requests>=2.32",
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "pyarrow>=17",
+    "duckdb>=1.1",
+    "geopandas>=1.0",
+    "shapely>=2.0",
+    "pyogrio>=0.10",
+    "rasterio>=1.3",
+    "exactextract>=0.2",
+    "scikit-learn>=1.5",
+    "lightgbm>=4.5",
+    "shap>=0.46",
+    "s2sphere>=0.2.5",
+    "pystac-client>=0.8",
+    "scipy>=1.14",
+]
+
+[tool.uv]
+package = false

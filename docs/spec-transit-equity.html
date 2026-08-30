@@ -1,0 +1,223 @@
+<title>Transit Equity Spec</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper: #FAF9F6; --surface: #F1F0EC; --ink: #191C22; --muted: #5F646E;
+    --hairline: #E2E1DB; --accent: #B93E1C; --accent-soft: #F6E2DA;
+    --teal: #177368; --warn: #A6521F; --warn-soft: #F5E4D7; --code-bg: #EAE9E3;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #101216; --surface: #181B21; --ink: #E9EAED; --muted: #989DA8;
+      --hairline: #272C36; --accent: #E4562E; --accent-soft: #351105;
+      --teal: #4BB8A9; --warn: #E08B54; --warn-soft: #3A2413; --code-bg: #1F232B;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #101216; --surface: #181B21; --ink: #E9EAED; --muted: #989DA8;
+    --hairline: #272C36; --accent: #E4562E; --accent-soft: #351105;
+    --teal: #4BB8A9; --warn: #E08B54; --warn-soft: #3A2413; --code-bg: #1F232B;
+  }
+  body { background: var(--paper); color: var(--ink); font-family: "Source Serif 4", Georgia, serif; font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 56px 24px 96px; }
+  h1, h2, h3 { font-family: "Archivo", Arial, sans-serif; text-wrap: balance; margin: 0; }
+  h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
+  h2 { font-size: 1.3rem; font-weight: 700; }
+  h3 { font-size: 1rem; font-weight: 600; }
+  p { margin: 0; max-width: 68ch; }
+  a { color: var(--teal); }
+  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+  header.doc { display: flex; flex-direction: column; gap: 14px; padding-bottom: 30px; border-bottom: 2px solid var(--ink); }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px 26px; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--muted); }
+  .meta-row b { color: var(--ink); font-weight: 500; }
+  section { display: flex; flex-direction: column; gap: 16px; margin-top: 48px; }
+  .lede { font-size: 1rem; color: var(--muted); }
+  .q { font-size: 1.15rem; font-style: italic; border-left: 3px solid var(--accent); padding: 6px 0 6px 18px; max-width: 62ch; }
+  table { border-collapse: collapse; width: 100%; font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; line-height: 1.55; }
+  .table-scroll { overflow-x: auto; }
+  th { text-align: left; font-weight: 600; font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 8px 14px 8px 0; border-bottom: 1px solid var(--ink); }
+  td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  code { font-family: "IBM Plex Mono", monospace; font-size: 0.82em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  pre { background: var(--code-bg); padding: 14px 16px; overflow-x: auto; border-radius: 4px; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; line-height: 1.6; margin: 0; }
+  ul.plain, ol.plain { margin: 0; padding-left: 1.35em; display: flex; flex-direction: column; gap: 9px; max-width: 70ch; }
+  ol.plain li::marker, ul.plain li::marker { color: var(--accent); font-family: "IBM Plex Mono", monospace; font-weight: 600; }
+  .stage { display: grid; grid-template-columns: 120px 1fr; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--hairline); }
+  .stage:last-child { border-bottom: 0; }
+  .stage .sname { font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; font-weight: 600; color: var(--accent); padding-top: 3px; }
+  .stage p { font-size: 0.95rem; }
+  @media (max-width: 600px) { .stage { grid-template-columns: 1fr; gap: 4px; } }
+  .gate { border: 1px solid var(--hairline); border-left: 3px solid var(--teal); background: var(--surface); padding: 14px 18px; font-size: 0.95rem; max-width: 70ch; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+  .sw { display: flex; align-items: center; gap: 8px; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+  .sw i { width: 22px; height: 22px; border-radius: 4px; display: inline-block; border: 1px solid var(--hairline); }
+  .check li { list-style: none; position: relative; padding-left: 1.6em; }
+  .check li::before { content: "☐"; position: absolute; left: 0; color: var(--accent); font-family: "IBM Plex Mono", monospace; }
+  .check { padding-left: 0; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 3px; font-family: "IBM Plex Mono", monospace; font-size: 0.64rem; font-weight: 600; letter-spacing: 0.06em; white-space: nowrap; background: var(--warn-soft); color: var(--warn); }
+  footer.doc { margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--hairline); font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header class="doc">
+    <span class="eyebrow">Phase 3 · Case G · Spec v1</span>
+    <h1>Transit Access &amp; Urban Equity</h1>
+    <p class="lede">TransJakarta, KRL, MRT and both LRTs on one routing graph with every footpath
+    in Jabodetabek: who can reach work and a hospital within an hour on public transport, who
+    cannot — and how unequally that hour is distributed across ~1,500 kelurahan.</p>
+    <div class="meta-row">
+      <span>DATE <b>2026-08-30</b></span>
+      <span>REFRESH <b>Static snapshot (D3) · re-run when the GTFS changes</b></span>
+      <span>IDENTITY <b>Metro-line chromatics on graphite</b></span>
+      <span>DATA PATH <b>Verified by reconnaissance 2026-08-30 (feed unpacked)</b></span>
+    </div>
+  </header>
+
+  <section>
+    <span class="eyebrow">G1 · The question</span>
+    <p class="q">“An hour on public transport buys a Menteng resident half the city's jobs. What does it buy in Bekasi?”</p>
+    <p>Jakarta has spent a decade building transit — BRT to Mikrotrans, MRT, two LRTs, a
+    commuter rail carrying a million people a day. The question every planner, employer and
+    property investor asks is not “how long is the network” but “who can actually reach what”.
+    This case computes door-to-door travel times at scale (graph routing over GTFS + OSM,
+    frequency-aware) and turns them into an equity statement: cumulative access to jobs and
+    healthcare per kelurahan, its Lorenz curve, and where poverty and disconnection coincide —
+    the cross-case link to Case F's poverty surface.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">G2 · Data contract</span>
+    <h2>Data contract</h2>
+    <p class="lede">Every row verified live 2026-08-30; the TransJakarta zip was downloaded (2.5 MB) and unpacked to count what is actually in it.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Source</th><th>Product / access</th><th>Licence</th><th>Size</th><th>Cadence</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>TransJakarta GTFS</td><td>Official <code>gtfs.transjakarta.co.id/files/file_gtfs.zip</code> — verified contents: 240 routes (all bus, incl. 98 <code>JAK.*</code> Mikrotrans), 700 trips, 8,091 stops, <code>frequencies.txt</code> covering every trip (6/10/15/20/30/60-min headways), shapes; calendar → 2027-12-31. Transitland <code>f-transjakarta~id</code> keeps 81 archived versions</td><td><span class="pill">Unstated</span> — attribution + written confirmation pending (risk register, build plan)</td><td>2.5 MB</td><td>irregular (last 2026-07-27)</td><td><b>BRT + microbus network</b></td></tr>
+          <tr><td>Rail (KRL · MRT · LRT ×2)</td><td><b>No GTFS exists</b> (Transitland + Mobility Database exhaustively searched — the only Jakarta operator is TransJakarta). Hand-encoded frequency GTFS from published headways: MRT 5/10 min (&lt; 30 min end-to-end, 13 stn), LRT Jabodebek 4–5 peak / 6–7 off (05:53–23:11, official), LRT Jakarta 10 min, KRL per-line from KCI's GAPEKA 2025 lookup; geometry + stations from OSM (bbox holds 129 train / 8 light-rail / 4 subway route relations)</td><td>Facts hand-encoded, sources cited per line; OSM ODbL</td><td>&lt; 1 MB</td><td>re-read at build</td><td>Rail layer (±15 % caveat shown)</td></tr>
+          <tr><td>Bogor angkot GTFS</td><td>Mobility Database mdb-1229, community feed</td><td>CC0</td><td>0.8 MB</td><td>2026-08</td><td>Bogor feeder bonus layer</td></tr>
+          <tr><td>OSM (Geofabrik)</td><td><code>asia/indonesia/java-latest.osm.pbf</code> 896 MB daily → <code>osmium extract</code> to the Jabodetabek bbox (~120–150 MB): streets, footways, POIs</td><td>ODbL 1.0</td><td>0.9 GB → 0.15 GB</td><td>daily</td><td>Street + walk graph, POI jobs proxy</td></tr>
+          <tr><td>r5py 1.1.7</td><td>Frequency-aware RAPTOR (R5 jar 65 MB, auto-fetched); needs JDK 21; heap pinned at 10 G</td><td>GPL-3.0-or-later OR MIT</td><td>—</td><td>—</td><td>Routing engine</td></tr>
+          <tr><td>WorldPop R2025A</td><td>Constrained 100 m IDN 2025 (169 MB, HEAD-verified), clipped</td><td>CC BY 4.0</td><td>169 MB</td><td>annual</td><td>Population</td></tr>
+          <tr><td>GHSL R2023A</td><td>GHS-POP E2025 + GHS-BUILT-S <b>NRES</b> E2020, 100 m — tile <code>R10_C29</code> verified to span 99.5–110.1 E / 0–8.1 S (all Jabodetabek in one tile)</td><td>CC BY 4.0</td><td>25 MB</td><td>epochs</td><td>Pop cross-check · <b>jobs proxy</b></td></tr>
+          <tr><td>Health facilities</td><td>HDX healthsites (ODbL, GeoJSON 18 MB, refreshed 2026-08-28) + HDX MoH hospital list (CC BY, 2018) + OSM amenity tags; Kemenkes registries have no anonymous download (registration path noted)</td><td>ODbL / CC BY</td><td>21 MB</td><td>rolling</td><td>Hospitals + puskesmas destinations</td></tr>
+          <tr><td>HDX COD-AB (BPS)</td><td>ADM4 kelurahan/desa (81,912 national), P-coded, filtered to the 14 Jabodetabek kabupaten/kota → ~1,500 units; DKI's 267 via Jakarta Satu as cross-check</td><td>CC BY-IGO</td><td>219 MB gdb</td><td>2020-04</td><td>Origin polygons</td></tr>
+          <tr><td>Welfare layer</td><td>Case F's benchmarked kecamatan poverty estimates (own product) + BPS regency P0 (14 units)</td><td>own / BPS</td><td>small</td><td>annual</td><td>Equity axis</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><b>Scouted and rejected:</b> Meta Relative Wealth Index — <span class="pill">CC BY-NC</span>,
+    replaced by the Case F cross-link; Kemenkes SATUSEHAT/layanandata — registration-gated;
+    Jakarta Open Data GTFS — none exists (halte tables only, and the portal resets non-browser
+    clients). <b>Scope rule (load-bearing):</b> weekday 07:00–09:00 departures, WALK+TRANSIT;
+    travel times are <em>scheduled</em> times, not congestion-adjusted — stated on every view.
+    Google Routes data is used only as an on-the-fly validation comparator (≤ 50 OD pairs,
+    within the 10,000 free Essentials calls, 30-day cache ceiling respected, never stored raw,
+    never drawn on our maps — Maps ToS §19).</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">G3 · Pipeline</span>
+    <h2>Pipeline — static rebuild</h2>
+    <p class="lede">Total raw pull ≈ 1.3 GB. Wall time on the 16 GB server: ingest ~30 min, network build 5–10 min, the 1,500 × 12,000 × 3-scenario matrix 20–40 min on 8 cores inside a 10 G heap, everything after that seconds. A full rebuild is comfortably under two hours.</p>
+    <div>
+      <div class="stage"><span class="sname">ingest</span><p>GTFS (TransJakarta + Bogor angkot), Java PBF → osmium bbox clip, WorldPop, GHSL POP/NRES, healthsites + hospital lists, COD-AB ADM4 → Jabodetabek filter, Case F estimates. Manifest with sizes + sha256 + feed Last-Modified.</p></div>
+      <div class="stage"><span class="sname">rail</span><p><code>gtfs_rail.py</code> builds frequency GTFS per rail line from config.RAIL_LINES (headways re-read from the cited official pages at build time), stops/shapes from OSM relations, transfers at the named hubs. Output labelled hand-encoded.</p></div>
+      <div class="stage"><span class="sname">network</span><p>r5py TransportNetwork over the clip + all GTFS zips; build report (node/edge counts, GTFS validation warnings from gtfs-kit) kept for G-G3.</p></div>
+      <div class="stage"><span class="sname">matrix</span><p>Origins = ~1,500 kelurahan population-weighted centroids; destinations = 500 m hexes (~12,000) + every hospital/puskesmas; scenarios all / no-rail / walk-only; percentiles p50/p75 over the departure window.</p></div>
+      <div class="stage"><span class="sname">access</span><p>Cumulative opportunities at 30/45/60 min (jobs proxy = NRES surface; hospitals count; population reach) + gravity variant (half-weight 45 min) so the cutoff choice is shown not to drive conclusions.</p></div>
+      <div class="stage"><span class="sname">equity</span><p>Lorenz + Gini + Palma of population-weighted access; access vs Case F poverty (Spearman); double-disadvantage list; DKI vs Bodetabek; mode-layer attribution (Gini with/without rail, with/without TransJakarta).</p></div>
+      <div class="stage"><span class="sname">validate</span><p>Gates G-G1…G-G4 → <code>stats.json</code>.</p></div>
+      <div class="stage"><span class="sname">export</span><p>View-models ≤ 3 MB (kelurahan GeoJSON, access ledger, per-origin isochrone hex lists as lazy-loaded files, network geometry, equity curves). Insight brief per D11.</p></div>
+    </div>
+    <pre>cases/transit-equity/
+  pipeline/  config.py ingest.py gtfs_rail.py network.py matrix.py access.py equity.py validate.py export_web.py
+  data/      raw/ gtfs/ network/ (git-ignored)   web/  Astro app, port 4329, base /transit   Makefile</pre>
+  </section>
+
+  <section>
+    <span class="eyebrow">G4 · Validation gates</span>
+    <h2>Validation gates</h2>
+    <div class="gate"><b>G-G1 — Timetable sanity (hard).</b> For the published-time OD sample (MRT Lebak Bulus → Bundaran HI &lt; 30 min official; TJ Corridor 1 Blok M → Kota ≈ 49 min from brtdata.org's 19 km/h × 15.48 km; KRL Bogor → Jakarta Kota and LRT Jabodebek end-to-end read from the operators' timetables at build): r5 in-vehicle time within ±15 % or ±8 min, whichever is larger.</div>
+    <div class="gate"><b>G-G2 — External routing check.</b> 50 random OD pairs vs Google Routes transit (on-the-fly, never stored raw): median absolute deviation ≤ 10 min; the full deviation distribution is charted in the methodology, including the tail.</div>
+    <div class="gate"><b>G-G3 — Network integrity (hard).</b> ≥ 98 % of GTFS stops snap to the street graph within 200 m; zero unreachable kelurahan origins in the WALK+TRANSIT scenario; r5 build warnings triaged and listed.</div>
+    <div class="gate"><b>G-G4 — Plausibility (hard where bookkeeping).</b> Rail scenario ≥ no-rail scenario everywhere (monotonicity — exact); DKI core &gt; Bodetabek periphery on population-weighted median access; the ITDP People-Near-Transit replication (population within 1 km of ≤ 15-min-headway service) lands <em>above</em> the 2016 anchors — Jakarta 44 %, Greater Jakarta 16 % — since the network has only grown; the comparison is charted, not asserted.</div>
+  </section>
+
+  <section>
+    <span class="eyebrow">G5 · Dashboard</span>
+    <h2>Dashboard — page anatomy</h2>
+    <p class="lede">Map rule: the user's browser runs with WebGL off — every map ships a full-function 2-D canvas fallback (Path2D + <code>isPointInPath</code>, the nightlights pattern), tagged visibly when active.</p>
+    <ol class="plain">
+      <li><b>Hero — “The hour.”</b> Signature moment: from a single origin (Bundaran HI), the 60-minute isochrone blooms outward along the network — rail lines igniting in their mode colours as they're reached, the reachable area filling like ink in water. 2-D fallback: pre-rendered 5-minute isochrone rings crossfading on canvas. Reduced motion: final isochrone, static.</li>
+      <li><b>Chapter 1 — “One network, four systems.”</b> The assembled graph: BRT corridors, Mikrotrans capillaries, KRL trunks, MRT/LRT — each layer toggling in with its route-km and headway signature; the hand-encoded-rail caveat stated here, first.</li>
+      <li><b>Chapter 2 — “An hour from home.”</b> Kelurahan choropleth of 60-min jobs access; the Menteng-vs-Bekasi pairing as annotated callouts; cutoff scrubber 30/45/60 showing the cliff beyond the rail shadow.</li>
+      <li><b>Chapter 3 — “Who is left out.”</b> The Lorenz curve draws itself; Gini and Palma numbers land; double-disadvantage kelurahan (poor + disconnected, via Case F) highlighted on a linked mini-map — the sentence a policy client remembers.</li>
+      <li><b>Chapter 4 — “What each layer buys.”</b> Access with and without rail / TransJakarta: the marginal contribution of every system, as small-multiple maps + a Gini delta chart.</li>
+      <li><b>Explore.</b> Click any kelurahan → its isochrone (precomputed hex lists), access panel (jobs %, hospitals, nearest-hospital time, poverty estimate), scenario + cutoff toggles, URL state, chart/table + download per Grapher affordances.</li>
+      <li><b>Methodology.</b> Scheduled-not-congested disclosure; hand-encoded rail table with sources and the ±15 % caveat; gate results incl. the Google-comparison distribution; GTFS licence note + attribution (TransJakarta, KCI/MRT/LRT timetables, OSM ODbL, WorldPop, GHSL, healthsites ODbL, COD-AB); the RWI rejection note.</li>
+    </ol>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Chart</th><th>Form</th><th>Interactions</th><th>2-D fallback</th></tr></thead>
+        <tbody>
+          <tr><td>Access choropleth + isochrones</td><td>MapLibre fill + line layers</td><td>hover, click-isochrone, scenario/cutoff toggles</td><td>canvas choropleth + Path2D hit test; isochrone hexes painted per frame</td></tr>
+          <tr><td>Network map</td><td>MapLibre line layers, mode colours</td><td>layer toggles, hover route cards</td><td>canvas polylines (same projection helper)</td></tr>
+          <tr><td>Lorenz / Gini</td><td>custom d3, animated draw-in</td><td>hover, scenario compare</td><td>SVG — no GPU</td></tr>
+          <tr><td>Access-vs-poverty scatter</td><td>custom d3</td><td>hover, quadrant highlight, linked map</td><td>SVG</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">G6 · Design brief</span>
+    <h2>Design brief</h2>
+    <p><b>Identity:</b> the transit map itself — metro-line chromatics on graphite. The accent is
+    TransJakarta's red-orange; each mode keeps a fixed line colour throughout (BRT red-orange,
+    KRL commuter blue, MRT teal-green, LRT gold, walk grey) so the map legend <em>is</em> the
+    brand. Access ramps run graphite → red-orange; poverty stays in Case F's ochre where it
+    appears, so the two dimensions never share a hue.</p>
+    <div class="swatches">
+      <span class="sw"><i style="background:#101216"></i> ground #101216</span>
+      <span class="sw"><i style="background:#181B21"></i> surface #181B21</span>
+      <span class="sw"><i style="background:#E9EAED"></i> text #E9EAED</span>
+      <span class="sw"><i style="background:#E4562E"></i> BRT / accent #E4562E</span>
+      <span class="sw"><i style="background:#3E8EDE"></i> KRL blue #3E8EDE</span>
+      <span class="sw"><i style="background:#57B26A"></i> MRT green #57B26A</span>
+      <span class="sw"><i style="background:#E0A63F"></i> LRT gold #E0A63F</span>
+    </div>
+    <ul class="plain">
+      <li>Tokens from <code>shared/design/tokens.css</code> (<code>data-case="transit"</code>); mode colours declared as case-local tokens beside them.</li>
+      <li>Times always carry the window: “42 min · scheduled, 07–09 weekday”.</li>
+      <li>One orchestrated moment (the isochrone bloom); micro-interactions elsewhere; <code>prefers-reduced-motion</code> respected.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">G7 · Acceptance</span>
+    <h2>Acceptance checklist</h2>
+    <ul class="plain check">
+      <li><code>make rebuild</code> reproduces matrix → equity from raw feeds on a clean machine with JDK 21 (gate 1).</li>
+      <li>G-G1…G-G4 evaluated and published (gates 2–3).</li>
+      <li>Explore interactive &lt; 3 s; isochrone fetch &lt; 300 ms (lazy per-origin files); 60 fps; Lighthouse ≥ 90; full function with WebGL disabled (gate 4).</li>
+      <li>Vintage stamps: GTFS Last-Modified · OSM extract date · WorldPop 2025 · GHSL epochs · healthsites pull date (gate 5).</li>
+      <li>Attributions + the unstated-GTFS-licence note; Google data absent from maps and storage (gate 6).</li>
+      <li>Story reads in one scroll; the bloom passes the award test (gates 7, 9).</li>
+      <li>Static hosting; the only external calls at build time are the ≤ 50 validation routes (gate 8).</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">G8 · Risks &amp; decisions pending</span>
+    <h2>Risks, unknowns &amp; decisions pending user verification</h2>
+    <ul class="plain">
+      <li><b>TransJakarta GTFS licence is unstated</b> (feed, Transitland and Mobility Database all silent) — already in the build-plan risk register; proceed with attribution + seek written confirmation. If refused, the case survives on rail + OSM but loses its richest layer.</li>
+      <li><b>Hand-encoded rail is the weakest data</b> — headways drift with GAPEKA revisions; every rail time carries the ±15 % caveat and the build re-reads the cited pages. An official KAI/MRT feed would retire this entire risk.</li>
+      <li><b>Jobs proxy honesty</b> — NRES built-up surface is floorspace, not employment; POI density is the second proxy; both are disclosed as proxies and the access metric is named “access to job-dense floorspace”, never “jobs”.</li>
+      <li><b>Pending user verification:</b> (1) drop of Meta RWI (CC BY-NC) in favour of the Case F cross-link — creates a build-order dependency F → G; (2) hand-encoded rail GTFS as acceptable methodology for a public demo; (3) Google Routes as validation-only comparator within the free tier (10,000 Essentials calls/mo) and ToS §19; (4) whether Kepulauan Seribu is excluded from equity aggregates (boat-only access distorts Gini).</li>
+      <li><b>Out of scope:</b> congestion-adjusted times, fares/affordability, park-and-ride, future-network scenarios (an obvious paid-pilot upsell, noted in the CTA).</li>
+    </ul>
+  </section>
+
+  <footer class="doc">CASE G SPEC v1 · 2026-08-30 · DATA PATH VERIFIED · SIBLINGS: SPEC F, SPEC H · PARENT: BUILD PLAN (docs/build-plan.html)</footer>
+</div>

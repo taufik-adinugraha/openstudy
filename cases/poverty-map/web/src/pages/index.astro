@@ -1,0 +1,28 @@
+---
+// Case F — Poverty Mapping from Space. Skeleton until the pipeline lands.
+// Spec: docs/spec-poverty-map.html (F5 dashboard anatomy).
+import "../styles/tokens.css";
+---
+<html lang="en" data-case="poverty" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Poverty Mapping from Space</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+  </head>
+  <body>
+    <main style="min-height:100vh;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:16px;padding:0 6vw;">
+      <span style="font-family:var(--font-data);font-size:0.72rem;letter-spacing:0.14em;color:var(--accent);">CASE F · SCAFFOLDED · PIPELINE PENDING</span>
+      <h1 style="font-size:clamp(2rem,5vw,3.2rem);margin:0;line-height:1.1;">Poverty Mapping from Space</h1>
+      <p style="color:var(--ink-muted);max-width:36rem;margin:0;">Rooftops, lights, land cover and roads as welfare
+      signals — trained against BPS's official regency poverty rates (2016–2025), spatially cross-validated,
+      then carried down to the kecamatan. This page lights up when the first model run passes its gates.</p>
+      <!-- TODO per spec F5: hero "rooftops → poverty" morph (canvas 2-D fallback: static
+           choropleth with hover) → chapters (what the satellite sees · how well it predicts,
+           Java vs off-Java · where the gaps are · the kecamatan map) → explore (choropleth,
+           regency panel with feature contributions, model-vs-BPS scatter) → methodology.
+           Map rule (user's browser has WebGL off): try MapLibre, catch → 2-D canvas choropleth
+           with Path2D + isPointInPath hit-testing, as in cases/nightlights-pulse/web. -->
+    </main>
+  </body>
+</html>

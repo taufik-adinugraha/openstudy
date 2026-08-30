@@ -1,0 +1,28 @@
+---
+// Case G — Transit Access & Urban Equity. Skeleton until the pipeline lands.
+// Spec: docs/spec-transit-equity.html (G5 dashboard anatomy).
+import "../styles/tokens.css";
+---
+<html lang="en" data-case="transit" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Transit Access &amp; Urban Equity</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+  </head>
+  <body>
+    <main style="min-height:100vh;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:16px;padding:0 6vw;">
+      <span style="font-family:var(--font-data);font-size:0.72rem;letter-spacing:0.14em;color:var(--accent);">CASE G · SCAFFOLDED · PIPELINE PENDING</span>
+      <h1 style="font-size:clamp(2rem,5vw,3.2rem);margin:0;line-height:1.1;">Transit Access &amp; Urban Equity</h1>
+      <p style="color:var(--ink-muted);max-width:36rem;margin:0;">TransJakarta, KRL, MRT and LRT on one routing graph
+      with every footpath in Jabodetabek: who can reach work and a hospital within an hour on public transport —
+      and who cannot. Access per kelurahan, and how unequally it is shared.</p>
+      <!-- TODO per spec G5: hero "the hour" isochrone bloom from Bundaran HI (canvas 2-D fallback:
+           pre-rendered isochrone rings as static SVG paths with hover) → chapters (the network ·
+           an hour from home · who is left out — Lorenz curve · access vs wealth) → explore
+           (kelurahan choropleth + click-to-isochrone from precomputed matrix, mode toggles) →
+           methodology. Map rule (WebGL off): try MapLibre, catch → 2-D canvas choropleth, as in
+           cases/nightlights-pulse/web. -->
+    </main>
+  </body>
+</html>
