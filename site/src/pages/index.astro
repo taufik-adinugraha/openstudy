@@ -14,6 +14,7 @@ const DEMOS = {
   forest: "http://localhost:4331/forest",           // TODO prod: /forest
   poverty: "http://localhost:4332/poverty",         // TODO prod: /poverty
   airquality: "http://localhost:4328/airquality",   // TODO prod: /airquality
+  rice: "http://localhost:4333/rice",               // TODO prod: /rice
 };
 ---
 <html lang="en" data-theme="dark">
@@ -183,6 +184,45 @@ const DEMOS = {
           jobs — and Bodetabek’s median resident 0.05%. 38% of Jabodetabek
           cannot reach a hospital within the hour.</p>
           <span class="meta">GTFS · OSM · R5 ROUTING · 1,511 KELURAHAN · GINI 0.74</span>
+        </div>
+      </a>
+
+      <a class="case live" data-case="rice" href={DEMOS.rice} target="_blank" rel="noopener">
+        <div class="case-visual rice-visual" aria-hidden="true">
+          <svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="ri-water" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#122A31"/><stop offset="100%" stop-color="#0A1214"/>
+              </linearGradient>
+            </defs>
+            <rect width="400" height="240" fill="url(#ri-water)"/>
+            <!-- flooded paddy terraces stepping through the phenology ramp -->
+            <g opacity="0.95">
+              <rect x="0"   y="150" width="400" height="30" fill="#2F7E96" opacity="0.55"/>
+              <rect x="0"   y="120" width="400" height="30" fill="#5FA83F" opacity="0.45"/>
+              <rect x="0"   y="90"  width="400" height="30" fill="#A8CE3A" opacity="0.40"/>
+              <rect x="0"   y="60"  width="400" height="30" fill="#E6B94F" opacity="0.32"/>
+              <rect x="0"   y="180" width="400" height="30" fill="#B4805A" opacity="0.30"/>
+            </g>
+            <!-- the SAR signature: backscatter dipping at flooding, peaking at heading -->
+            <path d="M14 128 C60 132 78 168 106 170 C140 172 158 96 196 86 C232 77 246 104 274 120 C306 138 330 96 386 78"
+                  fill="none" stroke="#A8CE3A" stroke-width="3" stroke-linecap="round"/>
+            <g fill="#E8EEEC">
+              <circle cx="106" cy="170" r="4.5"/><circle cx="196" cy="86" r="4.5"/>
+            </g>
+            <text x="112" y="192" fill="#2F7E96" font-size="12" letter-spacing="1.2" font-family="ui-monospace,monospace">FLOOD</text>
+            <text x="176" y="70"  fill="#A8CE3A" font-size="12" letter-spacing="1.2" font-family="ui-monospace,monospace">HEADING</text>
+            <text x="18" y="222" fill="#A8CE3A" opacity="0.95" font-size="12" letter-spacing="1.5" font-family="ui-monospace,monospace">1.18M CROP CYCLES</text>
+          </svg>
+        </div>
+        <div class="case-body">
+          <span class="badge">LIVE DEMO</span>
+          <h2>Rice &amp; Food Security</h2>
+          <p>Sentinel-1 radar reads Java's paddy through monsoon cloud — 1.23 million
+          cells, 1.18 million crop cycles, benchmarked against 6,240 official BPS
+          regency-months. <b>All five gates published red</b>, with the reason
+          measured: we find the rice, but one crop where there are two.</p>
+          <span class="meta">SENTINEL-1 RTC · 6 KABUPATEN · 1.18M CROP CYCLES · 5 GATES RED</span>
         </div>
       </a>
 
