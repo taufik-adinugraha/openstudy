@@ -143,20 +143,23 @@
   --loss: #B4552A;
 }
 
-/* ── Case: fire & haze — plume magenta on ash ────────────────────────
- *
- * NOT YET IN shared/design/tokens.css — this block is the case-local copy and
- * is proposed verbatim for the shared file (see cases/fire-haze/README.md,
- * "Decisions pending user verification" #1).
- *
- * Why magenta and not fire-orange: orange is triple-booked in this portfolio
- * (trade copper #D9722C, transit red-orange #E4562E, forest loss #B4552A) and a
- * fourth orange case would be indistinguishable in the homepage grid.  Magenta
- * is also the honest choice: satellite aerosol products (TROPOMI UV Aerosol
- * Index, MODIS AOD) render dense smoke at the magenta end, so the plume colour
- * is borrowed from the instrument, not invented.  Ignition points keep a hot
- * vermilion, used ONLY for point detections, never for UI.
- */
+/* ── Case: rice & food security — flooded paddy, seen by radar ────────── */
+[data-case="rice"] {
+  --ground: #0A1214; --surface: #111A1C; --surface-raised: #182428;
+  --ink: #E8EEEC; --ink-muted: #93A5A2; --hairline: #1F2E31;
+  --accent: #A8CE3A;          /* young-paddy chartreuse — the rice signal only */
+  --accent-ink: #16250A;
+  /* Phenology ramp — CYCLIC and data-only: a crop calendar is a loop, so the
+     ramp closes (harvest stubble hands back to flooded water). */
+  --phen-flood:   #2F7E96;    /* transplanting: sheet water, the SAR minimum */
+  --phen-veg:     #5FA83F;    /* tillering */
+  --phen-peak:    #A8CE3A;    /* heading: the VH maximum */
+  --phen-ripe:    #E6B94F;    /* ripening */
+  --phen-harvest: #B4805A;    /* harvested stubble, bare soil */
+  --grain: #E6B94F;           /* tonnage / production series */
+}
+
+/* ── Case: fire & haze — plume magenta on ash ─────────────────────────── */
 [data-case="haze"] {
   --ground: #12100F; --surface: #1A1715; --surface-raised: #231F1C;
   --ink: #EFEAE6; --ink-muted: #A79C93; --hairline: #2C2724;
@@ -164,7 +167,6 @@
   --accent-ink: #330A20;
   --fire: #FF7A45;            /* ignition / hotspot points ONLY */
   --clean: #7FB2C9;           /* clear-air reference, receptor baselines */
-  /* Haze ramp — data-only: clear sky through sulphur to dense plume. */
   --ramp-0: #16232B; --ramp-1: #4E5A55; --ramp-2: #A88A4E;
   --ramp-3: #D9628A; --ramp-4: #F6C9DE;
 }
