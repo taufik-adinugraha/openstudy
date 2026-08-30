@@ -25,7 +25,10 @@ from rasterio.windows import Window
 import config
 from alerts import log, px_area_ha, tile_origin
 
-BLOCK30 = 10_000
+# 5000 px at 30 m = 64 blocks per 10-degree tile.  10000 px OOM-killed the 3 GB unit: the
+# int32 province raster alone is 400 MB at that size, before the loss array and the index
+# arrays. At 5000 the whole working set is ~150 MB.
+BLOCK30 = 5_000
 
 
 def main(argv: list[str]) -> None:
@@ -63,19 +66,21 @@ def main(argv: list[str]) -> None:
                     if sub.empty:
                         continue
                     pr = rasterize(zip(sub.geometry, sub.pid), out_shape=arr.shape,
-                                   transform=tr, fill=0, dtype="int32")
+                                   transform=tr, fill=0, dtype="uint8")   # <= 255 provinces
                     sel = (arr > 0) & (pr > 0)
                     if not sel.any():
+                        del arr, pr, sel
                         continue
-                    rows = np.flatnonzero(sel.ravel()) // BLOCK30
-                    lat = north - (br * BLOCK30 + rows + 0.5) * px
+                    rr, _ = np.nonzero(sel)                    # only as long as the hit count
+                    lat = north - (br * BLOCK30 + rr + 0.5) * px
                     ha = px_area_ha(lat, px)
-                    key = pr[sel].astype(np.int64) * 1000 + arr[sel].astype(np.int64)
+                    key = pr[sel].astype(np.int32) * np.int32(1000) + arr[sel].astype(np.int32)
+                    del arr, pr, sel, rr, lat
                     dfb = pd.DataFrame({"k": key, "ha": ha}).groupby("k")["ha"].sum()
                     for k, v in dfb.items():
                         pid, yv = divmod(int(k), 1000)
                         acc[(pid, yv)] = acc.get((pid, yv), 0.0) + float(v)
-                    del arr, pr, sel, rows, lat, ha, key, dfb
+                    del ha, key, dfb
                 log(f"    {tile} row {br+1}/{nb} ({time.time()-t0:.0f}s)")
     if not acc:
         log("no loss accumulated")

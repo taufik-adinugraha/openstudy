@@ -326,6 +326,9 @@ import "../styles/tokens.css";
       main, header, footer { position: relative; z-index: 1; }
       h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.018em; margin: 0; }
       em { font-style: normal; color: var(--accent); }
+      /* green is "intact", never "alert": inside data furniture, emphasis is muted ink */
+      .tile em, .flag em, .bigstat em, .sm em, .cc em, .note em { color: var(--ink-muted); }
+      .flag em b { color: var(--ink); }
       code { font-family: var(--font-data); font-size: 0.86em; color: var(--accent);
              background: color-mix(in srgb, var(--accent) 10%, transparent);
              padding: 1px 5px; border-radius: 4px; }
@@ -881,10 +884,14 @@ import "../styles/tokens.css";
 
         const W = 760, H = 260, m = { t: 16, r: 20, b: 34, l: 92 };
         const svg = d3.select(host).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
+        const ourNumber = dv?.gfw_tree_cover_loss_ha?.["2024"] != null;
         const series = [
-          { k: "gfw", label: "GFW tree-cover loss (gross)", c: css("--loss") },
-          { k: "klhkGross", label: "KLHK deforestation (gross)", c: css("--official") },
-          { k: "klhkNet", label: "KLHK deforestation (net)", c: "#7FA79B" },
+          { k: "gfw", c: css("--loss"), short: ourNumber ? "our count" : "GFW",
+            label: ourNumber ? "Tree-cover loss, our count from the Hansen tiles (≥30 % canopy, gross)"
+                             : "Tree-cover loss, GFW published (≥30 % canopy, gross)" },
+          { k: "klhkGross", c: css("--official"), short: "KLHK gross",
+            label: "Deforestation, KLHK (gross)" },
+          { k: "klhkNet", c: "#7FA79B", short: "KLHK net", label: "Deforestation, KLHK (net)" },
         ];
         const y = d3.scaleBand().domain(data.flatMap((d) => series.map((s) => `${d.year}·${s.k}`)))
           .range([m.t, H - m.b]).padding(0.32);
@@ -904,7 +911,7 @@ import "../styles/tokens.css";
           g.append("text").attr("x", m.l - 10).attr("y", y(key) + y.bandwidth() / 2)
             .attr("dy", "0.35em").attr("text-anchor", "end").attr("fill", css("--ink-muted"))
             .style("font-size", "12px").style("font-family", "var(--font-data)")
-            .text(s.k === "gfw" ? `${d.year} GFW` : (s.k === "klhkGross" ? "KLHK gross" : "KLHK net"));
+            .text(s.k === "gfw" ? `${d.year} · ${s.short}` : s.short);
           if (v) g.append("text").attr("x", x(v) + 8).attr("y", y(key) + y.bandwidth() / 2)
             .attr("dy", "0.35em").attr("fill", css("--ink")).style("font-size", "12px")
             .style("font-variant-numeric", "tabular-nums").style("opacity", 0)
@@ -960,10 +967,12 @@ import "../styles/tokens.css";
       function chapter2(stats, ledger) {
         const host = document.getElementById("alertstats");
         const c = stats?.clusters;
+        const keep = stats?.gates?.["G-H2"]?.event_floor_keeps_share_of_ha;
         const tiles = [
-          ["events detected", c ? fmt(c.n) : "—", c ? `≥ ${c.min_cluster_ha} ha, ${c.first_date} → ${c.last_date}` : "pipeline pending"],
-          ["hectares alerted", c ? fmt(c.ha) : "—", "geodetic pixel area, cos-latitude weighted"],
-          ["linked to palm or a mill", stats?.linkage ? pct(stats.linkage.linked_share, 1) : "—", "of alerted hectares"],
+          ["events detected", c ? fmt(c.n) : "—", c ? `≥ ${c.min_cluster_ha} ha · ${c.first_date} → ${c.last_date}` : "pipeline pending"],
+          ["hectares in those events", c ? fmt(c.ha) : "—",
+           keep != null ? `${pct(keep, 0)} of all alerted hectares — the rest are detections below the ${c?.min_cluster_ha} ha event floor` : "geodetic pixel area, cos-latitude weighted"],
+          ["linked to palm or a mill", stats?.linkage ? pct(stats.linkage.linked_share, 1) : "—", "of alerted hectares — a floor, see below"],
           ["on peat", stats?.linkage ? pct(stats.linkage.peat_share, 1) : "—", "Miettinen et al. via gfw_peatlands"],
         ];
         host.innerHTML = tiles.map(([lab, v, sub]) =>

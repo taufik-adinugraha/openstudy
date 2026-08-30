@@ -99,12 +99,32 @@ the honest version of the spec's compromise, and it is stated verbatim on the pa
 7. **Block-seam stitching, not approximation.** Events crossing a 10,000 px processing block
    boundary are re-joined with a union-find over block edges, so a clearing is one event rather
    than two. This was worth ~60 lines to keep the event counts defensible.
-8. **Naming mills and parent groups on a public page.** The UML fields are published CC BY 4.0,
+8. **Clustering is spatio-temporal (4-week window), not purely spatial.** The first
+   implementation labelled 8-connected components over the whole 2020–2026 record at once. That
+   is wrong in a way that is easy to miss: a frontier creeping across the same hillside for six
+   years becomes a single event dated to its first pixel, which back-dated 55&nbsp;% of the
+   archipelago's hectares into 2020. Two pixels now join an event only if they are 8-connected
+   *and* their detection dates are within 28 days; components come from
+   `scipy.sparse.csgraph.connected_components` over an explicit neighbour graph, which is
+   faster than the dense labelling it replaced. **The G-H2 reconciliation gate is what caught
+   this** — worth remembering when deciding whether gates earn their cost.
+9. **The spec's 13-tile list was missing `00N_090E`** — south-west Sumatra and the Mentawai
+   Islands. It surfaced as a systematic 4–7.5 % shortfall in G-H1 for West Sumatra **and no
+   other province**, which is what a missing tile looks like from the outside. The tile list is
+   now 15 ids (`10S_130E` added for completeness); ids the API does not publish are recorded as
+   absent and cost one request. Second time a gate paid for itself.
+10. **G-H2 compares unfiltered alert hectares, not the event table.** GFW's aggregation counts
+   every alert pixel, while the event table drops detections below 0.5 ha by design, so
+   comparing the two would guarantee a failure that says nothing about our plumbing. `alerts.py`
+   therefore also writes `data/alerts/raw_<tile>.parquet` — unfiltered hectares on a
+   0.05° × 1-week grid — and the page states what share of hectares the event floor keeps rather
+   than netting it out.
+11. **Naming mills and parent groups on a public page.** The UML fields are published CC BY 4.0,
    and the page names them. A Jakarta consultancy may still prefer aggregation to group level —
    unchanged from the spec, still your call.
-9. **Weekly alert refresh cron vs D3's static-snapshot rule** for non-flagships — unchanged from
+12. **Weekly alert refresh cron vs D3's static-snapshot rule** for non-flagships — unchanged from
    the spec. `make refresh` exists and is idempotent by RADD version; nothing is scheduled.
-10. **Sentinel-2 before/after chips (`chips.py`) are not built.** Ranked below the gates and the
+13. **Sentinel-2 before/after chips (`chips.py`) are not built.** Ranked below the gates and the
     dashboard under the resource budget. The stub and the Makefile target remain.
 
 ## Resource behaviour

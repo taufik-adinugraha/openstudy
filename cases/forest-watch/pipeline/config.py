@@ -57,14 +57,21 @@ GFW_HEADERS = {"x-api-key": GFW_API_KEY}          # lowercase; see the module do
 GFW_ATTRIB = 'Source: "RADD alerts". WUR, accessed through Global Nature Watch on {date}'
 
 BBOX_IDN = (94.5, -11.5, 141.5, 6.5)
-FOCUS_PROVINCES = ("Riau", "Kalimantan Tengah", "Papua")
+# Province names follow the boundary file actually loaded (geoBoundaries ADM1 uses
+# English exonyms: "Central Kalimantan", not "Kalimantan Tengah").
+FOCUS_PROVINCES = ("Riau", "Central Kalimantan", "Papua")
 
 # 10-degree GFW/Hansen tile grid. Every raster below lives on it, so a window in one layer
 # maps to a window in every other by a pure integer scale (100000 px = 10 m, 40000 px = 30 m,
 # ratio exactly 2.5).
-TILES_IDN = ("00N_100E", "00N_110E", "00N_120E", "00N_130E", "00N_140E",
+# 00N_090E carries south-west Sumatra and the Mentawai Islands.  The spec's 13-tile ALERT list
+# omitted it; that showed up as a systematic 4-7 % shortfall for West Sumatra in gate G-H1 and
+# nowhere else, which is exactly what a missing tile looks like.  10S_130E is included for
+# completeness (Tanimbar/Aru margins); absent tiles are recorded and skipped, so an extra id
+# that the API does not publish costs one request.
+TILES_IDN = ("00N_090E", "00N_100E", "00N_110E", "00N_120E", "00N_130E", "00N_140E",
              "10N_090E", "10N_100E", "10N_110E", "10N_120E", "10N_130E", "10N_140E",
-             "10S_110E", "10S_120E")
+             "10S_110E", "10S_120E", "10S_130E")
 TILE_DEG = 10
 
 # --- raster tile sets, all pulled through /dataset/{ds}/{ver}/download/geotiff ----------
@@ -133,6 +140,10 @@ ALERT_EPOCH = "2014-12-31"
 ALERT_CONF_HIGH = 3
 MIN_CLUSTER_HA = 0.5
 MIN_CLUSTER_PX = 50                # 0.5 ha at ~10 m
+# Two 8-connected alert pixels join the same event only if their detection dates are
+# within this many days.  Purely spatial labelling merges a multi-year frontier into a
+# single event dated to its first pixel; the spec calls for a rolling 4-week window.
+CLUSTER_WINDOW_DAYS = 28
 GLAD_AGREEMENT_DAYS = 60
 RADD_START = "2020-01-01"          # RADD south-east Asia coverage starts here
 BLOCK_PX = 10000                   # 10 m block edge -> 100 blocks per 10-degree tile

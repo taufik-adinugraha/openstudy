@@ -135,6 +135,8 @@
 }
 
 /* ── Case: forest watch — canopy against burn ───────────────────────── */
+/* Case H note: `em` is styled as the canopy accent in running prose, but green must never read
+ * as "alert" — so inside stat tiles, flags and captions the emphasis reverts to muted ink. */
 [data-case="forest"] {
   --ground: #0C120D; --surface: #141C15; --surface-raised: #1B261C;
   --ink: #E7ECE6; --ink-muted: #93A394; --hairline: #243025;

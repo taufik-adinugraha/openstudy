@@ -28,7 +28,7 @@ import pandas as pd
 import requests
 
 import config
-from alerts import log
+from alerts import RAW_GRID, log
 
 TOL_YEARS = range(2015, 2025)
 
@@ -65,7 +65,7 @@ def api_query(dataset: str, version: str, sql: str, geometry=None, timeout=300):
 
 def gate_h1(prov: gpd.GeoDataFrame, ours: pd.DataFrame) -> dict:
     spec = config.RASTERS["tcl30"]
-    sql = ("SELECT umd_tree_cover_loss__year AS yr, SUM(area__ha) AS ha FROM data "
+    sql = ("SELECT umd_tree_cover_loss__year, SUM(area__ha) FROM data "
            "WHERE umd_tree_cover_density_2000__threshold >= 30 "
            "GROUP BY umd_tree_cover_loss__year")
     rows, fails = [], {}
@@ -77,7 +77,16 @@ def gate_h1(prov: gpd.GeoDataFrame, ours: pd.DataFrame) -> dict:
         if err:
             fails[p.province] = err
             continue
-        ref = {int(d["umd_tree_cover_loss__year"]): float(d["area__ha"]) for d in data}
+        if not data:
+            continue
+        # The API names the columns after the dataset, and the exact spelling moves between
+        # versions, so bind by shape (the year-ish key and the hectare-ish key) not by literal.
+        k0 = next((k for k in data[0] if "year" in k), None)
+        k1 = next((k for k in data[0] if "ha" in k or "area" in k), None)
+        if k0 is None or k1 is None:
+            fails[p.province] = f"unexpected response columns: {list(data[0])}"
+            continue
+        ref = {int(d[k0]): float(d[k1]) for d in data if d.get(k0) is not None}
         mine = dict(zip(ours.loc[ours.province == p.province, "year"],
                         ours.loc[ours.province == p.province, "loss_ha"]))
         for y in TOL_YEARS:
@@ -104,12 +113,46 @@ def gate_h1(prov: gpd.GeoDataFrame, ours: pd.DataFrame) -> dict:
             "rows": _nan_safe(df.to_dict("records"))}
 
 
+def raw_grid(prov: gpd.GeoDataFrame, min_wk: int, names: tuple[str, ...]) -> pd.DataFrame:
+    """Unfiltered alert hectares per province per week, for weeks at or after ``min_wk``.
+
+    This, not the >= 0.5 ha event table, is the like-for-like comparator for G-H2: GFW's
+    aggregation counts every alert pixel, and the event floor is a presentation choice we make
+    downstream.  Comparing the filtered table against an unfiltered reference would guarantee a
+    failure that says nothing about our plumbing.
+
+    Streamed one tile at a time and filtered on week *before* the spatial join — loading all 13
+    tiles of the 0.05-degree x weekly grid at once is ~20 M rows and OOM-kills a 3 GB unit.
+    """
+    target = prov.loc[prov.province.isin(names), ["province", "geometry"]]
+    out = []
+    for f in sorted(config.ALERTS_DIR.glob("raw_*.parquet")):
+        g = pd.read_parquet(f)
+        g = g.loc[g.wk >= min_wk]
+        if g.empty:
+            continue
+        lon = config.BBOX_IDN[0] + (g.gx + 0.5) * RAW_GRID
+        lat = config.BBOX_IDN[3] - (g.gy + 0.5) * RAW_GRID
+        pts = gpd.GeoDataFrame(g[["ha", "px"]], geometry=gpd.points_from_xy(lon, lat), crs=4326)
+        j = gpd.sjoin(pts, target, how="inner", predicate="within")
+        if len(j):
+            out.append(pd.DataFrame(j[["province", "ha", "px"]])
+                       .groupby("province", as_index=False).sum())
+        del g, pts, j
+    if not out:
+        return pd.DataFrame(columns=["province", "ha", "px"])
+    return pd.concat(out, ignore_index=True).groupby("province", as_index=False).sum()
+
+
 def gate_h2(prov: gpd.GeoDataFrame, linked: pd.DataFrame) -> dict:
     spec = config.RASTERS["radd"]
     last = pd.to_datetime(linked.last_date).max()
-    start = (last - pd.Timedelta(days=365)).date().isoformat()
+    start_ts = last - pd.Timedelta(days=365)
+    start = start_ts.date().isoformat()
+    start_day = (start_ts - pd.Timestamp(config.ALERT_EPOCH)).days
     sql = ("SELECT count(*) AS n, SUM(area__ha) AS ha FROM data "
            f"WHERE wur_radd_alerts__date >= '{start}'")
+    grid = raw_grid(prov, start_day // 7, config.FOCUS_PROVINCES)
     rows, fails = [], {}
     for name in config.FOCUS_PROVINCES:
         sel = prov.loc[prov.province == name]
@@ -124,25 +167,31 @@ def gate_h2(prov: gpd.GeoDataFrame, linked: pd.DataFrame) -> dict:
             fails[name] = err
             continue
         ref_ha = float(data[0].get("ha") or 0.0)
-        sub = linked.loc[(linked.province == name)
-                         & (pd.to_datetime(linked.first_date) >= last - pd.Timedelta(days=365))]
-        ours_ha = float(sub.ha.sum())
+        ours_ha = float(grid.loc[grid.province == name, "ha"].sum())
+        ev = linked.loc[(linked.province == name)
+                        & (pd.to_datetime(linked.first_date) >= start_ts)]
         rows.append({"province": name, "ours_ha": ours_ha, "gfw_ha": ref_ha,
-                     "ours_clusters": int(len(sub)), "gfw_pixels": int(data[0].get("count") or 0),
+                     "events_ha": float(ev.ha.sum()), "events": int(len(ev)),
+                     "gfw_pixels": int(data[0].get("count") or 0),
                      "pct_diff": 100 * (ours_ha - ref_ha) / ref_ha if ref_ha else float("nan")})
-        log(f"  G-H2 {name}: ours {ours_ha:,.0f} ha vs GFW {ref_ha:,.0f} ha")
+        log(f"  G-H2 {name}: ours {ours_ha:,.0f} ha vs GFW {ref_ha:,.0f} ha "
+            f"({100 * (ours_ha - ref_ha) / ref_ha:+.1f} %); "
+            f"events >= 0.5 ha keep {ev.ha.sum() / ours_ha:.0%}" if ref_ha and ours_ha else "")
     if not rows:
         return {"status": "pending", "reason": "no reference aggregation returned",
                 "errors": fails}
     df = pd.DataFrame(rows)
+    keep = float(df.events_ha.sum() / df.ours_ha.sum()) if df.ours_ha.sum() else float("nan")
     return {"status": "pass" if df.pct_diff.abs().max() <= config.GATE_ALERT_TOL_PCT else "fail",
             "tolerance_pct": config.GATE_ALERT_TOL_PCT, "window_start": start,
             "window_end": str(last)[:10],
             "max_abs_pct_diff": float(df.pct_diff.abs().max()),
-            "note": "our hectares are clustered (>= 0.5 ha) and seam-stitched; GFW's are raw "
-                    "alert-pixel hectares over the identical geometry, so a small negative "
-                    "residual from the cluster floor is expected and is not tuned away",
-            "comparator": f"{spec['dataset']} {spec['version']} raster analysis",
+            "event_floor_keeps_share_of_ha": keep,
+            "note": "compared on unfiltered alert hectares, because GFW's aggregation counts "
+                    "every alert pixel. The >= 0.5 ha event floor that the rest of the page uses "
+                    f"keeps {keep:.0%} of those hectares — stated rather than netted out",
+            "comparator": f"{spec['dataset']} {spec['version']} raster analysis over the same "
+                          "province geometry",
             "errors": fails, "rows": _nan_safe(df.to_dict("records"))}
 
 

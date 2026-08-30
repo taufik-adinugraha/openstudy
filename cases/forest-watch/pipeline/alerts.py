@@ -3,23 +3,38 @@ context sampled in the same pass (it is free while the pixel index is in hand).
 
 Decoding: value = confidence * 10000 + days since 2014-12-31 (2 = low, 3 = high; 0 = none).
 
+**Clustering is spatio-temporal, not purely spatial.**  Two alert pixels join the same event
+only if they are 8-connected *and* their detection dates are within CLUSTER_WINDOW_DAYS of each
+other.  Labelling on space alone is wrong in a way that is easy to miss and ruins every
+downstream number: a frontier that creeps across the same hillside from 2020 to 2026 becomes one
+component whose "first date" is 2020, which silently back-dates most of the archipelago's
+hectares into the first year of the record.  We hit exactly that, and the reconciliation gate
+against GFW's own aggregation is what caught it.
+
+Implementation: the alert pixels of a block are extracted as a sparse index; candidate edges are
+the four forward 8-neighbours, found by binary search on the sorted (row * BLOCK + col) keys and
+then filtered on the date difference; components come from
+``scipy.sparse.csgraph.connected_components``.  That is C-speed and needs no dense label array.
+
 Memory discipline: a 10-degree RADD tile is 100000 x 100000 px (20 GB as uint16), so it is
-never opened whole.  Each tile is walked in 10000 x 10000 blocks (200 MB read + 400 MB label
-array, ~1 GB peak) and the alert pixels of a block are pulled out as a sparse index.  Clusters
-that straddle a block seam would otherwise be double-counted, so block edges are stitched with
-a union-find over global label ids: the right column of the previous block and the bottom row
-of the block above are carried forward and unioned against the current block's first column /
-first row over the three 8-connected offsets.  Nothing is approximated away.
+never opened whole.  Each tile is walked in 10000 x 10000 blocks.  Clusters that straddle a
+block seam would otherwise be double-counted, so block edges are stitched with a union-find
+over global component ids: the right column of the previous block and the bottom row of the
+block above are carried forward and unioned against the current block's first column / first
+row over the three 8-connected offsets, under the same date rule.  Nothing is approximated away.
 
 Every other layer sits on the same 10-degree grid, so the co-located window is a pure integer
-scale: palm (SDPT simpleType) is 10 m like RADD; peat, primary forest and GLAD-L are 30 m,
+scale: RADD is 10 m; palm (SDPT simpleName), peat, primary forest and GLAD-L are 30 m,
 i.e. exactly 2.5x coarser, indexed with (i * 2) // 5.
 
 No tree-cover mask is applied.  RADD is already a forest-disturbance product, and gate G-H2
 compares our counts against the GFW API's own aggregation over the same geometry, which is
 also unmasked - masking here would compare unlike with unlike.  Stated in the methodology.
 
-Output: data/alerts/<tile>.parquet, one row per cluster (>= 0.5 ha).
+Outputs: data/alerts/<tile>.parquet     one row per event (>= 0.5 ha)
+         data/alerts/raw_<tile>.parquet unfiltered alert hectares on a
+                                        0.05-degree x 1-week grid, the honest
+                                        like-for-like comparator for gate G-H2
 """
 
 from __future__ import annotations
@@ -32,14 +47,17 @@ import numpy as np
 import pandas as pd
 import rasterio
 from rasterio.windows import Window
-from scipy import ndimage
+from scipy.sparse import coo_matrix
+from scipy.sparse.csgraph import connected_components
 
 import config
 
 BLOCK = config.BLOCK_PX
-STRUCT = np.ones((3, 3), dtype=bool)          # 8-connectivity
+WIN = config.CLUSTER_WINDOW_DAYS
 EPOCH = np.datetime64(config.ALERT_EPOCH)
 DEG = config.TILE_DEG
+NEIGHBOURS = ((0, 1), (1, -1), (1, 0), (1, 1))    # forward half of the 8-neighbourhood
+RAW_GRID = 0.05                                   # degrees, the unfiltered-hectare grid
 
 
 def log(*a: object) -> None:
@@ -86,24 +104,38 @@ def _open(layer: str, tile: str):
     return rasterio.open(p) if p.exists() else None
 
 
-def _seam(u: Union, a: np.ndarray, b: np.ndarray) -> None:
-    """Union two parallel 1-px strips (global ids, 0 = background) over 8-connected offsets."""
+def _seam(u: Union, a: np.ndarray, ad: np.ndarray, b: np.ndarray, bd: np.ndarray) -> None:
+    """Union two parallel 1-px strips of global ids (0 = background) over the three 8-connected
+    offsets, under the same date rule that governs clustering inside a block."""
     n = min(a.size, b.size)
-    a, b = a[:n], b[:n]
     for off in (-1, 0, 1):
-        aa = a[max(0, -off): n - max(0, off)]
-        bb = b[max(0, off): n - max(0, -off)]
+        lo_a, lo_b = max(0, -off), max(0, off)
+        hi = n - abs(off)
+        aa, bb = a[lo_a:lo_a + hi], b[lo_b:lo_b + hi]
         both = (aa > 0) & (bb > 0)
         if not both.any():
             continue
+        both &= np.abs(ad[lo_a:lo_a + hi].astype(np.int32)
+                       - bd[lo_b:lo_b + hi].astype(np.int32)) <= WIN
         for x, y in zip(aa[both].tolist(), bb[both].tolist()):
             u.union(x, y)
 
 
-def process_tile(tile: str) -> pd.DataFrame | None:
+def _strip(size: int, sel: np.ndarray, idx: np.ndarray, lab: np.ndarray,
+           day: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Scatter the sparse pixels lying on one block edge into dense (label, day) strips."""
+    out_l = np.zeros(size, dtype=np.int64)
+    out_d = np.zeros(size, dtype=np.int32)
+    if sel.any():
+        out_l[idx[sel]] = lab[sel]
+        out_d[idx[sel]] = day[sel]
+    return out_l, out_d
+
+
+def process_tile(tile: str) -> tuple[pd.DataFrame | None, pd.DataFrame | None]:
     radd = _open("radd", tile)
     if radd is None:
-        return None
+        return None, None
     west, north = tile_origin(tile)
     px10 = DEG / radd.width                                    # degrees per 10 m pixel
     palm, peat, prim, glad = (_open(k, tile) for k in ("palm", "peat", "primary", "glad"))
@@ -111,10 +143,11 @@ def process_tile(tile: str) -> pd.DataFrame | None:
 
     u = Union()
     parts: list[pd.DataFrame] = []
+    raw_parts: list[pd.DataFrame] = []
     nblk = radd.width // BLOCK
     offset = 1
-    prev_right: np.ndarray | None = None
-    bottom_prev: dict[int, np.ndarray] = {}
+    prev_right: tuple[np.ndarray, np.ndarray] | None = None
+    bottom_prev: dict[int, tuple[np.ndarray, np.ndarray]] = {}
     t0 = time.time()
 
     for br in range(nblk):
@@ -130,23 +163,50 @@ def process_tile(tile: str) -> pd.DataFrame | None:
                 del arr, mask
                 continue
 
-            lab, nlab = ndimage.label(mask, structure=STRUCT)
-            lab = lab.astype(np.int64)
-            lab[mask] += offset - 1                            # 0 stays background
-            left_col, right_col = lab[:, 0].copy(), lab[:, -1].copy()
-            top_row, bot_row = lab[0, :].copy(), lab[-1, :].copy()
+            keys = np.flatnonzero(mask.ravel())                # sorted row-major pixel ids
+            val_f = arr.ravel()[keys].astype(np.int32)
+            del arr, mask
+            rr = (keys // BLOCK).astype(np.int32)              # block-local row / col
+            cc = (keys % BLOCK).astype(np.int32)
+            day_f = (val_f % 10000).astype(np.int32)
 
-            flat = np.flatnonzero(mask.ravel())
-            lab_f = lab.ravel()[flat]
-            val_f = arr.ravel()[flat].astype(np.int32)
-            del arr, mask, lab
-            rr = (flat // BLOCK).astype(np.int32)              # block-local row / col
-            cc = (flat % BLOCK).astype(np.int32)
-            del flat
+            # --- spatio-temporal components -------------------------------------------
+            ei, ej = [], []
+            for dr, dc in NEIGHBOURS:
+                nk = keys + dr * BLOCK + dc
+                ok = (cc + dc >= 0) & (cc + dc < BLOCK) & (rr + dr < BLOCK)
+                pos = np.searchsorted(keys, nk)
+                np.clip(pos, 0, keys.size - 1, out=pos)
+                hit = ok & (keys[pos] == nk)
+                if not hit.any():
+                    continue
+                i = np.flatnonzero(hit).astype(np.int32)
+                j = pos[hit].astype(np.int32)
+                near = np.abs(day_f[i] - day_f[j]) <= WIN
+                ei.append(i[near]); ej.append(j[near])
+                del nk, ok, pos, hit, i, j, near
+            if ei:
+                i = np.concatenate(ei); j = np.concatenate(ej)
+            else:
+                i = j = np.empty(0, dtype=np.int32)
+            del ei, ej
+            g = coo_matrix((np.ones(i.size, dtype=np.int8), (i, j)),
+                           shape=(npx, npx)).tocsr()
+            del i, j
+            nlab, comp = connected_components(g, directed=False)
+            del g
+            lab_f = comp.astype(np.int64) + offset
+            del comp
+
+            left_col, left_day = _strip(BLOCK, cc == 0, rr, lab_f, day_f)
+            right_col, right_day = _strip(BLOCK, cc == BLOCK - 1, rr, lab_f, day_f)
+            top_row, top_day = _strip(BLOCK, rr == 0, cc, lab_f, day_f)
+            bot_row, bot_day = _strip(BLOCK, rr == BLOCK - 1, cc, lab_f, day_f)
+            del keys
 
             lat = north - (br * BLOCK + rr + 0.5) * px10       # pixel centres, degrees
             d = {"lab": lab_f,
-                 "day": (val_f % 10000).astype(np.int32),
+                 "day": day_f,
                  "hi": (val_f // 10000) >= config.ALERT_CONF_HIGH,
                  "ha": px_area_ha(lat, px10).astype(np.float32),
                  "lon": west + (bc * BLOCK + cc + 0.5) * px10,
@@ -182,6 +242,16 @@ def process_tile(tile: str) -> pd.DataFrame | None:
             del rr, cc, r5, c5, lat
 
             df = pd.DataFrame(d)
+            # Raw alert hectares on a 0.05-degree x 1-week grid, BEFORE the 0.5 ha event floor.
+            # G-H2 compares against GFW's aggregation of every alert pixel, so the event table
+            # (which drops sub-0.5 ha detections by design) is the wrong comparator; this is the
+            # right one, and the difference between the two is itself reported.
+            raw_parts.append(
+                df.assign(gx=np.floor((df.lon - config.BBOX_IDN[0]) / RAW_GRID).astype(np.int32),
+                          gy=np.floor((config.BBOX_IDN[3] - df.lat) / RAW_GRID).astype(np.int32),
+                          wk=(df.day // 7).astype(np.int32))
+                  .groupby(["gx", "gy", "wk"], sort=False)
+                  .agg(ha=("ha", "sum"), px=("ha", "size")).reset_index())
             g = df.groupby("lab", sort=False)
             agg = g.agg(px=("day", "size"), ha=("ha", "sum"),
                         day_min=("day", "min"), day_max=("day", "max"),
@@ -198,15 +268,17 @@ def process_tile(tile: str) -> pd.DataFrame | None:
 
             edge = set(np.unique(np.concatenate([left_col, right_col, top_row,
                                                  bot_row])).tolist()) - {0}
+            # A component split by a seam necessarily touches a block edge, so keeping every
+            # edge-touching component makes the >= 5 px pre-filter lossless for stitching.
             keep = agg.px.ge(5) | agg.lab.isin(edge)
             parts.append(agg.loc[keep])
 
             if prev_right is not None:
-                _seam(u, prev_right, left_col)
+                _seam(u, prev_right[0], prev_right[1], left_col, left_day)
             if bc in bottom_prev:
-                _seam(u, bottom_prev[bc], top_row)
-            prev_right = right_col
-            bottom_prev[bc] = bot_row
+                _seam(u, bottom_prev[bc][0], bottom_prev[bc][1], top_row, top_day)
+            prev_right = (right_col, right_day)
+            bottom_prev[bc] = (bot_row, bot_day)
             offset += nlab
         log(f"    {tile} row {br+1}/{nblk} — {sum(len(p) for p in parts)} raw parts, "
             f"{time.time()-t0:.0f}s")
@@ -214,8 +286,13 @@ def process_tile(tile: str) -> pd.DataFrame | None:
     for ds in (radd, palm, peat, prim, glad):
         if ds is not None:
             ds.close()
+    # NB: name it rawgrid, not raw — the cluster aggregation below binds `raw` too, and the
+    # collision silently wrote the cluster table into raw_<tile>.parquet.
+    rawgrid = (pd.concat(raw_parts, ignore_index=True)
+                 .groupby(["gx", "gy", "wk"], as_index=False).sum()) if raw_parts else None
+    del raw_parts
     if not parts:
-        return None
+        return None, rawgrid
 
     raw = pd.concat(parts, ignore_index=True)
     del parts
@@ -246,7 +323,7 @@ def process_tile(tile: str) -> pd.DataFrame | None:
     with np.errstate(invalid="ignore"):
         out["glad_agree"] = np.where(np.isnan(gmin), False,
                                      (gmin <= hi + D) & (gmax >= lo - D))
-    return out.drop(columns=["root"])
+    return out.drop(columns=["root"]), rawgrid
 
 
 def load_palm_values() -> list[int]:
@@ -283,13 +360,16 @@ def main(argv: list[str]) -> None:
             raise SystemExit(0)
         log(f"[{tile}] clustering")
         t0 = time.time()
-        df = process_tile(tile)
+        df, raw = process_tile(tile)
+        if raw is not None and len(raw):
+            raw.to_parquet(config.ALERTS_DIR / f"raw_{tile}.parquet", index=False)
         if df is None or df.empty:
             pd.DataFrame().to_parquet(out)
             log(f"[{tile}] no clusters")
             continue
         df.to_parquet(out, index=False)
-        log(f"[{tile}] {len(df):,} clusters, {df.ha.sum():,.0f} ha, "
+        log(f"[{tile}] {len(df):,} events >= {config.MIN_CLUSTER_HA} ha, {df.ha.sum():,.0f} ha "
+            f"of {raw.ha.sum():,.0f} ha raw ({df.ha.sum()/raw.ha.sum():.0%}), "
             f"{time.time()-t0:.0f}s")
     log("alerts complete")
 

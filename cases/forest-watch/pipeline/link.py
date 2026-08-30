@@ -51,7 +51,8 @@ def chord(km: float) -> float:
 
 
 def main(argv: list[str]) -> None:
-    files = sorted(config.ALERTS_DIR.glob("*.parquet"))
+    files = sorted(f for f in config.ALERTS_DIR.glob("*.parquet")
+                   if not f.name.startswith("raw_"))          # raw_*.parquet is the G-H2 grid
     frames = [pd.read_parquet(f) for f in files]
     frames = [f for f in frames if len(f)]
     if not frames:

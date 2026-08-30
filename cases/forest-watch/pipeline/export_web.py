@@ -24,9 +24,9 @@ import pandas as pd
 import config
 from alerts import log
 
-GRID = 0.05                    # degrees, the ignition raster cell
+GRID = 0.1                     # degrees, the ignition raster cell (~11 km; keeps the hero < 2 MB)
 IGNITION_YEARS = 3
-MAX_CLUSTERS = 15_000          # largest-first; the page states the cap and the cut-off size
+MAX_CLUSTERS = 9_000           # largest-first; the page states the cap and the cut-off size
 MAX_MILLS = 1_200
 
 
