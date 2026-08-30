@@ -48,6 +48,8 @@ the 5 GB data budget.
 ingest_ground.py  OpenAQ /locations + /sensors/{id}/hours   → stations.json, ground_hourly.parquet
 ingest_era5.py    CDS reanalysis-era5-single-levels          → era5_hourly.parquet
 ingest_firms.py   FIRMS area API, reduced on arrival         → fire_daily.parquet
+                  static-source mask, built once from the      firms_static_mask.parquet
+                  SP archive and applied to both products      fire_filter_audit.parquet
         ↓
 features.py       lagged PM2.5 + meteorology + upwind fire   → features.parquet
 model.py          direct GBM per horizon vs persistence      → model_eval / predictions / forecast
@@ -60,7 +62,9 @@ sensor-month, ERA5 month, and FIRMS 5-day window, and an artefact that exists
 is skipped (the current month / last 3 days are always refetched, because they
 are still filling). Raw ERA5 NetCDF is deleted the moment it is aggregated;
 raw FIRMS hotspots are reduced to sector-day counts in memory and never hit
-disk. Each stage checks free disk first and exits 0 below 10 GB.
+disk. The FIRMS static-source mask is keyed by sampled window and cached, so
+it is built once and not refetched. Each stage checks free disk first and
+exits 0 below 10 GB.
 
 Reproduce everything: `make all`. Refresh on a schedule: `make refresh`.
 
@@ -78,7 +82,9 @@ ventilation index (wind × BLH), temperature, RH, precipitation and its 24 h
 sum, solar radiation; upwind fire counts and FRP in a 3-sector arc around the
 wind-from bearing, in three distance rings (0–100, 100–400, 400–1200 km),
 summed over 1 and 3 days and lagged one day so an afternoon VIIRS overpass can
-never inform that morning's forecast; and local-time diurnal / seasonal terms.
+never inform that morning's forecast — with volcanoes, flares and other static
+heat masked out of *both* FIRMS products, not just the one that labels them
+(decision 7b); and local-time diurnal / seasonal terms.
 
 Uncertainty is quantile regression (10th/90th), not a residual assumption, so
 the band is allowed to be asymmetric — which for pollution it always is.
@@ -108,49 +114,75 @@ categorical, never as its 7-digit registry number.
 
 G-E4 is expected to fail and is published red, not softened. See below.
 
-### E5b · Results — first full run, 2026-08-30
+### E5b · Results — rerun 2026-08-30 after the static-source mask fix
 
 Trained on 122,644 station-hours (72,171 observed, 10 stations); tested on the
-36,538 rows after the cut at **2025-04-07** (24,061 observed, 8 stations).
+36,538 rows after the cut at **2025-04-07** (24,061 observed, 8 stations). The
+split, the feature count (49) and the row counts are unchanged from the first
+run — the only thing that moved is the fire feature block, now built from a
+hotspot series with volcanoes and flares removed from *both* products
+(decision 7b). Numbers in brackets are the pre-fix run, kept for comparison.
 
 | Horizon | Model MAE | Persistence MAE | Skill (MAE) | Skill (RMSE) | PI80 coverage |
 |---|---|---|---|---|---|
-| 1 h | 7.58 | 7.91 | +4.1% | +5.5% | 74% |
-| 3 h | 12.45 | 14.39 | +13.5% | +13.2% | 69% |
-| 6 h | 14.62 | 18.67 | +21.7% | +21.6% | 66% |
-| 12 h | 15.48 | 22.45 | +31.1% | +30.8% | 63% |
-| **24 h** | **15.99** | **19.49** | **+17.9%** | **+21.0%** | 63% |
-| 48 h | 16.76 | 21.01 | +20.2% | +22.8% | 61% |
-| 72 h | 17.38 | 21.32 | +18.5% | +21.7% | 59% |
+| 1 h | 7.57 [7.58] | 7.91 | +4.4% [+4.1%] | +5.6% | 74% |
+| 3 h | 12.44 [12.45] | 14.39 | +13.6% [+13.5%] | +13.4% | 68% |
+| 6 h | 14.66 [14.62] | 18.67 | +21.5% [+21.7%] | +21.7% | 65% |
+| 12 h | 15.46 [15.48] | 22.45 | +31.1% [+31.1%] | +30.8% | 63% |
+| **24 h** | **16.04** [15.99] | **19.49** | **+17.7%** [+17.9%] | **+20.8%** | 63% |
+| 48 h | 16.73 [16.76] | 21.01 | +20.4% [+20.2%] | +22.9% | 60% |
+| 72 h | 17.56 [17.38] | 21.32 | +17.6% [+18.5%] | +21.1% | 57% |
 
-**2 of 6 gates pass.**
+**2 of 6 gates pass** — the same two as before the fix. No gate changed state,
+and nothing was tuned to keep one green.
 
-- **G-E1 PASS** — 24 h MAE 15.99 vs persistence 19.49 µg/m³, +17.9% (threshold
-  +15%). +21.0% on RMSE.
-- **G-E2 PASS** — positive skill at all seven horizons; weakest is +4.1% at 1 h,
+- **G-E1 PASS** — 24 h MAE 16.04 vs persistence 19.49 µg/m³, +17.7% (threshold
+  +15%). +20.8% on RMSE. Was +17.9% before the fix: cleaning the fire series
+  cost 0.2 points of headline skill, which is the price of the number being
+  true.
+- **G-E2 PASS** — positive skill at all seven horizons; weakest is +4.4% at 1 h,
   where persistence is naturally hardest to beat.
-- **G-E3 FAIL by 0.001** — episode recall 0.499 against a 0.500 threshold, at
-  precision 0.532, over 6,084 episode hours. Persistence gets 0.476 / 0.475, so
-  the model is better but not by the margin the gate demanded. The threshold was
-  fixed in advance and has not been moved to collect this one.
+- **G-E3 FAIL** — episode recall 0.489 against a 0.500 threshold, at precision
+  0.534, over 6,084 episode hours. Persistence gets 0.476 / 0.475, so the model
+  is better but not by the margin the gate demanded. It failed at 0.499 before
+  the fix and fails at 0.489 after; the threshold was fixed in advance and has
+  not been moved either time.
 - **G-E4 FAIL** — 0 stations reach 80% completeness over the trailing 90 days.
-  Expected; it is the case's central finding, not an accident.
-- **G-E5 FAIL** — the 80% prediction interval covers 62.9%, not 72–88%. The
+  Expected; it is the case's central finding, not an accident. Untouched by the
+  fire fix.
+- **G-E5 FAIL** — the 80% prediction interval covers 62.8%, not 72–88%. The
   quantile models are over-confident out of sample. Honest reading: the point
   forecast is usable, the published interval is too narrow and should not be
   relied on for planning until it is recalibrated.
-- **G-E6 FAIL** — the top-8 permutation importances at 24 h contain a wind term
-  (`wind_from_sin`) and a weather term (`precip_mm_roll24`) but no
-  boundary-layer/ventilation term, so the gate's specific requirement is unmet.
-  The model leans hardest on station identity and the sensor's own recent
-  history. That is a real result about a sparse, heterogeneous network, and the
-  dashboard's chapter 03 headline is generated from it rather than asserted
-  ahead of it.
+- **G-E6 FAIL, and it now fails on both clauses.** The top-8 permutation
+  importances at 24 h are `station_idx`, `pm25`, `doy_cos`, `pm25_lag24`,
+  `pm25_roll6`, `pm25_lag48`, `fire_region_3d`, `doy` — no boundary-layer or
+  ventilation term, and no wind term either. Before the fix `wind_from_sin` sat
+  8th; the de-contaminated fire signal displaced it, entering the top-8 at 7th
+  where it had not appeared at all. So the fix made fire a genuinely stronger
+  driver and simultaneously pushed the gate further from passing. Both halves
+  are published. The model still leans hardest on station identity and the
+  sensor's own recent history — a real result about a sparse, heterogeneous
+  network, and the dashboard's chapter 03 headline is generated from it rather
+  than asserted ahead of it.
 
 **What this adds up to.** The forecast is genuinely better than the baseline
 that matters, at every horizon a client would ask about, and it is honest about
 the two places it is not yet trustworthy: the width of its error bars, and its
 ability to call an episode before it happens.
+
+**What the fix changed in the data.** The static-source mask holds 3,908 cells
+(708 flagged directly, the rest buffer) and removes **5.94%** of otherwise-
+qualifying NRT detections against 3.63% of archive ones. The cleanest read is
+April 2026, the one month the seam falls inside: on the SP side 34.1% of
+detections are static (30.2% caught by the label, 3.9% more by the mask); on
+the NRT side 35.8%, all of it caught by the mask, where before the fix it was
+**0.0%**. That ~34-point discontinuity inside a single calendar month was the
+bug, and it is now 1.7 points. In the 60 days after the seam the mask removes
+33.1% of detections against 3.9% in the 60 days before — May and June are the
+low fire season, so before the fix roughly a third of the "fires" the model saw
+in the recent tail were Semeru, Merapi, Sarawak gas flares and offshore
+platforms.
 
 ### E6 · Dashboard anatomy
 
@@ -174,6 +206,7 @@ on a laptop. Units are transient `systemd-run` jobs; check any of them with
 |---|---|---|
 | `aq-ground` | OpenAQ inventory + hourly pull | `uv run python pipeline/ingest_ground.py` |
 | `aq-fire` | FIRMS hotspots → sector-day aggregates | `uv run python pipeline/ingest_firms.py` |
+| `aq-firemask` | static-source mask from the SP archive (built once, then cached) | `uv run python pipeline/ingest_firms.py --mask-only` |
 | `aq-era5-0/1/2` | ERA5 backfill, 3 shards holding places in the CDS queue | `uv run python pipeline/ingest_era5.py --shard N --nshards 3` |
 | `aq-finish` | waits for the shards, gap-fills, then features → model → validate → export | `bash pipeline/finish.sh` (or `make finish`) |
 
@@ -235,9 +268,40 @@ written.
    leaves every variable 50% NaN and silently loses the accumulations at the
    first de-duplication; they must be joined on `(time, lat, lon)`. Caught here
    only because the model reported precipitation as an empty feature.
-   (b) FIRMS hotspots need `type == 0` and non-low confidence before they mean
+   (b) **FIRMS `type` exists only in the archive, and filtering on it alone is
+   a bug.** Hotspots need to be separated from static heat before they mean
    "fire": Indonesia has ~130 active volcanoes plus substantial gas flaring,
-   all of which VIIRS detects.
+   and VIIRS detects all of it. VIIRS does label them — `type` 1 volcano,
+   2 other static land source, 3 offshore — but **no NRT product emits the
+   column at all** (verified against the live API: `VIIRS_SNPP_SP` returns
+   `type`, `VIIRS_SNPP_NRT` does not). A `type == 0` filter written as
+   "if the column exists" therefore cleans 2023→2026-04 and leaves
+   2026-04→today dirty, which puts a **false step change at the SP/NRT seam**
+   in a series the model consumes as a feature.
+
+   The fix is a **static-source mask**, built by `build_static_mask()` and
+   cached in `data/firms_static_mask.parquet`. Static sources do not move, so
+   their locations are learned where FIRMS does label them: one 5-day window
+   per calendar month across the *whole* SP archive (2012-01-20 → the live
+   seam, 172 samples) is swept for `type ∈ {1,2,3}`, gridded to 0.01°
+   (~1.1 km; a VIIRS pixel is 375 m at nadir and ~750 m at scan edge), and a
+   cell is kept when it appears in **≥ 2 distinct sampled months** — one-off
+   mislabels do not earn a permanent exclusion. Each kept cell is buffered by
+   its 8 neighbours, because the same flare lands in an adjacent cell often
+   enough that an unbuffered mask leaks it back in. The mask is then applied
+   to **every row of both products**, in addition to the `type == 0` filter
+   wherever the column does exist.
+
+   Per-window filter counts are written to `data/fire_filter_audit.parquet`
+   and summarised into `stats.json` → `fire_filter`, so the share removed from
+   each product is published on the dashboard rather than asserted. The
+   samples are cached per window (`data/static_mask_parts/`), so a normal run
+   never refetches the mask; `make firemask` builds it alone, and the ingest
+   refuses to reduce real windows against a half-built mask.
+
+   Because the reduction changed, the aggregate cache is versioned
+   (`data/fire_parts_v2/`): aggregates computed under the pre-mask rule are
+   not comparable and are never mixed back in.
 
 8. **Sentinel-5P TROPOMI is not ingested.** Every genuinely open route
    (Copernicus Data Space, AWS open data, NASA GES DISC subsetting) costs more
