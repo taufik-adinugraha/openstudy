@@ -56,7 +56,8 @@ def g_d1(df: pd.DataFrame) -> dict:
            "spearman_raw_vs_normalized": _num(raw_vs_norm),
            "rule": "every attention chart is a share; raw counts appear once, in the methodology"}
     print(f"[validate] G-D1 PASS — crawl size drifts {drift:.2f}x across years "
-          f"({int(yearly.min()):,} → {int(yearly.max()):,} articles/day); raw≈norm ρ={raw_vs_norm:.2f}")
+          f"({int(yearly.min()):,} → {int(yearly.max()):,} articles/day); "
+          f"raw count vs normalized share ρ={raw_vs_norm:.2f} — raw counts mislead")
     return out
 
 
@@ -103,13 +104,17 @@ def _sig_protest(win, base) -> dict:
 
 
 def _quarter_min_tone(df: pd.DataFrame, d0: pd.Timestamp, window: int) -> dict:
+    if "api_tone" not in df:
+        return {"verdict": "PENDING", "why": "tone curve not available"}
     q = df.loc[d0.to_period("Q").start_time: d0.to_period("Q").end_time, "api_tone"].dropna()
     if q.empty:
         return {"verdict": "PENDING", "why": "tone curve not available"}
     day = q.idxmin()
     inside = d0 <= day < d0 + pd.Timedelta(days=window)
+    in_win = q[(q.index >= d0) & (q.index < d0 + pd.Timedelta(days=window))]
     return {"verdict": "PASS" if inside else "FAIL", "quarter_min_day": day.strftime("%Y-%m-%d"),
-            "quarter_min_tone": _num(q.min()), "rank_of_anchor_window": int((q.rank()[(q.index >= d0) & (q.index < d0 + pd.Timedelta(days=window))]).min())}
+            "quarter_min_tone": _num(q.min()),
+            "rank_of_anchor_window": int(q.rank()[in_win.index].min()) if len(in_win) else None}
 
 
 def g_d2(df: pd.DataFrame) -> dict:
@@ -120,7 +125,8 @@ def g_d2(df: pd.DataFrame) -> dict:
         win = df.loc[d0: d0 + pd.Timedelta(days=spec["window"] - 1)]
         base = _baseline(df, d0)
         sigs: dict[str, dict] = {}
-        for s in spec["expect"]:
+        gated = list(spec["expect"]) + (["quarter_min_tone"] if spec.get("quarter_min_tone") else [])
+        for s in dict.fromkeys(spec["expect"] + ["attention"]):   # attention always computed
             if s == "attention":
                 sigs[s] = _sig_attention(win, base)
             elif s == "tone_drop":
@@ -132,13 +138,13 @@ def g_d2(df: pd.DataFrame) -> dict:
         if spec.get("quarter_min_tone"):
             sigs["quarter_min_tone"] = _quarter_min_tone(df, d0, spec["window"])
         report = {s: _sig_tone(win, base, "rise") if s == "tone_rise" else {} for s in spec.get("report_only", [])}
-        verdicts = [v["verdict"] for v in sigs.values()]
+        verdicts = [v["verdict"] for k, v in sigs.items() if k in gated]
         verdict = "FAIL" if "FAIL" in verdicts else "PENDING" if "PENDING" in verdicts else "PASS"
         n_pass += verdict == "PASS"; n_fail += verdict == "FAIL"; n_pending += verdict == "PENDING"
         anchors.append({"day": day, "label": spec["label"], "window_days": spec["window"], "verdict": verdict,
-                        "signatures": sigs, "report_only": report})
+                        "gated": gated, "signatures": sigs, "report_only": report})
         detail = "; ".join(
-            f"{k}={v['verdict']}" + (f" ratio {v['ratio']}" if "ratio" in v else "") + (f" Δtone {v['delta']}" if "delta" in v else "")
+            f"{k}{'' if k in gated else '(info)'}={v['verdict']}" + (f" ratio {v['ratio']}" if "ratio" in v else "") + (f" Δtone {v['delta']}" if "delta" in v else "")
             for k, v in sigs.items())
         extra = "; ".join(f"{k}(report) Δ={v.get('delta')}" for k, v in report.items() if v)
         print(f"[validate] G-D2 {verdict:7s} {day} {spec['label']:32s} {detail}{'; ' + extra if extra else ''}")

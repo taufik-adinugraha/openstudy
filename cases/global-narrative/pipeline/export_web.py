@@ -190,7 +190,11 @@ def export_tone(df: pd.DataFrame, stats: dict, allow_fetch: bool) -> dict:
 
     darkest = [day_rec(d, allow_fetch) for d in _extremes(df, True, 10)]
     brightest = [day_rec(d, allow_fetch) for d in _extremes(df, False, 6)]
-    m = monthly(df[["api_vol", "api_tone"] + (["n_events", "protest_n"] if "n_events" in df else [])])
+    mcols = [c for c in ("api_vol", "api_tone", "n_events", "protest_n") if c in df]
+    m = monthly(df[mcols]) if mcols else pd.DataFrame(index=pd.DatetimeIndex([]))
+    for c in ("api_vol", "api_tone"):
+        if c not in m:
+            m[c] = np.nan
     g20 = next((a for a in stats.get("gates", {}).get("G-D2", {}).get("anchors", []) if a["day"] == "2022-11-15"), None)
     yearly_tone = tone.groupby(tone.index.year).mean()
     return {"dates": [d.strftime("%Y-%m-%d") for d in df.index], "tone": tone, "tone7": roll(tone), "tone28": roll(tone, 28),
@@ -202,6 +206,8 @@ def export_tone(df: pd.DataFrame, stats: dict, allow_fetch: bool) -> dict:
 
 
 def export_themes(df: pd.DataFrame) -> dict:
+    if "api_vol" not in df:
+        return {"months": [], "themes": {}, "order": [], "era_rank": []}
     m = monthly(df)
     months = month_keys(m.index)
     themes = {}
@@ -321,7 +327,8 @@ def export_map(con) -> dict:
                  AND action_adm1 <> 'ID'"""   # adm1 == 'ID' -> geocoded only to "Indonesia" (country centroid)
     cells = con.execute(f"""
         SELECT round(action_lat * 4) / 4 AS lat, round(action_lon * 4) / 4 AS lon, count(*) n,
-               avg(avg_tone) tone, count(*) FILTER (WHERE event_root = '14') protest, mode(action_name) name
+               avg(avg_tone) tone, count(*) FILTER (WHERE event_root = '14') protest,
+               mode(action_name) AS cname
         {base} GROUP BY 1, 2 HAVING count(*) >= 2 ORDER BY n DESC""").fetchall()
     by_year = con.execute(f"""
         SELECT year(added_day) y, round(action_lat * 4) / 4 AS lat, round(action_lon * 4) / 4 AS lon, count(*) n,

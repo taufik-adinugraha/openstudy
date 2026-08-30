@@ -278,7 +278,7 @@ const eventsLast = summary.eventsLast ?? "pending";
       /* ---------- chapter 2: tone ---------- */
       sect("tone chart", () => {
         const el = document.getElementById("tone-chart");
-        if (!tone?.tone) { pending("tone-chart", "Pipeline still running — the tone curve is not cached yet."); return; }
+        if (!tone?.tone?.some((v) => v != null)) { pending("tone-chart", "Pipeline still running — the tone curve is not cached yet."); pending("darkest", "Darkest-day briefs follow the tone curve."); return; }
         const dates = tone.dates.map(P), t28 = tone.tone28, t1 = tone.tone, mean = tone.mean;
         const M = { t: 18, r: 20, b: 30, l: 40 }, { svg, W, H } = mkSvg(el, 300);
         const x = d3.scaleTime(d3.extent(dates), [M.l, W - M.r]);
@@ -321,7 +321,8 @@ const eventsLast = summary.eventsLast ?? "pending";
       sect("scatter", () => {
         const el = document.getElementById("scatter");
         const m = tone?.monthly; if (!m) { pending("scatter", "Pending API curves."); return; }
-        const pts = m.months.map((mo, i) => ({ mo, d: PM(mo), vol: m.vol[i], tone: m.tone[i] })).filter((p) => p.vol != null && p.tone != null);
+        const pts = m.months.map((mo, i) => ({ mo, d: PM(mo), vol: m.vol?.[i], tone: m.tone?.[i] })).filter((p) => p.vol != null && p.tone != null);
+        if (pts.length < 6) { pending("scatter", "Pending API curves (monthly tone)."); return; }
         const M = { t: 16, r: 20, b: 36, l: 44 }, { svg, W, H } = mkSvg(el, 300);
         const x = d3.scaleLinear(d3.extent(pts, (p) => p.vol), [M.l, W - M.r]).nice();
         const y = d3.scaleLinear(d3.extent(pts, (p) => p.tone), [H - M.b, M.t]).nice();
@@ -345,9 +346,9 @@ const eventsLast = summary.eventsLast ?? "pending";
       /* ---------- chapter 3: themes small multiples ---------- */
       sect("themes", () => {
         const el = document.getElementById("themes");
-        if (!themes?.themes) { pending("themes", "Pipeline still running — theme timelines are being fetched (one API call per theme, 12 s apart)."); return; }
+        const keys = (themes?.order ?? []).filter((k) => themes.themes[k]?.share?.some((v) => v != null));
+        if (!keys.length) { pending("themes", "Pipeline still running — theme timelines are being fetched (one API call per theme, ~15 s apart)."); return; }
         const months = themes.months.map(PM);
-        const keys = themes.order.filter((k) => themes.themes[k]?.share?.some((v) => v != null));
         const panels = [];
         el.innerHTML = "";
         for (const k of keys) {
@@ -621,7 +622,7 @@ const eventsLast = summary.eventsLast ?? "pending";
           el.innerHTML = `
             <div class="gate">${V(d1.verdict)}<div><b>G-D1 Normalization honesty.</b> Crawl size drifts <b>${num(d1.crawl_size_drift_max_over_min, 2)}×</b> across years (${Object.entries(d1.monitored_articles_per_day_by_year ?? {}).map(([y, v]) => `${y}: ${d3.format(".2s")(v)}`).join(" · ")} articles/day). All attention charts are shares.</div></div>
             <div class="gate">${V(d2.verdict)}<div><b>G-D2 Anchors.</b> ${d2.pass ?? 0} pass · ${d2.fail ?? 0} fail · ${d2.pending ?? 0} pending of ${d2.anchors?.length ?? 0}, each against a trailing ${d2.baseline_days}-day baseline.
-              <div class="table-scroll"><table class="rank small anchors"><thead><tr><th>Anchor</th><th>Attention ×</th><th>Δ tone</th><th>Protest ×</th><th>Verdict</th></tr></thead><tbody>${(d2.anchors ?? []).map((a) => { const s = a.signatures; return `<tr><td>${a.day} · ${a.label}</td><td class="num">${s.attention ? `${num(s.attention.ratio, 1)} ${s.attention.verdict === "PASS" ? "✓" : s.attention.verdict === "FAIL" ? "✗" : "…"}` : "—"}</td><td class="num">${s.tone_drop ? `${sgn(-s.tone_drop.delta)} ${s.tone_drop.verdict === "PASS" ? "✓" : s.tone_drop.verdict === "FAIL" ? "✗" : "…"}` : a.report_only?.tone_rise ? `<i>${sgn(a.report_only.tone_rise.delta)} (report only)</i>` : "—"}</td><td class="num">${s.protest ? `${num(s.protest.ratio, 1)} ${s.protest.verdict === "PASS" ? "✓" : s.protest.verdict === "FAIL" ? "✗" : "…"}` : s.theme_cyber ? `cyber ${num(s.theme_cyber.ratio, 1)}× ${s.theme_cyber.verdict === "PASS" ? "✓" : "…"}` : "—"}</td><td>${V(a.verdict)}</td></tr>`; }).join("")}</tbody></table></div></div></div>
+              <div class="table-scroll"><table class="rank small anchors"><thead><tr><th>Anchor</th><th>Attention ×</th><th>Δ tone</th><th>Protest ×</th><th>Verdict</th></tr></thead><tbody>${(d2.anchors ?? []).map((a) => { const s = a.signatures; const mark = (k) => (a.gated?.includes(k) ? (s[k].verdict === "PASS" ? "✓" : s[k].verdict === "FAIL" ? "✗" : "…") : "<i>info</i>"); const th = a.gated?.find((k) => k.startsWith("theme_")); return `<tr><td>${a.day} · ${a.label}</td><td class="num">${s.attention ? `${num(s.attention.ratio, 1)} ${mark("attention")}` : "—"}${th && s[th] ? `<br><i>${th.replace("theme_", "")} ${s[th].ratio != null ? num(s[th].ratio, 1) + "×" : "…"} ${mark(th)}</i>` : ""}</td><td class="num">${s.tone_drop ? `${sgn(-s.tone_drop.delta)} ${s.tone_drop.verdict === "PASS" ? "✓" : s.tone_drop.verdict === "FAIL" ? "✗" : "…"}` : a.report_only?.tone_rise ? `<i>${sgn(a.report_only.tone_rise.delta)} (report only)</i>` : "—"}</td><td class="num">${s.protest ? `${num(s.protest.ratio, 1)} ${s.protest.verdict === "PASS" ? "✓" : s.protest.verdict === "FAIL" ? "✗" : "…"}` : "—"}</td><td>${V(a.verdict)}</td></tr>`; }).join("")}</tbody></table></div></div></div>
             <div class="gate">${V(d3g.verdict)}<div><b>G-D3 Two-source coherence.</b> Event-layer Indonesia share (own denominator) vs the API’s normalized volume: Spearman ρ = <b>${d3g.share_all?.spearman_rho ?? "pending"}</b> over ${d3g.share_all?.n_days ?? 0} shared days (threshold ${d3g.threshold}).${d3g.share_en ? ` English feed ρ ${d3g.share_en.spearman_rho ?? "—"}, translated ρ ${d3g.share_trans?.spearman_rho ?? "—"}.` : ""}</div></div>
             <div class="gate">${V(d4.verdict)}<div><b>G-D4 Language honesty.</b> Foreign press carries <b>${d4.api_foreign_share_mean != null ? d3.format(".0%")(d4.api_foreign_share_mean) : "—"}</b> of Indonesia coverage; the translated (non-English) feed supplies <b>${d4.event_layer_translated_share != null ? d3.format(".0%")(d4.event_layer_translated_share) : "—"}</b> of kept events. Both are charted in chapter 04.</div></div>`;
         }).catch(() => { el.innerHTML = `<div class="pending">stats.json not exported yet.</div>`; });

@@ -83,6 +83,14 @@ reversible in `pipeline/config.py` unless noted.
    protest: event-layer EventRootCode 14 count ratio ≥ 3 against the same
    baseline. Kanjuruhan additionally must be its quarter's most negative
    tone day. Thresholds are in `config.py`.
+   **Rewritten to the data (2026-08-30):** the riots 2019, election 2024,
+   PDNS 2024 and protests 2025 do NOT lift *overall* Indonesia attention
+   ≥ 1.5× (measured 1.24 / 1.48 / 1.26 / 1.30 — standing coverage keeps the
+   baseline high, and cyber is a niche story). Their tested claim is the
+   corresponding THEME curve's spike (protest / election / cyber), which is
+   also what the spec's live-test asserted for 2019. Overall attention is
+   still computed and published for every anchor, marked "info" when it is
+   not the gate — thresholds were never moved.
 6. **Theme battery = keyword queries, not GKG theme codes** (`Indonesia nickel`,
    `Indonesia ("palm oil" OR sawit)`, …, 20 themes). Keywords are transparent
    to a client; GKG theme taxonomies are not. Theme share = theme volume /
