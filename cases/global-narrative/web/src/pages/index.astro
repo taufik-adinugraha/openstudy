@@ -109,7 +109,7 @@ const eventsLast = summary.eventsLast ?? "pending";
       </div>
       <div class="map-wrap"><canvas id="map-canvas"></canvas><div id="map-tip" hidden></div><span class="stamp dim map-note" id="map-note"></span></div>
       <div class="two-up">
-        <div><h3>Who Indonesia is in the news with</h3><p class="footnote">Counter-party actor countries in Indonesia events (ISO3), all years streamed so far.</p><div id="actors" class="chart"></div></div>
+        <div><h3>Who Indonesia is in the news with</h3><p class="footnote">Counter-party actors in Indonesia events — CAMEO codes: ISO3 countries plus regions (SEA = Southeast Asia). All years streamed so far.</p><div id="actors" class="chart"></div></div>
         <div><h3>Event types</h3><p class="footnote">CAMEO root codes across all kept events.</p><div id="roots" class="chart"></div></div>
       </div>
     </section>
@@ -300,11 +300,12 @@ const eventsLast = summary.eventsLast ?? "pending";
         svg.append("path").datum(dates).attr("d", d3.line().defined((d, i) => t28[i] != null).x((d) => x(d)).y((d, i) => y(t28[i])).curve(d3.curveMonotoneX)).attr("fill", "none").attr("stroke", INK).attr("stroke-width", 1.2);
         svg.append("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y(mean)).attr("y2", y(mean)).attr("stroke", MUTED).attr("stroke-dasharray", "3 4");
         svg.append("text").attr("class", "annot").attr("x", M.l + 6).attr("y", M.t + 10).text(`decade mean ${sgn(mean)} · faint line = daily · bold = 28-day`);
-        const dark = (tone.darkest ?? []).slice(0, 6).map((d) => ({ ...d, x: x(P(d.day)) }));
+        const dark = (tone.darkest ?? []).slice(0, 8).map((d, i) => ({ ...d, i, x: x(P(d.day)) }));
         const dg = svg.selectAll("g.dk").data(dark).join("g").attr("class", "dk");
-        dg.append("circle").attr("cx", (d) => d.x).attr("cy", (d) => y(d.tone)).attr("r", 3.5).attr("fill", NEG).attr("stroke", GROUND);
-        const drows = []; [...dark].sort((a, b) => a.x - b.x).forEach((d) => { let r = 0; while (drows[r] != null && d.x - drows[r] < 92) r++; drows[r] = d.x; d.row = r; });
-        dg.append("text").attr("class", "annot alabel").attr("x", (d) => d.x).attr("y", (d) => Math.min(H - M.b - 4, y(d.tone) + 15 + d.row * 13)).attr("text-anchor", "middle").attr("fill", NEG).text((d) => fDay(P(d.day)));
+        dg.append("circle").attr("cx", (d) => d.x).attr("cy", (d) => y(d.tone)).attr("r", 3.5).attr("fill", NEG).attr("stroke", GROUND)
+          .on("mousemove", (e, d) => showTip(e, `<b>${fDay(P(d.day))}</b> · darkest day #${d.i + 1}<br>tone ${sgn(d.tone)} (${sgn(d.delta)} vs trailing month)<br>detailed below`))
+          .on("mouseleave", hideTip);
+        dg.append("text").attr("class", "annot alabel").attr("x", (d) => d.x).attr("y", (d) => y(d.tone) + 15).attr("text-anchor", "middle").attr("fill", NEG).text((d) => d.i + 1);
         const guide = svg.append("line").attr("y1", M.t).attr("y2", H - M.b).attr("stroke", INK).attr("stroke-opacity", 0.5).style("display", "none");
         hoverRect(svg, M, W, H, (e) => {
           const i = nearestIdx(dates, x.invert(d3.pointer(e)[0])); if (t1[i] == null) return;
@@ -313,9 +314,9 @@ const eventsLast = summary.eventsLast ?? "pending";
         }, () => { guide.style("display", "none"); hideTip(); });
         // darkest-day cards
         const list = document.getElementById("darkest");
-        list.innerHTML = `<h3>The ten darkest days</h3>` + (tone.darkest ?? []).map((d) => `
+        list.innerHTML = `<h3>The ten darkest days</h3>` + (tone.darkest ?? []).map((d, i) => `
           <article class="day">
-            <div class="day-head"><b>${fDay(P(d.day))}</b><span class="stamp" style="color:${NEG}">TONE ${sgn(d.tone)} · ${sgn(d.delta)} VS TRAILING MONTH</span><span class="stamp dim">${pct(d.vol)} OF WORLD NEWS${d.protests != null ? ` · ${d.protests} PROTEST EVENTS` : ""}</span></div>
+            <div class="day-head"><b>${i + 1} · ${fDay(P(d.day))}</b><span class="stamp" style="color:${NEG}">TONE ${sgn(d.tone)} · ${sgn(d.delta)} VS TRAILING MONTH</span><span class="stamp dim">${pct(d.vol)} OF WORLD NEWS${d.protests != null ? ` · ${d.protests} PROTEST EVENTS` : ""}</span></div>
             ${d.articles?.length ? `<ul>${d.articles.slice(0, 4).map((a) => `<li><a href="${a.url}" rel="noopener">${a.title}</a> <i>${a.domain}${a.country ? " · " + a.country : ""}</i></li>`).join("")}</ul>` : `<span class="stamp dim">HEADLINE SAMPLE PENDING (API CACHE)</span>`}
           </article>`).join("");
         const g20 = tone.g20;
@@ -413,7 +414,7 @@ const eventsLast = summary.eventsLast ?? "pending";
           .on("mousemove", (e, c) => showTip(e, `<b>${c.name}</b> · ${fMon(months[c.i])}<br>${pct(c.v, 2)} of its monitored articles mention Indonesia`))
           .on("mouseleave", hideTip);
         const idn = sources.countries.find((c) => c.name === "Indonesia");
-        if (idn) svg.append("text").attr("class", "annot").attr("x", M.l).attr("y", H - 6).text(`Indonesia’s own press: ${pct(idn.mean, 1)} of its output mentions the country — shown separately below.`);
+        if (idn) svg.append("text").attr("class", "annot").attr("x", W - M.r).attr("y", 14).attr("text-anchor", "end").text(`Indonesia’s own press: ${pct(idn.mean, 1)} of its output — shown below, not here.`);
       });
 
       sect("press split", () => {
@@ -585,7 +586,7 @@ const eventsLast = summary.eventsLast ?? "pending";
         const R = events?.root_mix; if (!R?.length) { pending("roots", "Event layer pending."); return; }
         const rows = [...R].sort((a, b) => b.n - a.n).slice(0, 16);
         const tot = d3.sum(R, (r) => r.n);
-        const M = { t: 6, r: 60, b: 6, l: 150 }, BH = 20, { svg, W, H } = mkSvg(el, M.t + rows.length * BH + M.b);
+        const M = { t: 6, r: 60, b: 6, l: 178 }, BH = 20, { svg, W, H } = mkSvg(el, M.t + rows.length * BH + M.b);
         const x = d3.scaleLinear([0, d3.max(rows, (r) => r.n)], [M.l, W - M.r]);
         const conflict = (c) => +c >= 13;
         const g = svg.selectAll("g").data(rows).join("g").attr("transform", (d, i) => `translate(0,${M.t + i * BH})`);

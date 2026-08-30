@@ -76,8 +76,16 @@ rsync -az cases/global-narrative/web/{src,astro.config.mjs,package.json}   ubunt
   counts + `norm` (total monitored).
 - Raw feed: `masterfilelist.txt` redirects HTTP→HTTPS (follow redirects).
   Export zips 2017→now: **331,667 English files / 30.8 GB + 326,747 translation
-  files / 18.8 GB**. 61 tab-separated columns, no header. Indonesia rows ≈ 0.4 %
-  (EN) / 0.9 % (translated) of a sample slot.
+  files / 18.8 GB**. 61 tab-separated columns, no header. Indonesia rows ≈ 1.4 %
+  of both feeds combined (measured on 2026 months; ~70 % of kept rows come from
+  the translated feed).
+- Only the plain `"Indonesia"` query survives a full-range (2017→now) API
+  request. Any multi-keyword or negation query runs >100 s server-side, has its
+  connection reset, and puts the calling IP in a several-minute penalty box
+  (verified from two different IPs). Theme and foreign/domestic curves are
+  therefore fetched as ten per-year windows each, with a circuit breaker that
+  ends a pass after 10 consecutive refusals; the `nn-curves` unit re-runs
+  (cache-first) every 15 min until the battery is complete.
 - Coding split: `ActionGeo_CountryCode` (col 54) is FIPS `ID`;
   `Actor1/2CountryCode` (cols 8/18) are ISO3 `IDN`. Both are matched.
 - `SQLDATE` is unreliable for undated in-text references (GDELT assigns the
