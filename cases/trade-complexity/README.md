@@ -41,11 +41,19 @@ enter that math. Chapters 01–06 are unchanged and export-based by
 construction, and the page now says so where a reader would otherwise wonder.
 
 **Data path.** `pipeline/fetch_baci.sh` re-downloads the 2.42 GB CEPII zip with
-byte-exact resume (CEPII drops connections constantly). `pipeline/partners.py
-slice` then streams it one year at a time, keeping only rows where Indonesia is
-exporter or importer — the full 330M-row DuckDB is never rebuilt, and retained
-data stays around 100 MB. Every year is skippable, so the stage resumes after a
-kill.
+byte-exact resume (CEPII drops connections constantly, though the run that built
+this completed on the first attempt at exactly 2,417,732,497 bytes).
+`pipeline/partners.py slice` then streams it one year at a time, keeping only
+rows where Indonesia is exporter or importer — the full 330M-row DuckDB is never
+rebuilt. Every year is skippable, so the stage resumes after a kill; the whole
+slice takes under two minutes.
+
+**What is retained: 45 MB.** Thirty per-year parquet slices (~100–225k rows each)
+plus the country lookup. The raw zip is deleted after slicing — it is a
+re-acquirable source, not an artifact, and keeping it would alone blow the ~2 GB
+retention budget on a box shared with four other jobs. Re-running `make partners`
+re-fetches it automatically; re-running only `partners.py facts` needs nothing
+but the slices.
 
 ### Pre-registered gates
 
