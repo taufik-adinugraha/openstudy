@@ -26,3 +26,6 @@ dist/
 
 # os
 .DS_Store
+
+# third-party tool checkouts (LiCSBAS etc.)
+cases/*/tools/

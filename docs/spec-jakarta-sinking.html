@@ -1,0 +1,198 @@
+<title>Jakarta Is Sinking Spec</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper: #FAF9F5; --surface: #EEF2F5; --ink: #18232E; --muted: #58697A;
+    --hairline: #DDE3E9; --accent: #12718A; --accent-soft: #DCEFF4;
+    --teal: #177368; --warn: #B4472F; --warn-soft: #F7E3DE; --code-bg: #E8EDF1;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0B1119; --surface: #121C28; --ink: #E4EBF2; --muted: #8CA0B5;
+      --hairline: #1E2E44; --accent: #35C6E0; --accent-soft: #0A2A33;
+      --teal: #4BB8A9; --warn: #F26D5B; --warn-soft: #3A1E1A; --code-bg: #182536;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0B1119; --surface: #121C28; --ink: #E4EBF2; --muted: #8CA0B5;
+    --hairline: #1E2E44; --accent: #35C6E0; --accent-soft: #0A2A33;
+    --teal: #4BB8A9; --warn: #F26D5B; --warn-soft: #3A1E1A; --code-bg: #182536;
+  }
+  body { background: var(--paper); color: var(--ink); font-family: "Source Serif 4", Georgia, serif; font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 56px 24px 96px; }
+  h1, h2, h3 { font-family: "Archivo", Arial, sans-serif; text-wrap: balance; margin: 0; }
+  h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
+  h2 { font-size: 1.3rem; font-weight: 700; }
+  h3 { font-size: 1rem; font-weight: 600; }
+  p { margin: 0; max-width: 68ch; }
+  a { color: var(--teal); }
+  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+  header.doc { display: flex; flex-direction: column; gap: 14px; padding-bottom: 30px; border-bottom: 2px solid var(--ink); }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px 26px; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--muted); }
+  .meta-row b { color: var(--ink); font-weight: 500; }
+  section { display: flex; flex-direction: column; gap: 16px; margin-top: 48px; }
+  .lede { font-size: 1rem; color: var(--muted); }
+  .q { font-size: 1.15rem; font-style: italic; border-left: 3px solid var(--accent); padding: 6px 0 6px 18px; max-width: 62ch; }
+  table { border-collapse: collapse; width: 100%; font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; line-height: 1.55; }
+  .table-scroll { overflow-x: auto; }
+  th { text-align: left; font-weight: 600; font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 8px 14px 8px 0; border-bottom: 1px solid var(--ink); }
+  td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  code { font-family: "IBM Plex Mono", monospace; font-size: 0.82em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  pre { background: var(--code-bg); padding: 14px 16px; overflow-x: auto; border-radius: 4px; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; line-height: 1.6; margin: 0; }
+  ul.plain, ol.plain { margin: 0; padding-left: 1.35em; display: flex; flex-direction: column; gap: 9px; max-width: 70ch; }
+  ol.plain li::marker, ul.plain li::marker { color: var(--accent); font-family: "IBM Plex Mono", monospace; font-weight: 600; }
+  .stage { display: grid; grid-template-columns: 120px 1fr; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--hairline); }
+  .stage:last-child { border-bottom: 0; }
+  .stage .sname { font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; font-weight: 600; color: var(--accent); padding-top: 3px; }
+  .stage p { font-size: 0.95rem; }
+  @media (max-width: 600px) { .stage { grid-template-columns: 1fr; gap: 4px; } }
+  .gate { border: 1px solid var(--hairline); border-left: 3px solid var(--teal); background: var(--surface); padding: 14px 18px; font-size: 0.95rem; max-width: 70ch; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+  .sw { display: flex; align-items: center; gap: 8px; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+  .sw i { width: 22px; height: 22px; border-radius: 4px; display: inline-block; border: 1px solid var(--hairline); }
+  .check li { list-style: none; position: relative; padding-left: 1.6em; }
+  .check li::before { content: "☐"; position: absolute; left: 0; color: var(--accent); font-family: "IBM Plex Mono", monospace; }
+  .check { padding-left: 0; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 3px; font-family: "IBM Plex Mono", monospace; font-size: 0.64rem; font-weight: 600; letter-spacing: 0.06em; white-space: nowrap; background: var(--warn-soft); color: var(--warn); }
+  footer.doc { margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--hairline); font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header class="doc">
+    <span class="eyebrow">Phase 2 · Case C · Spec v1 · decisions D17–D19</span>
+    <h1>Jakarta Is Sinking</h1>
+    <p class="lede">Sentinel-1 InSAR land subsidence for Greater Jakarta, fused with elevation,
+    population, and observed floods into a kelurahan-level exposure map — and a clock. Built
+    first on an openly deposited velocity field, then validated against our own InSAR run.</p>
+    <div class="meta-row">
+      <span>DATE <b>2026-08-30</b></span>
+      <span>REFRESH <b>Static snapshot (D3)</b></span>
+      <span>IDENTITY <b>Bathymetric blue → cyan</b></span>
+      <span>DATA PATH <b>Verified by reconnaissance 2026-08-30</b></span>
+    </div>
+  </header>
+
+  <section>
+    <span class="eyebrow">C1 · The question</span>
+    <p class="q">“How fast is the ground under Jakarta sinking — and who is standing on it?”</p>
+    <p>North Jakarta is among the fastest-subsiding urban land on Earth: coastal hotspots
+    drop 3–5 cm every year, and single points have exceeded 10. Radar interferometry sees it
+    from orbit to millimetre precision. This case turns that measurement into the thing a city,
+    an insurer, or a utility actually needs: <em>which kelurahan, how many people, how many
+    years</em>. The decisions behind it — D17 reuse a deposited field first and run our own
+    InSAR as a gate, D18 full flood-exposure scope, D19 open 30 m elevation now — trade a
+    little fidelity for zero registrations and a day-one map.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">C2 · Data contract</span>
+    <h2>Data contract</h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Source</th><th>Product / access</th><th>License</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>Ohenhen et al. 2026 (Sci. Adv.)</td><td>Java-wide InSAR vertical velocity 2017–2023, point cloud ~75 m — Zenodo 10.5281/zenodo.15786356, <code>Java_VLM_EW.csv</code> 447 MB, Jakarta longitude slice ~45 MB via HTTP Range; no login</td><td>CC BY 4.0</td><td><b>Day-one velocity field (D17)</b></td></tr>
+          <tr><td>COMET-LiCS / LiCSAR</td><td>Frame <code>098A_09673_121312</code> (ascending, continuous 2017–2024, 1,223 interferograms) via CEDA; <code>047D_09652_111009</code> descending for 2017–2022 decomposition (gap 2023–24); GACOS tropospheric corrections per epoch; no account</td><td>OGL v3 / CC BY 4.0</td><td>Own InSAR run (gate G-C3)</td></tr>
+          <tr><td>Susilo et al. 2023 (Sci. Data)</td><td>Continuous GNSS north Java 2010–2021 — Zenodo 10.5281/zenodo.7775016 (27 MB); Jakarta stations CJKT −6.4 mm/yr, CTGR −2.9, CBTU −0.5</td><td>CC BY 4.0</td><td>Ground truth (gate G-C2)</td></tr>
+          <tr><td>Copernicus GLO-30</td><td>Tiles S07E106, S07E107 (COG, 87 MB total) from the public S3 bucket, no login</td><td>Copernicus DEM licence (free use, attribution)</td><td>Elevation (D19); DEMNAS 8 m as later upgrade</td></tr>
+          <tr><td>WorldPop / GHSL</td><td>WorldPop 2020 constrained 100 m Indonesia (103 MB); GHSL GHS-POP E2020 100 m tile R10_C29 (22 MB)</td><td>CC BY 4.0</td><td>Population exposure (two sources, cross-checked)</td></tr>
+          <tr><td>Jakarta Satu (DKI GIS)</td><td>Kelurahan polygons (267) + BPBD flood history 2021–2024 (9,653 RT-level polygons with depth/date) via ArcGIS REST, GeoJSON</td><td><span class="pill">No licence text</span> — attribution + note</td><td>Admin units; observed floods</td></tr>
+          <tr><td>UNOSAT / EOS-ARIA</td><td>Sentinel-1 flood extents 2 Jan 2020 (UNOSAT FL20200101IDN 6 MB; EOS FPM 1 MB)</td><td>CC BY-SA / attribution</td><td>The 2020 flood as a reality check</td></tr>
+          <tr><td>HDX COD-AB (BPS)</td><td>Indonesia ADM0–4 boundaries (498 MB shp)</td><td>CC BY-IGO</td><td>Licensed fallback for kelurahan polygons</td></tr>
+          <tr><td>IOC / BIG tide gauge</td><td>Station <code>koli</code> (Tanjung Priok) 1-minute sea level</td><td>Open</td><td>Optional: relative sea-level context</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><b>Scope rule (load-bearing):</b> the deposited field measures 2017–2023; our LiCSBAS run
+    extends to 2024. Every rate on the site carries its measurement window, and the two fields
+    are never blended — one is the map, the other is the check.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">C3 · Pipeline</span>
+    <h2>Pipeline — static rebuild</h2>
+    <div>
+      <div class="stage"><span class="sname">ingest</span><p>Range-fetch the Jakarta slice of the Zenodo velocity CSV (lon 106.55–107.15, lat −6.55…−5.95), GNSS records, GLO-30 tiles, WorldPop + GHSL, kelurahan + BPBD flood polygons (paginated ArcGIS REST), 2020 flood extents. All small; ~300 MB total.</p></div>
+      <div class="stage"><span class="sname">grid</span><p>Average duplicate coordinates (overlapping frames), mask by reported standard deviation, grid to 100 m (EPSG:4326 → local UTM 48S for area math), write COG. Sign convention: negative = subsidence, stated everywhere.</p></div>
+      <div class="stage"><span class="sname">insar</span><p>LiCSBAS on <code>098A</code> 2017–2024 clipped to 106.6/107.1/−6.45/−6.0: steps 01 (GeoTIFFs + GACOS) → 02 → 03op GACOS → 05op clip → 11–16 (network, inversion, velocity, filtering) → <code>LiCSBAS_cum2vel</code>; LOS → vertical using <code>geo.E/N/U</code>; referenced to a stable central pixel near CJKT. ~13 GB download, tens of minutes compute. Runs after the nightlights backfill releases bandwidth.</p></div>
+      <div class="stage"><span class="sname">fuse</span><p>Per kelurahan: median and p10 subsidence, population (WorldPop; GHSL as cross-check), share of area below +1 m / +2 m GLO-30 elevation, flood-history frequency and max depth (BPBD 2021–24), 2020 flood share. <b>The clock:</b> years until a kelurahan’s median ground falls below a threshold at its current rate — stated as a linear extrapolation with its assumptions, never as a prediction.</p></div>
+      <div class="stage"><span class="sname">validate</span><p>Gates G-C1…G-C4 (below); results to <code>stats.json</code> for the methodology page.</p></div>
+      <div class="stage"><span class="sname">export</span><p>Velocity COG → PMTiles; kelurahan exposure GeoJSON + table; GNSS stations with measured-vs-InSAR; flood layers simplified; hotspot time-series (from LiCSBAS cumulative displacement). Insight brief per D11.</p></div>
+    </div>
+    <pre>cases/jakarta-sinking/
+  pipeline/  config.py ingest.py grid.py insar.sh fuse.py validate.py export_web.py
+  data/      raw/ derived/ (git-ignored)   web/  Astro + MapLibre + deck.gl   spec/</pre>
+  </section>
+
+  <section>
+    <span class="eyebrow">C4 · Validation gates</span>
+    <h2>Validation gates</h2>
+    <div class="gate"><b>G-C1 — Literature agreement.</b> Deposited-field medians in the NW-coast hotspots (Muara Baru, Kamal Muara, Kosambi, PIK) fall in 2–6 cm/yr; central Jakarta (Monas, Ancol) within ±1 cm/yr of zero. Point-based PS studies report higher peaks (Penjaringan up to 10 cm/yr) — a scale difference stated on the page, not a discrepancy hidden.</div>
+    <div class="gate"><b>G-C2 — GNSS agreement.</b> InSAR vertical rate at each Jakarta GNSS station (CJKT, CTGR, CBTU) within ±5 mm/yr of the published GNSS rate, after frame differences (IGS14 vs local) are reconciled and documented.</div>
+    <div class="gate"><b>G-C3 — Our run vs the deposit (D17).</b> LiCSBAS vertical velocity vs the deposited field over Jakarta: pixelwise correlation ≥ 0.7 and hotspot medians within 1 cm/yr. Divergence is diagnosed (reference point, atmospheric correction, unwrapping errors) before publish.</div>
+    <div class="gate"><b>G-C4 — Exposure plausibility.</b> Kelurahan exposure ranking correlates with observed BPBD flood frequency 2021–24 (Spearman ≥ 0.5) and the 2020 extent overlaps the top-exposure kelurahan disproportionately. Floods have many causes; the gate tests plausibility, not causation.</div>
+  </section>
+
+  <section>
+    <span class="eyebrow">C5 · Dashboard</span>
+    <h2>Dashboard — page anatomy</h2>
+    <ol class="plain">
+      <li><b>Hero — “The ground is moving.”</b> Signature moment: Jakarta rendered in the bathymetric ramp, dark and still; then the velocity field <em>settles</em> — hotspots sink into deep cyan over ~3 s while a clock counts the centimetres lost since 2017. Reduced motion: static.</li>
+      <li><b>Chapter 1 — “Where it sinks fastest.”</b> Ranked hotspot list with rates, measurement window, and the literature/GNSS checks alongside — the trust move, up front.</li>
+      <li><b>Chapter 2 — “Why.”</b> Groundwater extraction, sediment compaction, building load — cited narrative, no new data claims.</li>
+      <li><b>Chapter 3 — “Who stands on it.”</b> Population exposure by kelurahan; the clock per kelurahan; the two population sources shown side by side.</li>
+      <li><b>Chapter 4 — “The floods already came.”</b> January 2020 extent and 2021–24 flood history over the subsidence field; the plausibility gate shown as a chart.</li>
+      <li><b>Explore.</b> MapLibre + deck.gl: layers (velocity, elevation, exposure, floods, GNSS); kelurahan click → panel (rate, p10, population, low-lying share, flood count, clock); hotspot time series (from our InSAR run); URL state.</li>
+      <li><b>Methodology.</b> Both velocity fields explained; LOS→vertical; frames and windows; gates’ results; every licence and attribution; the clock’s assumptions in plain words.</li>
+    </ol>
+  </section>
+
+  <section>
+    <span class="eyebrow">C6 · Design brief</span>
+    <h2>Design brief</h2>
+    <p><b>Identity:</b> water and depth. The ramp reads like a bathymetric chart — stable ground
+    in deep navy, fast subsidence in luminous cyan — and coral is reserved for flood exposure so
+    “sinking” and “flooded” never share a hue.</p>
+    <div class="swatches">
+      <span class="sw"><i style="background:#070D16"></i> ground #070D16</span>
+      <span class="sw"><i style="background:#0E1926"></i> surface #0E1926</span>
+      <span class="sw"><i style="background:#E4EBF2"></i> text #E4EBF2</span>
+      <span class="sw"><i style="background:#0A1F3A"></i> ramp stable #0A1F3A</span>
+      <span class="sw"><i style="background:#35C6E0"></i> ramp fast / accent #35C6E0</span>
+      <span class="sw"><i style="background:#F26D5B"></i> flood coral #F26D5B</span>
+    </div>
+    <ul class="plain">
+      <li>Type: shared lab system. Numbers always carry units and windows: “−4.1 cm/yr · 2017–2023”.</li>
+      <li>Motion: the hero’s settling animation is the one orchestrated moment; everything else is 200–300 ms micro-interaction.</li>
+      <li>Every chart interactive (D9): hover inspection, linked kelurahan highlighting between map and lists, URL-addressable views.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">C7 · Acceptance</span>
+    <h2>Acceptance checklist</h2>
+    <ul class="plain check">
+      <li><code>make rebuild</code> reproduces the day-one map from the deposited field on a clean machine (gate 1); <code>make insar</code> reproduces our run.</li>
+      <li>G-C1…G-C4 evaluated and published on the methodology page (gates 2–3).</li>
+      <li>Explore interactive &lt; 3 s; 60 fps; Lighthouse ≥ 90 (gate 4).</li>
+      <li>Measurement windows and “linear extrapolation” caveat visible wherever a rate or a clock appears (gate 5).</li>
+      <li>Attributions: Ohenhen et al. 2026 (CC BY), COMET-LiCS/CEDA, Susilo et al. 2023, Copernicus DEM, WorldPop, GHSL, Jakarta Satu/BPBD, UNOSAT (gate 6).</li>
+      <li>Story reads in one scroll; the hero settling moment passes the award test (gates 7, 9).</li>
+      <li>Case cost: static hosting only (gate 8).</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">C8 · Risks &amp; out of scope</span>
+    <h2>Risks &amp; out of scope</h2>
+    <ul class="plain">
+      <li><b>Jakarta Satu licence</b> — no explicit terms; used with attribution and the HDX COD-AB fallback for polygons. If challenged, the BPBD flood-history layer is replaced by the UNOSAT/EOS extents only.</li>
+      <li><b>Scale mismatch</b> — SBAS at 75–100 m vs PS points: hotspots read lower than headline studies; disclosed in chapter 1.</li>
+      <li><b>LOS → vertical</b> — single-geometry conversion assumes negligible horizontal motion; the descending frame enables 2-D decomposition for 2017–2022 if needed.</li>
+      <li><b>The clock is an extrapolation</b> — linear rates, no groundwater-policy scenarios; labeled as such.</li>
+      <li><b>Out of scope:</b> sea-level-rise projections (the Zenodo RSL product exists; phase 3 at most), building-level damage, real-time monitoring.</li>
+    </ul>
+  </section>
+
+  <footer class="doc">CASE C SPEC v1 · 2026-08-30 · DECISIONS D17–D19 · DATA PATH VERIFIED · PARENT: BUILD PLAN</footer>
+</div>
