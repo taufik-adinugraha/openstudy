@@ -1,0 +1,906 @@
+---
+// Case C — page anatomy per spec §C5: hero (velocity field settles) → how fast, where →
+// the clock → who is exposed → validation → methodology. Identity: bathymetric blue → cyan
+// for subsidence, coral reserved for flood exposure (spec §C6).
+import "../styles/tokens.css";
+import "maplibre-gl/dist/maplibre-gl.css";
+const S = (await import("../data/summary.json").catch(() => null))?.default ?? null;
+const fmtN = (v) => (v == null ? "—" : Math.round(v).toLocaleString("en-US"));
+const fmtM = (v) => (v == null ? "—" : `${(v / 1e6).toFixed(v >= 1e6 ? 1 : 2)} M`);
+const pct = (v, d = 0) => (v == null ? "—" : `${(v * 100).toFixed(d)}%`);
+const cm = (v) => (v == null ? "—" : `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}`);
+const fastest = S?.fastest_p10?.[0];
+const soon = S?.soonest_0m?.[0];
+const b1 = S?.below?.["1m"], b0 = S?.below?.["0m"];
+const generated = S?.generated ?? "pending";
+const gateRows = ["G-C1", "G-C2", "G-C3", "G-C4", "G-C5"].map((k) => ({ k, ...(S?.gates?.[k] ?? { label: "—", pass: null }) }));
+const gateDetail = (g) => {
+  const d = g.detail;
+  if (!d || typeof d === "string") return d ?? "";
+  if (g.k === "G-C4")
+    return `${d.kelurahan_n} kelurahan · WorldPop ${fmtN(d.worldpop_total)} (${d.worldpop_vs_official > 0 ? "+" : ""}${pct(d.worldpop_vs_official, 1)} vs census ${fmtM(d.official_2020)}) · GHSL ${d.ghsl_vs_worldpop > 0 ? "+" : ""}${pct(d.ghsl_vs_worldpop, 1)} vs WorldPop · ${pct(d.mainland_covered_share)} of mainland kelurahan with ≥30% InSAR coverage`;
+  if (g.k === "G-C5")
+    return `Spearman ρ exposure index vs BPBD flood events = ${d.rho_index_vs_flood_events} (threshold ${d.threshold}; low-ground share ${d.rho_low1_vs_flood_events}, sinking rate ${d.rho_p10_vs_flood_events}) · 2020 flood covered ${pct(d.top20_exposure_2020_share)} of the 20 most exposed kelurahan vs ${pct(d.all_2020_share)} of all`;
+  return JSON.stringify(d);
+};
+// spec §C4 gate ranges (G-C1): NW-coast hotspots 2–6 cm/yr; central Jakarta within ±1
+const LIT = { "Muara Baru": "2–6 · gate", "Kamal Muara": "2–6 · gate", "Kosambi": "2–6 · gate", "PIK / Kapuk Muara": "2–6 · gate", "Ancol": "±1 · gate", "Monas (central)": "±1 · gate" };
+const c5 = S?.gates?.["G-C5"]?.detail;
+const flooded = S?.most_flooded ?? [];
+---
+<html lang="en" data-case="sinking" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jakarta Is Sinking</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+  </head>
+  <body>
+    <header class="stamp-bar">
+      <span class="stamp">JAKARTA IS SINKING</span>
+      <span class="stamp dim">SENTINEL-1 INSAR 2017–2023 · {S?.n_kel ?? 267} KELURAHAN · SNAPSHOT {generated}</span>
+    </header>
+
+    <section class="hero">
+      <img id="hero-still" src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/hero.jpg`}
+           alt="Greater Jakarta rendered in the bathymetric ramp — stable ground in navy, the fastest-subsiding north coast in luminous cyan" />
+      <canvas id="hero-canvas" aria-hidden="true"></canvas>
+      <div class="hero-copy">
+        <span class="eyebrow">Case C · Land subsidence + flood exposure</span>
+        <h1>The ground under Jakarta is moving.</h1>
+        <p>Radar interferometry from orbit measures the city sinking — millimetres a year in
+        the centre, centimetres on the north coast. This case turns the measurement into
+        what a city, an insurer or a utility needs: <b>which kelurahan, how many people,
+        how many years</b>.</p>
+        <span class="stamp dim" id="hero-status">OHENHEN ET AL. 2026 · VERTICAL VELOCITY · 2017–2023 · NEGATIVE = SUBSIDENCE</span>
+      </div>
+      <div class="hero-hud" id="hero-hud" aria-live="off">
+        <span class="hud-num" id="hud-cm">−0 cm</span>
+        <span class="stamp dim">LOST SINCE 2017 · {(fastest?.name ?? "NORTH COAST").toUpperCase()} · FASTEST DECILE</span>
+      </div>
+      <div class="hero-legend" aria-hidden="true">
+        <i></i>
+        <div><span>0</span><span>−2</span><span>−4</span><span>−6 cm/yr</span></div>
+      </div>
+      <div class="scroll-hint" aria-hidden="true">▾</div>
+    </section>
+
+    <section class="chapter">
+      <span class="eyebrow">01 · How fast, where</span>
+      <h2>Where the city sinks fastest</h2>
+      <p class="big-stat"><b class="cyan">{fmtN(S?.pop_fast2)}</b> people in DKI Jakarta live on ground
+      sinking faster than <b class="cyan">2 cm a year</b>. In <b class="cyan">{S?.n_kel_p10_fast2 ?? "—"}</b> of
+      {S?.n_ranked ?? "—"} measured kelurahan the fastest tenth of the ground drops more than that.</p>
+      <p>The map colours every kelurahan by its rate over 2017–2023: the fastest decile (p10)
+      shows the hotspot cores the way the literature's peak values do; the median tells the
+      neighbourhood story. Fastest of all: <b>{fastest?.name ?? "—"}</b> ({fastest?.kota ?? "—"}),
+      {cm(fastest?.v_p10)} cm/yr in its fastest decile, {cm(fastest?.v_med)} at the median.
+      Toggle the velocity field to see the measurement itself — including Tangerang and Bekasi,
+      which the kelurahan table does not cover.</p>
+      <p class="footnote"><b>Why it sinks:</b> decades of groundwater extraction compacting the young
+      alluvial and marine clays under the coastal plain, with the load of the built city on top —
+      the mechanism is well documented (Abidin et al. 2011; Chaussard et al. 2013; Ohenhen et al. 2026).
+      Rates have eased since the 2000s peaks (then 10–25 cm/yr in places) as extraction tightened,
+      but the fastest ground still loses several centimetres a year.</p>
+    </section>
+
+    <section class="explore">
+      <div class="explore-head">
+        <div class="toggle" role="group" aria-label="map metric" id="metric-toggle">
+          <button data-m="p10" class="on">FASTEST DECILE</button><button data-m="med">MEDIAN RATE</button><button data-m="flood">FLOOD EVENTS 2021–24</button><button data-m="low1">GROUND BELOW +1 M</button>
+        </div>
+        <button id="btn-field" class="chip-btn">VELOCITY FIELD</button>
+      </div>
+      <div class="map-wrap">
+        <div id="map1" class="map"></div>
+        <div class="legend" id="legend1"><i></i><div></div></div>
+      </div>
+      <div class="hotspots">
+        <h3 class="stamp">NAMED HOTSPOTS · CM/YR · 2017–2023 · MEDIAN | FASTEST DECILE · GATE RANGE (G-C1)</h3>
+        <ol class="ranked">
+          {(S?.hotspots ?? []).slice().sort((a, b) => (a.p10 ?? 0) - (b.p10 ?? 0)).map((h) => (
+            <li>
+              <span class="rname">{h.name}</span>
+              <span class="rbar"><i style={`width:${Math.min(100, Math.abs(h.p10 ?? 0) / 6 * 100)}%`}></i></span>
+              <span class="rval">{cm(h.median)} | <b>{cm(h.p10)}</b></span>
+              <span class="rlit">{LIT[h.name] ?? ""}</span>
+            </li>
+          ))}
+        </ol>
+        <p class="footnote">Point-based persistent-scatterer studies report higher peaks (Penjaringan
+        up to 10 cm/yr): this field averages ~75 m cells, so hotspot cores read lower — a
+        scale difference stated here, not a discrepancy hidden.</p>
+      </div>
+    </section>
+
+    <section class="chapter">
+      <span class="eyebrow">02 · The clock</span>
+      <h2>Where the ground goes next — if nothing changes</h2>
+      <p class="big-stat">Today <b class="coral">{fmtM(b1?.["2025"]?.pop)}</b> people live on ground below
+      +1 m. Hold the 2017–2023 rates and it is <b class="coral">{fmtM(b1?.["2030"]?.pop)}</b> by 2030 and
+      <b class="coral">{fmtM(b1?.["2050"]?.pop)}</b> by 2050; below mean sea level,
+      {fmtM(b0?.["2025"]?.pop)} → {fmtM(b0?.["2050"]?.pop)}.</p>
+      <p><b>This is a linear extrapolation, not a forecast.</b> Each 100 m cell's ground drops at its
+      measured 2017–2023 rate, year after year; cells without radar coverage are held still.
+      Groundwater policy, the sea wall, drainage and rainfall are all outside the model. Ground
+      height comes from Copernicus GLO-30 — a 30 m <i>surface</i> model acquired 2011–2015, with
+      ±2–4 m vertical accuracy — using each cell's lowest pixel as the ground proxy. The clock
+      is honest about ordering and magnitude, not about dates.
+      {soon ? ` At its median rate, ${soon.name} (${soon.kota}) — low ground at ${soon.ground_p10?.toFixed(1)} m — reaches mean sea level in about ${Math.round(soon.clock_med_0m)} years; ${S?.already_below_0m ?? 0} kelurahan already have low ground below it.` : ""}</p>
+    </section>
+
+    <section class="explore">
+      <div class="clock-hud">
+        <span class="clock-year" id="clock-year">2025</span>
+        <div class="clock-stats">
+          <div><span class="stamp dim">PEOPLE BELOW</span><b id="hud-pop">—</b></div>
+          <div><span class="stamp dim">BUILT-UP BELOW</span><b id="hud-built">—</b></div>
+          <div><span class="stamp dim">KELURAHAN MOSTLY BELOW</span><b id="hud-kel">—</b></div>
+        </div>
+        <div class="clock-controls">
+          <div class="toggle" role="group" aria-label="threshold" id="thr-toggle">
+            <button data-t="1" class="on">+1 M</button><button data-t="0">MEAN SEA LEVEL</button>
+          </div>
+          <button id="clock-play" class="play" aria-label="play">▶</button>
+          <input type="range" id="clock-range" min="2025" max="2050" step="1" value="2025" aria-label="year" />
+        </div>
+      </div>
+      <div class="map-wrap">
+        <div id="map2" class="map"></div>
+        <div class="legend" id="legend2"><i></i><div><span>0%</span><span>50%</span><span>100%</span><span class="cap">residents below threshold</span></div></div>
+      </div>
+      <div id="clock-chart" class="chart"></div>
+      <p class="footnote">City totals by year for both thresholds; hover the chart to move the clock.
+      Only kelurahan on the mainland are counted; Kepulauan Seribu lies outside the velocity field.</p>
+    </section>
+
+    <section class="chapter wide">
+      <span class="eyebrow">03 · Who is exposed</span>
+      <h2>Who stands on the lowest ground</h2>
+      <p>Ranked by residents (WorldPop 2020) or built-up surface (GHSL 2020) on ground below the
+      threshold in the clock's year. Click a bar to open the kelurahan; the maps follow.</p>
+      <div class="controls">
+        <div class="toggle" role="group" aria-label="quantity" id="who-toggle">
+          <button data-w="pop" class="on">PEOPLE</button><button data-w="built">BUILT-UP KM²</button>
+        </div>
+        <span class="stamp dim" id="bars-caption"></span>
+      </div>
+      <div id="bars" class="chart"></div>
+    </section>
+
+    <section class="chapter">
+      <span class="eyebrow">04 · Does it hold up?</span>
+      <h2>Checks before the story</h2>
+      <p>Two independent truths sit beside the radar field: continuous GNSS stations (Susilo et al.
+      2023, millimetre-level vertical rates) and the published literature on Jakarta's hotspots.
+      Then the exposure numbers are checked against the census and against floods that actually
+      happened.</p>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead><tr><th>GNSS station</th><th>GNSS vertical mm/yr</th><th>InSAR mm/yr</th><th>Δ</th><th>Cells</th><th>±5 mm/yr</th></tr></thead>
+          <tbody>
+            {(S?.gnss ?? []).map((g) => (
+              <tr><td>{g.station}</td><td>{g.gnss_mm}</td><td>{g.insar_mm ?? "—"}</td>
+                  <td>{g.insar_mm == null ? "—" : (g.insar_mm - g.gnss_mm).toFixed(1)}</td><td>{g.n}</td>
+                  <td class={g.ok ? "ok" : "bad"}>{g.ok ? "PASS" : "FAIL"}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div class="table-scroll">
+        <table class="data-table">
+          <thead><tr><th>Gate</th><th>Check</th><th>Result</th><th>Detail</th></tr></thead>
+          <tbody>
+            {gateRows.map((g) => (
+              <tr><td>{g.k}</td><td>{g.label}</td>
+                  <td class={g.pass === true ? "ok" : g.pass === false ? "bad" : "defer"}>{g.pass === true ? "PASS" : g.pass === false ? "FAIL" : "DEFERRED"}</td>
+                  <td class="detail">{gateDetail(g)}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {c5 && S?.gates?.["G-C5"]?.pass === false && (
+        <p><b>The plausibility gate fails, and the reason is informative.</b> BPBD's 2021–2024 record is
+        dominated by riverine floods along the Ciliwung and its tributaries in East Jakarta —
+        {flooded.slice(0, 3).map((f) => `${f.name} (${f.fl_events} event dates)`).join(", ")} — kelurahan on
+        higher ground that barely subside. Across the city, flood frequency is <i>inversely</i> related to
+        low ground (ρ = {c5.rho_low1_vs_flood_events}) and only weakly to the sinking rate
+        (ρ = {c5.rho_p10_vs_flood_events}). Subsidence-driven exposure is a coastal, tidal and drainage
+        problem, and it is the January 2020 extent — one extreme event seen by Sentinel-1 — that overlaps
+        the most-exposed kelurahan disproportionately: {pct(c5.top20_exposure_2020_share)} of their area
+        against {pct(c5.all_2020_share)} city-wide. We keep the gate red rather than redefine it to pass.</p>
+      )}
+      <p class="footnote">GNSS rates are in IGS14; the InSAR field is referenced to stable ground in the
+      same region, so a small frame offset (≈1–2 mm/yr) is expected and stays inside the tolerance.
+      G-C3 — our own LiCSBAS processing of LiCSAR frame 098A (2017–2024) against this deposited
+      field — is pending; it needs a 13 GB download and runs after the flagships' bandwidth frees.</p>
+    </section>
+
+    <footer class="method">
+      <span class="eyebrow">Methodology &amp; sources</span>
+      <p><b>Velocity:</b> Ohenhen et al. 2026 (Science Advances), Java-wide Sentinel-1 InSAR vertical land
+      motion 2017–2023, point cloud ~75 m, Zenodo 10.5281/zenodo.15786356, CC BY 4.0 — {fmtN(S?.points)} points
+      in the Jakarta window, duplicates from overlapping frames averaged, points with sd &gt; 1 cm/yr dropped,
+      gridded to 0.001°. Negative = subsidence. <b>Ground truth:</b> Susilo et al. 2023 (Scientific Data),
+      continuous GNSS north Java, Zenodo 10.5281/zenodo.7775016, CC BY 4.0. <b>Elevation:</b> Copernicus
+      GLO-30 DEM (© DLR e.V. 2010–2014 and © Airbus Defence and Space GmbH 2014–2018, provided under
+      COPERNICUS by the European Union and ESA; all rights reserved) — a surface model; the per-cell minimum
+      is our ground proxy. <b>Population:</b> WorldPop 2020 constrained 100 m (CC BY 4.0; totals
+      {fmtM(S?.pop_total)} vs census {fmtM(S?.official_pop)}); GHSL GHS-POP E2020 as cross-check
+      ({fmtM(S?.ghs_pop_total)}) and GHS-BUILT-S E2020 for built-up surface (JRC, CC BY 4.0).
+      <b>Admin units and observed floods:</b> Jakarta Satu / DKI Jakarta (267 kelurahan) and BPBD DKI Jakarta
+      flood history 2021–2024 (RT-level polygons, depth and date) via ArcGIS REST — no explicit licence text;
+      used with attribution. <b>January 2020 flood:</b> UNOSAT FL20200101IDN Sentinel-1 water extent
+      (2 Jan 2020) and EOS-ARIA Singapore flood proxy map v1.5. <b>Fusion:</b> one 100 m analysis grid
+      (WorldPop's cells); kelurahan assigned by cell centre; velocity bilinear; kelurahan p10 = fastest decile
+      of covered cells; flood frequency = distinct BPBD event dates with a flooded RT inside the kelurahan.
+      <b>The clock:</b> ground(y) = ground(2025) + v·(y−2025), linear, no scenarios, cells without coverage
+      held still — an illustration of momentum, not a prediction. <b>Gates:</b> G-C1 literature, G-C2 GNSS,
+      G-C4 exposure sanity, G-C5 flood plausibility evaluated above; G-C3 (own LiCSBAS run) deferred.</p>
+      <span class="stamp dim">A DEMO-LAB CASE · STATIC SNAPSHOT · GENERATED {generated} · ALL SOURCES OPEN</span>
+    </footer>
+
+    <aside id="kel-panel" hidden>
+      <button id="panel-close" aria-label="close">×</button>
+      <h3 id="panel-name"></h3>
+      <div class="stamp dim" id="panel-sub"></div>
+      <dl class="panel-stats" id="panel-stats"></dl>
+      <div id="panel-spark"></div>
+      <p class="panel-clock" id="panel-clock"></p>
+    </aside>
+    <div id="tip" hidden></div>
+
+    <script>
+      import maplibregl from "maplibre-gl";
+      import * as d3 from "d3";
+
+      /* visible failure beats silent emptiness (same pattern as the other cases) */
+      const failBanner = (msg) => {
+        let b = document.getElementById("err-banner");
+        if (!b) {
+          b = document.createElement("div"); b.id = "err-banner";
+          b.style.cssText = "position:fixed;bottom:0;left:0;right:0;z-index:99;background:#3A1E1A;color:#F26D5B;font:12px ui-monospace,monospace;padding:10px 16px;border-top:1px solid #F26D5B;";
+          document.body.appendChild(b);
+        }
+        b.textContent = "⚠ " + msg;
+      };
+      addEventListener("error", (e) => failBanner("Script error: " + (e.message ?? e.type)));
+      addEventListener("unhandledrejection", (e) => failBanner("Load error: " + (e.reason?.message ?? e.reason)));
+      const sect = (name, fn) => { try { return fn(); } catch (err) { console.error(name, err); failBanner(`${name} failed: ${err.message ?? err}`); return null; } };
+
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const GROUND = "#070D16", HAIR = "#1E2E44", INK = "#E4EBF2", MUTED = "#8CA0B5", CYAN = "#35C6E0", CORAL = "#F26D5B", NODATA = "#1B2432";
+      const heroStatus = document.getElementById("hero-status");
+      const load = (f) => fetch(`${base}/data/${f}`).then((r) => { if (!r.ok) throw f; return r.json(); });
+
+      let X, geo, hot;
+      try {
+        [X, geo, hot] = await Promise.all(["exposure.json", "kelurahan.geojson", "hotspots.json"].map(load));
+      } catch (missing) {
+        heroStatus.textContent = `PIPELINE STILL RUNNING — ${missing} not yet exported. Refresh in a few minutes.`;
+        throw missing;
+      }
+      const K = X.kel, YEARS = X.years, Y0 = X.base_year;
+      const ids = geo.features.map((f) => f.properties.id);
+      const rampV = d3.scaleLinear().domain(X.ramp_v.map((p) => p[0])).range(X.ramp_v.map((p) => p[1])).clamp(true).interpolate(d3.interpolateRgb);
+      const rampX = d3.scaleLinear().domain([0, 0.25, 0.5, 0.75, 1]).range(X.ramp_x).clamp(true).interpolate(d3.interpolateRgb);
+      const fmtN = d3.format(",.0f"), fmtP = d3.format(".0%"), fmt1 = d3.format(".1f");
+      const cm = (v) => (v == null ? "—" : `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(2)}`);
+      const yi = () => state.year - Y0;
+      const state = { metric: "p10", field: false, year: Y0, thr: "1", who: "pop", sel: null };
+      const floodMax = d3.max(ids, (id) => K[id].fl_ev) || 1;
+      const METRICS = {
+        p10: { label: "fastest decile", value: (k) => k.v_p10, color: (v) => (v == null ? NODATA : rampV(v)), legend: "v" },
+        med: { label: "median rate", value: (k) => k.v_med, color: (v) => (v == null ? NODATA : rampV(v)), legend: "v" },
+        flood: { label: "flood events 2021–24", value: (k) => k.fl_ev, color: (v) => (v == null ? NODATA : rampX(v / floodMax)), legend: "flood" },
+        low1: { label: "ground below +1 m", value: (k) => k.low1, color: (v) => (v == null ? NODATA : rampX(v)), legend: "share" },
+      };
+      const tip = document.getElementById("tip");
+      const showTip = (e, html) => { tip.hidden = false; tip.innerHTML = html; tip.style.left = e.pageX + 14 + "px"; tip.style.top = e.pageY + 14 + "px"; };
+      const hideTip = () => { tip.hidden = true; };
+      const kelTip = (id) => {
+        const k = K[id]; if (!k) return "—";
+        const v = state.metric === "p10" ? k.v_p10 : k.v_med;
+        return `<b>${k.name}</b> <span class="dim">· ${k.kec} · ${k.kota}</span><br>` +
+          (k.cov ? `${state.metric === "med" ? "median" : "fastest decile"} <b>${cm(v)} cm/yr</b> · 2017–2023 <span class="dim">(${fmtP(k.cov)} covered)</span>` : `<span class="dim">no InSAR coverage</span>`) +
+          `<br>${fmtN(k.pop)} people · ${fmtP(k.low1 ?? 0)} of ground below +1 m<br>` +
+          `${k.fl_ev ?? 0} flood events 2021–24${k.f20 > 0.005 ? ` · ${fmtP(k.f20)} flooded Jan 2020` : ""}`;
+      };
+      const clockTip = (id) => {
+        const k = K[id]; if (!k) return "—";
+        const p = k[`pop${state.thr}`]?.[yi()] ?? 0, b = k[`built${state.thr}`]?.[yi()] ?? 0;
+        return `<b>${k.name}</b> <span class="dim">· ${k.kota}</span><br>${state.year}: <b>${fmtN(p)}</b> of ${fmtN(k.pop)} people (${fmtP(k.pop ? p / k.pop : 0)})<br>` +
+          `${fmt1(b)} km² built-up below ${state.thr === "1" ? "+1 m" : "mean sea level"}<br><span class="dim">low ground ${k.ground_p10 == null ? "—" : fmt1(k.ground_p10) + " m"} · median ${cm(k.v_med)} cm/yr</span>`;
+      };
+
+      /* ---------- velocity field: decode the PNG once, colour on demand ---------- */
+      const field = { w: 0, h: 0, v: null, canvas: document.createElement("canvas"), ready: false, bounds: X.field.bounds };
+      const fieldReady = new Promise((ok) => {
+        const im = new Image();
+        im.onload = () => {
+          field.w = im.width; field.h = im.height;
+          const c = document.createElement("canvas"); c.width = im.width; c.height = im.height;
+          const cx = c.getContext("2d"); cx.drawImage(im, 0, 0);
+          const d = cx.getImageData(0, 0, im.width, im.height).data;
+          field.v = new Float32Array(im.width * im.height);
+          const { offset, scale } = X.field.encode;
+          for (let i = 0; i < field.v.length; i++) field.v[i] = d[i * 4 + 3] ? (d[i * 4] - offset) / scale : NaN;
+          field.canvas.width = im.width; field.canvas.height = im.height;
+          field.ready = true; ok(true);
+        };
+        im.onerror = () => { console.warn("velocity field PNG unavailable"); ok(false); };
+        im.src = `${base}/data/${X.field.file}`;
+      });
+      const lut = new Uint32Array(256);
+      function colourField(progress = 1) {
+        const { offset, scale } = X.field.encode;
+        for (let b = 0; b < 256; b++) {
+          const c = d3.color(rampV(((b - offset) / scale) * progress));
+          lut[b] = (255 << 24) | (c.b << 16) | (c.g << 8) | c.r;
+        }
+        const cx = field.canvas.getContext("2d");
+        const img = cx.createImageData(field.w, field.h);
+        const px = new Uint32Array(img.data.buffer);
+        for (let i = 0; i < field.v.length; i++) {
+          const v = field.v[i];
+          if (v !== v) { px[i] = 0; continue; }
+          px[i] = lut[Math.max(0, Math.min(255, Math.round(v * scale + offset)))];
+        }
+        cx.putImageData(img, 0, 0);
+      }
+
+      /* ---------- shared projection helpers (equirectangular, lat-corrected) ---------- */
+      function fitter(B, W, H, pad) {
+        const cos = Math.cos(((B.s + B.n) / 2) * Math.PI / 180);
+        const k = Math.min((W - 2 * pad) / ((B.e - B.w) * cos), (H - 2 * pad) / (B.n - B.s));
+        const ox = (W - k * (B.e - B.w) * cos) / 2, oy = (H + k * (B.n - B.s)) / 2;
+        return { k, cos, x: (lon) => ox + (lon - B.w) * k * cos, y: (lat) => oy - (lat - B.s) * k };
+      }
+      function drawFieldTo(ctx, P, alpha = 1) {
+        if (!field.ready) return;
+        const [w, s, e, n] = field.bounds;
+        const x0 = P.x(w), x1 = P.x(e), y0 = P.y(n), y1 = P.y(s);
+        ctx.save(); ctx.globalAlpha = alpha; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(field.canvas, x0, y0, x1 - x0, y1 - y0); ctx.restore();
+      }
+      const polys = (f) => (f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates);
+
+      /* ---------- hero: the field settles (3 s), a counter tallies centimetres lost ---------- */
+      sect("hero", () => {
+        const canvas = document.getElementById("hero-canvas"), still = document.getElementById("hero-still");
+        const hud = document.getElementById("hud-cm");
+        const fastest = ids.filter((id) => (K[id].cov ?? 0) >= 0.3).reduce((a, b) => (K[b].v_p10 < K[a].v_p10 ? b : a), ids[0]);
+        const rate = Math.abs(K[fastest]?.v_p10 ?? 5), years = 2025 - 2017;
+        const HB = { w: 106.55, s: -6.42, e: 107.15, n: -6.06 };
+        const ctx = canvas.getContext("2d"), dpr = Math.min(devicePixelRatio || 1, 2);
+        let P, W, H;
+        function size() {
+          W = canvas.clientWidth; H = canvas.clientHeight;
+          canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          // cover: scale so HB fills the canvas; keep the north coast in the upper third
+          const cos = Math.cos(-6.24 * Math.PI / 180);
+          const k = Math.max(W / ((HB.e - HB.w) * cos), H / (HB.n - HB.s));
+          const ox = (W - k * (HB.e - HB.w) * cos) / 2, oy = (H - k * (HB.n - HB.s)) / 2 + k * (HB.n - HB.s);
+          P = { x: (lon) => ox + (lon - HB.w) * k * cos, y: (lat) => oy - (lat - HB.s) * k };
+        }
+        function draw(progress) {
+          colourField(progress);
+          ctx.fillStyle = GROUND; ctx.fillRect(0, 0, W, H);
+          drawFieldTo(ctx, P);
+          ctx.strokeStyle = "rgba(140,160,181,0.28)"; ctx.lineWidth = 0.7; ctx.beginPath();
+          for (const f of geo.features) for (const poly of polys(f)) for (const ring of poly) ring.forEach(([lon, lat], j) => (j ? ctx.lineTo(P.x(lon), P.y(lat)) : ctx.moveTo(P.x(lon), P.y(lat))));
+          ctx.stroke();
+          hud.textContent = `−${Math.round(rate * years * progress)} cm`;
+        }
+        fieldReady.then((ok) => {
+          if (!ok) return;
+          size(); addEventListener("resize", () => { size(); draw(1); });
+          const done = () => { heroStatus.textContent = `${fmtN(Object.keys(K).length)} KELURAHAN · ${fmtN(X.city.pop)} PEOPLE · FIELD SETTLED AT 2017–2023 RATES · NEGATIVE = SUBSIDENCE`; };
+          if (reduced) { draw(1); still.hidden = true; done(); return; }
+          const t0 = performance.now(), ms = 3200;
+          const step = (t) => {
+            const p = Math.min((t - t0) / ms, 1), e = 1 - Math.pow(1 - p, 3);
+            draw(e); if (p === 0 || still.hidden === false) still.hidden = true;
+            if (p < 1) requestAnimationFrame(step); else done();
+          };
+          requestAnimationFrame(step);
+        });
+      });
+
+      /* ---------- choropleth factory: WebGL (MapLibre) or full 2-D canvas fallback ---------- */
+      const hasWebGL = (() => { try { const c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); } catch { return false; } })();
+      const B = { w: X.bounds[0], s: X.bounds[1], e: X.bounds[2], n: X.bounds[3] };
+      const maps = [];
+
+      function canvasMap(container, opts) {
+        container.innerHTML = ""; container.style.position = "relative";
+        const canvas = document.createElement("canvas");
+        canvas.style.cssText = "width:100%;height:100%;display:block;cursor:crosshair;";
+        container.appendChild(canvas);
+        const note = document.createElement("div"); note.className = "map-note";
+        note.textContent = "2-D MAP (BROWSER GPU OFF) · OHENHEN ET AL. 2026 CC BY 4.0 · JAKARTA SATU";
+        container.appendChild(note);
+        const ctx = canvas.getContext("2d");
+        const hitCtx = document.createElement("canvas").getContext("2d");
+        const dpr = Math.min(devicePixelRatio || 1, 2);
+        let W, H, P, paths = [], boxes = [], hoverIdx = -1, selIdx = -1;
+        function project() {
+          W = container.clientWidth; H = container.clientHeight;
+          canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          hitCtx.canvas.width = W; hitCtx.canvas.height = H;
+          P = fitter(B, W, H, 18);
+          paths = []; boxes = [];
+          for (const f of geo.features) {
+            const p = new Path2D();
+            let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+            for (const poly of polys(f)) for (const ring of poly) {
+              ring.forEach(([lon, lat], j) => {
+                const px = P.x(lon), py = P.y(lat);
+                if (px < x0) x0 = px; if (px > x1) x1 = px; if (py < y0) y0 = py; if (py > y1) y1 = py;
+                j ? p.lineTo(px, py) : p.moveTo(px, py);
+              });
+              p.closePath();
+            }
+            paths.push(p); boxes.push([x0, y0, x1, y1]);
+          }
+        }
+        function paintAll() {
+          const showField = opts.showField?.() ?? false;
+          ctx.fillStyle = GROUND; ctx.fillRect(0, 0, W, H);
+          if (showField) drawFieldTo(ctx, P);
+          geo.features.forEach((f, i) => {
+            if (!showField) { ctx.fillStyle = opts.color(opts.value(K[f.properties.id])); ctx.fill(paths[i]); }
+            ctx.strokeStyle = showField ? "rgba(228,235,242,0.35)" : HAIR; ctx.lineWidth = showField ? 0.6 : 0.5; ctx.stroke(paths[i]);
+          });
+          if (selIdx >= 0) { ctx.strokeStyle = INK; ctx.lineWidth = 2; ctx.stroke(paths[selIdx]); }
+          if (hoverIdx >= 0) { ctx.strokeStyle = opts.hover ?? CYAN; ctx.lineWidth = 1.6; ctx.stroke(paths[hoverIdx]); }
+          ctx.font = "600 12px 'IBM Plex Mono', ui-monospace, monospace"; ctx.textBaseline = "middle";
+          const placed = [];
+          for (const L of opts.labels ?? []) {
+            const x = P.x(L.lon), y0 = P.y(L.lat);
+            if (x < 0 || x > W - 70 || y0 < 0 || y0 > H) continue;
+            const tw = ctx.measureText(L.text).width;
+            let y = y0;                                     // greedy de-collision: nudge vertically
+            for (const dy of [0, -16, 16, -32, 32]) {
+              y = y0 + dy;
+              if (!placed.some((b) => Math.abs(b.y - y) < 15 && x + 7 < b.x + b.w && x + 13 + tw > b.x)) break;
+            }
+            placed.push({ x: x + 7, y, w: tw + 6 });
+            ctx.fillStyle = L.kind === "gnss" ? INK : CYAN;
+            if (L.kind === "gnss") { ctx.strokeStyle = INK; ctx.lineWidth = 1.2; ctx.strokeRect(x - 4, y0 - 4, 8, 8); }
+            else { ctx.beginPath(); ctx.arc(x, y0, 2.6, 0, Math.PI * 2); ctx.fill(); }
+            ctx.fillStyle = "rgba(7,13,22,0.75)";
+            ctx.fillRect(x + 7, y - 8, Math.min(tw + 6, W - x - 9), 16);
+            ctx.fillStyle = L.kind === "gnss" ? INK : "#D8F6FC"; ctx.fillText(L.text, x + 10, y);
+          }
+        }
+        const featureAt = (px, py) => {
+          for (let i = paths.length - 1; i >= 0; i--) {
+            const b = boxes[i];
+            if (px < b[0] || px > b[2] || py < b[1] || py > b[3]) continue;
+            if (hitCtx.isPointInPath(paths[i], px, py)) return i;
+          }
+          return -1;
+        };
+        canvas.addEventListener("mousemove", (e) => {
+          const r = canvas.getBoundingClientRect();
+          const i = featureAt(e.clientX - r.left, e.clientY - r.top);
+          if (i !== hoverIdx) { hoverIdx = i; paintAll(); }
+          if (i >= 0) showTip(e, opts.tip(geo.features[i].properties.id)); else hideTip();
+        });
+        canvas.addEventListener("mouseleave", () => { hoverIdx = -1; hideTip(); paintAll(); });
+        canvas.addEventListener("click", (e) => {
+          const r = canvas.getBoundingClientRect();
+          const i = featureAt(e.clientX - r.left, e.clientY - r.top);
+          if (i >= 0) opts.onClick?.(geo.features[i].properties.id);
+        });
+        project(); paintAll();
+        addEventListener("resize", () => { project(); paintAll(); });
+        return {
+          kind: "canvas",
+          paint: paintAll,
+          highlight(id) { selIdx = ids.indexOf(id); paintAll(); },
+          /* debug/test hooks: hit-test in canvas pixels or by coordinate */
+          at: (px, py) => { const i = featureAt(px, py); return i >= 0 ? geo.features[i].properties : null; },
+          px: (lon, lat) => [P.x(lon), P.y(lat)],
+          canvas,
+        };
+      }
+
+      function webglMap(container, opts) {
+        const g = structuredClone(geo);
+        const map = new maplibregl.Map({
+          container, style: { version: 8, sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": GROUND } }] },
+          bounds: [[B.w, B.s], [B.e, B.n]], fitBoundsOptions: { padding: 18 }, attributionControl: false, dragRotate: false,
+        });
+        map.addControl(new maplibregl.AttributionControl({ customAttribution: "Ohenhen et al. 2026 CC BY 4.0 · Jakarta Satu · WorldPop · GHSL", compact: true }));
+        map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
+        let loaded = false, pendingSel = null;
+        const [w, s, e, n] = field.bounds;
+        function recolour() { for (const f of g.features) f.properties.c = opts.color(opts.value(K[f.properties.id])); }
+        map.on("load", () => {
+          recolour();
+          map.addSource("field", { type: "image", url: `${base}/data/${X.field.rgba}`, coordinates: [[w, n], [e, n], [e, s], [w, s]] });
+          map.addLayer({ id: "field", type: "raster", source: "field", paint: { "raster-opacity": 0.95 }, layout: { visibility: "none" } });
+          map.addSource("kel", { type: "geojson", data: g, promoteId: "id" });
+          map.addLayer({ id: "fill", type: "fill", source: "kel", paint: { "fill-color": ["get", "c"], "fill-opacity": 0.92 } });
+          map.addLayer({ id: "line", type: "line", source: "kel", paint: { "line-color": HAIR, "line-width": 0.5 } });
+          map.addLayer({ id: "sel", type: "line", source: "kel", paint: { "line-color": INK, "line-width": 2 }, filter: ["==", ["get", "id"], ""] });
+          map.addLayer({ id: "hover", type: "line", source: "kel", paint: { "line-color": opts.hover ?? CYAN, "line-width": 1.6 }, filter: ["==", ["get", "id"], ""] });
+          loaded = true; api.paint(); if (pendingSel) api.highlight(pendingSel);
+        });
+        map.on("mousemove", "fill", (e) => {
+          const id = e.features[0].properties.id;
+          map.setFilter("hover", ["==", ["get", "id"], id]); map.getCanvas().style.cursor = "pointer";
+          showTip(e.originalEvent, opts.tip(id));
+        });
+        map.on("mouseleave", "fill", () => { map.setFilter("hover", ["==", ["get", "id"], ""]); map.getCanvas().style.cursor = ""; hideTip(); });
+        map.on("click", "fill", (e) => opts.onClick?.(e.features[0].properties.id));
+        const api = {
+          kind: "webgl",
+          paint() {
+            if (!loaded) return;
+            const showField = opts.showField?.() ?? false;
+            recolour(); map.getSource("kel").setData(g);
+            map.setLayoutProperty("field", "visibility", showField ? "visible" : "none");
+            map.setPaintProperty("fill", "fill-opacity", showField ? 0 : 0.92);
+            map.setPaintProperty("line", "line-color", showField ? "rgba(228,235,242,0.35)" : HAIR);
+          },
+          highlight(id) { if (!loaded) { pendingSel = id; return; } map.setFilter("sel", ["==", ["get", "id"], id ?? ""]); },
+        };
+        return api;
+      }
+      const makeMap = (container, opts) => {
+        let api = null;
+        if (hasWebGL) { try { api = webglMap(container, opts); } catch (err) { console.warn("WebGL map unavailable — 2-D canvas fallback:", err?.message ?? err); } }
+        if (!api) api = sect("map (2-D fallback)", () => canvasMap(container, opts));
+        if (api) maps.push(api);
+        return api;
+      };
+      window.__jkmaps = maps;
+
+      /* ---------- kelurahan panel (shared by both maps and the bars) ---------- */
+      const panel = document.getElementById("kel-panel");
+      function select(id) {
+        state.sel = id;
+        const k = K[id];
+        if (!k) return;
+        panel.hidden = false;
+        document.getElementById("panel-name").textContent = k.name;
+        document.getElementById("panel-sub").textContent = `${k.kec.toUpperCase()} · ${k.kota.toUpperCase()} · ${fmt1(k.area)} KM²`;
+        const rows = [
+          ["FASTEST DECILE", k.cov ? `${cm(k.v_p10)} cm/yr` : "no coverage"], ["MEDIAN RATE", k.cov ? `${cm(k.v_med)} cm/yr · 2017–2023` : "—"],
+          ["INSAR COVERAGE", fmtP(k.cov ?? 0)], ["PEOPLE 2020", `${fmtN(k.pop)} (GHSL ${fmtN(k.ghs_pop)})`],
+          ["BUILT-UP", `${fmt1(k.built)} km² · ${fmtP(k.built_share ?? 0)}`],
+          ["LOW GROUND (P10)", k.ground_p10 == null ? "—" : `${fmt1(k.ground_p10)} m · median ${fmt1(k.ground_med)} m`],
+          ["GROUND BELOW +1 M", fmtP(k.low1 ?? 0)], ["FLOOD EVENTS 2021–24", `${k.fl_ev ?? 0} dates · ${k.fl_rt ?? 0} RT · ${fmtP(k.fl_share ?? 0)} of area`],
+          ["JAN 2020 FLOOD", fmtP(k.f20 ?? 0)],
+        ];
+        document.getElementById("panel-stats").innerHTML = rows.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join("");
+        const yrs = (v) => (v == null ? null : `${Math.round(v)} yr (${Y0 + Math.round(v)})`);
+        const line = (label, med, p10) =>
+          med === 0 ? `<b>${label}:</b> low ground already below.` :
+          med == null && p10 == null ? `<b>${label}:</b> not at current rates.` :
+          `<b>${label}:</b> ${yrs(med) ?? "not at the median rate"}; ${yrs(p10) ?? "—"} at the fastest decile.`;
+        document.getElementById("panel-clock").innerHTML = k.cov
+          ? `${line("Mean sea level", k.clk_med_0m, k.clk_p10_0m)} ${line("Below +1 m", k.clk_med_1m, k.clk_p10_1m)} <span class="dim">Linear extrapolation of 2017–2023 rates from the GLO-30 low-ground proxy — momentum, not a forecast.</span>`
+          : `<span class="dim">No InSAR coverage — the clock cannot run here.</span>`;
+        const sp = d3.select("#panel-spark").html("");
+        const Wd = 264, Hd = 76, M = { l: 44, r: 26, t: 10, b: 18 };
+        const x = d3.scaleLinear([Y0, YEARS.at(-1)], [M.l, Wd - M.r]);
+        const y = d3.scaleLinear([0, d3.max([...(k.pop1 ?? [0]), ...(k.pop0 ?? [0])]) || 1], [Hd - M.b, M.t]);
+        const svg = sp.append("svg").attr("width", Wd).attr("height", Hd).attr("class", "spark");
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(2).tickFormat(d3.format("~s")));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${Hd - M.b})`).call(d3.axisBottom(x).tickValues([2025, 2050]).tickFormat(d3.format("d")));
+        for (const [key, col, dash] of [["pop1", CORAL, null], ["pop0", "#FFCFC3", "3 3"]]) {
+          if (!k[key]) continue;
+          svg.append("path").datum(k[key]).attr("fill", "none").attr("stroke", col).attr("stroke-width", 1.5).attr("stroke-dasharray", dash)
+            .attr("d", d3.line().x((d, i) => x(Y0 + i)).y((d) => y(d)));
+        }
+        svg.append("line").attr("class", "spark-year").attr("x1", x(state.year)).attr("x2", x(state.year)).attr("y1", M.t).attr("y2", Hd - M.b).attr("stroke", INK).attr("stroke-opacity", 0.5);
+        svg.append("text").attr("x", Wd - M.r).attr("y", M.t + 4).attr("text-anchor", "end").attr("class", "spark-label").text("people below +1 m — · below MSL ┄");
+        for (const m of maps) m.highlight(id);
+        bars?.paint();
+        syncHash();
+      }
+      document.getElementById("panel-close").onclick = () => { panel.hidden = true; state.sel = null; for (const m of maps) m.highlight(null); bars?.paint(); syncHash(); };
+      function syncHash() {
+        history.replaceState(null, "", `#m=${state.metric}&y=${state.year}&t=${state.thr}${state.field ? "&f=1" : ""}${state.sel ? `&k=${state.sel}` : ""}`);
+      }
+
+      /* ---------- chapter 1: how fast, where ---------- */
+      const legend1 = document.getElementById("legend1");
+      function paintLegend1() {
+        const m = METRICS[state.metric], bar = legend1.querySelector("i"), lab = legend1.querySelector("div");
+        if (m.legend === "v") {
+          bar.style.background = `linear-gradient(90deg, ${[0, -1.5, -3, -4.5, -6].map((v) => rampV(v)).join(",")})`;
+          lab.innerHTML = `<span>0</span><span>−2</span><span>−4</span><span>−6 cm/yr</span><span class="cap">${m.label} · 2017–2023</span>`;
+        } else {
+          bar.style.background = `linear-gradient(90deg, ${[0, 0.25, 0.5, 0.75, 1].map((v) => rampX(v)).join(",")})`;
+          lab.innerHTML = m.legend === "flood" ? `<span>0</span><span>${Math.round(floodMax / 2)}</span><span>${floodMax} dates</span><span class="cap">BPBD flood events · 2021–24</span>`
+                                                : `<span>0%</span><span>50%</span><span>100%</span><span class="cap">ground below +1 m · GLO-30 proxy</span>`;
+        }
+        legend1.hidden = state.field;
+      }
+      let map1 = null;
+      sect("map 1", () => {
+        const labels = [
+          ...(hot.hotspots ?? []).filter((h) => h.p10 != null && h.p10 <= -2.4).map((h) => ({ lon: h.lon, lat: h.lat, text: h.name, kind: "hot" })),
+          ...(hot.gnss ?? []).map((g) => ({ lon: g.lon, lat: g.lat, text: `${g.station} GNSS ${g.gnss_mm} · InSAR ${g.insar_mm ?? "—"} mm/yr`, kind: "gnss" })),
+        ];
+        map1 = makeMap(document.getElementById("map1"), {
+          value: (k) => METRICS[state.metric].value(k), color: (v) => METRICS[state.metric].color(v),
+          tip: kelTip, onClick: select, showField: () => state.field, labels, hover: CYAN,
+        });
+        paintLegend1();
+        document.querySelectorAll("#metric-toggle button").forEach((b) => (b.onclick = () => {
+          state.metric = b.dataset.m; state.field = false;
+          document.querySelectorAll("#metric-toggle button").forEach((x) => x.classList.toggle("on", x === b));
+          document.getElementById("btn-field").classList.remove("on");
+          map1.paint(); paintLegend1(); syncHash();
+        }));
+        document.getElementById("btn-field").onclick = (e) => {
+          state.field = !state.field; e.currentTarget.classList.toggle("on", state.field);
+          map1.paint(); paintLegend1(); syncHash();
+        };
+      });
+
+      /* ---------- chapter 2: the clock ---------- */
+      const legend2 = document.getElementById("legend2");
+      legend2.querySelector("i").style.background = `linear-gradient(90deg, ${[0, 0.25, 0.5, 0.75, 1].map((v) => rampX(v)).join(",")})`;
+      let map2 = null, clockChart = null;
+      const share = (k) => { const p = k[`pop${state.thr}`]?.[yi()]; return p == null || !k.pop ? null : p / k.pop; };
+      sect("clock", () => {
+        map2 = makeMap(document.getElementById("map2"), {
+          value: share, color: (v) => (v == null ? NODATA : rampX(v)), tip: clockTip, onClick: select, hover: "#FFCFC3",
+        });
+        const yearEl = document.getElementById("clock-year"), range = document.getElementById("clock-range");
+        const hud = { pop: document.getElementById("hud-pop"), built: document.getElementById("hud-built"), kel: document.getElementById("hud-kel") };
+        // city series chart
+        const el = document.getElementById("clock-chart");
+        const Wc = el.clientWidth || 800, Hc = 220, M = { t: 18, r: 24, b: 30, l: 64 };
+        const x = d3.scaleLinear([Y0, YEARS.at(-1)], [M.l, Wc - M.r]);
+        const y = d3.scaleLinear([0, d3.max([...X.city.pop1, ...X.city.pop0]) * 1.08], [Hc - M.b, M.t]);
+        const svg = d3.select(el).append("svg").attr("width", Wc).attr("height", Hc);
+        svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(4).tickFormat(d3.format("~s")));
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${Hc - M.b})`).call(d3.axisBottom(x).ticks(6).tickFormat(d3.format("d")));
+        const line = d3.line().x((d, i) => x(Y0 + i)).y((d) => y(d));
+        svg.append("path").datum(X.city.pop1).attr("fill", CORAL).attr("fill-opacity", 0.12).attr("d", d3.area().x((d, i) => x(Y0 + i)).y0(y(0)).y1((d) => y(d)));
+        const l1 = svg.append("path").datum(X.city.pop1).attr("fill", "none").attr("stroke", CORAL).attr("stroke-width", 2).attr("d", line);
+        const l0 = svg.append("path").datum(X.city.pop0).attr("fill", "none").attr("stroke", "#FFCFC3").attr("stroke-width", 1.5).attr("stroke-dasharray", "4 3").attr("d", line);
+        svg.append("text").attr("class", "chart-label").attr("x", x(YEARS.at(-1)) - 4).attr("y", y(X.city.pop1.at(-1)) - 8).attr("text-anchor", "end").attr("fill", CORAL).text("people on ground below +1 m");
+        svg.append("text").attr("class", "chart-label").attr("x", x(YEARS.at(-1)) - 4).attr("y", y(X.city.pop0.at(-1)) - 8).attr("text-anchor", "end").attr("fill", "#FFCFC3").text("below mean sea level");
+        const marker = svg.append("line").attr("y1", M.t).attr("y2", Hc - M.b).attr("stroke", INK).attr("stroke-opacity", 0.6);
+        const dot1 = svg.append("circle").attr("r", 4.5).attr("fill", CORAL), dot0 = svg.append("circle").attr("r", 3.5).attr("fill", "#FFCFC3");
+        svg.append("rect").attr("x", M.l).attr("y", M.t).attr("width", Wc - M.l - M.r).attr("height", Hc - M.t - M.b).attr("fill", "transparent").style("cursor", "ew-resize")
+          .on("mousemove", (e) => {
+            const yr = Math.round(x.invert(d3.pointer(e)[0]));
+            if (yr >= Y0 && yr <= YEARS.at(-1) && yr !== state.year) setYear(yr);
+            showTip(e, `<b>${state.year}</b><br>below +1 m <b>${fmtN(X.city.pop1[yi()])}</b> people · ${fmt1(X.city.built1[yi()])} km² built-up<br>below MSL ${fmtN(X.city.pop0[yi()])} people · ${fmt1(X.city.built0[yi()])} km²`);
+          }).on("mouseleave", hideTip);
+        clockChart = {
+          paint() {
+            const i = yi();
+            marker.attr("x1", x(state.year)).attr("x2", x(state.year));
+            dot1.attr("cx", x(state.year)).attr("cy", y(X.city.pop1[i])); dot0.attr("cx", x(state.year)).attr("cy", y(X.city.pop0[i]));
+            l1.attr("stroke-width", state.thr === "1" ? 2.4 : 1.4); l0.attr("stroke-width", state.thr === "0" ? 2.2 : 1.2);
+          },
+        };
+        window.setYear = setYear;
+        function renderHUD() {
+          const i = yi(), t = state.thr;
+          yearEl.textContent = state.year;
+          hud.pop.textContent = fmtN(X.city[`pop${t}`][i]);
+          hud.built.textContent = `${fmt1(X.city[`built${t}`][i])} km²`;
+          hud.kel.textContent = `${ids.filter((id) => (share(K[id]) ?? 0) > 0.5).length} of ${ids.length}`;
+          range.value = state.year; range.style.setProperty("--pct", `${((state.year - Y0) / (YEARS.length - 1)) * 100}%`);
+        }
+        function setYear(yr) {
+          state.year = yr; renderHUD(); map2.paint(); clockChart.paint(); bars?.paint();
+          if (state.sel) d3.select("#panel-spark .spark-year").attr("x1", d3.scaleLinear([Y0, YEARS.at(-1)], [44, 264 - 26])(yr)).attr("x2", d3.scaleLinear([Y0, YEARS.at(-1)], [44, 264 - 26])(yr));
+          syncHash();
+        }
+        range.oninput = () => setYear(+range.value);
+        document.querySelectorAll("#thr-toggle button").forEach((b) => (b.onclick = () => {
+          state.thr = b.dataset.t;
+          document.querySelectorAll("#thr-toggle button").forEach((x) => x.classList.toggle("on", x === b));
+          legend2.querySelector("div").innerHTML = `<span>0%</span><span>50%</span><span>100%</span><span class="cap">residents below ${state.thr === "1" ? "+1 m" : "mean sea level"}</span>`;
+          setYear(state.year);
+        }));
+        let timer = null;
+        const btn = document.getElementById("clock-play");
+        const stop = () => { clearInterval(timer); timer = null; btn.textContent = "▶"; btn.setAttribute("aria-label", "play"); };
+        btn.onclick = () => {
+          if (timer) return stop();
+          if (state.year >= YEARS.at(-1)) setYear(Y0);
+          btn.textContent = "❚❚"; btn.setAttribute("aria-label", "pause");
+          timer = setInterval(() => { setYear(state.year + 1); if (state.year >= YEARS.at(-1)) stop(); }, 420);
+        };
+        renderHUD(); clockChart.paint();
+      });
+
+      /* ---------- chapter 3: who is exposed (ranked bars) ---------- */
+      let bars = null;
+      sect("bars", () => {
+        const el = document.getElementById("bars"), cap = document.getElementById("bars-caption");
+        const N = 15, ROW = 26, M = { l: 220, r: 90, t: 6, b: 26 };
+        const Wb = el.clientWidth || 800, Hb = M.t + N * ROW + M.b;
+        const svg = d3.select(el).append("svg").attr("width", Wb).attr("height", Hb);
+        const gx = svg.append("g").attr("class", "axis").attr("transform", `translate(0,${M.t + N * ROW})`);
+        const rows = svg.append("g");
+        bars = {
+          paint() {
+            const key = `${state.who}${state.thr}`, i = yi();
+            const data = ids.map((id) => ({ id, v: K[id][key]?.[i] ?? 0 })).sort((a, b) => b.v - a.v).slice(0, N);
+            const x = d3.scaleLinear([0, d3.max(data, (d) => d.v) || 1], [M.l, Wb - M.r]);
+            const y = (j) => M.t + j * ROW;
+            gx.call(d3.axisBottom(x).ticks(5).tickFormat(state.who === "pop" ? d3.format("~s") : d3.format(".1f")));
+            const fmt = state.who === "pop" ? fmtN : (v) => `${fmt1(v)} km²`;
+            const g = rows.selectAll("g.row").data(data, (d) => d.id).join((enter) => {
+              const r = enter.append("g").attr("class", "row").style("cursor", "pointer");
+              r.append("rect").attr("class", "bg").attr("fill", "transparent");
+              r.append("rect").attr("class", "bar");
+              r.append("text").attr("class", "name");
+              r.append("text").attr("class", "val");
+              return r;
+            });
+            g.attr("transform", (d, j) => `translate(0,${y(j)})`);
+            g.select("rect.bg").attr("x", 0).attr("y", 0).attr("width", Wb).attr("height", ROW);
+            g.select("rect.bar").attr("x", M.l).attr("y", 5).attr("height", ROW - 10).attr("rx", 2)
+              .attr("fill", (d) => (d.id === state.sel ? "#FFCFC3" : CORAL)).attr("fill-opacity", (d) => (state.sel && d.id !== state.sel ? 0.55 : 0.9))
+              .transition().duration(reduced ? 0 : 250).attr("width", (d) => Math.max(0, x(d.v) - M.l));
+            g.select("text.name").attr("x", M.l - 10).attr("y", ROW / 2).attr("text-anchor", "end").attr("dominant-baseline", "middle")
+              .text((d) => `${K[d.id].name} · ${K[d.id].kota.replace("Jakarta ", "")}`).attr("fill", (d) => (d.id === state.sel ? INK : "#C7D2DE"));
+            g.select("text.val").attr("x", (d) => x(d.v) + 8).attr("y", ROW / 2).attr("dominant-baseline", "middle").attr("fill", MUTED).text((d) => fmt(d.v));
+            g.on("mousemove", (e, d) => showTip(e, clockTip(d.id))).on("mouseleave", hideTip).on("click", (e, d) => select(d.id));
+            cap.textContent = `TOP ${N} · ${state.year} · ${state.who === "pop" ? "RESIDENTS" : "BUILT-UP SURFACE"} ON GROUND BELOW ${state.thr === "1" ? "+1 M" : "MEAN SEA LEVEL"} · LINEAR EXTRAPOLATION OF 2017–2023 RATES`;
+          },
+        };
+        document.querySelectorAll("#who-toggle button").forEach((b) => (b.onclick = () => {
+          state.who = b.dataset.w;
+          document.querySelectorAll("#who-toggle button").forEach((x) => x.classList.toggle("on", x === b));
+          bars.paint();
+        }));
+        bars.paint();
+      });
+
+      /* ---------- restore URL state ---------- */
+      sect("url state", () => {
+        const h = new URLSearchParams(location.hash.slice(1));
+        if (h.get("m") && METRICS[h.get("m")]) document.querySelector(`#metric-toggle button[data-m="${h.get("m")}"]`)?.click();
+        if (h.get("f") === "1") document.getElementById("btn-field").click();
+        if (h.get("t") === "0") document.querySelector('#thr-toggle button[data-t="0"]')?.click();
+        const yr = +h.get("y"); if (yr >= Y0 && yr <= YEARS.at(-1)) window.setYear?.(yr);
+        if (h.get("k") && K[h.get("k")]) select(h.get("k"));
+      });
+    </script>
+
+    <style is:global>
+      html { scroll-behavior: smooth; }
+      body { margin: 0; }
+      .stamp { font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.12em; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); }
+      .dim { color: var(--ink-muted); }
+      .eyebrow { font-family: var(--font-data); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+      .cyan { color: var(--accent); } .coral { color: var(--danger); }
+
+      .stamp-bar { position: fixed; inset: 0 0 auto 0; z-index: 20; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+        padding: 12px 20px; background: linear-gradient(color-mix(in srgb, var(--ground) 84%, transparent), transparent); pointer-events: none; }
+
+      .hero { position: relative; height: 100vh; min-height: 560px; overflow: hidden; background: var(--ground); }
+      .hero img, .hero canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+      .hero img { opacity: 0; animation: fadeup 2.2s ease-out 0.2s forwards; }
+      .hero img[hidden] { display: none; }
+      @keyframes fadeup { to { opacity: 1; } }
+      .hero::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(180deg, rgba(7,13,22,0.82) 0%, rgba(7,13,22,0.42) 38%, transparent 62%, rgba(7,13,22,0.55) 100%); }
+      .hero-copy { position: absolute; left: 6vw; top: 14vh; max-width: 36rem; display: flex; flex-direction: column; gap: 14px; z-index: 2; }
+      .hero-copy h1 { font-size: clamp(2rem, 4.8vw, 3.4rem); margin: 0; line-height: 1.06; letter-spacing: -0.015em; }
+      .hero-copy p { margin: 0; color: var(--ink-muted); font-size: 1.05rem; max-width: 32rem; }
+      .hero-copy p b { color: var(--ink); font-weight: 600; }
+      .hero-hud { position: absolute; right: 6vw; bottom: 12vh; z-index: 2; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; text-align: right; }
+      .hud-num { font-family: var(--font-data); font-weight: 600; font-size: clamp(2.6rem, 7vw, 5.6rem); line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums;
+        text-shadow: 0 0 28px color-mix(in srgb, var(--accent) 45%, transparent); }
+      .hero-legend { position: absolute; left: 6vw; bottom: 12vh; z-index: 2; width: min(300px, 40vw); display: flex; flex-direction: column; gap: 5px; }
+      .hero-legend i { display: block; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #0A1F3A, #144E7A, #1F8FB5, #35C6E0, #D8F6FC); }
+      .hero-legend div, .legend div { display: flex; justify-content: space-between; font-family: var(--font-data); font-size: 12px; letter-spacing: 0.06em; color: var(--ink-muted); }
+      @media (max-width: 720px) { .hero-copy { top: 11vh; max-width: 26rem; } .hero-hud { bottom: 22vh; } .hero-legend { bottom: 6vh; width: 60vw; } }
+      .scroll-hint { position: absolute; bottom: 3vh; left: 50%; transform: translateX(-50%); color: var(--accent); animation: bob 2s ease-in-out infinite; z-index: 2; }
+      @keyframes bob { 50% { transform: translate(-50%, 6px); } }
+
+      .chapter { max-width: 46rem; margin: 0 auto; padding: 13vh 24px 0; display: flex; flex-direction: column; gap: 18px; }
+      .chapter.wide { max-width: 72rem; }
+      .chapter h2 { font-size: 1.75rem; margin: 0; }
+      .chapter p { margin: 0; line-height: 1.65; color: var(--ink); }
+      .big-stat { font-family: var(--font-display); font-size: clamp(1.25rem, 2.8vw, 1.7rem); line-height: 1.32; }
+      .footnote { font-size: 0.86rem; color: var(--ink-muted) !important; }
+
+      .explore { max-width: 72rem; margin: 5vh auto 0; padding: 0 24px; position: relative; display: flex; flex-direction: column; gap: 14px; }
+      .explore-head { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; justify-content: space-between; }
+      .controls { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; }
+      .toggle { display: inline-flex; flex-wrap: wrap; }
+      .toggle button, .chip-btn { background: var(--surface); color: var(--ink-muted); border: 1px solid var(--hairline); padding: 8px 12px; font-family: var(--font-data); font-size: 12px; letter-spacing: 0.08em; cursor: pointer; }
+      .toggle button:first-child { border-radius: 4px 0 0 4px; }
+      .toggle button:last-child { border-radius: 0 4px 4px 0; }
+      .toggle button + button { border-left: 0; }
+      .toggle button.on, .chip-btn.on { background: var(--accent-ink); color: var(--accent); border-color: var(--accent); }
+      .chip-btn { border-radius: 14px; }
+      .chip-btn:hover, .toggle button:hover { color: var(--ink); }
+      .toggle button:focus-visible, .chip-btn:focus-visible, input[type=range]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+      .map-wrap { position: relative; }
+      .map { height: 72vh; min-height: 420px; border: 1px solid var(--hairline); border-radius: 6px; overflow: hidden; background: var(--ground); }
+      .map-note { position: absolute; left: 12px; top: 10px; font-family: var(--font-data); font-size: 12px; letter-spacing: 0.08em; color: var(--ink-muted); pointer-events: none; }
+      .legend { position: absolute; left: 12px; bottom: 12px; width: min(340px, 60%); display: flex; flex-direction: column; gap: 5px; padding: 8px 10px; border-radius: 4px;
+        background: color-mix(in srgb, var(--ground) 78%, transparent); backdrop-filter: blur(6px); }
+      .legend[hidden] { display: none; }
+      .legend i { display: block; height: 6px; border-radius: 3px; }
+      .legend div { flex-wrap: wrap; }
+      .legend .cap { flex-basis: 100%; margin-top: 2px; color: var(--ink-muted); }
+
+      .hotspots { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; }
+      .hotspots h3 { margin: 0; }
+      .ranked { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+      .ranked li { display: grid; grid-template-columns: 11rem 1fr 8.5rem 9rem; gap: 12px; align-items: center; font-size: 0.9rem; }
+      .ranked .rbar { height: 8px; background: var(--surface); border-radius: 2px; overflow: hidden; }
+      .ranked .rbar i { display: block; height: 100%; background: linear-gradient(90deg, #144E7A, var(--accent)); }
+      .ranked .rval { font-family: var(--font-data); font-variant-numeric: tabular-nums; text-align: right; color: var(--ink-muted); font-size: 12px; }
+      .ranked .rval b { color: var(--accent); }
+      .ranked .rlit { font-family: var(--font-data); font-size: 12px; color: var(--ink-muted); }
+      @media (max-width: 720px) { .ranked li { grid-template-columns: 8rem 1fr 7rem; } .ranked .rlit { display: none; } }
+
+      .clock-hud { display: grid; grid-template-columns: auto 1fr auto; gap: 18px 28px; align-items: center; padding: 18px 22px; border: 1px solid var(--hairline); border-radius: 10px;
+        background: linear-gradient(135deg, var(--surface), var(--ground)); }
+      .clock-year { font-family: var(--font-data); font-size: clamp(2.4rem, 5vw, 3.6rem); font-weight: 600; color: var(--danger); letter-spacing: -0.02em; line-height: 1; font-variant-numeric: tabular-nums;
+        text-shadow: 0 0 24px color-mix(in srgb, var(--danger) 45%, transparent); }
+      .clock-stats { display: flex; gap: 28px; flex-wrap: wrap; }
+      .clock-stats div { display: flex; flex-direction: column; gap: 4px; }
+      .clock-stats b { font-family: var(--font-display); font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+      .clock-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+      @media (max-width: 860px) { .clock-hud { grid-template-columns: 1fr; } }
+      .play { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--danger); background: #3A1E1A; color: var(--danger); cursor: pointer; font-size: 0.72rem; display: grid; place-items: center; padding: 0 0 0 1px; }
+      .play:hover { box-shadow: 0 0 14px color-mix(in srgb, var(--danger) 55%, transparent); }
+      #clock-range { -webkit-appearance: none; appearance: none; width: min(320px, 60vw); height: 4px; margin: 0; border-radius: 2px; outline: none;
+        background: linear-gradient(90deg, var(--danger) var(--pct, 0%), var(--hairline) var(--pct, 0%)); }
+      #clock-range::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--danger); cursor: pointer;
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 25%, transparent), 0 0 12px var(--danger); }
+      #clock-range::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: var(--danger); cursor: pointer; }
+
+      .chart { width: 100%; }
+      .axis { font-family: var(--font-data); font-size: 12px; }
+      .axis text { fill: var(--ink-muted); font-size: 12px; }
+      .axis path, .axis line { stroke: var(--hairline); }
+      .chart-label { font-family: var(--font-data); font-size: 12px; }
+      #bars text.name { font-family: var(--font-body); font-size: 13px; }
+      #bars text.val { font-family: var(--font-data); font-size: 12px; font-variant-numeric: tabular-nums; }
+      #bars g.row:hover rect.bg { fill: color-mix(in srgb, var(--surface-raised) 70%, transparent); }
+
+      .table-scroll { overflow-x: auto; }
+      .data-table { border-collapse: collapse; width: 100%; font-family: var(--font-data); font-size: 12px; line-height: 1.5; }
+      .data-table th { text-align: left; font-weight: 600; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); padding: 8px 14px 8px 0; border-bottom: 1px solid var(--ink); }
+      .data-table td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; font-variant-numeric: tabular-nums; }
+      .data-table td.detail { color: var(--ink-muted); font-size: 12px; min-width: 22rem; }
+      .data-table .ok { color: var(--official); font-weight: 600; } .data-table .bad { color: var(--danger); font-weight: 600; } .data-table .defer { color: var(--ink-muted); }
+
+      #tip { position: absolute; z-index: 30; pointer-events: none; max-width: 22rem; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px;
+        font-family: var(--font-data); font-size: 12px; line-height: 1.6; color: var(--ink); }
+      #tip[hidden] { display: none; }
+      #kel-panel[hidden] { display: none; }
+      #kel-panel { position: fixed; right: 20px; top: 50%; transform: translateY(-50%); z-index: 25; width: 300px; max-height: 88vh; overflow: auto; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 6px; padding: 18px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 10px 40px rgba(0,0,0,0.45); }
+      @media (max-width: 860px) { #kel-panel { right: 0; left: 0; top: auto; bottom: 0; transform: none; width: auto; border-radius: 10px 10px 0 0; max-height: 60vh; } }
+      #kel-panel h3 { margin: 0; font-size: 1.1rem; }
+      #panel-close { position: absolute; top: 8px; right: 10px; background: none; border: 0; color: var(--ink-muted); font-size: 1.2rem; cursor: pointer; }
+      .panel-stats { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; }
+      .panel-stats dt { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.08em; color: var(--ink-muted); align-self: center; }
+      .panel-stats dd { margin: 0; font-family: var(--font-data); font-size: 12px; font-variant-numeric: tabular-nums; }
+      .panel-clock { margin: 0; font-size: 0.86rem; line-height: 1.55; }
+      .spark-label { font-family: var(--font-data); font-size: 12px; fill: var(--ink-muted); }
+
+      .method { max-width: 46rem; margin: 0 auto; padding: 12vh 24px 14vh; display: flex; flex-direction: column; gap: 14px; }
+      .method p { margin: 0; font-size: 0.9rem; line-height: 1.7; color: var(--ink-muted); }
+      .method p b { color: var(--ink); font-weight: 600; }
+      .maplibregl-ctrl-attrib { background: color-mix(in srgb, var(--ground) 70%, transparent) !important; color: var(--ink-muted); font-size: 11px; }
+    </style>
+  </body>
+</html>
