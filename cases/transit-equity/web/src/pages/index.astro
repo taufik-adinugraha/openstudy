@@ -507,6 +507,37 @@ import "maplibre-gl/dist/maplibre-gl.css";
           ctx.fillStyle = "#0C0F13"; ctx.fillRect(0, 0, m.W, m.H);
           drawOutlines(m, { fillFn: (i) => baseFill[i], stroke: "#1E232C", lw: 0.3 });
           drawNetwork(m, { modes: active, alpha: 1 });
+          labelLineEnds();
+        }
+        /* rail line names at the line ends, with bounding-box de-collision */
+        function labelLineEnds() {
+          const { ctx } = m;
+          ctx.font = "600 12px " + getComputedStyle(document.body).getPropertyValue("--font-data");
+          ctx.textBaseline = "middle";
+          const placed = [];
+          const fits = (b) => !placed.some((q) => !(b[2] < q[0] || b[0] > q[2] || b[3] < q[1] || b[1] > q[3]))
+            && b[0] > 2 && b[2] < m.W - 2 && b[1] > 2 && b[3] < m.H - 2;
+          for (const ln of net.lines) {
+            if (ln.m === "brt" || ln.m === "mikrotrans" || !active.has(ln.m) || !ln.c?.length) continue;
+            const label = (ln.n || "").replace(/Krl |Lrt |Mrt /i, (x) => x.toUpperCase());
+            const w = ctx.measureText(label).width;
+            const ends = [ln.c[ln.c.length - 1], ln.c[0]];
+            for (const [lon, lat] of ends) {
+              const x = m.X(lon), y = m.Y(lat);
+              let done = false;
+              for (const [dx, dy] of [[9, 0], [-9 - w, 0], [9, -13], [-9 - w, 13]]) {
+                const b = [x + dx - 3, y + dy - 8, x + dx + w + 3, y + dy + 8];
+                if (!fits(b)) continue;
+                ctx.fillStyle = "rgba(12,15,19,0.78)";
+                ctx.fillRect(b[0], b[1], b[2] - b[0], b[3] - b[1]);
+                ctx.fillStyle = MODE_COLOR[ln.m];
+                ctx.fillText(label, x + dx, y + dy);
+                ctx.beginPath(); ctx.arc(x, y, 2.2, 0, 7); ctx.fill();
+                placed.push(b); done = true; break;
+              }
+              if (done) break;
+            }
+          }
         }
         paint();
         addEventListener("resize", paint);
