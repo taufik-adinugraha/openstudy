@@ -59,7 +59,12 @@ CROSSWALK = DATA_DIR / "crosswalk" / "pemekaran_crosswalk.csv"  # shapeID <-> BP
 
 # Masking (spec §A3 · mask): the composite's own QA layers.
 MIN_NUM_OBS = 2          # observation-count threshold per cell
-FLARE_BUFFER_KM = 5.0    # EOG VNF public flare catalog (static, one manual download)
+# Flare buffers: VNF flare survey sites (ORNL DAAC doi:10.3334/ORNLDAAC/1874).
+# Spec said 5 km, but the measured radial glow profile (flares.py analysis,
+# 2026-08-30) shows ~84% of a flare's excess light inside 3 km while 5 km
+# swallows whole towns (Kota Sorong −72%, Bontang −71% of SOL) — so 3 km is
+# the primary radius; 5 km and 1.5 km are kept as sensitivity columns.
+FLARE_BUFFER_KM = 3.0
 # TODO week 2: pin exact HDF5 dataset names (NearNadir_Composite_Snow_Free etc.)
 
 LEDGER = DATA_DIR / "ledger.parquet"   # regency × month sum-of-lights ledger
