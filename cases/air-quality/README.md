@@ -83,10 +83,17 @@ never inform that morning's forecast; and local-time diurnal / seasonal terms.
 Uncertainty is quantile regression (10th/90th), not a residual assumption, so
 the band is allowed to be asymmetric — which for pollution it always is.
 
-Evaluation is a **single time-based split** at 75% of the timeline. Every
-number published is from the held-out future, against two baselines:
-persistence (carry the last observation forward) and diurnal climatology
-fitted on the training period only.
+Evaluation is a **single time-based split**, placed at the 75th percentile of
+*observed hours* rather than of the calendar. Splitting the calendar would have
+handed the test set whichever months the sensor network happened to be dead in
+— a lottery, not a held-out sample. Nothing after the cut is seen in training.
+Every published number comes from the held-out future, against two baselines:
+persistence (carry the last observation forward) and diurnal climatology fitted
+on the training period only.
+
+Per horizon, features that are entirely missing or constant in that horizon's
+training slice are dropped and logged; station identity enters as a declared
+categorical, never as its 7-digit registry number.
 
 ### E5 · Gates (fixed before the first model run)
 
@@ -148,7 +155,18 @@ deliberate choice, not a fallback — see Decisions.
    with roughly 5 days' delay, so the operational issue time is bounded by
    meteorology, not by the sensor. The page states both timestamps.
 
-7. **Sentinel-5P TROPOMI is not ingested.** Every genuinely open route
+7. **Two source quirks worth knowing before anyone reuses this code.**
+   (a) The new CDS answers a multi-variable ERA5 request with **two** NetCDFs
+   split by `stepType` — instantaneous fields in one, accumulations (total
+   precipitation, surface solar radiation) in the other. Concatenating them
+   leaves every variable 50% NaN and silently loses the accumulations at the
+   first de-duplication; they must be joined on `(time, lat, lon)`. Caught here
+   only because the model reported precipitation as an empty feature.
+   (b) FIRMS hotspots need `type == 0` and non-low confidence before they mean
+   "fire": Indonesia has ~130 active volcanoes plus substantial gas flaring,
+   all of which VIIRS detects.
+
+8. **Sentinel-5P TROPOMI is not ingested.** Every genuinely open route
    (Copernicus Data Space, AWS open data, NASA GES DISC subsetting) costs more
    build time than the remaining budget allowed, and the ground record — one
    station — cannot validate a column product anyway. Listed as pending rather
