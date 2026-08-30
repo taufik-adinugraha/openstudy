@@ -424,7 +424,8 @@ const eventsLast = summary.eventsLast ?? "pending";
           .on("mousemove", (e, c) => showTip(e, `<b>${c.name}</b> · ${fMon(months[c.i])}<br>${pct(c.v, 2)} of its monitored articles mention Indonesia`))
           .on("mouseleave", hideTip);
         const idn = sources.countries.find((c) => c.name === "Indonesia");
-        if (idn) svg.append("text").attr("class", "annot").attr("x", W - M.r).attr("y", 14).attr("text-anchor", "end").text(`Indonesia’s own press: ${pct(idn.mean, 1)} of its output — shown below, not here.`);
+        if (idn) el.insertAdjacentHTML("beforebegin",
+          `<p class="footnote">Indonesia’s own press mentions the country in ${pct(idn.mean, 1)} of everything it publishes — it is left off this matrix so the neighbours stay readable.</p>`);
       });
 
       sect("press split", () => {
