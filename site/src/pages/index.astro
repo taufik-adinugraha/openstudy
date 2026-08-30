@@ -231,32 +231,65 @@ const DEMOS = {
         <div class="case-visual haze-visual" aria-hidden="true">
           <svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
             <defs>
-              <linearGradient id="hz-plume" x1="0" y1="1" x2="1" y2="0">
-                <stop offset="0%" stop-color="#FF7A45" stop-opacity="0.85"/>
-                <stop offset="45%" stop-color="#E2569E" stop-opacity="0.55"/>
-                <stop offset="100%" stop-color="#E2569E" stop-opacity="0.05"/>
+              <linearGradient id="hz-ground" x1="0" y1="1" x2="1" y2="0">
+                <stop offset="0%" stop-color="#1B1310"/><stop offset="55%" stop-color="#16110F"/>
+                <stop offset="100%" stop-color="#241726"/>
               </linearGradient>
-              <radialGradient id="hz-glow" cx="22%" cy="76%" r="34%">
-                <stop offset="0%" stop-color="#FF7A45" stop-opacity="0.5"/>
+              <linearGradient id="hz-plume" x1="0" y1="1" x2="1" y2="0">
+                <stop offset="0%" stop-color="#FF7A45" stop-opacity="0.42"/>
+                <stop offset="42%" stop-color="#E2569E" stop-opacity="0.30"/>
+                <stop offset="100%" stop-color="#E2569E" stop-opacity="0.04"/>
+              </linearGradient>
+              <linearGradient id="hz-stream" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#FF7A45"/><stop offset="55%" stop-color="#E2569E"/>
+                <stop offset="100%" stop-color="#F6C9DE"/>
+              </linearGradient>
+              <radialGradient id="hz-burn" cx="18%" cy="80%" r="34%">
+                <stop offset="0%" stop-color="#FF7A45" stop-opacity="0.45"/>
                 <stop offset="100%" stop-color="#FF7A45" stop-opacity="0"/>
               </radialGradient>
+              <filter id="hz-soft" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="2.2"/>
+              </filter>
             </defs>
-            <rect width="400" height="240" fill="#16110F"/>
-            <rect width="400" height="240" fill="url(#hz-glow)"/>
-            <!-- smoke carried downwind from the ignitions to a receptor -->
-            <path d="M78 186 C150 168 196 140 246 108 C288 82 322 66 372 54 L372 96 C322 108 288 122 248 146 C200 174 148 200 84 214 Z"
-                  fill="url(#hz-plume)"/>
-            <g fill="#FF7A45">
-              <circle cx="62" cy="196" r="6"/><circle cx="88" cy="182" r="4.5"/>
-              <circle cx="46" cy="178" r="4"/><circle cx="104" cy="200" r="3.5"/>
-              <circle cx="74" cy="164" r="3"/>
+
+            <rect width="400" height="240" fill="url(#hz-ground)"/>
+            <rect width="400" height="240" fill="url(#hz-burn)"/>
+
+            <!-- the smoke body -->
+            <path d="M46 206 C140 182 220 140 300 96 C326 82 344 72 366 62 L372 92
+                     C344 104 322 116 296 132 C216 180 138 212 52 224 Z"
+                  fill="url(#hz-plume)" filter="url(#hz-soft)"/>
+
+            <!-- back-trajectories: what the case actually computes -->
+            <g class="flows">
+              <path class="flow" d="M62 188 C140 168 214 132 286 96 C316 81 336 72 352 66" style="--t:0.0s;--w:3.0;--o:0.3"/>
+              <path class="flow" d="M50 180 C132 156 206 116 282 84  C312 72 334 64 352 60" style="--t:0.9s;--w:2.2;--o:0.22"/>
+              <path class="flow" d="M84 196 C156 180 222 146 292 108 C318 94 338 82 354 72" style="--t:1.7s;--w:2.6;--o:0.18"/>
             </g>
-            <!-- receptor -->
-            <g transform="translate(360 58)">
-              <circle r="7" fill="none" stroke="#7FB2C9" stroke-width="2"/>
-              <circle r="2.5" fill="#7FB2C9"/>
+
+            <!-- ignitions -->
+            <g class="fires">
+              <circle class="fire" cx="52" cy="196" r="6.5" style="--t:0.84s"/>
+              <circle class="fire" cx="78" cy="182" r="5" style="--t:0.39s"/>
+              <circle class="fire" cx="40" cy="176" r="4.5" style="--t:1.69s"/>
+              <circle class="fire" cx="96" cy="202" r="4" style="--t:0.19s"/>
+              <circle class="fire" cx="64" cy="166" r="3.5" style="--t:1.39s"/>
+              <circle class="fire" cx="110" cy="186" r="3" style="--t:0.95s"/>
+              <circle class="fire" cx="30" cy="192" r="3.5" style="--t:0.15s"/>
+              <circle class="fire" cx="88" cy="166" r="2.8" style="--t:1.32s"/>
+              <circle class="fire" cx="120" cy="200" r="2.6" style="--t:0.1s"/>
             </g>
-            <text x="18" y="222" fill="#E2569E" opacity="0.95" font-size="12" letter-spacing="1.5" font-family="ui-monospace,monospace">BLAME THE WIND · AUC 0.875</text>
+
+            <!-- receptor: the city asking whose smoke this is -->
+            <g class="recv" transform="translate(354 64)">
+              <circle class="ring" r="11" fill="none" stroke="#7FB2C9" stroke-width="1.6"/>
+              <circle r="4" fill="#7FB2C9"/>
+            </g>
+
+            <text x="18" y="212" fill="#FF7A45" opacity="0.95" font-size="12" letter-spacing="1.4" font-family="ui-monospace,monospace">IGNITIONS</text>
+            <text x="382" y="98" text-anchor="end" fill="#7FB2C9" opacity="0.95" font-size="12" letter-spacing="1.4" font-family="ui-monospace,monospace">RECEPTOR</text>
+            <text x="18" y="230" fill="#E2569E" opacity="0.9" font-size="12" letter-spacing="1.4" font-family="ui-monospace,monospace">72H BACK-TRAJECTORY · ρ 0.53</text>
           </svg>
         </div>
         <div class="case-body">
@@ -626,6 +659,30 @@ const DEMOS = {
       .mini-visual { height: 130px; background: linear-gradient(120deg, var(--ground), var(--surface));
         display: flex; align-items: center; justify-content: center; }
       .mini-visual svg { width: 78%; height: 82%; }
+
+
+      /* Fire & haze: smoke actually moving along the trajectories the case computes.
+         Streamlines march downwind, ignitions flare, the receptor breathes. */
+      .flow { fill: none; stroke: url(#hz-stream); stroke-width: var(--w); stroke-linecap: round;
+        opacity: var(--o); stroke-dasharray: 10 118; animation: hz-march 4.6s linear var(--t) infinite; }
+      @keyframes hz-march { from { stroke-dashoffset: 128; } to { stroke-dashoffset: 0; } }
+      .fire { fill: #FF7A45; transform-box: fill-box; transform-origin: center;
+        animation: hz-flare 3.2s ease-in-out var(--t) infinite; }
+      @keyframes hz-flare {
+        0%, 100% { opacity: 0.55; transform: scale(0.86); }
+        45%      { opacity: 1;    transform: scale(1.16); }
+      }
+      .recv .ring { transform-box: fill-box; transform-origin: center;
+        animation: hz-recv 3.6s ease-out infinite; }
+      @keyframes hz-recv {
+        0%   { transform: scale(0.7); opacity: 0.95; }
+        70%  { transform: scale(1.5); opacity: 0; }
+        100% { transform: scale(1.5); opacity: 0; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .flow { animation: none; stroke-dasharray: none; }
+        .fire, .recv .ring { animation: none; }
+      }
 
       /* Air quality: suspended particulate drifting downwind. Motion is the point —
          the air is not still — so it animates, but stops for reduced-motion users. */
