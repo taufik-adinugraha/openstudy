@@ -1,0 +1,27 @@
+[project]
+name = "rice-security"
+version = "0.1.0"
+description = "Case I pipeline: paddy phenology from Sentinel-1 SAR -> planted/harvested area and harvest timing, benchmarked against BPS KSA"
+requires-python = ">=3.12"
+dependencies = [
+    "requests>=2.32",          # NOT urllib: header case is preserved (forest-watch lesson)
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "pyarrow>=17",
+    "duckdb>=1.1",
+    "geopandas>=1.0",
+    "shapely>=2.0",
+    "pyogrio>=0.10",
+    "rasterio>=1.3",
+    "xarray>=2024.7",
+    "netcdf4>=1.7",            # CDS/ERA5 returns NetCDF4
+    "scipy>=1.14",             # signal.savgol_filter + find_peaks for the phenology curve
+    "scikit-learn>=1.5",       # calibration / harvest-date regression
+    "exactextract>=0.2",       # zonal stats over kabupaten and kecamatan
+    "pystac-client>=0.8",      # STAC search (CDSE + Earth Search)
+    "cdsapi>=0.7",             # ERA5 (~/.cdsapirc already present on the server)
+    "pillow>=10.4",
+]
+
+[tool.uv]
+package = false

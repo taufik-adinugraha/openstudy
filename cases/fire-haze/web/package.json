@@ -1,0 +1,14 @@
+{
+  "name": "fire-haze-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --port 4334",
+    "build": "astro build",
+    "preview": "astro preview --port 4334"
+  },
+  "dependencies": {
+    "astro": "^5.1.0",
+    "d3": "^7.9.0"
+  }
+}

@@ -1,0 +1,314 @@
+<title>Rice Security Spec</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper: #F9FAF6; --surface: #EDF1E9; --ink: #16211C; --muted: #5C6B62;
+    --hairline: #DDE4D8; --accent: #5F7A16; --accent-soft: #E8F0D2;
+    --teal: #177368; --warn: #9A6B12; --warn-soft: #F5EAD4; --code-bg: #E9EEE2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0A1214; --surface: #111A1C; --ink: #E8EEEC; --muted: #93A5A2;
+      --hairline: #1F2E31; --accent: #A8CE3A; --accent-soft: #1A2A0C;
+      --teal: #4BB8A9; --warn: #E6B94F; --warn-soft: #2E250F; --code-bg: #16211F;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0A1214; --surface: #111A1C; --ink: #E8EEEC; --muted: #93A5A2;
+    --hairline: #1F2E31; --accent: #A8CE3A; --accent-soft: #1A2A0C;
+    --teal: #4BB8A9; --warn: #E6B94F; --warn-soft: #2E250F; --code-bg: #16211F;
+  }
+  body { background: var(--paper); color: var(--ink); font-family: "Source Serif 4", Georgia, serif; font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 56px 24px 96px; }
+  h1, h2, h3 { font-family: "Archivo", Arial, sans-serif; text-wrap: balance; margin: 0; }
+  h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
+  h2 { font-size: 1.3rem; font-weight: 700; }
+  h3 { font-size: 1rem; font-weight: 600; }
+  p { margin: 0; max-width: 68ch; }
+  a { color: var(--teal); }
+  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+  header.doc { display: flex; flex-direction: column; gap: 14px; padding-bottom: 30px; border-bottom: 2px solid var(--ink); }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px 26px; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--muted); }
+  .meta-row b { color: var(--ink); font-weight: 500; }
+  section { display: flex; flex-direction: column; gap: 16px; margin-top: 48px; }
+  .lede { font-size: 1rem; color: var(--muted); }
+  .q { font-size: 1.15rem; font-style: italic; border-left: 3px solid var(--accent); padding: 6px 0 6px 18px; max-width: 62ch; }
+  table { border-collapse: collapse; width: 100%; font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; line-height: 1.55; }
+  .table-scroll { overflow-x: auto; }
+  th { text-align: left; font-weight: 600; font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 8px 14px 8px 0; border-bottom: 1px solid var(--ink); }
+  td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  code { font-family: "IBM Plex Mono", monospace; font-size: 0.82em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  pre { background: var(--code-bg); padding: 14px 16px; overflow-x: auto; border-radius: 4px; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; line-height: 1.6; margin: 0; }
+  ul.plain, ol.plain { margin: 0; padding-left: 1.35em; display: flex; flex-direction: column; gap: 9px; max-width: 70ch; }
+  ol.plain li::marker, ul.plain li::marker { color: var(--accent); font-family: "IBM Plex Mono", monospace; font-weight: 600; }
+  .stage { display: grid; grid-template-columns: 120px 1fr; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--hairline); }
+  .stage:last-child { border-bottom: 0; }
+  .stage .sname { font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; font-weight: 600; color: var(--accent); padding-top: 3px; }
+  .stage p { font-size: 0.95rem; }
+  @media (max-width: 600px) { .stage { grid-template-columns: 1fr; gap: 4px; } }
+  .gate { border: 1px solid var(--hairline); border-left: 3px solid var(--teal); background: var(--surface); padding: 14px 18px; font-size: 0.95rem; max-width: 70ch; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+  .sw { display: flex; align-items: center; gap: 8px; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+  .sw i { width: 22px; height: 22px; border-radius: 4px; display: inline-block; border: 1px solid var(--hairline); }
+  .check li { list-style: none; position: relative; padding-left: 1.6em; }
+  .check li::before { content: "☐"; position: absolute; left: 0; color: var(--accent); font-family: "IBM Plex Mono", monospace; }
+  .check { padding-left: 0; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 3px; font-family: "IBM Plex Mono", monospace; font-size: 0.64rem; font-weight: 600; letter-spacing: 0.06em; white-space: nowrap; background: var(--warn-soft); color: var(--warn); }
+  footer.doc { margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--hairline); font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header class="doc">
+    <span class="eyebrow">Phase 3 · Case I · Spec v1</span>
+    <h1>Rice &amp; Food Security</h1>
+    <p class="lede">Paddy phenology read out of Sentinel-1 radar — the flooding minimum, the
+    tillering rise, the heading peak — turned into planted and harvested area and a harvest date
+    for Java's rice bowl, and set beside BPS's own KSA figures. Radar because the crop grows under
+    monsoon cloud, which is exactly what optical cannot see through.</p>
+    <div class="meta-row">
+      <span>DATE <b>2026-08-30</b></span>
+      <span>REFRESH <b>Static snapshot (D3) · re-run per season</b></span>
+      <span>IDENTITY <b>Flooded paddy, seen by radar</b></span>
+      <span>DATA PATH <b>Verified by reconnaissance 2026-08-30 (catalogues queried live)</b></span>
+    </div>
+  </header>
+
+  <section>
+    <span class="eyebrow">I1 · The question</span>
+    <p class="q">“Indonesia will know how much rice it harvested in March. Can we know in
+    January?”</p>
+    <p>Rice is the most politically load-bearing number in Indonesian statistics: it decides
+    import licences, Bulog procurement, the food-price index and, in a bad year, the national
+    conversation about self-sufficiency. BPS produces it well — the KSA area-frame survey replaced
+    a generation of eye-estimates in 2018 and is a genuinely good method — but it produces it
+    <em>after</em> the fact, roughly two months in arrears. The gap in the market is not
+    a better annual number; it is <b>the same number, earlier</b>. A crop
+    transplanted in November is visible from orbit the week it is flooded, and a harvest date
+    follows a transplanting date by a crop duration that temperature and water stress modulate in
+    knowable ways. That is a forecast with roughly six weeks of lead over the official monthly
+    release, and it is the product. The methodological demonstration underneath it — that we can
+    detect a crop calendar through cloud, at scale, and be graded against the national statistical
+    office — is the capability a ministry, a fertiliser distributor, a miller or a food-security
+    programme is actually buying.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">I2 · Data contract</span>
+    <h2>Data contract</h2>
+    <p class="lede">Every row verified live 2026-08-30 by querying the catalogue or the API itself:
+    scene counts cross-checked between two independent catalogues, file sizes measured, licences
+    read from the deposit rather than the paper. The core path needs <b>no new registration</b> —
+    the existing <code>EARTHDATA_TOKEN</code>, <code>BPS_API_KEY</code> and <code>CDS_API_KEY</code>
+    cover it. One optional upgrade (a 10 m close-up) costs one free Copernicus account.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Source</th><th>Product / access</th><th>Licence</th><th>Size</th><th>Cadence</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>Sentinel-1 RTC <b>(primary)</b></td><td>ASF <code>OPERA_L2_RTC-S1_V1</code> — 30 m γ⁰ on the Copernicus GLO-30 DEM, one granule per S1 burst, separate <code>_VV.tif</code>/<code>_VH.tif</code> COGs. Anonymous GET → 401 → 302 to <code>urs.earthdata.nasa.gov</code>; the existing EDL token is the credential. Measured revisit at real Java rice locations: <b>Central Java 124 acquisition dates in two years</b> (T127+T076, ≈6-day effective), West Java 56/yr, East Java 44/yr</td><td>Free &amp; open (CMR <code>FreeAndOpenData: true</code>, EOSDIS Data Use Policy); Copernicus attribution</td><td>6–14 MB per burst · ~290 GB for 2 yr all-Java · <b>~50 GB for our 4-season deep scope</b></td><td>~6-day</td><td><b>The measurement</b></td></tr>
+          <tr><td>Sentinel-1 10 m close-up <span class="pill">1 free account</span></td><td>CDSE Sentinel Hub <code>S1GRD</code> with <code>backCoeff=GAMMA0_TERRAIN</code> + <code>orthorectify=TRUE</code> (Copernicus DEM) — RTC γ⁰ computed server-side, no egress. Catalogue is anonymous (STAC + OData both 200); download and processing need OAuth</td><td>Copernicus (commercial permitted)</td><td>~52 PU per date for one Indramayu-sized regency → <b>~3,200 PU for a 2-yr series against a free 10,000 PU/month</b>. All-Java at 10 m is ~3,300 PU <em>per date</em> — impossible on the free tier</td><td>12-day</td><td>Plot-scale detail for one focus regency</td></tr>
+          <tr><td>Sentinel-1 GRD <span class="pill">fallback</span></td><td><code>s3://sentinel-s1-l1c</code> — genuinely anonymous (LIST 200, ranged GET 206, “No AWS account required”), and the measurement TIFFs are <b>true COGs</b>, so an AOI can be window-read without touching the archive. Price: we do our own radiometric terrain correction. <em>Gotcha: month/day prefixes are unpadded —</em> <code>/8/12/</code>, <em>not</em> <code>/08/12/</code></td><td>Copernicus</td><td>836–847 MB/scene measured (VV 443.8 + VH 356.4); <b>28 scenes per 12-day cycle cover Java</b> across 12 relative orbits; 2 yr = 1,672 scenes ≈ <b>1.4 TB</b></td><td>6–12 day</td><td>Escape hatch, no account</td></tr>
+          <tr><td>BPS KSA — national/provincial</td><td>BPS WebAPI domain <code>0000</code>. Var <b>1498</b> annual area/production/yield by province 2018–2024 (turvar 1191/1192/1193), <b>discontinued</b> and replaced from March 2025 by monthly vars <b>2504</b> (area, ha) and <b>2506</b> (production, t) — where the month sits in <code>turtahun</code> 1–12 and 13 means “Tahunan”. Var <b>2345</b> gives monthly <em>national</em> production complete for 2018–2026. Browser User-Agent required; the “App ID” is the key; <code>th</code> accepts ranges (max 2 years/call) and <code>keyword</code> search works, which together cut the crawl to ~65 requests</td><td>Data terms permit <b>commercial use with citation</b>; the API developer terms say non-commercial — see the note below</td><td>&lt; 1 MB total</td><td>monthly, ~2-month arrears</td><td><b>The benchmark</b></td></tr>
+          <tr><td>BPS KSA — kabupaten <span class="pill">the find</span></td><td><b>Rice is not on domain 0000 at regency level.</b> Every rice table there is grouped “38 Provinsi”. Kabupaten rice lives only on the <em>provincial</em> domains, with a different var id per province: <b>Jawa Barat 3200 var 935</b> and <b>Jawa Timur 3500 var 578</b> publish <b>MONTHLY</b> harvested area per regency for 2018–2025; Jawa Tengah (3300 var 463) is annual only. Verified consistent: the kabupaten rows sum exactly to the provincial row, which matches the national table to the cent</td><td>as above</td><td>&lt; 1 MB</td><td>monthly 2018–2025</td><td><b>65 regencies × 96 months = 6,240 benchmark observations</b> — this is what makes G-I2 testable at kabupaten level</td></tr>
+          <tr><td>Rice extent prior</td><td><b>Open-SEA-Rice-10</b>, Zenodo <code>10.5281/zenodo.14627003</code>, 10 m, 2021 — classes <b>1/2/3 = single/double/triple crop</b>, so it is simultaneously the extent prior and the independent cropping-intensity benchmark. Cross-check: <b>NESEA-Rice10</b>, Zenodo <code>10.5281/zenodo.5645344</code>, two tiles cover Java</td><td><b>CC BY 4.0</b>, read from the Zenodo <em>deposit</em> — the Open-SEA-Rice-10 article renders CC BY-NC-ND, the deposit does not</td><td>521.8 MB + 34.8 MB</td><td>static (2021 / 2019)</td><td>Prior + G-I3/G-I4 benchmark</td></tr>
+          <tr><td>Rice ground truth</td><td>WorldCereal Reference Data Module, anonymous OGC-API: <code>2023_idn_vitocampaign_poly_110</code> — 336 polygons across West and Central Java, <b>89 labelled rice</b></td><td><span class="pill">Unverified</span> — the RDM permits CC BY-NC per collection and this one exposes no licence field</td><td>&lt; 1 MB</td><td>2023</td><td>Confusion matrix (pending licence)</td></tr>
+          <tr><td>Sentinel-2 L2A</td><td>Element84 Earth Search STAC, <b>fully anonymous, no registration</b>; collection <code>sentinel-2-c1-l2a</code>. <em>The Collection-1 bucket is</em> <code>e84-earth-search-sentinel-data</code>, <em>not</em> <code>sentinel-cogs</code>. 62 MGRS tiles intersect Java; 585 scenes over Java in July 2026 alone below 30 % cloud</td><td>Copernicus</td><td>streamed, ~100 MB</td><td>5-day</td><td>Chapter 01: the cloud evidence, <em>measured</em></td></tr>
+          <tr><td>CHIRPS</td><td>UCSB Climate Hazards Center, 0.05°, 1981→. <b>v2 production ends after December 2026</b>, so v3 is the build target. There is no Asia subset and no server-side subsetting at all (THREDDS/OPeNDAP are dead; it is plain nginx) — but the <code>cogs/</code> tree is tiled 512×512 and <b>Java's pixel window falls wholly inside one tile</b>, verified end-to-end with a Range request returning HTTP 206. The <code>.tif.gz</code> route is a gzip stream and cannot be range-read: taking it means downloading 9.6 GiB of global files to extract ~210 MiB of Java</td><td>a CC0-style public-domain dedication — unversioned and unlinked; described that way rather than as “CC0”</td><td><b>~125 KiB/day via the tile</b> vs 3 MiB whole-file — a 64× saving; ~220 MiB for the 2018–2026 pentad spine</td><td>final 30-day lag; <code>prelim</code> 5-day</td><td>Onset date, water stress</td></tr>
+          <tr><td>ERA5</td><td><code>reanalysis-era5-single-levels</code> via CDS — temperature (growing-degree days, heat-stress days), solar radiation, soil moisture. <code>~/.cdsapirc</code> exists and the <code>cc-by</code> licence is accepted</td><td>Copernicus CC BY 4.0</td><td>small at 0.25° over Java</td><td>hourly, ERA5T ≈5-day lag</td><td>Crop-duration modulation</td></tr>
+          <tr><td>ENSO / IOD</td><td>NOAA ONI + DMI, monthly, forward-filled to daily with an <code>is_interpolated</code> flag so nothing downstream mistakes a monthly index for a daily observation</td><td>US Government, public domain</td><td>kB</td><td>monthly</td><td>Chapter 04: why the calendar moves</td></tr>
+          <tr><td>Boundaries</td><td>geoBoundaries gbOpen ADM1 (34 units, <b>ODbL 1.0</b>, 2017, OSM-derived) + ADM2 (519 units, <b>CC BY 3.0 IGO</b>, 2020, BPS via OCHA). <b>gbOpen has no Indonesian ADM3 — the API 404s</b> — so kecamatan comes from HDX COD-AB. Case H found the COD-AB <code>.gdb</code> exposes no <code>adm1</code>-named layer under current <code>pyogrio</code>; the SHP zip is the workaround</td><td>ODbL 1.0 / CC BY 3.0 IGO / CC BY-IGO</td><td>COD-AB gdb 208.6 MiB · shp 474.6 MiB (verified live, modified 2026-06-23)</td><td>2017–2020 vintages</td><td>Map + report units</td></tr>
+          <tr><td>MODIS phenology <span class="pill">cross-check only</span></td><td>MOD13Q1/MYD13Q1 + MCD12Q2, tiles <b><code>h28v09</code> + <code>h29v09</code></b> (<code>v10</code> is wrong: <code>v09</code> covers 0–10 °S and Java ends at 8.8 °S). <code>e4ftl01.cr.usgs.gov</code> <b>404s — LP DAAC retired MODIS from it on 2025-06-30</b>; the Earthdata Cloud pool or AppEEARS is the live route</td><td>CC0 (NASA); attribute anyway</td><td>2 yr × 2 tiles ≈ 7.7 GB (Terra) / 15.7 GB (+Aqua)</td><td>16-day (8-day combined)</td><td>Labelled comparison, never an input</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><b>Scouted and rejected, with the evidence:</b>
+    <b>IRRI</b>'s Asia lowland rice extent — <span class="pill">CC BY-NC-SA 4.0</span>, non-commercial.
+    <b>RIICE / CRISP</b> — site returns 503/500 and CRISP is a commercial sarmap service.
+    <b>Zhao/Zhang 30 m S+SE Asia rice</b> — the raster stops at 5.63 °N and never crosses the
+    equator, so it does not cover Java at all.
+    <b>ESA WorldCereal v100</b> — it has <em>no rice class</em> (all 21 released files listed; phase-2's
+    announced crops do not include rice), and its irrigation layer measured <b>0.09 %</b> over
+    Semarang/Demak/Grobogan in the middle of the wet paddy season, against 38.9 % temporary crops;
+    the ESSD paper confirms irrigation received no quantitative validation and runs ~35 % below
+    statistics. It must not be pitched as a paddy layer.
+    <b>GADM</b> — non-commercial, rejected on sight.
+    <b>MCD12Q2 as an input</b> — stuck at 2024 and structurally capped at two cycles per year,
+    which cannot represent triple-cropped irrigated sawah.
+    <b>ASEAN AFSIS</b> — the only rights statement anywhere on the site is a bare
+    “Copyright 2017 … Rights Reserved” footer: no terms page, no reuse grant, which is worse than
+    a restrictive licence because there is no affirmative permission. It is also a
+    revision-lagged copy of BPS (2023 reads 53,733.52 kt where BPS now says 53,980,993 t).
+    <b>Kementan BDSP</b> — reachable, with an undocumented JSON query layer, but its 2025 figures
+    are BPS's to the rounding (11,320,986.21 ha against BPS's 11,320,986.23): a cross-check, not
+    an independent source.
+    <b>FAO GIEWS</b> — PDF only, and seven months stale on the day we checked.
+    <b>FAO ASIS</b> — a flat self-contradiction: CC BY 4.0 on the GIEWS access page against
+    <code>license_id: CC-BY-NC-SA-4.0</code> in FAO's own catalogue for the same datasets.
+    <b>Bapanas / PIHPS price portals</b> — under maintenance and HTTP 522 respectively, and
+    PIHPS generates its export client-side so there is no endpoint to script.</p>
+    <p><b>The two licence questions that need a signature.</b> First, <b>BPS</b>: the data terms
+    are the cleanest in the set and explicitly permit commercial use — “using the data for both
+    commercial and non-commercial purposes” — subject to citation and no implied endorsement.
+    The <em>WebAPI developer</em> terms are narrower: “BPS berkomitmen pada akses gratis dan
+    terbuka ke API kami untuk tujuan non-komersial”, and they forbid selling or sublicensing API
+    access. The workable reading is that the numbers are fine commercially with citation and what
+    is forbidden is reselling the pipe — so we ingest to our own store, cite BPS, and never expose
+    or proxy the API. Second, <b>FAO</b>: FAOSTAT is no longer CC BY-NC-SA 3.0 IGO but plain
+    CC BY 4.0 <em>with an appended clause</em> — “Datasets shall not be used for or in conjunction
+    with the promotion of a commercial enterprise and/or its product(s) or services”. A
+    consulting demo is precisely the edge case that clause was written for, so FAO data appears
+    here as context only and the question is escalated rather than assumed. (FAOSTAT's REST API
+    is in any case now gated behind a developer portal and returns 401; the bulk files still
+    work, and the Asia regional bulk is 4.49 MiB with Indonesia inside at area code 101.)</p>
+    <p><b>The national rice-field map, and the honest position on it.</b> Indonesia's official
+    <em>Lahan Baku Sawah</em> layer (ATR/BPN Decree 686/SK-PG.03.03/XII/2019) is <em>live and
+    anonymous</em> on BIG's service —
+    <code>kspservices.big.go.id/satupeta/…/MapServer/36</code>, 1,242,551 sawah polygons — and it
+    is the best validation surface in the country. But <b>no licence is stated anywhere on the
+    service</b>, and every catalogue record for it on the national SDI portal returns a null
+    licence field. This is the Case H concession problem again, and it gets the Case H answer:
+    the layer is used as a <em>view-time reference overlay and a validation comparator only</em> —
+    never stored, never joined into a published artefact, never redistributed — and the stored
+    prior is the CC BY 4.0 Zenodo product instead. (Two operational notes: the SDI's HTML pages
+    return 403 while its CKAN API answers normally with a browser User-Agent, and the separate
+    host <code>geoservices.bappenas.go.id</code> did not resolve at all on 2026-08-30.)</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">I3 · Pipeline</span>
+    <h2>Pipeline — static rebuild, scoped on purpose</h2>
+    <p class="lede"><b>The scoping arithmetic, stated because it is the design.</b> Java needs 28
+    Sentinel-1 IW GRD scenes per 12-day cycle across 12 relative orbits — a figure ASF's catalogue
+    and CDSE's OData <code>$count</code> return identically — and a GRD scene measures 836–847 MB.
+    Two years of Java GRD is therefore ~1.4 TB. The same two years as OPERA RTC bursts is ~290 GB:
+    five times smaller <em>and</em> already terrain-corrected. Our four-season deep scope
+    (six kabupaten, ~9,000 km²) is roughly 50 GB of transfer, streamed and deleted after
+    aggregation, leaving under 3 GB standing. Wall time on the 16 GB server: ingest 6–10 h
+    (network-bound, resumable per burst), backscatter 1–2 h, phenology minutes, everything after
+    that seconds. A full rebuild is an overnight job, not a week.</p>
+    <p><b>The deep scope is chosen by where the benchmark is monthly</b>, not by where the rice
+    is prettiest: <b>Indramayu</b> (239,498 ha in 2025), <b>Karawang</b> (202,293), <b>Subang</b>
+    (184,319) in West Java, <b>Bojonegoro</b> (160,748) and <b>Lamongan</b> (152,564) in East Java
+    — the five largest regencies in the two provinces that publish monthly KSA — plus
+    <b>Grobogan</b> in Central Java as the deliberate rainfed contrast, validated annually, which
+    is stated wherever it appears. Karawang carries a second story on its own: it is the most
+    urbanising of the trio, so its paddy is being converted while it is being measured.</p>
+    <div>
+      <div class="stage"><span class="sname">stats</span><p><b>Runs first on purpose.</b> The national/provincial tables from domain <code>0000</code>, then the per-province domains for kabupaten detail — because rice, unlike poverty, is <em>not</em> served at regency level from the national domain. Variable ids are resolved by keyword search and written to <code>data/bps_vars.json</code> rather than hard-coded. About 65 requests, under a megabyte, a minute. Cheap — and if the benchmark cannot be retrieved the case does not exist, so it should fail here rather than after the SAR ingest.</p></div>
+      <div class="stage"><span class="sname">aux</span><p>geoBoundaries ADM1/ADM2 + COD-AB kecamatan; the Open-SEA-Rice-10 prior reprojected onto the analysis grid and dilated by 300 m so newly converted land can still be found; the cell index with geodetic areas and its kecamatan/kabupaten codes.</p></div>
+      <div class="stage"><span class="sname">climate</span><p>CHIRPS dailies streamed, clipped, reduced and deleted; per-cell monsoon-onset date under a <em>stated</em> rule (40 mm over 10 days with no following dry spell — “onset” has a dozen definitions and they disagree by weeks); ERA5 met; ONI and DMI.</p></div>
+      <div class="stage"><span class="sname">sar</span><p>OPERA RTC bursts for the deep scope, resumable per (relative orbit, acquisition date), disk-guarded, raw deleted after aggregation. Every download asserts HTTP 200 <em>and</em> GeoTIFF magic bytes — an invalid EDL token returns the same 302-to-login as no token, and a bare HEAD can hand back a working presigned URL unauthenticated, so the failure mode is an HTML login page written into a <code>.tif</code>.</p></div>
+      <div class="stage"><span class="sname">backscatter</span><p>Multi-look within the 100 m cell — <b>mean in linear power, then to dB</b>, because averaging decibels biases every cell low by an amount that depends on its own variance and therefore looks like a real spatial pattern. Per relative orbit; incidence-angle normalisation fitted on dry-season stable targets. Resample to a 6-day grid, keep the original observation dates, flag every gap over 24 days. Savitzky-Golay smoothing, which preserves peak position — the thing this case measures — where a moving average destroys it.</p></div>
+      <div class="stage"><span class="sname">phenology</span><p>Five-step detector per cell per season: VV minimum below −17 dB (sheet water) → a required VH rise of ≥4 dB within 45 days (this is what separates rice from ponds, tidal flats and reservoirs) → the following VH maximum (heading) → harvest at heading + 30 days, refined by the subsequent drop → reject any event whose defining dates fall inside a gap. Cropping intensity falls out free as cycles per year.</p></div>
+      <div class="stage"><span class="sname">area</span><p>Events → hectares, apportioned to kecamatan by intersection fraction (whole-cell assignment produces visible edge artefacts on Java's small districts). <b>Three separately-named quantities</b>: paddy extent (a stock), harvested area (a flow, comparable to KSA), planted area (the flow that leads it). Intervals from detection confidence, mask sensitivity and gap fraction.</p></div>
+      <div class="stage"><span class="sname">model</span><p>An interpretable calibration of detected → KSA hectares with cropping intensity, irrigation share and observation density as covariates, so the residual structure is visible rather than absorbed by a scale factor; then the timing predictor — harvest date from transplanting date, growing-degree-day accumulation and water stress, issued roughly six weeks ahead of the official monthly release. Fitted on 2022–24 only.</p></div>
+      <div class="stage"><span class="sname">validate</span><p>Gates G-I1…G-I5 → <code>stats.json</code>, evaluated on the uncalibrated series as well as the calibrated one.</p></div>
+      <div class="stage"><span class="sname">export</span><p>View-models ≤ 3 MB first paint. The probe lattice — quantised curves plus detected events, dates as indices into one shared array — is what makes the signature interaction instant, and its step is a config constant rather than an afterthought. Insight brief per D11.</p></div>
+    </div>
+    <pre>cases/rice-security/
+  pipeline/  config.py util.py ingest_stats.py ingest_aux.py ingest_climate.py ingest_sar.py
+             backscatter.py phenology.py area.py model.py validate.py export_web.py
+  data/      raw/ backscatter/ (git-ignored)   web/  Astro app, port 4333, base /rice   Makefile</pre>
+  </section>
+
+  <section>
+    <span class="eyebrow">I4 · Validation gates</span>
+    <h2>Validation gates</h2>
+    <p class="lede">Thresholds fixed here, before any result was seen. A gate that fails is
+    published red with a diagnosis — the house precedent is Case C's G-C5 and Case H's G-H1, both
+    of which shipped failing and explained. Thresholds are never moved to fit an outcome.</p>
+    <div class="gate"><b>G-I1 — KSA reconciliation (hard).</b> Provincial annual harvested area within <b>±10 %</b> of BPS KSA for every year in the record; at kabupaten level <b>R² ≥ 0.75</b> and <b>MAPE ≤ 20 %</b>. Evaluated on the <em>uncalibrated</em> series as well as the calibrated one — a gate applied only after fitting to the benchmark is not a gate. The pre-2018 eye-estimate regime is excluded: BPS itself replaced that series, and comparing against it would measure the wrong thing. Three published defects are asserted against rather than inherited: Kota Batu's 2025 “Tahunan” cell is an exact 100× decimal slip against its own monthly sum, var 2345's 2026 annual cell was never refreshed past April, and roughly 40 East Java regency-months are blank where they are almost certainly true zeros.</div>
+    <div class="gate"><b>G-I2 — Harvest-timing accuracy (hard).</b> Median absolute error of the modelled peak-harvest week <b>≤ 2 weeks</b>, with no unit biased more than <b>3 weeks</b>. Because West and East Java publish monthly KSA harvested area <em>per regency</em> for 2018–2025, this gate is evaluated on a <b>65-regency × 96-month panel — 6,240 observations</b> — not on four provincial curves. Central Java is annual-only and is excluded from G-I2 with that stated. This is the gate that matters commercially: area we can approximately reproduce, but timing is what nobody publishes early.</div>
+    <div class="gate"><b>G-I3 — Cropping-intensity plausibility.</b> Detected cycles per year land in <b>1.5–2.5</b> for the irrigated lowland kabupaten and <b>below 1.5</b> for the rainfed ones, and agree with Open-SEA-Rice-10's own single/double/triple classes. An independent agronomic sanity check on the detector that costs nothing extra.</div>
+    <div class="gate"><b>G-I4 — Independent rice-map agreement.</b> Our detected paddy extent agrees with Open-SEA-Rice-10 on <b>≥ 70 %</b> of its area. Agreement is <em>measured</em>, not assumed — the mask is a prior, and where we differ from a published product is the interesting part. The published product's own ~6,460 km² national underestimate is carried as a stated bias, not silently absorbed.</div>
+    <div class="gate"><b>G-I5 — Temporal hold-out.</b> The 2025/26 season is excluded from calibration entirely and G-I1 and G-I2 are re-reported on it before any tuning. In-sample agreement with a benchmark you fitted to is not evidence.</div>
+  </section>
+
+  <section>
+    <span class="eyebrow">I5 · Dashboard</span>
+    <h2>Dashboard — page anatomy</h2>
+    <p class="lede">Map rule: the user's browser runs with WebGL off — every map ships a
+    full-function 2-D canvas/SVG fallback (Path2D + <code>isPointInPath</code>, the nightlights
+    pattern), tagged visibly when active. In this case the fallback is not a downgrade: the maps
+    are choropleths and point lattices, both of which canvas draws at 60 fps.</p>
+    <ol class="plain">
+      <li><b>Hero — “The radar probe.” <span class="pill">signature interaction</span></b> A probe drifts across an irrigated command and the panel beside it draws <em>that location's real Sentinel-1 curves</em> — raw VV and VH observations as points, the Savitzky-Golay fit through them — with the detected flooding minimum and heading maximum snapping into place as it moves, and the derived planting and harvest dates dropping onto a calendar strip. Then it hands the probe to the reader. It teaches the physics in one gesture, proves we hold per-pixel data rather than a downloaded map, and shows the noise the fit is drawn through — a client who can see the scatter trusts the line. 2-D fallback: this is already 2-D. Reduced motion: probe parked, curve static, drag still works.</li>
+      <li><b>Chapter 01 — “Why radar.”</b> Usable Sentinel-2 scenes per month over Java, counted live from the anonymous STAC, against the Sentinel-1 acquisition record on the same axis: the wet-season collapse in one chart. The argument for the whole method, <em>measured</em> rather than asserted.</li>
+      <li><b>Chapter 02 — “The harvest wave.”</b> One scrub through the crop calendar: kecamatan recolour by phenological stage on the cyclic ramp while the national harvested-area ridge fills beneath and the wave visibly crosses the island. Staggered planting is what makes Indonesian rice supply continuous, and this is the only view that shows it as motion.</li>
+      <li><b>Chapter 03 — “Our number against theirs.”</b> Radar-derived harvested area beside BPS KSA — per kabupaten, per month — with the residuals charted rather than netted out and the calibration's coefficients shown. The 2018 break is drawn <em>as a break</em>: 14,116,638 ha in 2015 under the old method, a two-year moratorium with no data at all, then 11,377,934 ha in 2018 under KSA — a 2.74 Mha, −19.4 % step across a hole, which is why no line may cross it. And the chapter ends on the claim worth stress-testing: <b>2025 harvested area jumped +1,274,851 ha (+12.7 %) in a single year, with Java supplying about half of it</b> (Jawa Barat +19.0 %, Jawa Timur +13.9 %). An independent measurement either corroborates that or it does not, and either answer is worth the build.</li>
+      <li><b>Chapter 04 — “The calendar is moving.”</b> Planting-date anomalies against monsoon onset, ONI and DMI: when the rain is late, the crop is late, and the harvest lands in a different month than the procurement plan assumed.</li>
+      <li><b>Chapter 05 — “Six weeks early.”</b> The hold-out season replayed as it would have been issued: our forecast at transplanting, then the official figure arriving weeks later on the same timeline. The product, demonstrated rather than described.</li>
+      <li><b>Explore.</b> Probe anywhere; kabupaten panel (planted/harvested/extent with intervals, cycles per year, confidence, KSA comparison); stage filter, season toggle, orbit-diagnostic view; URL state; chart/table + download.</li>
+      <li><b>Methodology.</b> Speckle and the linear-power rule; orbit separation; the detector's thresholds and why each exists; the flow-vs-stock definition; every gate result; the KSA methodology break; the <em>Lahan Baku Sawah</em> licence statement verbatim; attributions (Copernicus, ASF/OPERA, BPS, Zenodo products, CHC, ECMWF, geoBoundaries, OCHA).</li>
+    </ol>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Chart</th><th>Form</th><th>Interactions</th><th>2-D fallback</th></tr></thead>
+        <tbody>
+          <tr><td>Radar probe + curve</td><td>canvas map + SVG curve, linked</td><td>drag probe, hover the curve, click an event to pin it</td><td><b>native</b> — no GPU path exists or is needed</td></tr>
+          <tr><td>Harvest-wave map + scrub</td><td>canvas choropleth, byte-quantised weekly frames</td><td>scrub, play, hover kecamatan, stage filter</td><td>canvas + Path2D hit test; a weekly repaint of ~2,500 polygons is cheap</td></tr>
+          <tr><td>Ours vs KSA</td><td>custom d3, official series in <code>--official</code> teal</td><td>hover crosshair, kabupaten tabs, residual toggle</td><td>SVG</td></tr>
+          <tr><td>Cloud-climatology bars</td><td>custom d3</td><td>hover month, sensor toggle</td><td>SVG</td></tr>
+          <tr><td>Anomaly vs ENSO scatter</td><td>custom d3</td><td>hover, year highlight, linked map</td><td>SVG</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">I6 · Design brief</span>
+    <h2>Design brief</h2>
+    <p><b>Identity:</b> flooded paddy, seen by radar. The accent is a <b>young-paddy chartreuse</b>
+    at roughly 78° of hue — the one green-adjacent slot the other eight cases leave open, with
+    forest's canopy green at ~133°, far enough that the two never read as the same case. The
+    phenology ramp is <b>cyclic</b>, because a crop calendar is a loop and a linear ramp would
+    imply a beginning and an end that the data does not have: flood teal → vegetative green →
+    heading chartreuse → ripening gold → harvest stubble → back to flood. The ramp is data-only
+    and never doubles as the accent; official BPS series always appear in the site-wide
+    <code>--official</code> teal so that “ours” and “theirs” are never the same colour.</p>
+    <div class="swatches">
+      <span class="sw"><i style="background:#0A1214"></i> ground #0A1214</span>
+      <span class="sw"><i style="background:#111A1C"></i> surface #111A1C</span>
+      <span class="sw"><i style="background:#E8EEEC"></i> text #E8EEEC</span>
+      <span class="sw"><i style="background:#A8CE3A"></i> paddy accent #A8CE3A</span>
+      <span class="sw"><i style="background:#2F7E96"></i> flood #2F7E96</span>
+      <span class="sw"><i style="background:#E6B94F"></i> ripening #E6B94F</span>
+      <span class="sw"><i style="background:#B4805A"></i> stubble #B4805A</span>
+    </div>
+    <ul class="plain">
+      <li>Tokens from <code>shared/design/tokens.css</code> (<code>data-case="rice"</code>), copied into <code>web/src/styles/</code>. <span class="pill">Block not yet in the shared file</span> — proposed verbatim in the case README.</li>
+      <li>Every number carries its vintage and its unit class: “412,600 ha harvested · flow, not extent · OPERA RTC, S1 through 2026-08-19”.</li>
+      <li>One orchestrated moment (the probe); micro-interactions elsewhere; <code>prefers-reduced-motion</code> respected.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">I7 · Acceptance</span>
+    <h2>Acceptance checklist</h2>
+    <ul class="plain check">
+      <li><code>make rebuild</code> reproduces phenology → area → model from raw sources on a clean machine given an Earthdata token and a BPS key (gate 1).</li>
+      <li>G-I1…G-I5 evaluated and published, on the uncalibrated series as well as the calibrated one (gates 2–3).</li>
+      <li>Probe responds &lt; 300 ms; explore interactive &lt; 3 s; per-tile probe files ≤ 2 MB; 60 fps; Lighthouse ≥ 90; full function with WebGL disabled (gate 4).</li>
+      <li>Vintage stamps: OPERA RTC granule dates · BPS release date and table id · Open-SEA-Rice-10 2021 · CHIRPS/ERA5 cutoffs (gate 5).</li>
+      <li>Attributions incl. the Copernicus line and the BPS line; the <em>Lahan Baku Sawah</em> licence statement verbatim; no NC data anywhere — IRRI, GADM and the WorldCereal RDM collection all held out pending or refused (gate 6).</li>
+      <li>Story reads in one scroll; the probe passes the award test (gates 7, 9).</li>
+      <li>Static hosting; the only credentialed calls are at build time; no per-view API cost (gate 8).</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">I8 · Risks &amp; decisions pending</span>
+    <h2>Risks, unknowns &amp; decisions pending user verification</h2>
+    <ul class="plain">
+      <li><b>30 m against a 0.3–0.5 ha plot.</b> OPERA RTC is 30 m, so a Javanese sawah plot is a handful of pixels and mixed pixels dilute the flooding minimum — biasing detection toward the larger, more uniform irrigated blocks. The mitigation is the 10 m Sentinel Hub close-up on one regency, which is also the honesty panel: the same kabupaten measured at both resolutions, differences shown. <b>This is the case's only registration ask</b> (one free CDSE account).</li>
+      <li><b>OPERA's recent months are thin.</b> Processing latency, not a coverage gap — CMR shows 2016 acquisitions processed in September 2025, i.e. an archive backfill still running. For a historical four-season build it is dense and reliable; <b>do not promise a near-real-time OPERA feed</b> without re-checking, and the “six weeks early” chapter is framed on the hold-out season rather than on today.</li>
+      <li><b>The detector's thresholds are literature values, not fitted.</b> −17 dB, 4 dB, 45 days, 30 days. Fitting them on the KSA benchmark would guarantee agreement and destroy the gate. They are stated, and the sensitivity of every headline number to each of them is exported.</li>
+      <li><b>MODIS is on a clock.</b> Terra and Aqua begin shutting down in late 2026/early 2027 and are already drifting from their design overpass times, injecting an illumination bias that mimics a phenological trend. MODIS therefore appears only as a labelled comparison; VIIRS (VNP13A1/VNP22Q2) is named as the successor.</li>
+      <li><b>CHIRPS v2 dies in four months.</b> Production ends after December 2026, so pinning v2 would pin a product that stops updating mid-engagement. The config builds on v3, which deserves its own reconnaissance pass before the first long run since only its directory existence was confirmed.</li>
+      <li><b>The best possible ground truth exists and is almost entirely unpublished.</b> KSA's own phase classification — vegetatif awal/akhir, generatif, persiapan lahan, puso — is exactly the label set a satellite phenology model wants, and BPS publishes it through the WebAPI for <b>DKI Jakarta only, 2018–2021</b>, a province with almost no rice. Everywhere else it is absent. <b>A direct data request to BPS is the single highest-value action available to this case</b>, and it costs nothing but a letter.</li>
+      <li><b>Pending user verification:</b> (1) the <code>[data-case="rice"]</code> token block, which this spec's author was scoped out of adding; (2) <b>scope — Java's rice-bowl provinces, six deep kabupaten chosen by where the benchmark is monthly</b>, the biggest call in the case and the one that keeps it honest; (3) analysis units — detect at 100 m, map at kecamatan, report and validate at kabupaten, so that G-I1 stays falsifiable; (4) the <em>Lahan Baku Sawah</em> compromise (validation and view-time overlay, nothing stored) — the direct analogue of Case H's concession decision; (5) <b>the BPS licence split</b> — data terms permit commercial use with citation, developer terms restrict the API — so we ingest to our own store, cite BPS, and never proxy the API; (6) FAO's anti-commercial-promotion clause, which makes FAO context-only here; (7) whether the WorldCereal RDM ground-truth collection may be used at all, pending its licence; (8) publishing “production = our area × BPS productivity” as arithmetic, given how politically live that number is.</li>
+      <li><b>Out of scope:</b> yield modelling from backscatter, national coverage, non-rice crops, irrigation-infrastructure mapping, and any claim about Bulog procurement or import policy. Each is a plausible paid-pilot extension and is noted in the CTA rather than half-built.</li>
+    </ul>
+  </section>
+
+  <footer class="doc">CASE I SPEC v1 · 2026-08-30 · DATA PATH VERIFIED · SIBLINGS: SPEC H, SPEC J · PARENT: BUILD PLAN (docs/build-plan.html)</footer>
+</div>

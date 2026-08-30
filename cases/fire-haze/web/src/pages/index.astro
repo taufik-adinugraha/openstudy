@@ -1,0 +1,108 @@
+---
+// Case J — Fire & Haze Early Warning.  SCAFFOLD ONLY: the pipeline has not been
+// run, so this page renders the contract (chapters + gates) rather than results.
+//
+// Anatomy (spec docs/spec-fire-haze.html, J5):
+//   hero "blame the wind" -> 01 where fire starts -> 02 the risk model ->
+//   03 the plume -> 04 the receptors -> 05 2015 and 2019 -> explore -> methodology
+//
+// Identity: plume magenta on ash.  --fire is for ignition POINTS only; the haze
+// ramp is data-only and never doubles as the accent.
+// No WebGL anywhere: every map is 2-D canvas/SVG with its own hit testing.
+import "../styles/tokens.css";
+
+const S = (await import("../data/summary.json").catch(() => null))?.default ?? null;
+const pending = !S;
+
+const CHAPTERS = [
+  ["Hero", "Blame the wind", "Pick a city and a bad-air day; 72-hour back-trajectories fan out across the archipelago and land on the fires that were burning where the air came from. Flip the dial and the same engine runs forward from today's hotspots."],
+  ["01", "Where fire starts", "Two decades of hotspots after the volcano-and-flare filter, split by peat, land cover and concession context — the base rates a risk model has to beat."],
+  ["02", "The risk model", "Ignition probability per 0.25 deg cell per day from drought, soil moisture, land cover, peat depth and ENSO state; skill measured against climatology and persistence, not against zero."],
+  ["03", "The plume", "Kinematic forward trajectories on ERA5 winds, weighted by fire radiative power — stated plainly as transport, not chemistry."],
+  ["04", "Who breathes it", "Receptor cities scored by modelled smoke arrival against observed PM2.5: Pekanbaru, Palangkaraya, Pontianak, Singapore, Kuala Lumpur."],
+  ["05", "2015 and 2019", "The two anchor crises replayed day by day, with the model run blind on them."],
+  ["Explore", "Any day, any receptor", "Direction toggle, day scrubber, receptor picker, layer toggles, URL state, chart/table + download."],
+  ["Method", "How it was built and where it breaks", "The FIRMS type/confidence filter, the trajectory model's physics limits, every gate result, all attributions."],
+];
+
+const GATES = [
+  ["G-J1", "Hotspot hygiene (hard)", "Zero retained detections inside the static volcano/flare mask, on EVERY product including NRT — where the FIRMS type field does not exist, so a field-based filter would pass while doing nothing. A removal share below 0.5 % FAILS: that means the filter is broken, not that Indonesia has no volcanoes."],
+  ["G-J2", "Ignition-risk skill (hard)", "Held-out AUC >= 0.80 and a Brier skill score > 0 against BOTH day-of-year climatology and the CEMS Canadian Fire Weather Index, at 1, 3 and 7 day lead. Reanalysis and forecast paths scored separately."],
+  ["G-J3", "Transport direction", "On observed haze episodes, the back-trajectory bearing agrees with the forward run's within +/-30 degrees on >= 70 % of episode days. This gates the integrator, not the physics — the physics check is the CAMS comparison."],
+  ["G-J4", "Receptor correlation (hard at tier 1)", "Spearman rho >= 0.5 against Singapore NEA instruments. Indonesian stations report with their short coverage stated; unmonitored receptors compare against CAMS EAC4 and are labelled model-vs-model."],
+  ["G-J5", "Anchor-event replay", "2015 and 2019 held out entirely; both must land in the top decile of national seasonal severity. 2015 has no Singapore ground truth (NEA history starts 2016-03), so its reference is FIRMS plus CAMS EAC4 — and the gate says so."],
+];
+---
+
+<html lang="en" data-case="haze" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fire &amp; Haze Early Warning</title>
+    <meta
+      name="description"
+      content="Ignition risk and haze transport for Indonesia days ahead — fire hotspots, ERA5 winds, peat and drought — scored against observed PM2.5 in Riau, Kalimantan, Singapore and Malaysia."
+    />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    />
+    <style is:global>
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+      .wrap { max-width: var(--content-width); margin: 0 auto; padding: var(--space-6) var(--space-4); }
+      .stamp { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+      h1 { font-size: clamp(2rem, 5vw, 3.2rem); margin: var(--space-3) 0; letter-spacing: -0.02em; }
+      .lede { color: var(--ink-muted); max-width: var(--prose-width); font-size: 1.05rem; }
+      .rail { display: grid; gap: var(--space-3); margin-top: var(--space-6); }
+      .row { display: grid; grid-template-columns: 92px 1fr; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--hairline); }
+      .row b { font-family: var(--font-data); font-size: 0.76rem; color: var(--accent); }
+      .row h3 { margin: 0 0 4px; font-size: 1rem; }
+      .row p { margin: 0; color: var(--ink-muted); font-size: 0.92rem; max-width: var(--prose-width); }
+      .ramp { display: flex; gap: 0; margin-top: var(--space-4); border-radius: var(--radius); overflow: hidden; }
+      .ramp i { flex: 1; height: 10px; }
+      .note { margin-top: var(--space-5); padding: var(--space-3); border: 1px solid var(--hairline); border-left: 3px solid var(--accent); background: var(--surface); font-size: 0.92rem; color: var(--ink-muted); }
+      @media (max-width: 600px) { .row { grid-template-columns: 1fr; gap: 4px; } }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <span class="stamp">Case J · Phase 3 · {pending ? "Scaffold — pipeline not yet run" : "Live"}</span>
+      <h1>Days before the sky turns</h1>
+      <p class="lede">
+        Indonesia's haze is not a weather event; it is a land-use decision plus a wind. This case
+        predicts where fire starts and where the smoke goes — an ignition-risk surface days ahead,
+        and a trajectory model that says which cities, on both sides of the Strait, are downwind.
+      </p>
+
+      <div class="ramp" aria-hidden="true">
+        <i style="background: var(--ramp-0)"></i>
+        <i style="background: var(--ramp-1)"></i>
+        <i style="background: var(--ramp-2)"></i>
+        <i style="background: var(--ramp-3)"></i>
+        <i style="background: var(--ramp-4)"></i>
+      </div>
+
+      <div class="rail">
+        {CHAPTERS.map(([k, t, d]) => (
+          <div class="row"><b>{k}</b><div><h3>{t}</h3><p>{d}</p></div></div>
+        ))}
+      </div>
+
+      <div class="rail">
+        {GATES.map(([k, t, d]) => (
+          <div class="row"><b>{k}</b><div><h3>{t}</h3><p>{d}</p></div></div>
+        ))}
+      </div>
+
+      {pending && (
+        <p class="note">
+          No <code>src/data/summary.json</code> yet — run <code>make rebuild</code> in
+          <code>cases/fire-haze/</code>. Thresholds above were fixed before any result was seen,
+          per the spec; they are not moved to fit an outcome.
+        </p>
+      )}
+    </main>
+  </body>
+</html>

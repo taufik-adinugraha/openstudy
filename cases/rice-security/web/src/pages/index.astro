@@ -1,0 +1,108 @@
+---
+// Case I — Rice & Food Security.  SCAFFOLD ONLY: the pipeline has not been run,
+// so this page renders the contract (chapters + gates) rather than results.
+//
+// Anatomy (spec docs/spec-rice-security.html, I5):
+//   hero "the radar probe" -> 01 why radar -> 02 the harvest wave ->
+//   03 our number vs BPS -> 04 the calendar is moving -> explore -> methodology
+//
+// Identity: young-paddy chartreuse on wet slate; the phenology ramp is CYCLIC
+// and DATA ONLY — it never doubles as the accent.
+// No WebGL anywhere: every map is 2-D canvas/SVG with its own hit testing.
+import "../styles/tokens.css";
+
+const S = (await import("../data/summary.json").catch(() => null))?.default ?? null;
+const pending = !S;
+
+const CHAPTERS = [
+  ["Hero", "The radar probe", "Drag a probe over Java's paddy; its real Sentinel-1 VH curve draws, flooding minima and heading maxima snap into place, planting and harvest dates fall onto a calendar strip."],
+  ["01", "Why radar, not optical", "Cloud-cover climatology per month against Sentinel-2 usable-scene counts — the reason optical rice mapping fails in the tropics, shown rather than asserted."],
+  ["02", "The harvest wave", "One scrub through the crop calendar: kabupaten recolour by phenological stage while the national harvested-area ridge fills beneath."],
+  ["03", "Our number against theirs", "Radar-derived harvested area vs BPS KSA, per kabupaten and per month, with the residuals charted — not netted out."],
+  ["04", "The calendar is moving", "Planting-date anomalies against ENSO and CHIRPS rainfall: when the monsoon slips, the harvest slips with it."],
+  ["Explore", "Any kabupaten, any date", "Probe, stage filter, season toggle, URL state, chart/table + download."],
+  ["Method", "How it was built", "Speckle handling, the phenology rules and their thresholds, every gate result, the KSA methodology break, all attributions."],
+];
+
+const GATES = [
+  ["G-I1", "KSA reconciliation (hard)", "Provincial annual harvested area within +/-10 % of BPS KSA for every year in the record; kabupaten-level R2 >= 0.75, MAPE <= 20 %. Evaluated on the uncalibrated series too — a gate applied only after fitting to the benchmark is not a gate."],
+  ["G-I2", "Harvest-timing accuracy (hard)", "Median absolute error of the modelled peak-harvest week <= 2 weeks, no unit biased more than 3 weeks — on the 65-regency x 96-month monthly KSA panel that West and East Java publish, not on four provincial curves."],
+  ["G-I3", "Cropping-intensity plausibility", "Modelled crops per year lands in 1.5-2.5 for the irrigated lowland kabupaten and below 1.5 for rainfed uplands, and agrees with Open-SEA-Rice-10's own single/double/triple classes."],
+  ["G-I4", "Independent rice map agreement", "Our paddy extent agrees with Open-SEA-Rice-10 on >= 70 % of its area, with the disagreement mapped rather than absorbed."],
+  ["G-I5", "Temporal hold-out", "The 2025/26 season is held out by time; G-I1 and G-I2 are re-reported on it before any tuning."],
+];
+---
+
+<html lang="en" data-case="rice" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rice &amp; Food Security — Java's Harvest from Radar</title>
+    <meta
+      name="description"
+      content="Paddy phenology mapped from Sentinel-1 radar across Java's rice-bowl provinces: planted and harvested area, and when the harvest actually lands — benchmarked against BPS KSA."
+    />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    />
+    <style is:global>
+      * { box-sizing: border-box; }
+      body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
+      .wrap { max-width: var(--content-width); margin: 0 auto; padding: var(--space-6) var(--space-4); }
+      .stamp { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+      h1 { font-size: clamp(2rem, 5vw, 3.2rem); margin: var(--space-3) 0; letter-spacing: -0.02em; }
+      .lede { color: var(--ink-muted); max-width: var(--prose-width); font-size: 1.05rem; }
+      .rail { display: grid; gap: var(--space-3); margin-top: var(--space-6); }
+      .row { display: grid; grid-template-columns: 92px 1fr; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--hairline); }
+      .row b { font-family: var(--font-data); font-size: 0.76rem; color: var(--accent); }
+      .row h3 { margin: 0 0 4px; font-size: 1rem; }
+      .row p { margin: 0; color: var(--ink-muted); font-size: 0.92rem; max-width: var(--prose-width); }
+      .phen { display: flex; gap: 0; margin-top: var(--space-4); border-radius: var(--radius); overflow: hidden; }
+      .phen i { flex: 1; height: 10px; }
+      .note { margin-top: var(--space-5); padding: var(--space-3); border: 1px solid var(--hairline); border-left: 3px solid var(--accent); background: var(--surface); font-size: 0.92rem; color: var(--ink-muted); }
+      @media (max-width: 600px) { .row { grid-template-columns: 1fr; gap: 4px; } }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <span class="stamp">Case I · Phase 3 · {pending ? "Scaffold — pipeline not yet run" : "Live"}</span>
+      <h1>Java's harvest, seen through cloud</h1>
+      <p class="lede">
+        Sentinel-1 radar sees the paddy that optical satellites never do: the flooded field is a
+        mirror and the standing crop is a scatterer, so the crop calendar is written into the
+        backscatter itself. This case reads it, turns it into planted and harvested area and a
+        harvest date, and puts the answer next to BPS's own KSA figures.
+      </p>
+
+      <div class="phen" aria-hidden="true">
+        <i style="background: var(--phen-flood)"></i>
+        <i style="background: var(--phen-veg)"></i>
+        <i style="background: var(--phen-peak)"></i>
+        <i style="background: var(--phen-ripe)"></i>
+        <i style="background: var(--phen-harvest)"></i>
+      </div>
+
+      <div class="rail">
+        {CHAPTERS.map(([k, t, d]) => (
+          <div class="row"><b>{k}</b><div><h3>{t}</h3><p>{d}</p></div></div>
+        ))}
+      </div>
+
+      <div class="rail">
+        {GATES.map(([k, t, d]) => (
+          <div class="row"><b>{k}</b><div><h3>{t}</h3><p>{d}</p></div></div>
+        ))}
+      </div>
+
+      {pending && (
+        <p class="note">
+          No <code>src/data/summary.json</code> yet — run <code>make rebuild</code> in
+          <code>cases/rice-security/</code>. Thresholds above were fixed before any result was
+          seen, per the spec; they are not moved to fit an outcome.
+        </p>
+      )}
+    </main>
+  </body>
+</html>

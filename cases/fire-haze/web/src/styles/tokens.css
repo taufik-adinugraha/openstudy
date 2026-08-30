@@ -1,0 +1,227 @@
+/* Demo Lab design tokens — dark-first (decision D9).
+ *
+ * :root           = lab chrome, dark (the designed-for experience)
+ * [data-case=…]   = per-case tonal identity, derived from the case's subject
+ * light theme     = accessibility/print fallback via media query + [data-theme]
+ *
+ * Rule: components style through tokens only. Semantic colors (up/down/alert)
+ * are separate from the accent and never reuse it.
+ */
+
+:root {
+  /* lab chrome — graphite + spectral cyan (the neutral observatory) */
+  --ground: #101318;
+  --surface: #171B22;
+  --surface-raised: #1E242E;
+  --ink: #E8EAED;
+  --ink-muted: #9AA3AF;
+  --hairline: #262D38;
+  --accent: #5BC8DB;          /* spectral cyan — lab identity only */
+  --accent-ink: #0E2A30;
+
+  /* provenance + semantics (site-wide constants) */
+  --official: #4BB8A9;        /* official-statistics series, teal, everywhere */
+  --up: #E0A63F;
+  --down: #6B7CA6;
+  --alert: #E08B54;
+
+  /* type */
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "Public Sans", -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, monospace;
+
+  /* rhythm */
+  --space-1: 4px; --space-2: 8px; --space-3: 16px;
+  --space-4: 24px; --space-5: 40px; --space-6: 64px;
+  --radius: 6px;
+  --content-width: 72rem;
+  --prose-width: 68ch;
+}
+
+/* ── Flagship A: city lights from orbit ─────────────────────────────── */
+[data-case="nightlights"] {
+  --ground: #0A0E1A;          /* midnight indigo */
+  --surface: #131A2E;
+  --surface-raised: #1A2340;
+  --ink: #E9E4D6;             /* starlight */
+  --ink-muted: #9C9A8D;
+  --hairline: #232B44;
+  --accent: #E8A33D;          /* sodium amber — lights-derived data only */
+  --accent-ink: #2E1F06;
+  /* radiance ramp = the imagery's own ramp */
+  --ramp-0: #05070F; --ramp-1: #1B2447; --ramp-2: #7A5A22;
+  --ramp-3: #E8A33D; --ramp-4: #FFEFC9;
+}
+
+/* ── Flagship B: smelter metal ──────────────────────────────────────── */
+[data-case="trade"] {
+  --ground: #0C0F14;          /* carbon ink */
+  --surface: #161C25;
+  --surface-raised: #1D2530;
+  --ink: #E6E8EC;
+  --ink-muted: #99A2AE;
+  --hairline: #242B36;
+  --accent: #D9722C;          /* molten copper — Indonesia */
+  --accent-ink: #2E1607;
+  --peer: #58A89B;            /* verdigris — peer countries */
+  --structure: #AEB6C2;       /* nickel silver — world structure, edges */
+}
+
+/* ── Phase 2: Jakarta Is Sinking — abyssal blue → cyan (water and depth) ── */
+[data-case="sinking"] {
+  --ground: #070D16;
+  --surface: #0E1926;
+  --surface-raised: #142236;
+  --ink: #E4EBF2;
+  --ink-muted: #8CA0B5;
+  --hairline: #1E2E44;
+  --accent: #35C6E0;          /* cyan — subsidence signal */
+  --accent-ink: #062A33;
+  /* bathymetric ramp: stable → sinking fast */
+  --ramp-0: #0A1F3A; --ramp-1: #144E7A; --ramp-2: #1F8FB5;
+  --ramp-3: #35C6E0; --ramp-4: #D8F6FC;
+  --danger: #F26D5B;          /* flood-exposure emphasis */
+}
+
+/* ── Platform: knowledge assistant — jade on deep evergreen ─────────── */
+[data-case="knowledge"] {
+  --ground: #0C1210;
+  --surface: #131C18;
+  --surface-raised: #1A2620;
+  --ink: #E7EAE4;
+  --ink-muted: #93A198;
+  --hairline: #24312A;
+  --accent: #46C08B;          /* jade — the assistant's voice + citations */
+  --accent-ink: #0A2A1D;
+  --quote: #F1EDDF;           /* paper — verbatim quotes read as paper */
+}
+
+/* ── Case: global narrative — signal violet on broadcast black ──────── */
+[data-case="narrative"] {
+  --ground: #0E0A16;
+  --surface: #171126;
+  --surface-raised: #1F1733;
+  --ink: #EAE6F2;
+  --ink-muted: #9C93B3;
+  --hairline: #2A2142;
+  --accent: #B26DF2;          /* signal violet — the pulse of coverage */
+  --accent-ink: #26113E;
+  --tone-pos: #4BB8A9;        /* tone semantics: positive teal / negative coral */
+  --tone-neg: #F26D5B;
+}
+
+/* ── Case: air quality — haze clearing to sky ───────────────────────── */
+[data-case="airquality"] {
+  --ground: #10131A; --surface: #181D26; --surface-raised: #202733;
+  --ink: #E9EBEE; --ink-muted: #97A1AC; --hairline: #262E3A;
+  --accent: #6FC7D6;          /* washed sky cyan — the AQI ramp stays data-only */
+  --accent-ink: #0E2A30;
+}
+
+/* ── Case: poverty mapping — ground truth, rooftops and soil ────────── */
+[data-case="poverty"] {
+  --ground: #14100C; --surface: #1E1812; --surface-raised: #281f17;
+  --ink: #F0EAE1; --ink-muted: #A99C8B; --hairline: #332921;
+  --accent: #D99A4E;          /* ochre — roofscape from above */
+  --accent-ink: #33220D;
+}
+
+/* ── Case: transit equity — metro-line chromatics on graphite ───────── */
+[data-case="transit"] {
+  --ground: #101216; --surface: #181B21; --surface-raised: #20242C;
+  --ink: #E9EAED; --ink-muted: #989DA8; --hairline: #272C36;
+  --accent: #E4562E;          /* TransJakarta red-orange as the line colour */
+  --accent-ink: #351105;
+}
+
+/* ── Case: forest watch — canopy against burn ───────────────────────── */
+[data-case="forest"] {
+  --ground: #0C120D; --surface: #141C15; --surface-raised: #1B261C;
+  --ink: #E7ECE6; --ink-muted: #93A394; --hairline: #243025;
+  --accent: #57B26A;          /* canopy green; burnt umber reserved for loss */
+  --accent-ink: #10301A;
+  --loss: #B4552A;
+}
+
+/* ── Case: fire & haze — plume magenta on ash ────────────────────────
+ *
+ * NOT YET IN shared/design/tokens.css — this block is the case-local copy and
+ * is proposed verbatim for the shared file (see cases/fire-haze/README.md,
+ * "Decisions pending user verification" #1).
+ *
+ * Why magenta and not fire-orange: orange is triple-booked in this portfolio
+ * (trade copper #D9722C, transit red-orange #E4562E, forest loss #B4552A) and a
+ * fourth orange case would be indistinguishable in the homepage grid.  Magenta
+ * is also the honest choice: satellite aerosol products (TROPOMI UV Aerosol
+ * Index, MODIS AOD) render dense smoke at the magenta end, so the plume colour
+ * is borrowed from the instrument, not invented.  Ignition points keep a hot
+ * vermilion, used ONLY for point detections, never for UI.
+ */
+[data-case="haze"] {
+  --ground: #12100F; --surface: #1A1715; --surface-raised: #231F1C;
+  --ink: #EFEAE6; --ink-muted: #A79C93; --hairline: #2C2724;
+  --accent: #E2569E;          /* plume magenta — smoke concentration + transport */
+  --accent-ink: #330A20;
+  --fire: #FF7A45;            /* ignition / hotspot points ONLY */
+  --clean: #7FB2C9;           /* clear-air reference, receptor baselines */
+  /* Haze ramp — data-only: clear sky through sulphur to dense plume. */
+  --ramp-0: #16232B; --ramp-1: #4E5A55; --ramp-2: #A88A4E;
+  --ramp-3: #D9628A; --ramp-4: #F6C9DE;
+}
+
+/* ── Light fallback (accessibility/print) ───────────────────────────── */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --ground: #FAF9F5;
+    --surface: #F1EFE8;
+    --surface-raised: #FFFFFF;
+    --ink: #1C232E;
+    --ink-muted: #5B6473;
+    --hairline: #E3E0D7;
+    --accent: #147A8C;
+    --accent-ink: #E4F2F5;
+    --official: #177368;
+    --up: #8A6215;
+    --down: #55688F;
+    --alert: #A6521F;
+  }
+  /* The dark-guard must test the ROOT's theme, not the case-scoped element —
+     a dark page embedding case-scoped tiles stays dark throughout. */
+  :root[data-case="nightlights"]:not([data-theme="dark"]),
+  :root:not([data-theme="dark"]) [data-case="nightlights"] {
+    --ground: #FAF8F2; --surface: #F1EDE1; --surface-raised: #FFFFFF;
+    --ink: #201E16; --ink-muted: #6A675A; --hairline: #E2DDCD;
+    --accent: #8A5F12; --accent-ink: #F5E9CE;
+  }
+  :root[data-case="trade"]:not([data-theme="dark"]),
+  :root:not([data-theme="dark"]) [data-case="trade"] {
+    --ground: #F8F8F6; --surface: #EEEFEC; --surface-raised: #FFFFFF;
+    --ink: #191E25; --ink-muted: #5D6673; --hairline: #DFE1DC;
+    --accent: #A3541B; --accent-ink: #F6E5D6;
+    --peer: #2E7A6E; --structure: #6C7686;
+  }
+}
+:root[data-theme="light"] {
+  --ground: #FAF9F5; --surface: #F1EFE8; --surface-raised: #FFFFFF;
+  --ink: #1C232E; --ink-muted: #5B6473; --hairline: #E3E0D7;
+  --accent: #147A8C; --accent-ink: #E4F2F5;
+  --official: #177368; --up: #8A6215; --down: #55688F; --alert: #A6521F;
+}
+
+/* ── Base application ───────────────────────────────────────────────── */
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  line-height: 1.6;
+}
+h1, h2, h3, h4 { font-family: var(--font-display); text-wrap: balance; }
+code, .data, .stamp { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

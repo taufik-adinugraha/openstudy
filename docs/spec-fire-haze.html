@@ -1,0 +1,280 @@
+<title>Fire &amp; Haze Spec</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper: #FBF7F8; --surface: #F3ECEE; --ink: #211A1D; --muted: #6B5F63;
+    --hairline: #E7DDE0; --accent: #B8306F; --accent-soft: #F7E3EE;
+    --teal: #177368; --warn: #C2521F; --warn-soft: #F7E4D8; --code-bg: #F0E8EA;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #12100F; --surface: #1A1715; --ink: #EFEAE6; --muted: #A79C93;
+      --hairline: #2C2724; --accent: #E2569E; --accent-soft: #330A20;
+      --teal: #4BB8A9; --warn: #FF7A45; --warn-soft: #33190E; --code-bg: #221D1B;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #12100F; --surface: #1A1715; --ink: #EFEAE6; --muted: #A79C93;
+    --hairline: #2C2724; --accent: #E2569E; --accent-soft: #330A20;
+    --teal: #4BB8A9; --warn: #FF7A45; --warn-soft: #33190E; --code-bg: #221D1B;
+  }
+  body { background: var(--paper); color: var(--ink); font-family: "Source Serif 4", Georgia, serif; font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 56px 24px 96px; }
+  h1, h2, h3 { font-family: "Archivo", Arial, sans-serif; text-wrap: balance; margin: 0; }
+  h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
+  h2 { font-size: 1.3rem; font-weight: 700; }
+  h3 { font-size: 1rem; font-weight: 600; }
+  p { margin: 0; max-width: 68ch; }
+  a { color: var(--teal); }
+  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+  header.doc { display: flex; flex-direction: column; gap: 14px; padding-bottom: 30px; border-bottom: 2px solid var(--ink); }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px 26px; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--muted); }
+  .meta-row b { color: var(--ink); font-weight: 500; }
+  section { display: flex; flex-direction: column; gap: 16px; margin-top: 48px; }
+  .lede { font-size: 1rem; color: var(--muted); }
+  .q { font-size: 1.15rem; font-style: italic; border-left: 3px solid var(--accent); padding: 6px 0 6px 18px; max-width: 62ch; }
+  table { border-collapse: collapse; width: 100%; font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; line-height: 1.55; }
+  .table-scroll { overflow-x: auto; }
+  th { text-align: left; font-weight: 600; font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 8px 14px 8px 0; border-bottom: 1px solid var(--ink); }
+  td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  code { font-family: "IBM Plex Mono", monospace; font-size: 0.82em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  pre { background: var(--code-bg); padding: 14px 16px; overflow-x: auto; border-radius: 4px; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; line-height: 1.6; margin: 0; }
+  ul.plain, ol.plain { margin: 0; padding-left: 1.35em; display: flex; flex-direction: column; gap: 9px; max-width: 70ch; }
+  ol.plain li::marker, ul.plain li::marker { color: var(--accent); font-family: "IBM Plex Mono", monospace; font-weight: 600; }
+  .stage { display: grid; grid-template-columns: 120px 1fr; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--hairline); }
+  .stage:last-child { border-bottom: 0; }
+  .stage .sname { font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; font-weight: 600; color: var(--accent); padding-top: 3px; }
+  .stage p { font-size: 0.95rem; }
+  @media (max-width: 600px) { .stage { grid-template-columns: 1fr; gap: 4px; } }
+  .gate { border: 1px solid var(--hairline); border-left: 3px solid var(--teal); background: var(--surface); padding: 14px 18px; font-size: 0.95rem; max-width: 70ch; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+  .sw { display: flex; align-items: center; gap: 8px; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+  .sw i { width: 22px; height: 22px; border-radius: 4px; display: inline-block; border: 1px solid var(--hairline); }
+  .check li { list-style: none; position: relative; padding-left: 1.6em; }
+  .check li::before { content: "☐"; position: absolute; left: 0; color: var(--accent); font-family: "IBM Plex Mono", monospace; }
+  .check { padding-left: 0; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 3px; font-family: "IBM Plex Mono", monospace; font-size: 0.64rem; font-weight: 600; letter-spacing: 0.06em; white-space: nowrap; background: var(--warn-soft); color: var(--warn); }
+  footer.doc { margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--hairline); font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header class="doc">
+    <span class="eyebrow">Phase 3 · Case J · Spec v1</span>
+    <h1>Fire &amp; Haze Early Warning</h1>
+    <p class="lede">Ignition risk per 0.25° cell per day at 1–7 day lead, scored against the
+    operational Canadian Fire Weather Index rather than against a coin flip; and a trajectory
+    model on ERA5 winds, released at published plume heights, that says which cities are downwind.
+    2015 and 2019 are the anchors and are held out of training entirely.</p>
+    <div class="meta-row">
+      <span>DATE <b>2026-08-30</b></span>
+      <span>REFRESH <b>Static core + optional daily risk refresh</b></span>
+      <span>IDENTITY <b>Plume magenta on ash</b></span>
+      <span>DATA PATH <b>Verified by reconnaissance 2026-08-30 (APIs queried live)</b></span>
+    </div>
+  </header>
+
+  <section>
+    <span class="eyebrow">J1 · The question</span>
+    <p class="q">“The smoke that closed Singapore's schools — whose land was it standing on three
+    days earlier?”</p>
+    <p>Indonesia's haze is not weather. It is a land-use decision plus a wind, and the two halves
+    are separable: <em>where a fire is likely to start</em> is a function of drought, peat and
+    fuel, and <em>where the smoke goes</em> is a function of the flow aloft. Everyone downstream —
+    a plantation group managing concession risk, a Jakarta ministry allocating suppression
+    aircraft, a Singaporean facilities manager deciding whether to run the air handling at full
+    filtration on Thursday — is asking one of those two questions with days of lead. What exists
+    publicly is a map of fires that have already been detected and a fire-danger index with no
+    published medium-range forecast. The gap is not detection; NASA does detection extremely well.
+    <b>The gap is the two or three days before, and the attribution afterwards</b> — and both are
+    buildable from open data, provided the pipeline is honest about being a trajectory model
+    rather than a chemistry-transport model, and provided the fire record is cleaned of the
+    volcanoes and gas flares that make Indonesia's hotspot table partly a geology table.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">J2 · Data contract</span>
+    <h2>Data contract</h2>
+    <p class="lede">Every row verified live 2026-08-30 — real API calls, real HEAD sizes, real
+    jobs submitted to the Copernicus queues to measure file sizes without downloading them.
+    <b>No new registration is needed anywhere in this case</b>: one ECMWF token authenticates on
+    CDS, ADS and EWDS alike. What is outstanding is three one-time browser policy clicks, listed
+    in J8.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Source</th><th>Product / access</th><th>Licence</th><th>Size</th><th>Cadence</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>FIRMS hotspots <b>(the labels)</b></td><td>Per-country yearly bulk CSVs — the directory listing 404s under the new backend but the files are live at predictable URLs — spliced with the <code>area</code> API for the recent tail (<b>5-day windows, not 10</b>). <code>data_availability</code> gives the seam: <code>VIIRS_SNPP_SP</code> 2012-01-20→2026-04-27, <code>NRT</code> onward. <b>Both anchors are inside the VIIRS record</b> — on 2015-10-20 VIIRS returned 6,110 detections to MODIS's 1,354</td><td>NASA, public domain / free &amp; open</td><td>VIIRS SNPP Indonesia 2012–2024 ≈ <b>250 MB</b>. Per-year size <em>is</em> the story: 2015 = 66.1 MB, 2019 = 33.0 MB, 2016 (La Niña) = 8.8 MB</td><td>bulk lags ~18 mo; NRT ~3 h</td><td><b>Ignition labels</b></td></tr>
+          <tr><td>ERA5 + ERA5-Land</td><td>CDS <code>single-levels</code> (fire weather), <code>pressure-levels</code> 925/850/700 hPa (steering flow for transport), <code>era5-land</code> at 0.1° for peat soil moisture. All 15 needed variables confirmed present; two naming corrections found live — LAI is split high/low vegetation, and moisture flux is <code>vertical_integral_of_{eastward,northward}_water_vapour_flux</code></td><td>Copernicus CC BY 4.0</td><td>measured over the AOI: <b>1.05 / 1.66 / 1.42 GB per year</b></td><td>hourly; <b>6-day lag</b> measured</td><td>Fire weather + transport</td></tr>
+          <tr><td>CEMS fire indices <b>(the baseline to beat)</b></td><td><code>cems-fire-historical-v1</code> on <b>EWDS</b> — not CDS, which 404s. Full Canadian set (FWI, FFMC, DMC, DC, ISI, BUI, DSR) <b>plus <code>keetch_byram_drought_index</code></b>, so KBDI is not hand-rolled. Server-side bbox subsetting</td><td>CC BY 4.0</td><td><b>≈29 MB/year</b> for all seven indices over the AOI; 0.73 GB for the entire 1940→ archive</td><td>daily, <b>2-day lag</b></td><td><b>External benchmark — gate G-J2</b></td></tr>
+          <tr><td>CHIRPS + CHIRPS-GEFS</td><td>CHC. <b>v2 production ends after December 2026</b>, so v3 is the build target. Final runs 30 days behind, <code>prelim</code> 5 — and within prelim use <code>fixed/</code>, which sums exactly to the pentad totals, not <code>tifs/</code>. <b>CHIRPS-GEFS v3</b> gives bias-corrected precipitation <em>forecasts</em>, lead 0–15 days, issued same-day, no auth</td><td>a CC0-style public-domain dedication — unversioned and unlinked (described honestly, not as “CC0”)</td><td>small clipped; ~11 MB/day for the Indonesia GEFS clip</td><td>daily; prelim 5-day, GEFS same-day</td><td>Drought + <b>the days-ahead driver</b></td></tr>
+          <tr><td>CAMS <b>(the chemistry benchmark)</b></td><td>ADS <code>cams-global-atmospheric-composition-forecasts</code> — PM2.5, OM/BC/total AOD, CO, lead 0–120 h, <b>2015→today, so it covers both anchors</b>. Plus <code>cams-global-reanalysis-eac4</code> (2003→2025) as surrogate truth where no sensor exists</td><td>Copernicus CC BY 4.0</td><td>small at ~0.4°/0.75° over the AOI</td><td>2×daily forecasts</td><td>A real CTM to stand beside</td></tr>
+          <tr><td>CAMS GFAS <span class="pill">the upgrade</span></td><td><code>cams-global-fire-emissions-gfas</code> — FRP→emissions, and critically <b><code>injection_height</code>, plume top and plume bottom per fire</b>. Plume height is what decides whether smoke settles locally or joins the 850 hPa flow across the Strait, and it was the crudest guess in the first draft of this spec</td><td>Copernicus CC BY 4.0</td><td>small</td><td>daily, <b>ends 2025-12-03</b></td><td><b>Release heights</b> (training/backtest; operational tail falls back and says so)</td></tr>
+          <tr><td>Peat depth</td><td><b>PEATGRIDS</b> (Widyastuti et al. 2025, <em>CATENA</em>), Zenodo <code>10.5281/zenodo.12559239</code> — 1 km thickness in metres + carbon stock. Peat presence continues to come from Case H's <code>gfw_peatlands</code>, already CC BY 4.0</td><td><b>CC BY 4.0</b></td><td>57.5 + 57.8 MB</td><td>static</td><td><b>The fuel variable that matters most</b></td></tr>
+          <tr><td>Land cover</td><td>ESA WorldCover v200 (2021), anonymous S3, verified 200 + <code>Accept-Ranges</code> and a genuine COG structure so windows work. KLHK <code>PL_AR_250K</code> (Penutupan Lahan 2024, 442,816 polygons) as enrichment — note the path is <code>/server/rest/services</code>, the class is the integer <code>PL2024_ID</code> because <code>NAMAOBJ</code>/<code>FCODE</code> are literally <code>"-"</code>, and <code>PL2023_ID_R</code> in the same row is a free one-year change flag</td><td>WorldCover <b>CC BY 4.0</b>; KLHK <span class="pill">no open licence</span></td><td>38 tiles = <b>0.76 GiB</b> for the AOI</td><td>static / annual</td><td>Fuel classes</td></tr>
+          <tr><td>ENSO / IOD / SOI</td><td>CPC <code>oni.ascii.txt</code> and <code>wksst9120.for</code> (<em>not</em> <code>wksst8110.for</code> — it still resolves but froze in Jan 2021 at a base-period change); NOAA PSL HadISST DMI; <b>Long Paddock daily SOI</b>, because every BoM SOI URL is now 404</td><td>US Gov public domain; Long Paddock <b>CC BY 4.0</b></td><td>kB</td><td>ONI monthly, SOI <b>daily, 2-day lag</b></td><td>Season state</td></tr>
+          <tr><td>Ground PM2.5</td><td><b>Tier 1</b> Singapore NEA v1 (takes a <code>date</code>, returns a full day; verified at the 2019 peak, south region 105 µg/m³). <b>Tier 2</b> the few Indonesian OpenAQ units that exist. <b>Tier 3</b> CAMS EAC4 as an explicit surrogate where no sensor has ever existed</td><td>NEA: <b>Singapore Open Data Licence v1.0 — commercial explicitly permitted</b>; OpenAQ CC BY 4.0</td><td>small</td><td>hourly</td><td><b>Verification — gate G-J4</b></td></tr>
+          <tr><td>S5P UV Aerosol Index <span class="pill">held back</span></td><td>DLR EOC <code>S5P_TROPOMI_L3_P1D_AI_v2</code> — anonymous STAC, anonymous COGs, HTTP 206 range reads, and <b>the whole AOI inside one 512×512 tile at 0.97 MB/day</b> (≈1.2 GB for 2018–2026), same-day latency, no L2 swath handling at all. Technically ideal</td><td><span class="pill">CONFLICT</span> the collection's <code>license</code> string says CC-BY-4.0 while the URL in that same field <em>and</em> the <code>rel:license</code> link point at <b>CC BY-NC 4.0</b></td><td>0.97 MB/day</td><td>daily, same-day</td><td>Plume observation — <b>pending written confirmation from DLR</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><b>Six premises that did not survive contact, because each changes the build:</b>
+    (1) FIRMS <code>area</code> caps at <b>five</b> days, not ten.
+    (2) VIIRS <em>does</em> cover 2015, so no MODIS splice is needed for the anchors.
+    (3) <b>The <code>type</code> field is absent from every NRT product</b> — NASA: “data
+    distributed via the FIRMS download tool does not attribute the static sources/inferred hotspot
+    ‘type’”. A <code>type == 0</code> filter therefore silently no-ops on the live tail, so the
+    recent series keeps volcanoes and flares the historical series drops and the SP/NRT seam
+    becomes a step change that reads as a trend. <em>Case E has this bug today</em>; the fix — use
+    <code>type</code> to build a static mask from the archive, then filter everything with the
+    mask — is worth back-porting.
+    (4) <code>cems-fire-historical-v1</code> is on EWDS, not CDS.
+    (5) ADS and EWDS need no new registration.
+    (6) The ground-truth problem is not thin Jakarta coverage: <b>OpenAQ has zero PM2.5 locations
+    in Riau and zero in all of Kalimantan</b>, on bbox and radius searches alike.</p>
+    <p><b>Scouted and rejected, with the evidence:</b>
+    <b>Malaysia APIMS</b> — <code>apims.doe.gov.my</code> 404s on every path including root, and
+    the only aggregator carrying it forbids commercial use verbatim
+    (<span class="pill">AQICN non-commercial</span>). The transboundary claim is therefore
+    Indonesia→Singapore, and the copy must say so.
+    <b>Indonesia ISPU</b> — <code>menlhk.go.id</code> is NXDOMAIN after the 2024 ministry split;
+    the live host <code>ispu.kemenlh.go.id</code> is server-rendered with no API and no licence.
+    <b>SPEIbase</b> — ODbL 1.0 share-alike, a viral-licence risk on a commercial deliverable.
+    <b>S5P-PAL</b> — 932 MB/day with no subsetting and self-describes as pre-operational.
+    <b>CDSE STAC for S5P</b> — indexes only ~45 days despite advertising 2018→present, so a 2019
+    backtest silently returns zero items.
+    <b>Smithsonian GVP</b> — Cloudflare challenge from the dev network; the volcano geometry comes
+    from OSM via Overpass instead (295 nodes in the Indonesian bbox, ODbL).
+    <b>MODIS-bulk ∪ MODIS-API</b> — Collection 6.1 against Collection 6.0: same sensor, same day,
+    different row counts. Never concatenated.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">J3 · Pipeline</span>
+    <h2>Pipeline — static core with an optional daily refresh</h2>
+    <p class="lede">Total raw pull ≈ 6–8 GB, dominated by ERA5 (1.05 + 1.66 + 1.42 GB per year of
+    record) and WorldCover (0.76 GiB, deleted after aggregation). Wall time on the 16 GB server is
+    dominated by the Copernicus queues rather than by compute: FIRMS bulk minutes, ERA5 hours to
+    days sharded, everything downstream minutes. The daily refresh is well under 20 minutes.</p>
+    <div>
+      <div class="stage"><span class="sname">fires</span><p>Bulk country CSVs for the history, the 5-day <code>area</code> API for the tail, and the <b>static exclusion mask</b> — OSM volcano nodes buffered 5 km, plus persistent sources found empirically (a cell active on more than 120 days in <em>every</em> year of a fourteen-year record is a flare or a landfill, whatever its <code>type</code> says). The mask is applied to every product, which is the only way the NRT tail gets filtered at all. Removed rows are kept, with reasons, as the G-J1 audit trail.</p></div>
+      <div class="stage"><span class="sname">static</span><p>PEATGRIDS depth, Case H's peat and primary-forest rasters, WorldCover v200 class fractions, KLHK enrichment, geoBoundaries ADM2 with the name-based post-2020 Papua recode ported from the poverty case. Window-read, reduced to the model grid, raw deleted.</p></div>
+      <div class="stage"><span class="sname">indices</span><p>CHIRPS v3 (prelim for the operational path — train and serve on the same product or you have skew) plus CHIRPS-GEFS 0–15 day forecasts; SPI computed here, because only a self-computed index can also be run on the forecast; the CEMS FWI + KBDI set from EWDS as the external baseline; ONI, DMI, daily SOI.</p></div>
+      <div class="stage"><span class="sname">era5</span><p>Sharded by year. Single levels, pressure levels at 925/850/700, ERA5-Land soil moisture. <b>Remember the split response:</b> a multi-variable single-levels request returns a zip of two NetCDFs split by <code>stepType</code>, and naive concatenation leaves precipitation and radiation as all-NaN columns a model silently drops. Join on the grid key and assert non-null.</p></div>
+      <div class="stage"><span class="sname">cams</span><p>Forecasts as the CTM benchmark, EAC4 as tier-3 surrogate truth, GFAS for injection heights. Same token, different store, one policy click.</p></div>
+      <div class="stage"><span class="sname">ground</span><p>Three tiers, each labelled on the page: Singapore NEA (2016-03→, the only clean commercial-licensed instrument record), the handful of live Indonesian OpenAQ units with their coverage printed beside them, and CAMS EAC4 standing in where no sensor has ever existed.</p></div>
+      <div class="stage"><span class="sname">features</span><p>Cell-day panel: weather, drought, fuel, ocean state, calendar as sin/cos (a tree splitting on “day &gt; 250” learns the season as a cliff and cannot cross the year boundary), and trailing hotspot history in-cell and in the 8-neighbourhood. <b>Every predictor lagged to t−1 and asserted</b>; seasons blocked; anchors removed.</p></div>
+      <div class="stage"><span class="sname">risk</span><p>LightGBM per lead, blocked-by-season CV, isotonic calibration on a held-out season with the reliability diagram published, SHAP aggregated to feature families so chapter 02 can say <em>why</em> a cell is red. Two paths — reanalysis and CHIRPS-GEFS forecast — scored separately.</p></div>
+      <div class="stage"><span class="sname">transport</span><p>Petterssen second-order integration on the blended 925/850/700 field (first-order Euler drifts badly over 72 hours in curved flow — the difference between landing on Singapore and landing in the Java Sea). Release heights from GFAS where it exists, <code>PLUME_RISE</code> where it does not, with the fallback share reported. Forward and backward share one integrator, which is what G-J3 tests.</p></div>
+      <div class="stage"><span class="sname">validate</span><p>Gates G-J1…G-J5 → <code>stats.json</code>.</p></div>
+      <div class="stage"><span class="sname">export</span><p>View-models ≤ 3 MB first paint; per-day risk surfaces and per-receptor trajectory ensembles precomputed so the signature interaction responds without a server. Insight brief per D11.</p></div>
+    </div>
+    <pre>cases/fire-haze/
+  pipeline/  config.py util.py ingest_fires.py ingest_static.py ingest_indices.py ingest_era5.py
+             ingest_cams.py ingest_ground.py features.py risk.py transport.py validate.py
+             export_web.py finish.sh
+  data/      raw/ era5_parts/ (git-ignored)   web/  Astro app, port 4334, base /haze   Makefile</pre>
+  </section>
+
+  <section>
+    <span class="eyebrow">J4 · Validation gates</span>
+    <h2>Validation gates</h2>
+    <p class="lede">Thresholds fixed here, before any result was seen. A gate that fails ships red
+    with a diagnosis — the house precedent is Case C's G-C5 and Case H's G-H1. Thresholds are
+    never moved to fit an outcome.</p>
+    <div class="gate"><b>G-J1 — Hotspot hygiene (hard).</b> Zero retained detections inside the static exclusion mask, <em>on every product including NRT</em> — which is the whole point, since a field-based filter would pass this gate while doing nothing to the live tail. The removed share is published with its composition. Measured expectation at the 2019 peak: ~0.9 % by type, ~5.7 % by low confidence, with the volcano/flare floor a far larger share away from the season. <b>A removal share below 0.5 % fails</b>: that is evidence the filter is broken, not evidence that Indonesia has no volcanoes. Note also that only <b>3.2 %</b> of detections are high-confidence, so filtering to high confidence — a tempting-looking “quality” step — would discard 97 % of the signal and is explicitly not done.</div>
+    <div class="gate"><b>G-J2 — Ignition-risk skill (hard).</b> On held-out seasons: AUC ≥ <b>0.80</b> and a Brier skill score <b>&gt; 0 against both</b> the per-cell day-of-year climatology <em>and</em> the CEMS Canadian Fire Weather Index, at every lead of 1, 3 and 7 days. Beating climatology is table stakes; the FWI is an operational index we did not design and cannot tune, which is what makes it worth beating. Reported per lead and separately for the reanalysis and forecast paths — the gap between them is the honest cost of forecasting rather than hindcasting, and it is published rather than assumed away.</div>
+    <div class="gate"><b>G-J3 — Transport direction.</b> On observed episode days, the bearing from receptor to the back-trajectory's fire-weighted centroid agrees with the forward run's implied bearing within <b>±30°</b> on ≥ <b>70 %</b> of those days. This gates the integrator, not the physics, and the spec says so in those words. The physics check is the CAMS comparison — aligned by <em>issue</em> time, not valid time, so our day-3 forecast is compared with CAMS's day-3 lead rather than with its analysis — and it is published as a divergence chart, not as a score we claim to win.</div>
+    <div class="gate"><b>G-J4 — Receptor correlation (hard at tier 1 only).</b> Daily modelled exposure vs observed PM2.5 over the fire seasons: Spearman ρ ≥ <b>0.5</b> at Singapore, the only receptor with a long, clean, commercially-licensed instrument record. Tier-2 Indonesian stations are reported with their short coverage stated (2023-11 and 2025-10 onward); tier-3 receptors — Pekanbaru, Palangkaraya, Pontianak, where no open sensor has ever existed — are compared against CAMS EAC4 and labelled <em>model vs model</em>, never observation. Every receptor is reported <b>including the ones that fail</b>.</div>
+    <div class="gate"><b>G-J5 — Anchor-event replay.</b> 2015 and 2019 excluded from training entirely; scored blind, both must land in the top decile of national seasonal severity across the record. <b>2015 has no Singapore ground truth</b> — the NEA history begins 2016-03 — so its severity reference is FIRMS detections plus CAMS EAC4, and the gate states that rather than quietly substituting. If the model cannot rank the two crises everyone remembers, nothing else here is worth reading.</div>
+  </section>
+
+  <section>
+    <span class="eyebrow">J5 · Dashboard</span>
+    <h2>Dashboard — page anatomy</h2>
+    <p class="lede">Map rule: the user's browser runs with WebGL off — every map ships a
+    full-function 2-D canvas/SVG fallback (Path2D + <code>isPointInPath</code>, the nightlights
+    pattern), tagged visibly when active. Trajectories are polylines and risk surfaces are
+    byte-quantised grids: both are native canvas work, so the fallback is the primary path here
+    rather than a downgrade.</p>
+    <ol class="plain">
+      <li><b>Hero — “Blame the wind.” <span class="pill">signature interaction</span></b> Pick a receptor and a bad-air day. Seventy-two hours of back-trajectories fan out across the archipelago in plume magenta, the fires that were burning under them igniting in vermilion as the parcels sweep over them, and a province attribution assembling in the panel beside. Then one control flips the dial: the same engine runs <em>forward</em> from today's hotspots to tomorrow's downwind cities. It is the commercially interesting question and the methodologically honest one at the same time — and forward/backward sharing an integrator is exactly what gate G-J3 tests. Reduced motion: final trajectory fan, static, still clickable.</li>
+      <li><b>Chapter 01 — “What is actually burning.”</b> The hotspot record after the mask, with the mask itself drawn: volcanoes, flare stacks, the persistent-source cells. The removed share and its composition, and the file-size chart — 66.1 MB in 2015, 8.8 MB in 2016 — that tells the ENSO story before a single model runs.</li>
+      <li><b>Chapter 02 — “Why here, why now.”</b> The risk surface with SHAP contributions by family: dry + peat + wind, per cell, per day. The reliability diagram beside it, because a probability a ministry might act on has to mean what it says — 0.2 must burn about one time in five.</li>
+      <li><b>Chapter 03 — “Against the index everyone uses.”</b> Our skill against climatology, persistence and the CEMS FWI, per lead, plus the reanalysis-vs-forecast gap. The chapter that separates a demo from a claim.</li>
+      <li><b>Chapter 04 — “The plume.”</b> Forward trajectories weighted by FRP and released at GFAS injection heights, with the CAMS chemistry forecast drawn alongside — agreement where the cheap model works, divergence stated where it does not.</li>
+      <li><b>Chapter 05 — “Who breathes it.”</b> Receptor panels with their tier badge: Singapore against instruments, Palembang and West Sumatra against short records, Palangkaraya against a reanalysis and labelled as such.</li>
+      <li><b>Chapter 06 — “2015 and 2019.”</b> The anchors replayed day by day on a model that never saw them.</li>
+      <li><b>Explore.</b> Direction toggle, day scrubber, receptor picker, lead selector, layer toggles (peat depth, land cover, mask), URL state, chart/table + download.</li>
+      <li><b>Methodology.</b> The filter and its measured composition; the trajectory model's limits in plain words; the lag rule and what it means for operational skill; every gate result; the DLR licence question stated openly; attributions (NASA FIRMS, Copernicus/ECMWF, CEMS, CHC, ESA WorldCover, PEATGRIDS, NEA, OpenAQ, OSM/Overpass, KLHK).</li>
+    </ol>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Chart</th><th>Form</th><th>Interactions</th><th>2-D fallback</th></tr></thead>
+        <tbody>
+          <tr><td>Trajectory fan (bidirectional)</td><td>canvas polylines + fire points</td><td>direction flip, day scrub, receptor pick, click a fire for its cell</td><td><b>native</b> — polylines and points, no GPU path needed</td></tr>
+          <tr><td>Risk surface + lead selector</td><td>canvas grid, byte-quantised per day</td><td>scrub, lead toggle, hover cell → SHAP breakdown</td><td>canvas + Path2D hit test</td></tr>
+          <tr><td>Skill vs FWI / climatology</td><td>custom d3</td><td>lead tabs, path toggle, hover</td><td>SVG</td></tr>
+          <tr><td>Reliability diagram</td><td>custom d3</td><td>hover bin, season filter</td><td>SVG</td></tr>
+          <tr><td>Receptor observed vs modelled</td><td>custom d3, tier badge per series</td><td>hover crosshair, episode highlight, linked trajectory</td><td>SVG</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">J6 · Design brief</span>
+    <h2>Design brief</h2>
+    <p><b>Identity:</b> plume magenta on ash. Orange is triple-booked in this portfolio — trade
+    copper, transit red-orange, forest's burnt umber — and a fourth orange case would be
+    indistinguishable in the homepage grid. Magenta is also the <em>honest</em> choice rather than
+    a designer's whim: satellite aerosol products render dense smoke at the magenta end, so the
+    plume colour is borrowed from the instrument. Ignition points keep a hot vermilion
+    (<code>--fire</code>) used <b>only</b> for point detections and never for UI, so a red dot on
+    this site always means “something burned here”. The haze ramp runs clear-sky slate → sulphur →
+    dense plume and is data-only.</p>
+    <div class="swatches">
+      <span class="sw"><i style="background:#12100F"></i> ash ground #12100F</span>
+      <span class="sw"><i style="background:#1A1715"></i> surface #1A1715</span>
+      <span class="sw"><i style="background:#EFEAE6"></i> text #EFEAE6</span>
+      <span class="sw"><i style="background:#E2569E"></i> plume accent #E2569E</span>
+      <span class="sw"><i style="background:#FF7A45"></i> fire #FF7A45</span>
+      <span class="sw"><i style="background:#7FB2C9"></i> clean air #7FB2C9</span>
+    </div>
+    <ul class="plain">
+      <li>Tokens from <code>shared/design/tokens.css</code> (<code>data-case="haze"</code>), copied into <code>web/src/styles/</code>. <span class="pill">Block not yet in the shared file</span> — proposed verbatim in the case README.</li>
+      <li>Every number carries its provenance tier: “ρ = 0.61 · Singapore NEA, instrument” beside “ρ = 0.48 · Palangkaraya, CAMS EAC4, model”.</li>
+      <li>One orchestrated moment (the trajectory fan); micro-interactions elsewhere; <code>prefers-reduced-motion</code> respected.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">J7 · Acceptance</span>
+    <h2>Acceptance checklist</h2>
+    <ul class="plain check">
+      <li><code>make rebuild</code> reproduces risk → transport from raw sources on a clean machine given the existing keys and the three policy clicks (gate 1).</li>
+      <li>G-J1…G-J5 evaluated and published, with per-receptor and per-lead detail rather than an average (gates 2–3).</li>
+      <li>Trajectory fan responds &lt; 300 ms from precomputed ensembles; explore interactive &lt; 3 s; 60 fps; Lighthouse ≥ 90; full function with WebGL disabled (gate 4).</li>
+      <li>Vintage stamps: FIRMS source + last acquisition · ERA5T cutoff · CAMS/GFAS end dates · ground last reading (gate 5).</li>
+      <li>Attributions complete; the KLHK and DLR licence questions stated openly on the page; no NC data anywhere — AQICN, SPEIbase and (pending confirmation) the DLR AI product all held out (gate 6).</li>
+      <li>Story reads in one scroll; the trajectory fan passes the award test (gates 7, 9).</li>
+      <li>Static hosting; no per-view API cost; the daily refresh fits the cron budget (gate 8).</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">J8 · Risks &amp; decisions pending</span>
+    <h2>Risks, unknowns &amp; decisions pending user verification</h2>
+    <ul class="plain">
+      <li><b>Three one-time browser policy clicks are the only blockers</b> — ADS terms, EWDS terms, and (only if the S5P GES DISC route is used) the Earthdata EULA. A 403 reading “user didn't accept all required site policies” is <em>not</em> a dead key; anonymous requests return 401, which is how we know the token works. No new registrations anywhere.</li>
+      <li><b>The fire belt has no ground truth, and the answer is labelled honesty.</b> Zero OpenAQ PM2.5 locations in Riau, zero in Kalimantan. Tier 3 substitutes a reanalysis and calls it a reanalysis. Dropping those cities would be quieter and far less useful — but this is a decision to make deliberately, not by default.</li>
+      <li><b>Malaysia is out.</b> No machine-readable government route on commercially-usable terms exists. The transboundary story is Indonesia→Singapore and the copy must not overreach.</li>
+      <li><b>The DLR aerosol licence conflict</b> — technically the best-value layer in the case (0.97 MB/day, same-day, whole AOI in one tile), and it is held back until DLR confirms in writing. Do not ship it on the assumption that the <code>license</code> string beats the <code>rel:license</code> link.</li>
+      <li><b>No open medium-range FWI forecast exists</b> — which is the commercial opening, and also means the FWI baseline is available for the reanalysis path only. Our forecast path is compared against FWI-at-analysis-time, and the spec says that this flatters us slightly and by how much.</li>
+      <li><b>No operational IOD index.</b> The HadISST DMI runs ~3 months behind and is stamped “Preliminary”, so it is a historical feature only — and 2019 is unreadable without it. Stated, not papered over.</li>
+      <li><b>Pending user verification:</b> (1) the <code>[data-case="haze"]</code> token block, which this spec's author was scoped out of adding; (2) <b>publishing a province-level attribution</b> — the biggest editorial call here, given how it reads in Jakarta and in Singapore; (3) the three-tier ground-truth design and the model-vs-model comparison at tier 3; (4) scoring the 2015 anchor without Singapore instruments; (5) using KLHK land cover (no open licence) as enrichment beside WorldCover; (6) a daily refresh cron against D3's static rule.</li>
+      <li><b>Out of scope:</b> a real chemistry-transport model, emissions inventories beyond GFAS, health-impact or mortality estimates, concession-level attribution (Case H's territory and its licence problem), and suppression-resource optimisation. Each is a plausible paid-pilot extension and is named in the CTA rather than half-built.</li>
+    </ul>
+  </section>
+
+  <footer class="doc">CASE J SPEC v1 · 2026-08-30 · DATA PATH VERIFIED · SIBLINGS: SPEC H, SPEC I · PARENT: BUILD PLAN (docs/build-plan.html)</footer>
+</div>
