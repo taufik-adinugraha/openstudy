@@ -90,10 +90,41 @@ const DEMOS = {
 
       <div class="case building" data-case="sinking">
         <div class="case-visual sinking-visual" aria-hidden="true">
-          <div class="depth-bars">
-            <i style="height:18%"></i><i style="height:26%"></i><i style="height:34%"></i><i style="height:48%"></i>
-            <i style="height:62%"></i><i style="height:74%"></i><i style="height:88%"></i>
-          </div>
+          <!-- Jakarta skyline (Monas at centre) with the waterline rising over it -->
+          <svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMax meet">
+            <g fill="#12253C">
+              <rect x="14"  y="120" width="34" height="120"/>
+              <rect x="54"  y="96"  width="26" height="144"/>
+              <rect x="86"  y="138" width="38" height="102"/>
+              <rect x="130" y="82"  width="30" height="158"/>
+              <!-- Monas: plinth, cup, obelisk, flame -->
+              <rect x="188" y="196" width="40" height="44" rx="2"/>
+              <rect x="196" y="182" width="24" height="16" rx="3"/>
+              <rect x="203" y="92"  width="10" height="92"/>
+              <path d="M208 74 c7 6 8 14 0 20 c-8 -6 -7 -14 0 -20 z" fill="#E8A33D" opacity="0.9"/>
+              <rect x="244" y="110" width="28" height="130"/>
+              <rect x="278" y="140" width="36" height="100"/>
+              <rect x="320" y="88"  width="26" height="152"/>
+              <rect x="352" y="126" width="34" height="114"/>
+              <!-- windows -->
+              <g fill="#35C6E0" opacity="0.28">
+                <rect x="60" y="106" width="4" height="6"/><rect x="70" y="106" width="4" height="6"/>
+                <rect x="60" y="120" width="4" height="6"/><rect x="70" y="120" width="4" height="6"/>
+                <rect x="136" y="94" width="4" height="6"/><rect x="148" y="94" width="4" height="6"/>
+                <rect x="136" y="110" width="4" height="6"/><rect x="148" y="110" width="4" height="6"/>
+                <rect x="326" y="100" width="4" height="6"/><rect x="336" y="100" width="4" height="6"/>
+                <rect x="326" y="116" width="4" height="6"/><rect x="336" y="116" width="4" height="6"/>
+              </g>
+            </g>
+            <!-- water: two drifting wave sheets over the lower third -->
+            <g class="water">
+              <path class="wave w1" fill="#35C6E0" opacity="0.20"
+                d="M-400 178 q50 -10 100 0 t100 0 t100 0 t100 0 t100 0 t100 0 t100 0 t100 0 V240 H-400 z"/>
+              <path class="wave w2" fill="#1B7FA3" opacity="0.30"
+                d="M-400 190 q50 -8 100 0 t100 0 t100 0 t100 0 t100 0 t100 0 t100 0 t100 0 V240 H-400 z"/>
+            </g>
+            <text x="16" y="230" fill="#35C6E0" opacity="0.75" font-size="9" letter-spacing="2" font-family="ui-monospace,monospace">NORTH JAKARTA · −4 CM / YEAR</text>
+          </svg>
         </div>
         <div class="case-body">
           <span class="badge">IN BUILD — PHASE 2</span>
@@ -214,8 +245,12 @@ const DEMOS = {
         transition: border-color 0.25s ease, transform 0.25s ease; }
       a.case:hover { border-color: var(--accent); transform: translateY(-2px); }
       @media (max-width: 720px) { .case { grid-template-columns: 1fr; } }
-      .case img, .case-visual { width: 100%; height: 100%; min-height: 240px; object-fit: cover; display: block; background: var(--ground); }
-      .case-body { padding: 28px; display: flex; flex-direction: column; gap: 12px; }
+      .case img { width: 100%; height: 100%; min-height: 240px; object-fit: cover; display: block; background: var(--ground); }
+      /* DIY visuals blend into the card instead of butting against it with a hard seam */
+      .case-visual { width: 100%; height: 100%; min-height: 260px;
+        background: linear-gradient(105deg, var(--ground) 0%, color-mix(in srgb, var(--ground) 55%, var(--surface)) 78%, var(--surface) 100%); }
+      .case-body { padding: 28px; display: flex; flex-direction: column; gap: 12px; justify-content: center; }
+      .case-body .cta { align-self: flex-start; }
       .case-body h2 { margin: 0; font-size: 1.35rem; letter-spacing: -0.01em; }
       .case-body p { margin: 0; color: var(--ink-muted); line-height: 1.6; font-size: 0.95rem; }
       .badge { font-family: var(--font-data); font-size: 0.65rem; letter-spacing: 0.14em; color: var(--accent); }
@@ -225,14 +260,17 @@ const DEMOS = {
       .ps-dot { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--structure, #AEB6C2); opacity: 0.5; }
       .ps-dot.lit { background: var(--accent); opacity: 1; box-shadow: 0 0 12px var(--accent); }
       .building { opacity: 0.9; }
-      .sinking-visual { display: flex; align-items: flex-end; justify-content: center; padding: 28px; }
-      .depth-bars { display: flex; align-items: flex-end; gap: 10px; height: 160px; }
-      .depth-bars i { display: block; width: 22px; border-radius: 4px 4px 0 0; background: linear-gradient(to top, var(--ramp-3, #35C6E0), var(--ramp-0, #0A1F3A)); opacity: 0.85; box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 35%, transparent); }
+      .sinking-visual { display: flex; align-items: flex-end; justify-content: center; padding: 24px 24px 0; overflow: hidden; }
+      .sinking-visual svg { width: min(440px, 100%); height: auto; display: block; }
+      .sinking-visual .wave { animation: drift 9s linear infinite; }
+      .sinking-visual .w2 { animation-duration: 13s; animation-direction: reverse; }
+      @keyframes drift { to { transform: translateX(200px); } }
 
       .platform { padding-top: 4vh; }
       .section-head { display: flex; flex-direction: column; gap: 8px; }
       .section-sub { margin: 0; color: var(--ink-muted); max-width: 34rem; }
-      .pustaka-live { display: flex; flex-direction: column; justify-content: center; gap: 12px; padding: 26px; }
+      .pustaka-live { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 26px; }
+      .pustaka-live > * { width: min(420px, 100%); }
       .try-chips { display: flex; flex-wrap: wrap; gap: 6px; }
       .try-chips button { background: none; border: 1px solid var(--hairline); color: var(--ink-muted); border-radius: 16px; padding: 5px 11px; font-size: 0.72rem; cursor: pointer; font-family: var(--font-body); }
       .try-chips button:hover { border-color: var(--accent); color: var(--accent); }

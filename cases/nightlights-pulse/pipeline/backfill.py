@@ -72,6 +72,8 @@ def main() -> int:
                 shutil.rmtree(config.DATA_DIR / "derived" / "bm" / month, ignore_errors=True)
 
     print(f"[backfill] complete — {len(failures)} failures: {failures or 'none'}", flush=True)
+    if todo:  # refresh the dashboard's view-models with the grown ledger
+        subprocess.run([sys.executable, str(PIPELINE / "export_web.py")], check=False)
     return 1 if failures else 0
 
 
