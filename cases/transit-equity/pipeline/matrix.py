@@ -48,12 +48,16 @@ def run_scenario(tn, scenario: str, origins, dests) -> None:
     # One walking budget for every scenario (30 min, the standard access-walk assumption).
     # It must be identical across scenarios or the layer attribution in chapter 4 compares
     # different worlds — and "everything" would not be a superset of "walking only".
+    # R5 caps the direct (non-transit) leg of a transit request at max_time_walking, so a
+    # walk-only scenario with a 90-minute max_time would not be a subset of "everything" —
+    # it would beat it. The walking scenario is therefore the same 30-minute walk.
+    walk_only = scenario == "walk"
     kw = dict(
         departure=_departure(),
         departure_time_window=datetime.timedelta(minutes=_window_minutes()),
         percentiles=[50],
         transport_modes=modes,
-        max_time=datetime.timedelta(minutes=config.MAX_TRIP_MIN),
+        max_time=datetime.timedelta(minutes=config.MAX_WALK_MIN if walk_only else config.MAX_TRIP_MIN),
         max_time_walking=datetime.timedelta(minutes=config.MAX_WALK_MIN),
     )
     n = len(origins)

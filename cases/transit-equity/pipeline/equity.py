@@ -39,8 +39,8 @@ def lorenz(values: np.ndarray, weights: np.ndarray, points_out: int = 60):
              for a, b in zip(grid, np.interp(grid, np.concatenate([[0], x]), np.concatenate([[0], y])))]
     top10 = float(np.interp(1.0, x, y) - np.interp(0.9, x, y))
     bot40 = float(np.interp(0.4, x, y))
-    palma = float(top10 / bot40) if bot40 > 0 else float("inf")
-    return curve, gini, palma
+    palma = float(top10 / bot40) if bot40 > 1e-9 else None
+    return curve, (gini if np.isfinite(gini) else None), palma
 
 
 def wmedian(v, w) -> float:
@@ -96,7 +96,11 @@ def main() -> None:
         dki = a[a.adm1_name.str.contains("Jakarta", case=False, na=False)]
         bod = a[~a.adm1_name.str.contains("Jakarta", case=False, na=False)]
         out["scenarios"][s] = {
-            "gini": round(gini, 4), "palma": round(palma, 3), "lorenz": curve,
+            "gini": None if gini is None else round(gini, 4),
+            "palma": None if palma is None or not np.isfinite(palma) else round(palma, 3),
+            "palma_note": None if palma is not None else
+                "undefined — the bottom 40 % of the population reach essentially nothing",
+            "lorenz": curve,
             "median_jobs_share": round(wmedian(a.jobs_share.values, a["pop"].values), 4),
             "mean_jobs_share": round(float(np.average(a.jobs_share, weights=a["pop"])), 4),
             "dki_median": round(wmedian(dki.jobs_share.values, dki["pop"].values), 4),
@@ -109,15 +113,17 @@ def main() -> None:
     if "all" in out["scenarios"] and "no_rail" in out["scenarios"]:
         A, N = out["scenarios"]["all"], out["scenarios"]["no_rail"]
         out["rail_contribution"] = {
-            "gini_delta": round(A["gini"] - N["gini"], 4),
+            "gini_delta": None if A["gini"] is None or N["gini"] is None else round(A["gini"] - N["gini"], 4),
             "median_access_delta": round(A["median_jobs_share"] - N["median_jobs_share"], 4),
+            "mean_access_delta": round(A["mean_jobs_share"] - N["mean_jobs_share"], 4),
             "note": "what the KRL/MRT/LRT layer adds on top of TransJakarta + walking; "
                     "rail times are hand-encoded from published headways (±15 %)."}
     if "all" in out["scenarios"] and "walk" in out["scenarios"]:
         A, W = out["scenarios"]["all"], out["scenarios"]["walk"]
         out["transit_contribution"] = {
-            "gini_delta": round(A["gini"] - W["gini"], 4),
+            "gini_delta": None if A["gini"] is None or W["gini"] is None else round(A["gini"] - W["gini"], 4),
             "median_access_delta": round(A["median_jobs_share"] - W["median_jobs_share"], 4),
+            "mean_access_delta": round(A["mean_jobs_share"] - W["mean_jobs_share"], 4),
             "note": "the whole public-transport system against walking alone."}
 
     a60 = acc[(acc.scenario == "all") & (acc.cutoff == 60)].copy()
@@ -143,7 +149,7 @@ def main() -> None:
     config.EQUITY_JSON.write_text(json.dumps(out, indent=2, allow_nan=False))
     log("equity →", config.EQUITY_JSON)
     for s, v in out["scenarios"].items():
-        log(f"  {s}: Gini {v['gini']:.3f} Palma {v['palma']:.2f} "
+        log(f"  {s}: Gini {v['gini']} Palma {v['palma']} "
             f"median {v['median_jobs_share']:.1%} DKI {v['dki_median']:.1%} "
             f"Bodetabek {v['bodetabek_median']:.1%}")
 

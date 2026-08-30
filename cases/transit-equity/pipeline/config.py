@@ -131,7 +131,11 @@ RAIL_SPEED_KMH = {          # average commercial speed incl. dwell, from publish
     "krl_tangerang": 32.0,
     "krl_tanjung_priok": 32.0,
 }
-RAIL_DWELL_S = 45
+# The speeds above are *commercial* speeds, derived from published end-to-end journey times,
+# so station dwell is already inside them — adding a separate dwell double-counts it and made
+# the MRT run 39 min against its published 30 (G-G1). Kept as a named constant so the choice
+# is visible rather than implicit.
+RAIL_DWELL_S = 0
 # OSM relation selection: (route value, name/ref regex) per line key.
 RAIL_OSM_MATCH = {
     "mrt_north_south": ("subway", r"(mrt|ratangga|lebak bulus|bundaran hi)"),

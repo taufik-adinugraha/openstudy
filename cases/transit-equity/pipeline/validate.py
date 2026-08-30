@@ -117,10 +117,17 @@ def gate_g3(tn, acc: pd.DataFrame) -> dict:
         out["snap_share"] = None
         out["snap_pass"] = None
         out["snap_note"] = f"R5 snapper unavailable: {type(e).__name__}: {e}"
+    # "unreachable" means the router found NO destination at all from that origin — not the
+    # different (and real) finding that an origin reaches only residential cells with no
+    # job-dense floorspace in them.
     a = acc[(acc.scenario == "all") & (acc.cutoff == 60)]
-    unreachable = a[a.jobs_share <= 0]
+    import matrix as _m
+    routed = set(_m.load("all").from_id.unique())
+    unreachable = a[~a.id.isin(routed)]
+    zero_jobs = a[a.jobs_share <= 0]
     out["unreachable_origins"] = int(len(unreachable))
     out["unreachable_pop"] = float(unreachable["pop"].sum())
+    out["origins_reaching_no_job_floorspace"] = int(len(zero_jobs))
     out["origins"] = int(len(a))
     out["pass"] = bool(out.get("snap_pass") is not False and len(unreachable) == 0)
     return out

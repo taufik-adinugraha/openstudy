@@ -239,6 +239,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
       const RAMP = ["#15181F", "#3A2118", "#7E3418", "#C24A20", "#E4562E", "#F79C6A"];
       const ramp = d3.piecewise(d3.interpolateRgb, RAMP);
       const BAND = ["#F79C6A", "#E4562E", "#C24A20", "#8E3A1B", "#5C2814"]; // 0-15, -30, -45, -60, beyond
+      const fx = (v, d = 3) => (typeof v === "number" && isFinite(v) ? v.toFixed(d) : "—");
       const pct = (v, d = 1) => (v === null || v === undefined || !isFinite(v) ? "—" : `${(v * 100).toFixed(d)}%`);
       const num = (v) => (v === null || v === undefined || !isFinite(v) ? "—" : d3.format(",")(Math.round(v)));
       const bandOf = (t) => (t <= 15 ? 0 : t <= 30 ? 1 : t <= 45 ? 2 : 3);
@@ -323,7 +324,8 @@ import "maplibre-gl/dist/maplibre-gl.css";
           return -1;
         }
         return { ctx, X, Y, project, featureAt, get paths() { return paths; },
-                 get W() { return W; }, get H() { return H; }, canvas };
+                 get W() { return W; }, get H() { return H; },
+                 get pxPerKm() { return k / 110.57; }, canvas };
       }
 
       function drawNetwork(m, { alpha = 1, modes = null, glow = true, reachedUntil = null } = {}) {
@@ -350,10 +352,17 @@ import "maplibre-gl/dist/maplibre-gl.css";
         ctx.globalAlpha = 1;
       }
 
-      function drawOutlines(m, { fill = "#14171D", stroke = "#242A34", lw = 0.35 } = {}) {
+      function drawOutlines(m, { fill = "#14171D", stroke = "#242A34", lw = 0.35, fillFn = null } = {}) {
         const { ctx } = m;
-        m.paths.forEach((p) => { ctx.fillStyle = fill; ctx.fill(p); ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(p); });
+        m.paths.forEach((p, i) => {
+          ctx.fillStyle = fillFn ? fillFn(i) : fill;
+          ctx.fill(p);
+          ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.stroke(p);
+        });
       }
+      /* the base map is not one flat grey: each kelurahan carries a whisper of its own access */
+      const baseTint = d3.piecewise(d3.interpolateRgb, ["#0F1218", "#1A1A20", "#2A1D1D", "#3A231B"]);
+      const baseFill = geo.features.map((f) => baseTint(Math.min(1, (val(f.properties.id, "all", 60) ?? 0) / maxVal)));
 
       /* ═════════ HERO — the hour blooming outward ═════════ */
       sect("hero", () => {
@@ -389,7 +398,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
         const hud = document.getElementById("hero-hud");
         const clock = document.getElementById("hud-clock");
-        const cellPx = () => Math.max(2.2, m.W / ((B.e - B.w) * 111 * 1000 / cells.cell_m) * 1.15);
+        const cellPx = () => Math.max(2.2, m.pxPerKm * (cells.cell_m / 1000) * 1.08);
         let raf = null;
 
         function run(id, animate = true) {
@@ -414,7 +423,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
             const { ctx } = m;
             ctx.clearRect(0, 0, m.W, m.H);
             ctx.fillStyle = "#0B0D11"; ctx.fillRect(0, 0, m.W, m.H);
-            drawOutlines(m, { fill: "#111419", stroke: "#1D222B", lw: 0.3 });
+            drawOutlines(m, { fillFn: (i) => baseFill[i], stroke: "#1D222B", lw: 0.3 });
             // reachable cells, igniting by band
             ctx.globalCompositeOperation = "lighter";
             for (let j = 0; j < iso.i.length; j++) {
@@ -439,7 +448,8 @@ import "maplibre-gl/dist/maplibre-gl.css";
               ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, pulse * 3, 0, 7); ctx.fill();
               ctx.fillStyle = "#FFF3E9"; ctx.beginPath(); ctx.arc(x, y, 2.6, 0, 7); ctx.fill();
             }
-            if (t < 60 || (!reduced && document.getElementById("hero").getBoundingClientRect().bottom > 0)) raf = requestAnimationFrame(frame);
+            const heroVisible = document.getElementById("hero").getBoundingClientRect().bottom > 0;
+            if (t < 60 || (!reduced && heroVisible)) raf = requestAnimationFrame(frame);
           };
           if (!animate || reduced) { clock.textContent = "60:00"; }
           raf = requestAnimationFrame(frame);
@@ -495,7 +505,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
           if (!m.project()) return;
           const { ctx } = m;
           ctx.fillStyle = "#0C0F13"; ctx.fillRect(0, 0, m.W, m.H);
-          drawOutlines(m, { fill: "#12151B", stroke: "#1E232C", lw: 0.3 });
+          drawOutlines(m, { fillFn: (i) => baseFill[i], stroke: "#1E232C", lw: 0.3 });
           drawNetwork(m, { modes: active, alpha: 1 });
         }
         paint();
@@ -578,9 +588,11 @@ import "maplibre-gl/dist/maplibre-gl.css";
           return `<div class="bar"><span class="bl">${c} min</span><i style="width:${Math.min(100, (v / maxVal) * 100)}%"></i><b>${pct(v)}</b></div>`;
         }).join("");
         document.getElementById("p-bars").innerHTML = bars;
-        document.getElementById("p-note").textContent = `Scheduled p50 over ${access.window.from}–${access.window.to} on ${access.window.date}. Rail legs carry a ±15 % caveat (hand-encoded timetables).`;
+        const note = document.getElementById("p-note");
         repaint();
+        if (!isochrones) note.textContent = "Loading this kelurahan's isochrone…";
         const iso = await loadIsochrones();
+        note.textContent = `Scheduled p50 over ${access.window.from}–${access.window.to} on ${access.window.date}. Rail legs carry a ±15 % caveat (hand-encoded timetables).`;
         if (iso && iso[id]) repaint();
         syncHash();
       }
@@ -622,6 +634,11 @@ import "maplibre-gl/dist/maplibre-gl.css";
             map.addLayer({ id: "sel", type: "line", source: "adm4", paint: { "line-color": "#F79C6A", "line-width": 1.8 }, filter: ["==", ["get", "id"], ""] });
             const lineFC = { type: "FeatureCollection", features: net.lines.map((l) => ({ type: "Feature", properties: { m: l.m }, geometry: { type: "LineString", coordinates: l.c } })) };
             map.addSource("net", { type: "geojson", data: lineFC });
+            map.addSource("iso", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+            map.addLayer({ id: "iso", type: "circle", source: "iso",
+              paint: { "circle-radius": ["interpolate", ["exponential", 2], ["zoom"], 8, 2.5, 12, 26],
+                       "circle-color": ["step", ["get", "t"], BAND[0], 15, BAND[1], 30, BAND[2], 45, BAND[3]],
+                       "circle-opacity": 0.5, "circle-blur": 0.35 } });
             map.addLayer({ id: "net", type: "line", source: "net",
               paint: { "line-color": ["match", ["get", "m"], "brt", MODE_COLOR.brt, "mikrotrans", MODE_COLOR.mikrotrans, "krl", MODE_COLOR.krl, "mrt", MODE_COLOR.mrt, "lrt", MODE_COLOR.lrt, "#888"],
                        "line-width": 0.9, "line-opacity": 0.5 } });
@@ -635,7 +652,19 @@ import "maplibre-gl/dist/maplibre-gl.css";
           });
           map.on("mouseleave", "fill", () => { map.setFilter("sel", ["==", ["get", "id"], ""]); tip.hidden = true; map.getCanvas().style.cursor = ""; });
           map.on("click", "fill", (e) => select(e.features[0].properties.id));
-          repaint = () => { shadeGeo(); map.getSource("adm4")?.setData(geo); };
+          repaint = () => {
+            shadeGeo();
+            map.getSource("adm4")?.setData(geo);
+            map.setFilter?.("sel", ["==", ["get", "id"], state.sel ?? ""]);
+            const iso = isochrones?.[state.sel]?.[state.scenario] ?? (state.scenario === "all" && state.sel ? hero?.origins?.[state.sel] : null);
+            const feats = [];
+            if (iso) for (let j = 0; j < iso.i.length; j++) {
+              const tt = iso.t[j]; if (tt > state.cutoff) break;
+              feats.push({ type: "Feature", properties: { t: tt },
+                geometry: { type: "Point", coordinates: [cells.lon[iso.i[j]], cells.lat[iso.i[j]]] } });
+            }
+            map.getSource("iso")?.setData({ type: "FeatureCollection", features: feats });
+          };
           return map;
         }
 
@@ -650,7 +679,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
           host.appendChild(note);
           const m = canvasMap(canvas, { pad: 14 });
           let hover = -1;
-          const cellPx = () => Math.max(2.4, m.W / ((B.e - B.w) * 111 * 1000 / cells.cell_m) * 1.1);
+          const cellPx = () => Math.max(2.4, m.pxPerKm * (cells.cell_m / 1000) * 1.04);
           function paint() {
             if (!m.project()) return;
             const { ctx } = m;
@@ -662,7 +691,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
               ctx.strokeStyle = "#1B2029"; ctx.lineWidth = 0.3; ctx.stroke(m.paths[i]);
             });
             drawNetwork(m, { alpha: 0.45, glow: false });
-            const iso = isochrones?.[state.sel]?.[state.scenario] ?? (state.sel && hero?.origins?.[state.sel]);
+            const iso = isochrones?.[state.sel]?.[state.scenario] ?? (state.scenario === "all" && state.sel ? hero?.origins?.[state.sel] : null);
             if (iso) {
               const px = cellPx();
               ctx.globalCompositeOperation = "lighter";
@@ -704,14 +733,15 @@ import "maplibre-gl/dist/maplibre-gl.css";
         const pair = equity.pairing ?? {};
         const co = document.getElementById("callouts");
         const items = [];
-        if (pair.menteng) items.push(["Menteng, Central Jakarta", pct(pair.menteng.pop_weighted_jobs_share), `${Math.round(pair.menteng.median_nearest_hospital_min)} min to a hospital`]);
-        if (pair.bekasi) items.push(["Bekasi", pct(pair.bekasi.pop_weighted_jobs_share), `${Math.round(pair.bekasi.median_nearest_hospital_min)} min to a hospital`]);
-        items.push(["DKI Jakarta, median resident", pct(sAll.dki_median), "population-weighted"]);
-        items.push(["Bodetabek, median resident", pct(sAll.bodetabek_median), "population-weighted"]);
+        const hosp = (v) => (typeof v === "number" ? `${Math.round(v)} min to a hospital` : "no hospital within an hour");
+        if (pair.menteng) items.push(["Menteng, Central Jakarta", pct(pair.menteng.pop_weighted_jobs_share, 2), hosp(pair.menteng.median_nearest_hospital_min)]);
+        if (pair.bekasi) items.push(["Bekasi", pct(pair.bekasi.pop_weighted_jobs_share, 2), hosp(pair.bekasi.median_nearest_hospital_min)]);
+        items.push(["DKI Jakarta, median resident", pct(sAll.dki_median, 2), "population-weighted"]);
+        items.push(["Bodetabek, median resident", pct(sAll.bodetabek_median, 2), "population-weighted"]);
         co.innerHTML = items.map(([l, v, s]) => `<div class="callout"><span class="co-v">${v}</span><span class="co-l">${l}</span><span class="co-s">${s}</span></div>`).join("");
         const ratio = sAll.bodetabek_median > 0 ? (sAll.dki_median / sAll.bodetabek_median) : null;
         document.getElementById("ch2-sowhat").textContent =
-          `So what: the median resident of DKI Jakarta reaches ${pct(sAll.dki_median)} of the region's job-dense floorspace in an hour; the median resident of Bodetabek reaches ${pct(sAll.bodetabek_median)}` +
+          `So what: the median resident of DKI Jakarta reaches ${pct(sAll.dki_median, 2)} of the region's job-dense floorspace in an hour; the median resident of Bodetabek reaches ${pct(sAll.bodetabek_median, 2)}` +
           (ratio && isFinite(ratio) ? ` — a ${ratio.toFixed(1)}× gap that no amount of individual effort closes.` : ".");
         document.getElementById("foot-stamp").textContent =
           `A DEMO-LAB CASE · STATIC SNAPSHOT · ROUTED ${access.window.date} ${access.window.from}–${access.window.to} · GENERATED ${(stats?.generated ?? "").slice(0, 10)}`;
@@ -721,15 +751,18 @@ import "maplibre-gl/dist/maplibre-gl.css";
       sect("lorenz", () => {
         const sAll = equity.scenarios?.all;
         if (!sAll) return;
-        document.getElementById("gini").textContent = sAll.gini.toFixed(3);
-        document.getElementById("palma").textContent = isFinite(sAll.palma) ? sAll.palma.toFixed(1) + "×" : "—";
+        document.getElementById("gini").textContent = fx(sAll.gini);
+        document.getElementById("palma").textContent = typeof sAll.palma === "number" ? fx(sAll.palma, 1) + "×" : "∞";
+        if (typeof sAll.palma !== "number" && sAll.palma_note)
+          document.querySelector("#palma").nextElementSibling.textContent =
+            "Palma ratio — undefined here: the bottom four tenths of the population reach essentially nothing";
         document.getElementById("nohosp").textContent = pct(sAll.pop_share_no_hospital_60min, 0);
         const el = document.getElementById("lorenz");
         const W = el.clientWidth || 560, H = Math.min(420, Math.max(300, W * 0.72));
         const M = { t: 18, r: 18, b: 44, l: 52 };
         const x = d3.scaleLinear([0, 1], [M.l, W - M.r]), y = d3.scaleLinear([0, 1], [H - M.b, M.t]);
         const svg = d3.select(el).append("svg").attr("width", W).attr("height", H).attr("role", "img")
-          .attr("aria-label", `Lorenz curve of transit access; Gini ${sAll.gini.toFixed(3)}`);
+          .attr("aria-label", `Lorenz curve of transit access; Gini ${fx(sAll.gini)}`);
         const defs = svg.append("defs");
         const grad = defs.append("linearGradient").attr("id", "lz").attr("x1", 0).attr("y1", 1).attr("x2", 0).attr("y2", 0);
         grad.append("stop").attr("offset", "0%").attr("stop-color", "#E4562E").attr("stop-opacity", 0.02);
@@ -751,7 +784,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
           svg.append("path").datum(equity.scenarios[s].lorenz).attr("d", line)
             .attr("fill", "none").attr("stroke", s === "walk" ? "#5A6270" : "#8C6A5D")
             .attr("stroke-width", 1.2).attr("stroke-dasharray", "4 4").attr("opacity", 0.9)
-            .append("title").text(`${s === "walk" ? "Walking only" : "Without rail"} · Gini ${equity.scenarios[s].gini.toFixed(3)}`);
+            .append("title").text(`${s === "walk" ? "Walking only" : "Without rail"} · Gini ${fx(equity.scenarios[s].gini)}`);
         });
         const fill = svg.append("path").datum(sAll.lorenz).attr("d", area).attr("fill", "url(#lz)").attr("opacity", 0);
         const path = svg.append("path").datum(sAll.lorenz).attr("d", line).attr("fill", "none")
@@ -788,7 +821,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
         tbl(equity.worst ?? [], "tbl-worst");
         const pl = equity.poverty_link ?? {};
         document.getElementById("ch3-sowhat").textContent =
-          `So what: a Gini of ${sAll.gini.toFixed(3)} on access means the hour is shared about as unevenly as income is in many countries — and ${pct(sAll.pop_share_no_hospital_60min, 0)} of the region's people cannot reach a hospital in it at all. ` +
+          `So what: a Gini of ${fx(sAll.gini)} on access means the hour is shared about as unevenly as income is in many countries — and ${pct(sAll.pop_share_no_hospital_60min, 0)} of the region's people cannot reach a hospital in it at all. ` +
           (pl.available ? `Against Case F's poverty surface the rank correlation is ${pl.spearman_rho.toFixed(2)}, and ${num(pl.double_disadvantage_count)} kelurahan are both poor and disconnected.`
                         : `The poverty cross-link is pending: ${pl.reason ?? "Case F has not published its estimates yet"}.`);
       });
@@ -799,13 +832,13 @@ import "maplibre-gl/dist/maplibre-gl.css";
         const S = equity.scenarios ?? {};
         const order = ["all", "no_rail", "walk"].filter((s) => S[s]);
         const LAB = { all: "Everything: bus + rail + walking", no_rail: "Without rail (bus + walking)", walk: "Walking only" };
-        const maxM = Math.max(...order.map((s) => S[s].median_jobs_share), 0.0001);
+        const maxM = Math.max(...order.map((s) => S[s].mean_jobs_share), 0.0001);
         el.innerHTML = order.map((s) => {
           const v = S[s];
           return `<div class="layer">
-            <div class="layer-h"><span class="layer-n">${LAB[s]}</span><span class="layer-v">${pct(v.median_jobs_share)}</span></div>
-            <div class="layer-bar"><i data-w="${Math.max(1.5, (v.median_jobs_share / maxM) * 100)}"></i></div>
-            <div class="layer-m"><span>Gini <b>${v.gini.toFixed(3)}</b></span><span>DKI <b>${pct(v.dki_median)}</b></span><span>Bodetabek <b>${pct(v.bodetabek_median)}</b></span><span>median hospital <b>${isFinite(v.median_nearest_hospital_min) ? Math.round(v.median_nearest_hospital_min) + " min" : "—"}</b></span></div>
+            <div class="layer-h"><span class="layer-n">${LAB[s]}</span><span class="layer-v">${pct(v.mean_jobs_share, 2)}</span></div>
+            <div class="layer-bar"><i data-w="${Math.max(1.5, (v.mean_jobs_share / maxM) * 100)}"></i></div>
+            <div class="layer-m"><span>average resident, population-weighted</span><span>median resident <b>${pct(v.median_jobs_share, 2)}</b></span><span>Gini <b>${fx(v.gini)}</b></span><span>DKI <b>${pct(v.dki_median, 2)}</b></span><span>Bodetabek <b>${pct(v.bodetabek_median, 2)}</b></span><span>hospital <b>${typeof v.median_nearest_hospital_min === "number" ? Math.round(v.median_nearest_hospital_min) + " min" : "—"}</b></span></div>
           </div>`;
         }).join("");
         const bars = el.querySelectorAll(".layer-bar i");
@@ -813,8 +846,8 @@ import "maplibre-gl/dist/maplibre-gl.css";
         new IntersectionObserver((es, o) => es.forEach((e) => { if (e.isIntersecting) { run(); o.disconnect(); } }), { threshold: 0.3 }).observe(el);
         const rc = equity.rail_contribution, tc = equity.transit_contribution;
         document.getElementById("ch4-sowhat").textContent =
-          (rc ? `So what: removing the rail layer costs the median resident ${pct(Math.abs(rc.median_access_delta))} of reachable floorspace and moves the Gini by ${Math.abs(rc.gini_delta).toFixed(3)}. ` : "So what: ") +
-          (tc ? `The whole public-transport system is worth ${pct(Math.abs(tc.median_access_delta))} over walking alone — which is the honest size of the prize, and of the gap left to close.` : "");
+          (rc ? `So what: removing the rail layer costs the average resident ${pct(Math.abs(rc.mean_access_delta ?? 0), 2)} of reachable floorspace${typeof rc.gini_delta === "number" ? ` and moves the Gini by ${fx(Math.abs(rc.gini_delta))}` : ""}. ` : "So what: ") +
+          (tc ? `The whole public-transport system is worth ${pct(Math.abs(tc.mean_access_delta ?? 0), 2)} over walking alone — which is the honest size of the prize, and of the gap left to close.` : "");
       });
 
       /* ═════════ METHOD ═════════ */
@@ -837,7 +870,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
           const pnt = g4.people_near_transit ?? {};
           mk("G-G4", "Plausibility", [
             g4.monotonicity ? `Rail ≥ no-rail everywhere: ${g4.monotonicity.violations ?? "—"} violations of ${num(g4.monotonicity.origins)}.` : "",
-            g4.core_periphery ? `DKI median ${pct(g4.core_periphery.dki_median)} vs Bodetabek ${pct(g4.core_periphery.bodetabek_median)}.` : "",
+            g4.core_periphery ? `DKI median ${pct(g4.core_periphery.dki_median, 2)} vs Bodetabek ${pct(g4.core_periphery.bodetabek_median, 2)}.` : "",
             pnt.Jakarta ? `People-near-transit (≤15-min headway, 1 km): Jakarta ${pct(pnt.Jakarta.share, 0)} vs ITDP's 2016 anchor 44%; Greater Jakarta ${pct(pnt["Greater Jakarta"].share, 0)} vs 16%.` : "",
           ].filter(Boolean).join("<br>"), g4.pass);
           g.innerHTML = rowsG.join("");

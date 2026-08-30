@@ -47,8 +47,10 @@ def geojson(acc: pd.DataFrame) -> list[str]:
     import geopandas as gpd
     g = gpd.read_parquet(ingest.ADM4)
     g = g.to_crs(4326)
-    g["geometry"] = g.geometry.simplify(0.0006).buffer(0)
-    g = g[g.geometry.notna() & ~g.geometry.is_empty]
+    simp = g.geometry.simplify(0.0006).buffer(0)
+    ok = simp.notna() & ~simp.is_empty & simp.geom_type.isin(["Polygon", "MultiPolygon"])
+    g["geometry"] = simp.where(ok, g.geometry)          # keep the original if simplification degenerates
+    g = g[g.geometry.geom_type.isin(["Polygon", "MultiPolygon"])]
     order = list(g["adm4_pcode"])
     feats = []
     for _, r in g.iterrows():
