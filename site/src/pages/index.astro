@@ -11,6 +11,7 @@ const DEMOS = {
   jakarta: "http://localhost:4327/jakarta",         // TODO prod: /jakarta
   narrative: "http://localhost:4326/narrative",     // TODO prod: /narrative
   transit: "http://localhost:4329/transit",         // TODO prod: /transit
+  forest: "http://localhost:4331/forest",           // TODO prod: /forest
 };
 ---
 <html lang="en" data-theme="dark">
@@ -180,6 +181,42 @@ const DEMOS = {
         </div>
       </a>
 
+      <a class="case live" data-case="forest" href={DEMOS.forest} target="_blank" rel="noopener">
+        <div class="case-visual forest-visual" aria-hidden="true">
+          <svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid meet">
+            <defs>
+              <radialGradient id="burn" cx="70%" cy="50%" r="52%">
+                <stop offset="0%" stop-color="#B4552A" stop-opacity="0.42"/>
+                <stop offset="100%" stop-color="#B4552A" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <rect x="0" y="0" width="400" height="240" fill="url(#burn)"/>
+            <!-- canopy giving way to alert clusters inside a mill catchment -->
+            <g fill="#57B26A" opacity="0.92">
+              <circle cx="26" cy="42" r="13"/><circle cx="62" cy="72" r="16"/><circle cx="32" cy="108" r="14"/>
+              <circle cx="76" cy="140" r="13"/><circle cx="112" cy="52" r="15"/><circle cx="106" cy="110" r="16"/>
+              <circle cx="46" cy="176" r="12"/><circle cx="140" cy="158" r="13"/><circle cx="150" cy="88" r="11"/>
+            </g>
+            <circle cx="286" cy="120" r="74" fill="none" stroke="#D9A441" stroke-width="1.6" stroke-dasharray="6 5" opacity="0.75"/>
+            <g fill="#B4552A">
+              <circle cx="246" cy="70" r="8"/><circle cx="300" cy="96" r="6.5"/><circle cx="264" cy="136" r="7"/>
+              <circle cx="330" cy="60" r="5.5"/><circle cx="322" cy="158" r="7"/><circle cx="286" cy="184" r="5"/>
+              <circle cx="352" cy="112" r="6"/>
+            </g>
+            <circle cx="286" cy="120" r="5.5" fill="#D9A441"/>
+            <text x="18" y="226" fill="#57B26A" opacity="0.9" font-size="12" letter-spacing="1.6" font-family="ui-monospace,monospace">75% INSIDE A MILL CATCHMENT</text>
+          </svg>
+        </div>
+        <div class="case-body">
+          <h2>Forest &amp; Commodity Watch</h2>
+          <p>404,287 radar alerts since 2020, clustered into events and linked to
+          palm estates, mill sourcing areas and peat. Three-quarters of alerted
+          hectares fall inside a mill catchment — deforestation as a supply-chain
+          question, not a pixel count.</p>
+          <span class="meta">RADD · 763,643 HA · MILL LINKAGE · 13.6% ON PEAT</span>
+        </div>
+      </a>
+
       <div class="case building" data-case="airquality">
         <div class="case-visual aq-visual" aria-hidden="true">
           <span class="aq-sun"></span>
@@ -197,7 +234,7 @@ const DEMOS = {
       </div>
 
       <div class="queued-head">
-        <span class="stamp">PHASE 3 — SPEC’D &amp; SCAFFOLDED, IN THE QUEUE</span>
+        <span class="stamp">PHASE 3 — IN BUILD</span>
       </div>
       <div class="queued-grid">
         <div class="mini-case" data-case="poverty">
@@ -209,26 +246,6 @@ const DEMOS = {
           poverty estimates, benchmarked to official BPS rates and validated
           out-of-province.</p>
           <span class="meta">GEO-ML · OPEN BUILDINGS · SMALL-AREA ESTIMATION</span>
-        </div>
-        <div class="mini-case" data-case="forest">
-          <div class="mini-visual" aria-hidden="true">
-            <svg viewBox="0 0 220 120" preserveAspectRatio="xMidYMid meet">
-              <g fill="#57B26A">
-                <circle cx="18" cy="24" r="8"/><circle cx="42" cy="40" r="10"/><circle cx="22" cy="62" r="9"/>
-                <circle cx="50" cy="82" r="8"/><circle cx="74" cy="30" r="9"/><circle cx="70" cy="64" r="10"/>
-                <circle cx="30" cy="100" r="7"/><circle cx="92" cy="90" r="8"/><circle cx="98" cy="52" r="7"/>
-              </g>
-              <path d="M118 0 L138 120" stroke="#B4552A" stroke-width="2" stroke-dasharray="5 4" fill="none"/>
-              <g fill="#B4552A" opacity="0.75">
-                <circle cx="150" cy="34" r="5"/><circle cx="176" cy="58" r="4"/><circle cx="158" cy="86" r="4"/>
-                <circle cx="196" cy="30" r="3.5"/><circle cx="192" cy="96" r="4.5"/>
-              </g>
-            </svg>
-          </div>
-          <h3>Forest &amp; Commodity Watch</h3>
-          <p>Where Global Forest Watch stops: weekly radar alerts linked to palm
-          estates, mills and peat — deforestation as a supply-chain question.</p>
-          <span class="meta">SENTINEL-2 · RADD ALERTS · SUPPLY-CHAIN LINKAGE</span>
         </div>
       </div>
       <p class="parked-note">Parked: maritime traffic analytics — the credible open AIS source is licensed
