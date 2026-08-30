@@ -392,79 +392,158 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
           },
         };
       }
-      /* ---------- 2-D canvas fallback (no WebGL required) ---------- */
+      /* ---------- canvas fallback: software 3-D, no WebGL required ----------
+         Same layout and the same interactions as the WebGL scene — auto-rotate,
+         drag to orbit, wheel to zoom, depth fog, copper glow, hover, PCI altitude —
+         projected by hand onto a 2-D canvas (~1.2k points, ~2k edges: cheap). */
       function makeSpace2D(canvas, { interactive }) {
         const ctx = canvas.getContext("2d");
-        const dpr = devicePixelRatio || 1;
-        let W, H, x, y, lit = new Set(states[latest] ?? []), hover = null, progress = 1, filter = null;
-        const rScale2 = d3.scaleSqrt(d3.extent(space.nodes, (n) => n.trade), [1.6, 9]);
-        const idx = new Map(space.nodes.map((n) => [n.id, n]));
+        const dpr = Math.min(devicePixelRatio || 1, 2);
+        const n = order.length;
+        const edgeIdx = space.edges.map(([a, b]) => [indexOf.get(a), indexOf.get(b)]).filter(([a, b]) => a != null && b != null);
+        const P = new Float32Array(n * 3);     // world positions (x, altitude, y) — as in makeSpace
+        const SX = new Float32Array(n), SY = new Float32Array(n), SD = new Float32Array(n); // screen x, y, depth
+        const byDepth = Array.from({ length: n }, (_, i) => i);
+        let W, H, mode = "net", lit = new Set(states[latest] ?? []), filter = null, progress = 1, hovered = -1;
+        // orbit state mirrors the OrbitControls setup above (camera at (0, .35, 2.6)·SPAN)
+        const cam = { yaw: 0, pitch: Math.atan2(0.35, 2.6), dist: SPAN * Math.hypot(0.35, 2.6), target: [0, 0, 0] };
+        const MIN_D = SPAN * 0.6, MAX_D = SPAN * 5, FOG_NEAR = SPAN * 1.6, FOG_FAR = SPAN * 5;
+        const autoSpeed = interactive ? 0.026 : 0.057;   // rad/s ≈ OrbitControls autoRotateSpeed 0.25 / 0.55
+        let auto = !reduced, dragging = false, vyaw = 0, vpitch = 0, mouse = null;
+        const F = () => (H / 2) / Math.tan((48 / 2) * Math.PI / 180);
+        const zOf = (nd) => mode === "pci" ? spci(nd.pci) : sz(nd.z ?? 0);
+        const layoutPositions = () => order.forEach((nd, i) => { P[i * 3] = sx(nd.x); P[i * 3 + 1] = zOf(nd); P[i * 3 + 2] = sy(nd.y); });
         function size() {
           W = canvas.clientWidth; H = canvas.clientHeight;
           canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-          const pad = 40;
-          x = d3.scaleLinear(d3.extent(space.nodes, (n) => n.x), [pad, W - pad]);
-          y = d3.scaleLinear(d3.extent(space.nodes, (n) => n.y), [pad, H - pad]);
         }
-        const order2 = [...space.nodes].sort((a, b) => sectorOf(a.hs2)[1].localeCompare(sectorOf(b.hs2)[1]) || a.trade - b.trade);
-        function draw() {
-          ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
-          const shown = Math.floor(order2.length * Math.min(progress, 1));
-          const visible = new Set(order2.slice(0, shown).map((n) => n.id));
-          if (progress > 0.75) {
-            ctx.globalAlpha = Math.min((progress - 0.75) * 4, 1) * 0.28; ctx.strokeStyle = SILVER; ctx.lineWidth = 0.5;
-            ctx.beginPath();
-            for (const [a, b] of space.edges) {
-              const na = idx.get(a), nb = idx.get(b);
-              if (na && nb && visible.has(a) && visible.has(b)) { ctx.moveTo(x(na.x), y(na.y)); ctx.lineTo(x(nb.x), y(nb.y)); }
-            }
-            ctx.stroke(); ctx.globalAlpha = 1;
+        // copper glow sprite — one radial gradient scaled per lit node (shadowBlur per arc is far too slow)
+        const sprite = document.createElement("canvas"); sprite.width = sprite.height = 64;
+        { const g = sprite.getContext("2d"); const rg = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+          rg.addColorStop(0, "rgba(217,114,44,0.60)"); rg.addColorStop(0.35, "rgba(217,114,44,0.20)"); rg.addColorStop(1, "rgba(217,114,44,0)");
+          g.fillStyle = rg; g.fillRect(0, 0, 64, 64); }
+
+        function project() {
+          const cy = Math.cos(cam.yaw), syw = Math.sin(cam.yaw), cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+          const f = F(), [tx, ty, tz] = cam.target;
+          for (let i = 0; i < n; i++) {
+            const x = P[i * 3] - tx, y = P[i * 3 + 1] - ty, z = P[i * 3 + 2] - tz;
+            const x1 = x * cy - z * syw, z1 = x * syw + z * cy;        // orbit (yaw)
+            const y2 = y * cp - z1 * sp, z2 = y * sp + z1 * cp;        // elevation (pitch)
+            const depth = cam.dist - z2;                               // camera sits at +dist on the view axis
+            SD[i] = depth;
+            if (depth < 1) continue;
+            SX[i] = W / 2 + (f * x1) / depth; SY[i] = H / 2 - (f * y2) / depth;
           }
-          for (const n of order2.slice(0, shown)) {
-            const isLit = lit.has(n.id), dim = filter && !filter.has(n.id);
-            ctx.beginPath(); ctx.arc(x(n.x), y(n.y), rScale2(n.trade), 0, Math.PI * 2);
-            ctx.fillStyle = isLit ? COPPER : sectorOf(n.hs2)[2];
-            ctx.globalAlpha = dim ? 0.12 : isLit ? 0.95 : 0.55;
-            ctx.fill();
-            if (isLit && progress >= 1 && !dim) { ctx.shadowColor = COPPER; ctx.shadowBlur = 10; ctx.fill(); ctx.shadowBlur = 0; }
+          byDepth.sort((a, b) => SD[b] - SD[a]);                       // far → near
+        }
+        const fog = (d) => Math.max(0, Math.min(1, (FOG_FAR - d) / (FOG_FAR - FOG_NEAR)));
+        function draw() {
+          project();
+          ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
+          const shown = Math.floor(n * Math.min(progress, 1));
+          const f = F();
+          if (progress > 0.7) {
+            ctx.globalAlpha = 0.16 * Math.min((progress - 0.7) / 0.3, 1); ctx.strokeStyle = SILVER; ctx.lineWidth = 0.6;
+            ctx.beginPath();
+            for (const [a, b] of edgeIdx) {
+              if (a >= shown || b >= shown || SD[a] < 1 || SD[b] < 1) continue;
+              ctx.moveTo(SX[a], SY[a]); ctx.lineTo(SX[b], SY[b]);
+            }
+            ctx.stroke();
+          }
+          for (const i of byDepth) {
+            if (i >= shown || SD[i] < 1) continue;
+            const nd = order[i], isLit = lit.has(nd.id), dim = filter && !filter.has(nd.id);
+            const r = (rScale(nd.trade) * f * 0.62) / SD[i], k = fog(SD[i]);
+            if (isLit && !dim) { ctx.globalAlpha = 0.85 * k; const g = r * 7; ctx.drawImage(sprite, SX[i] - g / 2, SY[i] - g / 2, g, g); }
+            ctx.globalAlpha = (dim ? 0.08 : isLit ? 0.98 : 0.62) * k;
+            ctx.fillStyle = isLit ? COPPER : sectorOf(nd.hs2)[2];
+            ctx.beginPath(); ctx.arc(SX[i], SY[i], r, 0, Math.PI * 2); ctx.fill();
+          }
+          if (hovered >= 0 && SD[hovered] >= 1) {
+            const r = (rScale(order[hovered].trade) * f * 0.62) / SD[hovered];
+            ctx.globalAlpha = 0.9; ctx.strokeStyle = "#E6E8EC"; ctx.lineWidth = 1.3;
+            ctx.beginPath(); ctx.arc(SX[hovered], SY[hovered], r + 4, 0, Math.PI * 2); ctx.stroke();
           }
           ctx.globalAlpha = 1;
-          if (hover) {
-            const n = idx.get(hover);
-            if (n) { ctx.beginPath(); ctx.arc(x(n.x), y(n.y), rScale2(n.trade) + 4, 0, Math.PI * 2); ctx.strokeStyle = "#E6E8EC"; ctx.lineWidth = 1.2; ctx.stroke(); }
-          }
         }
-        size(); addEventListener("resize", () => { size(); draw(); });
-        const quad = () => d3.quadtree(space.nodes, (n) => x(n.x), (n) => y(n.y));
-        let q = quad();
+        size(); addEventListener("resize", size);
+        layoutPositions();
+
         if (interactive) {
           const tip = document.getElementById("ps-tip");
-          canvas.addEventListener("mousemove", (e) => {
+          canvas.style.touchAction = "none"; canvas.style.cursor = "grab";
+          let last = null;
+          canvas.addEventListener("pointerdown", (e) => { auto = false; dragging = true; last = [e.clientX, e.clientY]; vyaw = vpitch = 0; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = "grabbing"; });
+          canvas.addEventListener("pointerup", (e) => { dragging = false; canvas.style.cursor = "grab"; try { canvas.releasePointerCapture(e.pointerId); } catch {} });
+          canvas.addEventListener("pointercancel", () => { dragging = false; });
+          canvas.addEventListener("pointermove", (e) => {
             const rect = canvas.getBoundingClientRect();
-            const n = q.find(e.clientX - rect.left, e.clientY - rect.top, 14);
-            hover = n?.id ?? null; draw();
-            if (n) {
-              tip.hidden = false; tip.style.left = e.clientX - rect.left + 14 + "px"; tip.style.top = e.clientY - rect.top + 14 + "px";
-              tip.innerHTML = `<b>${label(n.id)}</b><br>HS ${n.id} · ${sectorOf(n.hs2)[1]}<br>PCI ${n.pci.toFixed(2)} · world trade $${d3.format(".3s")(n.trade * 1e3)}<br>${lit.has(n.id) ? "<span class='copper'>● Indonesia exports competitively</span>" : "<span class='dim'>○ not yet an Indonesian strength</span>"}`;
-            } else tip.hidden = true;
+            mouse = [e.clientX - rect.left, e.clientY - rect.top];
+            if (dragging && last) {
+              const dx = e.clientX - last[0], dy = e.clientY - last[1]; last = [e.clientX, e.clientY];
+              vyaw = -dx * 0.005; vpitch = dy * 0.005;
+              cam.yaw += vyaw; cam.pitch = Math.max(-1.35, Math.min(1.35, cam.pitch + vpitch));
+            }
           });
-          canvas.addEventListener("mouseleave", () => { hover = null; tip.hidden = true; draw(); });
+          canvas.addEventListener("mouseleave", () => { mouse = null; hovered = -1; tip.hidden = true; });
+          canvas.addEventListener("wheel", (e) => { e.preventDefault(); cam.dist = Math.max(MIN_D, Math.min(MAX_D, cam.dist * Math.exp(e.deltaY * 0.0012))); }, { passive: false });
+          // hover is resolved every frame (the scene moves under a still pointer)
+          var resolveHover = () => {
+            if (!mouse || dragging) return;
+            const shown = Math.floor(n * Math.min(progress, 1));
+            let best = -1, bestD = 12 * 12;
+            for (let i = 0; i < shown; i++) {
+              if (SD[i] < 1 || (filter && !filter.has(order[i].id))) continue;
+              const dx = SX[i] - mouse[0], dy = SY[i] - mouse[1], d = dx * dx + dy * dy;
+              if (d < bestD) { bestD = d; best = i; }
+            }
+            if (best !== hovered) {
+              hovered = best;
+              if (best >= 0) {
+                const nd = order[best];
+                tip.hidden = false;
+                tip.innerHTML = `<b>${label(nd.id)}</b><br>HS ${nd.id} · ${sectorOf(nd.hs2)[1]}<br>PCI ${nd.pci.toFixed(2)} · world trade $${d3.format(".3s")(nd.trade * 1e3)}<br>${lit.has(nd.id) ? "<span class='copper'>● Indonesia exports competitively</span>" : "<span class='dim'>○ not yet an Indonesian strength</span>"}`;
+              } else tip.hidden = true;
+            }
+            if (best >= 0) { tip.style.left = mouse[0] + 14 + "px"; tip.style.top = mouse[1] + 14 + "px"; }
+          };
         }
-        draw();
+
+        let running = true, tPrev = performance.now();
+        const io = new IntersectionObserver(([en]) => { running = en.isIntersecting; }, { threshold: 0.05 });
+        io.observe(canvas);
+        function frame(t) {
+          requestAnimationFrame(frame);
+          const dt = Math.min((t - tPrev) / 1000, 0.1); tPrev = t;
+          if (!running) return;
+          if (auto) cam.yaw += autoSpeed * dt;
+          if (!dragging && (Math.abs(vyaw) > 1e-4 || Math.abs(vpitch) > 1e-4)) {   // damping after release
+            cam.yaw += vyaw; cam.pitch = Math.max(-1.35, Math.min(1.35, cam.pitch + vpitch)); vyaw *= 0.9; vpitch *= 0.9;
+          }
+          draw();
+          if (interactive) resolveHover();
+        }
+        requestAnimationFrame(frame);
+
         return {
-          setYear(yr) { lit = new Set(states[String(yr)] ?? []); draw(); },
-          setFilter(ids) { filter = ids && ids.size ? ids : null; draw(); },
-          setMode() {},   // no depth in 2-D
-          focus(id) { hover = id; draw(); },
+          setYear(yr) { lit = new Set(states[String(yr)] ?? []); },
+          setFilter(ids) { filter = ids && ids.size ? ids : null; },
+          setMode(m) { mode = m; layoutPositions(); },
+          focus(id) {
+            const i = indexOf.get(id); if (i == null) return;
+            auto = false; cam.target = [P[i * 3], P[i * 3 + 1], P[i * 3 + 2]]; cam.dist = SPAN * 0.9; hovered = i;
+          },
           animate(ms) {
-            if (reduced) { progress = 1; draw(); return; }
+            if (reduced) { progress = 1; return; }
             progress = 0;
             const t0 = performance.now();
             const step = (t) => {
-              progress = Math.min((t - t0) / ms, 1); draw();
+              progress = Math.min((t - t0) / ms, 1);
               if (progress < 1) requestAnimationFrame(step);
               else document.getElementById("hero-status").textContent =
-                `${space.nodes.length} PRODUCTS · ${space.edges.length} LINKS · ${lit.size} INDONESIAN STRENGTHS IN ${latest} · 2-D MODE (ENABLE BROWSER GPU FOR 3-D)`;
+                `${space.nodes.length} PRODUCTS · ${space.edges.length} LINKS · ${lit.size} INDONESIAN STRENGTHS IN ${latest} · 3-D FORCE LAYOUT (SOFTWARE RENDER — BROWSER GPU OFF)`;
             };
             requestAnimationFrame(step);
           },
