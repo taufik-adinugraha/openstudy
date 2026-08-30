@@ -1,36 +1,56 @@
 ---
-// Case J — Fire & Haze Early Warning.  SCAFFOLD ONLY: the pipeline has not been
-// run, so this page renders the contract (chapters + gates) rather than results.
+// Case J — Fire & Haze Early Warning.  Spec: docs/spec-fire-haze.html (J5, J6).
 //
-// Anatomy (spec docs/spec-fire-haze.html, J5):
-//   hero "blame the wind" -> 01 where fire starts -> 02 the risk model ->
-//   03 the plume -> 04 the receptors -> 05 2015 and 2019 -> explore -> methodology
+// Anatomy: hero "blame the wind" -> 01 what is actually burning -> 02 why here, why now ->
+// 03 against the index everyone uses -> 04 the plume -> 05 who breathes it -> 06 2015 and 2019
+// -> explore -> methodology.
 //
-// Identity: plume magenta on ash.  --fire is for ignition POINTS only; the haze
-// ramp is data-only and never doubles as the accent.
-// No WebGL anywhere: every map is 2-D canvas/SVG with its own hit testing.
+// Identity: plume magenta on ash.  --fire is for ignition POINTS only and never for UI, so a
+// red dot on this page always means "something burned here".  The haze ramp is data-only.
+//
+// NO WEBGL ANYWHERE.  Every map is a 2-D canvas with Path2D + isPointInPath hit testing —
+// not a fallback, the primary path.  Trajectories are polylines and risk surfaces are
+// byte-quantised grids, both of which are native canvas work.
+//
+// Chart palette, validated (dataviz six checks, dark surface #1A1715):
+//   model #E2569E · climatology #E0A63F · persistence #6B7CA6 · CEMS FWI #4BB8A9
+//     -> CVD separation PASS (worst adjacent dE 14.2 deutan), normal-vision PASS (17.2)
+//   observed #7FB2C9 vs modelled #E2569E
+//     -> deutan dE 7.7, a WARN in the 6-8 band, legal ONLY with secondary encoding, so those
+//        two series carry direct labels AND different mark geometry (solid vs dashed).
+// The remaining validator FAILs are lightness-band/chroma-floor on shared/design/tokens.css
+// itself, which this case must not edit; they are recorded here rather than silently ignored.
 import "../styles/tokens.css";
 
 const S = (await import("../data/summary.json").catch(() => null))?.default ?? null;
 const pending = !S;
-
-const CHAPTERS = [
-  ["Hero", "Blame the wind", "Pick a city and a bad-air day; 72-hour back-trajectories fan out across the archipelago and land on the fires that were burning where the air came from. Flip the dial and the same engine runs forward from today's hotspots."],
-  ["01", "Where fire starts", "Two decades of hotspots after the volcano-and-flare filter, split by peat, land cover and concession context — the base rates a risk model has to beat."],
-  ["02", "The risk model", "Ignition probability per 0.25 deg cell per day from drought, soil moisture, land cover, peat depth and ENSO state; skill measured against climatology and persistence, not against zero."],
-  ["03", "The plume", "Kinematic forward trajectories on ERA5 winds, weighted by fire radiative power — stated plainly as transport, not chemistry."],
-  ["04", "Who breathes it", "Receptor cities scored by modelled smoke arrival against observed PM2.5: Pekanbaru, Palangkaraya, Pontianak, Singapore, Kuala Lumpur."],
-  ["05", "2015 and 2019", "The two anchor crises replayed day by day, with the model run blind on them."],
-  ["Explore", "Any day, any receptor", "Direction toggle, day scrubber, receptor picker, layer toggles, URL state, chart/table + download."],
-  ["Method", "How it was built and where it breaks", "The FIRMS type/confidence filter, the trajectory model's physics limits, every gate result, all attributions."],
-];
+const H = S?.headline ?? {};
+const fmtN = (v) => (v == null ? "—" : Math.round(v).toLocaleString("en-US"));
+const pct = (v, d = 1) => (v == null ? "—" : `${(v * 100).toFixed(d)}%`);
+const num = (v, d = 2) => (v == null ? "—" : Number(v).toFixed(d));
 
 const GATES = [
-  ["G-J1", "Hotspot hygiene (hard)", "Zero retained detections inside the static volcano/flare mask, on EVERY product including NRT — where the FIRMS type field does not exist, so a field-based filter would pass while doing nothing. A removal share below 0.5 % FAILS: that means the filter is broken, not that Indonesia has no volcanoes."],
-  ["G-J2", "Ignition-risk skill (hard)", "Held-out AUC >= 0.80 and a Brier skill score > 0 against BOTH day-of-year climatology and the CEMS Canadian Fire Weather Index, at 1, 3 and 7 day lead. Reanalysis and forecast paths scored separately."],
-  ["G-J3", "Transport direction", "On observed haze episodes, the back-trajectory bearing agrees with the forward run's within +/-30 degrees on >= 70 % of episode days. This gates the integrator, not the physics — the physics check is the CAMS comparison."],
-  ["G-J4", "Receptor correlation (hard at tier 1)", "Spearman rho >= 0.5 against Singapore NEA instruments. Indonesian stations report with their short coverage stated; unmonitored receptors compare against CAMS EAC4 and are labelled model-vs-model."],
-  ["G-J5", "Anchor-event replay", "2015 and 2019 held out entirely; both must land in the top decile of national seasonal severity. 2015 has no Singapore ground truth (NEA history starts 2016-03), so its reference is FIRMS plus CAMS EAC4 — and the gate says so."],
+  ["G-J1", "Hotspot hygiene", true,
+   "Zero retained detections inside the static volcano/flare mask, on every product including NRT — where the FIRMS type field does not exist, so a field-based filter passes while doing nothing. A removal share below 0.5 % also fails: that means the filter is broken, not that Indonesia has no volcanoes."],
+  ["G-J2", "Ignition-risk skill", true,
+   "Held-out AUC ≥ 0.80 and a Brier skill score > 0 against both day-of-year climatology and the CEMS Canadian Fire Weather Index, at 1, 3 and 7 days' lead. Reanalysis and forecast paths scored separately."],
+  ["G-J3", "Transport direction", false,
+   "On episode days, the back-trajectory bearing agrees with the forward run's within ±30° on ≥ 70 % of days. This gates the integrator, not the physics — the physics check is the CAMS comparison, published as divergence rather than as a score we claim to win."],
+  ["G-J4", "Receptor correlation", true,
+   "Spearman ρ ≥ 0.5 against Singapore NEA instruments — the only long, clean, commercially-licensed ground record in the region. Every receptor is reported including the ones that fail, each carrying its tier."],
+  ["G-J5", "Anchor-event replay", false,
+   "2015 and 2019 held out of training entirely; both must land in the top decile of seasonal severity, scored blind. 2015 has no Singapore ground truth — the NEA record begins 2016-03 — so its reference is FIRMS plus CAMS EAC4, and the gate says so."],
+];
+
+const CHAPTERS = [
+  ["01", "What is actually burning", "#ch01"],
+  ["02", "Why here, why now", "#ch02"],
+  ["03", "Against the index everyone uses", "#ch03"],
+  ["04", "The plume", "#ch04"],
+  ["05", "Who breathes it", "#ch05"],
+  ["06", "2015 and 2019", "#ch06"],
+  ["07", "Explore", "#explore"],
+  ["08", "Methodology", "#method"],
 ];
 ---
 
@@ -41,7 +61,7 @@ const GATES = [
     <title>Fire &amp; Haze Early Warning</title>
     <meta
       name="description"
-      content="Ignition risk and haze transport for Indonesia days ahead — fire hotspots, ERA5 winds, peat and drought — scored against observed PM2.5 in Riau, Kalimantan, Singapore and Malaysia."
+      content="Ignition risk per 0.25° cell per day at 1–7 days' lead, scored against the operational Canadian Fire Weather Index; and a trajectory model on ERA5 winds that says which cities are downwind. Indonesia to Singapore."
     />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -50,59 +70,1699 @@ const GATES = [
     />
     <style is:global>
       * { box-sizing: border-box; }
-      body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.62; -webkit-font-smoothing: antialiased; }
-      .wrap { max-width: var(--content-width); margin: 0 auto; padding: var(--space-6) var(--space-4); }
-      .stamp { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
-      h1 { font-size: clamp(2rem, 5vw, 3.2rem); margin: var(--space-3) 0; letter-spacing: -0.02em; }
-      .lede { color: var(--ink-muted); max-width: var(--prose-width); font-size: 1.05rem; }
-      .rail { display: grid; gap: var(--space-3); margin-top: var(--space-6); }
-      .row { display: grid; grid-template-columns: 92px 1fr; gap: var(--space-3); padding: var(--space-3) 0; border-top: 1px solid var(--hairline); }
-      .row b { font-family: var(--font-data); font-size: 0.76rem; color: var(--accent); }
-      .row h3 { margin: 0 0 4px; font-size: 1rem; }
-      .row p { margin: 0; color: var(--ink-muted); font-size: 0.92rem; max-width: var(--prose-width); }
-      .ramp { display: flex; gap: 0; margin-top: var(--space-4); border-radius: var(--radius); overflow: hidden; }
-      .ramp i { flex: 1; height: 10px; }
-      .note { margin-top: var(--space-5); padding: var(--space-3); border: 1px solid var(--hairline); border-left: 3px solid var(--accent); background: var(--surface); font-size: 0.92rem; color: var(--ink-muted); }
-      @media (max-width: 600px) { .row { grid-template-columns: 1fr; gap: 4px; } }
+      /* `clip` rather than `hidden`: hidden on <body> makes the whole page a scroll
+         container, which breaks position:sticky on the chapter nav.  clip does not. */
+      html, body { overflow-x: clip; max-width: 100%; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0; background: var(--ground); color: var(--ink);
+        font-family: var(--font-body); font-size: 16px; line-height: 1.62;
+        -webkit-font-smoothing: antialiased;
+      }
+      :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+      .wrap { max-width: var(--content-width); margin: 0 auto; padding: 0 var(--space-4); }
+      .stamp { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.14em;
+               text-transform: uppercase; color: var(--accent); display: block; }
+      .muted { color: var(--ink-muted); }
+      h1 { font-family: var(--font-display); font-size: clamp(2.1rem, 6vw, 4rem); margin: var(--space-3) 0;
+           letter-spacing: -0.025em; line-height: 1.02; text-wrap: balance; font-weight: 800; }
+      h2 { font-family: var(--font-display); font-size: clamp(1.5rem, 3.4vw, 2.2rem); margin: 0 0 var(--space-2);
+           letter-spacing: -0.02em; line-height: 1.1; text-wrap: balance; }
+      h3 { font-family: var(--font-display); font-size: 1.05rem; margin: 0 0 6px; letter-spacing: -0.01em; }
+      p { margin: 0 0 var(--space-3); max-width: var(--prose-width); }
+      a { color: var(--accent); }
+      code { font-family: var(--font-data); font-size: max(12px, 0.88em); background: var(--surface);
+             padding: 1px 5px; border-radius: 3px; }
+
+      /* ── chapter rhythm ─────────────────────────────────────────────── */
+      section { padding: var(--space-6) 0; border-top: 1px solid var(--hairline); }
+      section:first-of-type { border-top: 0; }
+      .chnum { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.18em;
+               color: var(--accent); display: block; margin-bottom: var(--space-2); }
+      .lede { color: var(--ink-muted); font-size: 1.06rem; max-width: var(--prose-width); }
+
+      /* ── hero ───────────────────────────────────────────────────────── */
+      .hero { padding-top: var(--space-6); }
+      .hero-grid { display: grid; grid-template-columns: 1fr 340px; gap: var(--space-4);
+                   margin-top: var(--space-4); align-items: start; }
+      .mapbox { position: relative; background: var(--surface); border: 1px solid var(--hairline);
+                border-radius: var(--radius); overflow: hidden; }
+      .mapbox canvas { display: block; width: 100%; }
+      .maptag { position: absolute; left: 10px; top: 9px; font-family: var(--font-data);
+                font-size: 12px; letter-spacing: 0.09em; color: var(--ink-muted);
+                text-transform: uppercase; pointer-events: none; }
+      .maplegend { position: absolute; right: 10px; bottom: 9px; display: flex; gap: 12px;
+                   font-family: var(--font-data); font-size: 12px; color: var(--ink-muted);
+                   background: color-mix(in srgb, var(--ground) 78%, transparent);
+                   padding: 5px 8px; border-radius: 4px; pointer-events: none; flex-wrap: wrap; }
+      .maplegend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px;
+                     margin-right: 5px; vertical-align: -1px; }
+
+      .panel { background: var(--surface); border: 1px solid var(--hairline);
+               border-radius: var(--radius); padding: var(--space-3); }
+      .panel h3 { font-size: 0.9rem; }
+
+      /* ── controls ───────────────────────────────────────────────────── */
+      .controls { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center;
+                  margin: var(--space-3) 0; }
+      .seg { display: inline-flex; border: 1px solid var(--hairline); border-radius: var(--radius);
+             overflow: hidden; background: var(--surface); }
+      .seg button { appearance: none; border: 0; background: transparent; color: var(--ink-muted);
+                    font-family: var(--font-data); font-size: 12px; letter-spacing: 0.06em;
+                    padding: 8px 13px; cursor: pointer; min-height: 34px; }
+      .seg button + button { border-left: 1px solid var(--hairline); }
+      .seg button[aria-pressed="true"] { background: var(--accent-ink); color: var(--accent); }
+      .seg button:hover { color: var(--ink); }
+      select, input[type="range"] { font-family: var(--font-data); font-size: 13px; }
+      select { background: var(--surface); color: var(--ink); border: 1px solid var(--hairline);
+               border-radius: var(--radius); padding: 8px 10px; min-height: 34px; }
+      input[type="range"] { accent-color: var(--accent); width: 220px; height: 24px; }
+      .ctl-label { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.1em;
+                   text-transform: uppercase; color: var(--ink-muted); }
+
+      /* ── stat tiles ─────────────────────────────────────────────────── */
+      .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+               gap: var(--space-3); margin: var(--space-4) 0; }
+      .tile { border-top: 2px solid var(--accent); padding-top: var(--space-2); }
+      .tile .v { font-family: var(--font-display); font-size: clamp(1.6rem, 3.4vw, 2.3rem);
+                 font-weight: 700; letter-spacing: -0.02em; line-height: 1.05; }
+      .tile .k { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.1em;
+                 text-transform: uppercase; color: var(--ink-muted); margin-top: 4px; }
+      .tile .s { font-size: 13px; color: var(--ink-muted); margin-top: 4px; }
+      .tile.alt { border-top-color: var(--clean); }
+      .tile.warn { border-top-color: var(--alert); }
+
+      /* ── big stat moment ────────────────────────────────────────────── */
+      .moment { margin: var(--space-5) 0; padding: var(--space-4) 0;
+                border-top: 1px solid var(--hairline); border-bottom: 1px solid var(--hairline); }
+      .moment .big { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.03em;
+                     font-size: clamp(2.6rem, 9vw, 5.5rem); line-height: 0.95; color: var(--accent); }
+      .moment p { margin-top: var(--space-2); font-size: 1.02rem; }
+
+      /* ── tables ─────────────────────────────────────────────────────── */
+      .tscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      table { border-collapse: collapse; width: 100%; font-family: var(--font-data);
+              font-size: 12.5px; line-height: 1.5; }
+      th { text-align: left; font-weight: 600; font-size: 12px; letter-spacing: 0.1em;
+           text-transform: uppercase; color: var(--ink-muted); padding: 9px 14px 9px 0;
+           border-bottom: 1px solid var(--ink); white-space: nowrap; }
+      td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+      td.n { text-align: right; font-variant-numeric: tabular-nums; }
+
+      /* ── gates ──────────────────────────────────────────────────────── */
+      .gate { display: grid; grid-template-columns: 62px 1fr 92px; gap: var(--space-3);
+              align-items: start; padding: var(--space-3); margin-bottom: var(--space-2);
+              background: var(--surface); border-left: 3px solid var(--ink-muted);
+              border-radius: 0 var(--radius) var(--radius) 0; }
+      .gate.ok { border-left-color: var(--official); }
+      .gate.bad { border-left-color: var(--alert); }
+      .gate.na { border-left-color: var(--ink-muted); }
+      .gate .id { font-family: var(--font-data); font-size: 12px; color: var(--accent); }
+      .gate p { margin: 4px 0 0; font-size: 13px; color: var(--ink-muted); max-width: 64ch; }
+      .gate .why { margin-top: 6px; font-family: var(--font-data); font-size: 12px; }
+      .badge { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.12em;
+               padding: 3px 7px; border-radius: 3px; text-align: center; align-self: start;
+               white-space: nowrap; }
+      .badge.pass { background: color-mix(in srgb, var(--official) 20%, transparent); color: var(--official); }
+      .badge.fail { background: color-mix(in srgb, var(--alert) 22%, transparent); color: var(--alert); }
+      .badge.pending { background: transparent; color: var(--ink-muted); border: 1px dashed var(--hairline); }
+
+      /* ── tier badges ────────────────────────────────────────────────── */
+      .tier { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.1em;
+              padding: 2px 6px; border-radius: 3px; white-space: nowrap; }
+      .tier-1 { background: color-mix(in srgb, var(--official) 20%, transparent); color: var(--official); }
+      .tier-2 { background: color-mix(in srgb, var(--clean) 20%, transparent); color: var(--clean); }
+      .tier-3 { background: color-mix(in srgb, var(--alert) 20%, transparent); color: var(--alert); }
+
+      /* ── charts ─────────────────────────────────────────────────────── */
+      .chart { width: 100%; }
+      .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+      .chart .grid line { stroke: var(--hairline); stroke-width: 1; }
+      .chart .axis text { fill: var(--ink-muted); font-family: var(--font-data); font-size: 12px; }
+      .chart .axis path, .chart .axis line { stroke: var(--hairline); }
+      .legend { display: flex; flex-wrap: wrap; gap: 14px; font-family: var(--font-data);
+                font-size: 12px; color: var(--ink-muted); margin-bottom: var(--space-2); }
+      .legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px;
+                  margin-right: 6px; vertical-align: 3px; }
+      .legend i.dash { background: repeating-linear-gradient(90deg, currentColor 0 4px, transparent 4px 7px); }
+
+      .tip { position: fixed; z-index: 60; pointer-events: none; background: var(--surface-raised);
+             border: 1px solid var(--hairline); border-radius: var(--radius); padding: 9px 11px;
+             font-family: var(--font-data); font-size: 12px; line-height: 1.5; max-width: 280px;
+             box-shadow: 0 8px 28px rgba(0,0,0,.45); opacity: 0; transition: opacity .12s; }
+      .tip b { color: var(--ink); font-weight: 600; }
+      .tip .r { color: var(--ink-muted); }
+
+      /* ── states ─────────────────────────────────────────────────────── */
+      .empty, .err, .loading { border: 1px dashed var(--hairline); border-radius: var(--radius);
+              padding: var(--space-4); color: var(--ink-muted); font-family: var(--font-data);
+              font-size: 13px; text-align: center; }
+      .err { border-style: solid; border-color: var(--alert); color: var(--alert); }
+      .skel { background: linear-gradient(90deg, var(--surface) 25%, var(--surface-raised) 50%, var(--surface) 75%);
+              background-size: 200% 100%; animation: sh 1.4s infinite; border-radius: var(--radius); }
+      @keyframes sh { 0% { background-position: 200% 0 } 100% { background-position: -200% 0 } }
+      #fail { display: none; position: sticky; top: 0; z-index: 90; background: var(--alert);
+              color: #1a0e06; font-family: var(--font-data); font-size: 13px; padding: 9px 14px; }
+
+      /* ── nav ────────────────────────────────────────────────────────── */
+      nav.toc { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--ground) 92%, transparent);
+                backdrop-filter: blur(8px); border-bottom: 1px solid var(--hairline); }
+      /* the chapter rail scrolls INSIDE itself; it must never widen the page */
+      nav.toc ol { display: flex; gap: 0; list-style: none; padding: 0;
+                   overflow-x: auto; max-width: var(--content-width); margin: 0 auto;
+                   scrollbar-width: none; min-width: 0; }
+      nav.toc ol::-webkit-scrollbar { display: none; }
+      nav.toc li { flex: 0 0 auto; }
+      nav.toc a { display: block; padding: 11px 14px; font-family: var(--font-data); font-size: 12px;
+                  letter-spacing: 0.06em; color: var(--ink-muted); text-decoration: none; white-space: nowrap; }
+      nav.toc a:hover, nav.toc a[aria-current="true"] { color: var(--accent); }
+
+      footer { padding: var(--space-6) 0 var(--space-5); border-top: 1px solid var(--hairline);
+               color: var(--ink-muted); font-size: 13px; }
+
+      @media (max-width: 900px) { .hero-grid { grid-template-columns: 1fr; } }
+      @media (max-width: 600px) {
+        .gate { grid-template-columns: 52px 1fr; }
+        .gate .badge { grid-column: 1 / -1; justify-self: start; }
+        input[type="range"] { width: 100%; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        .skel { animation: none; }
+        * { transition-duration: 0.01ms !important; }
+      }
     </style>
   </head>
   <body>
-    <main class="wrap">
-      <span class="stamp">Case J · Phase 3 · {pending ? "Scaffold — pipeline not yet run" : "Live"}</span>
-      <h1>Days before the sky turns</h1>
-      <p class="lede">
-        Indonesia's haze is not a weather event; it is a land-use decision plus a wind. This case
-        predicts where fire starts and where the smoke goes — an ignition-risk surface days ahead,
-        and a trajectory model that says which cities, on both sides of the Strait, are downwind.
-      </p>
+    <div id="fail" role="alert"></div>
 
-      <div class="ramp" aria-hidden="true">
-        <i style="background: var(--ramp-0)"></i>
-        <i style="background: var(--ramp-1)"></i>
-        <i style="background: var(--ramp-2)"></i>
-        <i style="background: var(--ramp-3)"></i>
-        <i style="background: var(--ramp-4)"></i>
-      </div>
+    <nav class="toc" aria-label="Chapters">
+      <ol>
+        <li><a href="#top">Blame the wind</a></li>
+        {CHAPTERS.map(([n, t, href]) => (<li><a href={href}>{n} · {t}</a></li>))}
+      </ol>
+    </nav>
 
-      <div class="rail">
-        {CHAPTERS.map(([k, t, d]) => (
-          <div class="row"><b>{k}</b><div><h3>{t}</h3><p>{d}</p></div></div>
-        ))}
-      </div>
-
-      <div class="rail">
-        {GATES.map(([k, t, d]) => (
-          <div class="row"><b>{k}</b><div><h3>{t}</h3><p>{d}</p></div></div>
-        ))}
-      </div>
-
-      {pending && (
-        <p class="note">
-          No <code>src/data/summary.json</code> yet — run <code>make rebuild</code> in
-          <code>cases/fire-haze/</code>. Thresholds above were fixed before any result was seen,
-          per the spec; they are not moved to fit an outcome.
+    <main>
+      <!-- ══════════════════════════ HERO ══════════════════════════ -->
+      <section class="hero wrap" id="top">
+        <span class="stamp">Case J · Indonesia → Singapore · {pending ? "pipeline not yet run" : "live"}</span>
+        <h1>The smoke that closed Singapore's schools — whose land was it standing on three days earlier?</h1>
+        <p class="lede">
+          Indonesia's haze is not weather. It is a land-use decision plus a wind, and the two
+          halves are separable: <em>where a fire is likely to start</em> is a function of drought,
+          peat and fuel; <em>where the smoke goes</em> is a function of the flow aloft. NASA
+          already does detection extremely well. The gap is the two or three days before — and the
+          attribution afterwards.
         </p>
-      )}
+
+        <div class="tiles">
+          <div class="tile">
+            <div class="v">{fmtN(H.detections_kept)}</div>
+            <div class="k">Retained detections</div>
+            <div class="s">VIIRS SNPP, 2012 →, after the static-source mask</div>
+          </div>
+          <div class="tile warn">
+            <div class="v">{pct(H.nrt_removed_share)}</div>
+            <div class="k">Removed from the live tail</div>
+            <div class="s">where a <code>type</code> filter removes exactly zero</div>
+          </div>
+          <div class="tile">
+            <div class="v">{num(H.auc_lead1, 3)}</div>
+            <div class="k">AUC · 1-day lead, forecast path</div>
+            <div class="s">threshold 0.80, fixed before any result</div>
+          </div>
+          <div class="tile alt">
+            <div class="v">{num(H.singapore_rho, 2)}</div>
+            <div class="k">Spearman ρ · Singapore</div>
+            <div class="s">modelled exposure vs NEA instruments</div>
+          </div>
+        </div>
+
+        <h2 style="margin-top: var(--space-5)">Blame the wind</h2>
+        <p class="lede">
+          Pick a receptor and a bad-air day. Seventy-two hours of back-trajectories fan out across
+          the archipelago and land on the fires that were burning where the air came from, with
+          the province attribution assembling beside them. Then flip the dial: the same integrator
+          runs <em>forward</em>, from that day's hotspots to the cities downwind.
+        </p>
+
+        <div class="controls" role="group" aria-label="Trajectory controls">
+          <span class="ctl-label" id="lbl-dir">Direction</span>
+          <div class="seg" role="group" aria-labelledby="lbl-dir">
+            <button id="dir-back" aria-pressed="true">← Backward · blame</button>
+            <button id="dir-fwd" aria-pressed="false">Forward · warn →</button>
+          </div>
+          <span class="ctl-label" id="lbl-rec">Receptor</span>
+          <select id="pick-receptor" aria-labelledby="lbl-rec"></select>
+          <span class="ctl-label" id="lbl-ep">Episode</span>
+          <select id="pick-episode" aria-labelledby="lbl-ep"></select>
+        </div>
+
+        <div class="hero-grid">
+          <div class="mapbox" id="hero-map" style="aspect-ratio: 16 / 10; min-height: 320px;">
+            <span class="maptag" id="hero-tag">2-D canvas · no WebGL</span>
+            <div class="maplegend">
+              <span><i style="background: var(--accent)"></i>parcel path</span>
+              <span><i style="background: var(--fire)"></i>hotspot</span>
+              <span><i style="background: var(--clean)"></i>receptor</span>
+            </div>
+          </div>
+          <div class="panel" id="hero-attr">
+            <h3>Attribution</h3>
+            <div class="empty">Pick an episode.</div>
+          </div>
+        </div>
+        <p class="muted" style="margin-top: var(--space-3); font-size: 13px;">
+          This is a <b>kinematic trajectory model</b>, not a chemistry-transport model. A single
+          trajectory is a line, not a plume; the spread of the ensemble is a proxy for dispersion,
+          not a simulation of it. Release heights come from CAMS GFAS where GFAS exists and from a
+          parameterised plume rise where it does not — the share is printed in the methodology.
+        </p>
+      </section>
+
+      <!-- ══════════════════════════ 01 ══════════════════════════ -->
+      <section class="wrap" id="ch01">
+        <span class="chnum">Chapter 01</span>
+        <h2>What is actually burning</h2>
+        <p class="lede">
+          Roughly one detection in ten inside the Indonesian box is not a landscape fire.
+          Indonesia has ~130 active volcanoes and a working oil-and-gas industry, and both radiate
+          at the wavelengths VIIRS watches. Taken at face value, the hotspot table reports Merapi,
+          Dukono and the Duri flares as fires every single day of the year — a permanent,
+          perfectly seasonal-looking background a risk model will happily learn and then present
+          as skill.
+        </p>
+
+        <div class="moment">
+          <div class="big" id="m-nrt">—</div>
+          <p>
+            of the near-real-time tail is removed by the static mask — the part of the record where
+            the FIRMS <code>type</code> field <b>does not exist at all</b>, so the obvious
+            <code>type == 0</code> filter removes exactly zero rows and the recent series silently
+            keeps the volcanoes the historical series drops. That step change at the SP/NRT seam
+            reads as a trend. It is the whole reason this stage exists.
+          </p>
+        </div>
+
+        <div class="hero-grid">
+          <div class="mapbox" id="mask-map" style="aspect-ratio: 16 / 9; min-height: 300px;">
+            <span class="maptag">Static exclusion mask · 0.01° cells</span>
+          </div>
+          <div class="panel">
+            <h3>What was thrown away</h3>
+            <div id="removal-comp" class="loading skel" style="height: 190px"></div>
+          </div>
+        </div>
+
+        <h3 style="margin-top: var(--space-5)">The file size tells the story before a model runs</h3>
+        <p class="muted" style="font-size: 14px">
+          The per-country bulk CSV for Indonesia was 66.1 MB in 2015 and 8.8 MB in 2016. That is
+          El Niño and La Niña, in bytes, with no analysis at all.
+        </p>
+        <div class="chart" id="ch-year"></div>
+      </section>
+
+      <!-- ══════════════════════════ 02 ══════════════════════════ -->
+      <section class="wrap" id="ch02">
+        <span class="chnum">Chapter 02</span>
+        <h2>Why here, why now</h2>
+        <p class="lede">
+          Ignition probability per 0.25° cell per day, from drought, soil moisture, fuel, peat
+          depth and the ocean state — every predictor lagged to <code>t−1</code> and the lag
+          asserted, seasons blocked in cross-validation, and the two anchor years removed from
+          training entirely.
+        </p>
+
+        <div class="controls" role="group" aria-label="Risk surface controls">
+          <span class="ctl-label" id="lbl-lead">Lead</span>
+          <div class="seg" role="group" aria-labelledby="lbl-lead">
+            <button data-lead="1" aria-pressed="true">1 day</button>
+            <button data-lead="3" aria-pressed="false">3 days</button>
+            <button data-lead="7" aria-pressed="false">7 days</button>
+          </div>
+          <span class="ctl-label" id="lbl-day">Day</span>
+          <input type="range" id="day-scrub" min="0" max="0" value="0" aria-labelledby="lbl-day" />
+          <span class="ctl-label" id="day-label" aria-live="polite">—</span>
+        </div>
+
+        <div class="hero-grid">
+          <div class="mapbox" id="risk-map" style="aspect-ratio: 16 / 10; min-height: 340px;">
+            <span class="maptag" id="risk-tag">Ignition probability · 0.25°</span>
+            <div class="maplegend" id="risk-legend"></div>
+          </div>
+          <div class="panel">
+            <h3>Why this cell is red</h3>
+            <p class="muted" style="font-size: 13px; margin-bottom: var(--space-2)">
+              Mean |SHAP| aggregated to feature families, so the answer is a sentence rather than
+              forty column names.
+            </p>
+            <div id="shap" class="loading skel" style="height: 210px"></div>
+          </div>
+        </div>
+
+        <h3 style="margin-top: var(--space-5)">A probability a ministry might act on has to mean what it says</h3>
+        <p class="muted" style="font-size: 14px">
+          0.2 has to burn about one time in five. Isotonic calibration is fitted on a season the
+          model never saw, and the reliability diagram is published rather than asserted.
+        </p>
+        <div class="chart" id="ch-reliability"></div>
+      </section>
+
+      <!-- ══════════════════════════ 03 ══════════════════════════ -->
+      <section class="wrap" id="ch03">
+        <span class="chnum">Chapter 03</span>
+        <h2>Against the index everyone uses</h2>
+        <p class="lede">
+          Fire is rare and violently seasonal, so raw AUC flatters everyone. The baselines here
+          already contain the easy knowledge: per-cell day-of-year climatology, persistence, and
+          the operational <b>CEMS Canadian Fire Weather Index</b> — an index we did not design and
+          cannot tune, given the fairest possible treatment by being isotonically calibrated to
+          probability on the same folds.
+        </p>
+        <div id="skill-block"><div class="loading skel" style="height: 260px"></div></div>
+
+        <h3 style="margin-top: var(--space-5)">The honest cost of forecasting rather than hindcasting</h3>
+        <p class="muted" style="font-size: 14px">
+          The reanalysis path is allowed to see the weather that actually happened over the lead
+          window. The forecast path is not. The gap between them is what it costs not to know the
+          weather, and it is published rather than assumed away.
+        </p>
+        <div class="chart" id="ch-gap"></div>
+      </section>
+
+      <!-- ══════════════════════════ 04 ══════════════════════════ -->
+      <section class="wrap" id="ch04">
+        <span class="chnum">Chapter 04</span>
+        <h2>The plume</h2>
+        <p class="lede">
+          Forward trajectories weighted by fire radiative power and released at CAMS GFAS
+          injection heights — plume height is what decides whether smoke settles over
+          Palangkaraya or joins the 850 hPa flow across the Strait. Drawn beside the CAMS
+          chemistry forecast: where the cheap model agrees, it is doing its job; where it
+          diverges, the divergence is the finding.
+        </p>
+        <div id="plume-block"><div class="loading skel" style="height: 220px"></div></div>
+      </section>
+
+      <!-- ══════════════════════════ 05 ══════════════════════════ -->
+      <section class="wrap" id="ch05">
+        <span class="chnum">Chapter 05</span>
+        <h2>Who breathes it</h2>
+        <p class="lede">
+          The fire belt is unmonitored. OpenAQ has <b>zero PM2.5 locations in Riau and zero in all
+          of Kalimantan</b> — bbox and 25 km radius searches around Pekanbaru, Palangkaraya and
+          Banjarbaru all return nothing. So every receptor carries a tier, and tier 3 substitutes
+          a reanalysis and calls it a reanalysis on every row.
+        </p>
+        <div id="receptors"><div class="loading skel" style="height: 320px"></div></div>
+      </section>
+
+      <!-- ══════════════════════════ 06 ══════════════════════════ -->
+      <section class="wrap" id="ch06">
+        <span class="chnum">Chapter 06</span>
+        <h2>2015 and 2019</h2>
+        <p class="lede">
+          Both anchor years were excluded from training entirely — not held out at scoring time,
+          which is the kind of arrangement that survives one refactor and then quietly stops being
+          true. They are scored blind. If the model cannot rank the two crises everyone remembers,
+          nothing else here is worth reading.
+        </p>
+        <div id="anchors"><div class="loading skel" style="height: 260px"></div></div>
+      </section>
+
+      <!-- ══════════════════════════ EXPLORE ══════════════════════════ -->
+      <section class="wrap" id="explore">
+        <span class="chnum">Chapter 07</span>
+        <h2>Explore</h2>
+        <p class="lede">
+          Every episode in the archive, with its attribution and its uncertainty. State is in the
+          URL, so a row you find is a link you can send.
+        </p>
+        <div class="controls">
+          <span class="ctl-label" id="lbl-sort">Sort</span>
+          <div class="seg" role="group" aria-labelledby="lbl-sort">
+            <button id="sort-exp" aria-pressed="true">Worst exposure</button>
+            <button id="sort-day" aria-pressed="false">Most recent</button>
+          </div>
+          <button class="seg" id="dl" style="padding: 8px 13px; cursor: pointer;
+            font-family: var(--font-data); font-size: 12px; color: var(--accent);">Download CSV</button>
+        </div>
+        <div class="tscroll"><table id="episode-table"><tbody></tbody></table></div>
+      </section>
+
+      <!-- ══════════════════════════ METHOD ══════════════════════════ -->
+      <section class="wrap" id="method">
+        <span class="chnum">Chapter 08</span>
+        <h2>Methodology, and where it breaks</h2>
+
+        <h3>Validation gates</h3>
+        <p class="muted" style="font-size: 14px">
+          Thresholds were fixed before any result was seen and are never moved to fit an outcome.
+          A gate that fails ships red with a diagnosis; a gate whose input has not arrived ships
+          pending with the reason.
+        </p>
+        <div id="gates">
+          {GATES.map(([id, title, hard, desc]) => (
+            <div class="gate na" data-gate={id}>
+              <span class="id">{id}</span>
+              <div>
+                <b>{title}{hard ? " · hard" : ""}</b>
+                <p>{desc}</p>
+                <div class="why muted"></div>
+              </div>
+              <span class="badge pending">PENDING</span>
+            </div>
+          ))}
+        </div>
+
+        <h3 style="margin-top: var(--space-5)">Six premises that did not survive contact</h3>
+        <ol class="muted" style="font-size: 14px; max-width: var(--prose-width); padding-left: 1.2em">
+          <li>The FIRMS <code>area</code> window caps at <b>five</b> days, not ten.</li>
+          <li>VIIRS <em>does</em> cover 2015, so no MODIS splice is needed for the anchors — on
+              2015-10-20 VIIRS returned 6,110 detections to MODIS's 1,354.</li>
+          <li><b>The <code>type</code> field is absent from every NRT product</b>, so a
+              <code>type == 0</code> filter silently no-ops on the live tail. The fix is to use
+              <code>type</code> only to <em>build</em> a static mask from the archive, then filter
+              everything with the mask.</li>
+          <li><code>cems-fire-historical-v1</code> is on EWDS, not CDS, which 404s.</li>
+          <li>ADS and EWDS need no new registration — one ECMWF token authenticates all three
+              Copernicus stores; only a one-time policy acceptance differs.</li>
+          <li>The ground-truth problem is not thin Jakarta coverage: <b>OpenAQ has zero PM2.5
+              locations in Riau and zero in all of Kalimantan.</b></li>
+        </ol>
+
+        <h3 style="margin-top: var(--space-5)">What this model is not</h3>
+        <p class="muted" style="font-size: 14px">
+          There is no chemistry, no aerosol microphysics, no secondary organic aerosol formation,
+          no wet or dry deposition beyond a crude exponential decay, and no aerosol–radiation
+          feedback — which in 2015 was strong enough to suppress the boundary layer and make the
+          haze worse than the emissions alone imply. The honest claim is <em>which fires were
+          upwind</em> and <em>which receptors are downwind</em>, at daily resolution, with a
+          stated direction error.
+        </p>
+
+        <h3 style="margin-top: var(--space-5)">The editorial decision, stated</h3>
+        <p class="muted" style="font-size: 14px" id="attr-decision">
+          Attribution is published at <b>province level</b>, with the trajectory ensemble's spread
+          shown beside every share and an explicit “no attributable source” outcome when the air
+          passed over no fire at all. Island level was the conservative alternative and was
+          rejected: “Sumatra” is not an answer anyone can act on, and the commercial premise of
+          this case is that the answer is actionable. A province share is a statement about
+          <em>where the air came from</em>, not about who lit the fire.
+        </p>
+
+        <h3 style="margin-top: var(--space-5)">Known holes, stated rather than papered over</h3>
+        <ul class="muted" style="font-size: 14px; max-width: var(--prose-width); padding-left: 1.2em">
+          <li><b>Malaysia is out.</b> <code>apims.doe.gov.my</code> 404s on every path including
+              root, and the only aggregator carrying it forbids commercial use verbatim. The
+              transboundary claim here is <b>Indonesia → Singapore only</b>.</li>
+          <li><b>2015 has no Singapore ground truth.</b> The NEA record begins ~2016-03, so that
+              anchor is scored on FIRMS detections plus CAMS EAC4, and G-J5 says so.</li>
+          <li><b>There is no operational IOD index.</b> The HadISST DMI runs about three months
+              behind and is stamped “Preliminary”, so it is a historical feature only — and 2019,
+              the strongest positive IOD on record, is unreadable without it.</li>
+          <li><b>No open medium-range FWI forecast exists</b>, so our forecast path is compared
+              against the FWI at analysis time. That flatters us, and the size of the flattery is
+              the reanalysis-vs-forecast gap printed in chapter 03.</li>
+          <li><b>The DLR Sentinel-5P aerosol product is held back.</b> Its collection metadata
+              says CC-BY-4.0 in one field while the URL in that same field and the
+              <code>rel:license</code> link both point at CC BY-<b>NC</b> 4.0. Not shipped until
+              DLR confirms in writing.</li>
+          <li><b>KLHK land cover has no open licence</b>, so ESA WorldCover v200 (CC BY 4.0) is
+              the primary and KLHK is not stored.</li>
+        </ul>
+
+        <h3 style="margin-top: var(--space-5)">Vintages</h3>
+        <div class="tscroll"><table id="vintage"><tbody></tbody></table></div>
+
+        <h3 style="margin-top: var(--space-5)">Attribution</h3>
+        <div id="licences" class="muted" style="font-size: 13px"></div>
+      </section>
+
+      <footer class="wrap">
+        <p class="muted" style="font-size: 13px">
+          Case J · Fire &amp; Haze Early Warning · demo-lab. Ignition risk and haze transport for
+          Indonesia, built entirely from public data. Out of scope and named rather than
+          half-built: a real chemistry-transport model, emissions inventories beyond GFAS,
+          health-impact estimates, and concession-level attribution.
+        </p>
+      </footer>
     </main>
+
+    <div class="tip" id="tip" role="tooltip" aria-hidden="true"></div>
+
+    <script>
+      import * as d3 from "d3";
+
+      /* ══════════════════════════════════════════════════════════════════════════════
+         Fail loudly.  A blank chart is worse than a red banner, so every section runs
+         inside sect() and any throw shows up rather than leaving a hole.
+         ══════════════════════════════════════════════════════════════════════════════ */
+      const failEl = document.getElementById("fail");
+      const failBanner = (m) => { failEl.style.display = "block"; failEl.textContent = m; };
+      addEventListener("error", (e) => failBanner("Script error: " + (e.message ?? e.type)));
+      addEventListener("unhandledrejection", (e) =>
+        failBanner("Load error: " + (e.reason?.message ?? e.reason)));
+      const sect = (name, fn) => {
+        try { return fn(); }
+        catch (err) { console.error(name, err); failBanner(`${name} failed: ${err.message ?? err}`); return null; }
+      };
+
+      const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const load = (f) => fetch(`${BASE}/data/${f}`).then((r) => {
+        if (!r.ok) throw new Error(`${f} → HTTP ${r.status}`);
+        return r.json();
+      });
+      const soft = (f) => load(f).catch(() => null);
+      const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+      const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      const C = {
+        accent: css("--accent") || "#E2569E",
+        fire: css("--fire") || "#FF7A45",
+        clean: css("--clean") || "#7FB2C9",
+        ink: css("--ink") || "#EFEAE6",
+        muted: css("--ink-muted") || "#A79C93",
+        hair: css("--hairline") || "#2C2724",
+        surface: css("--surface") || "#1A1715",
+        ground: css("--ground") || "#12100F",
+        official: css("--official") || "#4BB8A9",
+        up: css("--up") || "#E0A63F",
+        down: css("--down") || "#6B7CA6",
+        alert: css("--alert") || "#E08B54",
+        ramp: [css("--ramp-0"), css("--ramp-1"), css("--ramp-2"), css("--ramp-3"), css("--ramp-4")]
+          .map((s, i) => s || ["#16232B", "#4E5A55", "#A88A4E", "#D9628A", "#F6C9DE"][i]),
+      };
+      const rampScale = d3.piecewise(d3.interpolateRgb, C.ramp);
+
+      /* ── tooltip ─────────────────────────────────────────────────────────────── */
+      const tipEl = document.getElementById("tip");
+      const tip = {
+        show(html, x, y) {
+          tipEl.innerHTML = html;
+          tipEl.style.opacity = "1";
+          tipEl.setAttribute("aria-hidden", "false");
+          const r = tipEl.getBoundingClientRect();
+          tipEl.style.left = Math.min(x + 14, innerWidth - r.width - 10) + "px";
+          tipEl.style.top = Math.max(8, y - r.height - 12) + "px";
+        },
+        hide() { tipEl.style.opacity = "0"; tipEl.setAttribute("aria-hidden", "true"); },
+      };
+
+      /* ══════════════════════════════════════════════════════════════════════════════
+         CanvasMap — the renderer that actually ships.  The owner's browser runs with
+         WebGL off, so this is not a degraded path: it does hover, click, hit-testing
+         with Path2D + isPointInPath, polylines and a quantised grid, all in 2-D.
+
+         Three invariants worth stating, because each is a silent bug otherwise:
+          1. A SEPARATE hit-test context with an identity transform.  The paint context
+             carries setTransform(dpr,...), so isPointInPath on it needs px/dpr.
+          2. The hit canvas MUST be sized to W x H — isPointInPath returns false for any
+             point outside the bitmap, and an unsized (300x150) canvas silently kills
+             hit testing below and right of that box.
+          3. Longitude cosine correction.  Over 24 degrees of longitude at the equator an
+             uncorrected projection is fine, but the AOI runs to 9S and the distortion
+             shows in trajectory angles, which is exactly what this page is about.
+         ══════════════════════════════════════════════════════════════════════════════ */
+      function CanvasMap(container, bbox) {
+        container.querySelectorAll("canvas").forEach((c) => c.remove());
+        const canvas = document.createElement("canvas");
+        canvas.style.cssText = "width:100%;height:100%;display:block;";
+        container.insertBefore(canvas, container.firstChild);
+        const ctx = canvas.getContext("2d");
+        const hit = document.createElement("canvas").getContext("2d");
+        const dpr = Math.min(devicePixelRatio || 1, 2);
+        const B = { w: bbox[0], s: bbox[1], e: bbox[2], n: bbox[3] };
+        let W = 0, H = 0, k = 1, ox = 0, oy = 0, lonC = 1;
+        const layers = [];
+
+        function project() {
+          W = container.clientWidth || 640;
+          H = container.clientHeight || 400;
+          canvas.width = Math.max(1, W * dpr);
+          canvas.height = Math.max(1, H * dpr);
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          hit.canvas.width = W; hit.canvas.height = H;
+          const pad = 8;
+          lonC = Math.cos((((B.n + B.s) / 2) * Math.PI) / 180);
+          k = Math.min((W - 2 * pad) / ((B.e - B.w) * lonC), (H - 2 * pad) / (B.n - B.s));
+          ox = (W - k * (B.e - B.w) * lonC) / 2;
+          oy = (H + k * (B.n - B.s)) / 2;
+        }
+        const X = (lon) => ox + (lon - B.w) * lonC * k;
+        const Y = (lat) => oy - (lat - B.s) * k;
+
+        function paint() {
+          ctx.fillStyle = C.ground;
+          ctx.fillRect(0, 0, W, H);
+          for (const l of layers) l.draw(ctx, X, Y, k);
+        }
+        project();
+        let raf = 0;
+        const redraw = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(paint); };
+        addEventListener("resize", () => { project(); for (const l of layers) l.reproject?.(X, Y, k); redraw(); });
+        return {
+          canvas, ctx, hit, X, Y, get k() { return k; }, get W() { return W; }, get H() { return H; },
+          add(l) { layers.push(l); l.reproject?.(X, Y, k); return l; },
+          clearLayers() { layers.length = 0; },
+          redraw, project,
+          pxOf(e) { const r = canvas.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; },
+        };
+      }
+
+      /* Coastline / province layer, with exact point-in-polygon hit testing. */
+      function polyLayer(geo, opts = {}) {
+        let paths = [], boxes = [];
+        return {
+          geo, paths, boxes,
+          reproject(X, Y) {
+            paths = []; boxes = [];
+            for (const f of geo.features) {
+              const p = new Path2D();
+              let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+              const polys = f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
+              for (const poly of polys)
+                for (const ring of poly) {
+                  ring.forEach(([lon, lat], j) => {
+                    const px = X(lon), py = Y(lat);
+                    if (px < x0) x0 = px; if (px > x1) x1 = px;
+                    if (py < y0) y0 = py; if (py > y1) y1 = py;
+                    j ? p.lineTo(px, py) : p.moveTo(px, py);
+                  });
+                  p.closePath();
+                }
+              paths.push(p); boxes.push([x0, y0, x1, y1]);
+            }
+            this.paths = paths; this.boxes = boxes;
+          },
+          draw(ctx) {
+            for (let i = 0; i < paths.length; i++) {
+              ctx.fillStyle = opts.fill ?? C.surface;
+              ctx.fill(paths[i]);
+              ctx.strokeStyle = opts.stroke ?? C.hair;
+              ctx.lineWidth = opts.lw ?? 0.7;
+              ctx.stroke(paths[i]);
+            }
+            if (opts.hoverIdx != null && opts.hoverIdx >= 0 && paths[opts.hoverIdx]) {
+              ctx.strokeStyle = C.accent; ctx.lineWidth = 1.6; ctx.stroke(paths[opts.hoverIdx]);
+            }
+          },
+          featureAt(hit, px, py) {
+            for (let i = paths.length - 1; i >= 0; i--) {
+              const b = boxes[i];
+              if (px < b[0] - 1 || px > b[2] + 1 || py < b[1] - 1 || py > b[3] + 1) continue;
+              if (hit.isPointInPath(paths[i], px, py)) return i;
+            }
+            return -1;
+          },
+        };
+      }
+
+      /* ══════════════════════════════════════════════════════════════════════════════ */
+      (async function main() {
+        const [grid, days, geo, stats, skill, receptors, mask, firesYear, national] =
+          await Promise.all([
+            soft("grid.json"), soft("days.json"), soft("adm1.geo.json"), soft("stats.json"),
+            soft("skill.json"), soft("receptors.json"), soft("mask.json"),
+            soft("fires_year.json"), soft("national.json"),
+          ]);
+
+        if (!grid) {
+          // A designed pending state, not a hole.  The page still says what it WILL show and
+          // what has to happen first, because a blank panel and a broken panel look identical.
+          const msg = "Pipeline output not exported yet — run <code>make rebuild</code> in " +
+                      "<code>cases/fire-haze/</code>. Thresholds on this page were fixed before " +
+                      "any result was seen and are not moved to fit an outcome.";
+          document.querySelectorAll(".loading").forEach((el) => {
+            el.className = "empty"; el.innerHTML = msg;
+          });
+          document.querySelectorAll(".mapbox").forEach((el) => {
+            el.insertAdjacentHTML("afterbegin",
+              `<div class="empty" style="position:absolute;inset:18px;display:grid;place-content:center;border-style:dashed">${msg}</div>`);
+          });
+          ["skill-block", "plume-block", "receptors", "anchors", "removal-comp", "shap",
+           "ch-year", "ch-reliability", "ch-gap"].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el && !el.querySelector(".empty")) { el.className = "empty"; el.innerHTML = msg; }
+          });
+          const tb = document.querySelector("#episode-table tbody");
+          if (tb) tb.innerHTML = `<tr><td class="muted">${msg}</td></tr>`;
+          sect("gates", () => renderGates(stats));
+          sect("vintage", () => vintageTable(stats));
+          return;
+        }
+        const BBOX = grid.bbox ?? [95, -9, 119, 6];
+
+        /* ── hero: blame the wind ───────────────────────────────────────────────── */
+        sect("hero", () => heroMap(grid, days, geo, BBOX));
+        /* ── 01 ─────────────────────────────────────────────────────────────────── */
+        sect("mask map", () => maskMap(mask, geo, BBOX));
+        sect("removal", () => removalComposition(firesYear));
+        sect("fires by year", () => firesByYear(firesYear));
+        /* ── 02 ─────────────────────────────────────────────────────────────────── */
+        sect("risk map", () => riskMap(grid, days, geo, BBOX));
+        sect("shap", () => shapFamilies(skill));
+        sect("reliability", () => reliability(skill));
+        /* ── 03 ─────────────────────────────────────────────────────────────────── */
+        sect("skill", () => skillTable(skill));
+        sect("gap", () => foresightGap(skill));
+        /* ── 04 ─────────────────────────────────────────────────────────────────── */
+        sect("plume", () => plumeBlock(stats, national));
+        /* ── 05 ─────────────────────────────────────────────────────────────────── */
+        sect("receptors", () => receptorPanels(receptors, stats));
+        /* ── 06 ─────────────────────────────────────────────────────────────────── */
+        sect("anchors", () => anchorBlock(stats, national));
+        /* ── explore + method ───────────────────────────────────────────────────── */
+        sect("explore", () => exploreTable(days));
+        sect("gates", () => renderGates(stats));
+        sect("vintage", () => vintageTable(stats));
+
+        /* ────────────────────────────────────────────────────────────────────────── */
+        function heroMap(grid, days, geo, bbox) {
+          const el = document.getElementById("hero-map");
+          const eps = days?.episodes ?? [];
+          const recSel = document.getElementById("pick-receptor");
+          const epSel = document.getElementById("pick-episode");
+          const attr = document.getElementById("hero-attr");
+          if (!eps.length) {
+            el.insertAdjacentHTML("afterbegin",
+              '<div class="empty" style="margin:24px">No trajectory episodes exported yet — the transport stage has not run.</div>');
+            return;
+          }
+          const map = CanvasMap(el, bbox);
+          const land = geo ? map.add(polyLayer(geo, { fill: C.surface, stroke: C.hair })) : null;
+
+          const recs = [...new Set(eps.map((e) => e.receptor))];
+          recSel.innerHTML = recs.map((r) => `<option value="${r}">${title(r)}</option>`).join("");
+          let state = { rec: recs.includes("singapore") ? "singapore" : recs[0], dir: "back", ep: null };
+
+          function fillEpisodes() {
+            const list = eps.filter((e) => e.receptor === state.rec)
+              .sort((a, b) => (b.exposure ?? 0) - (a.exposure ?? 0));
+            epSel.innerHTML = list.map((e) =>
+              `<option value="${e.day}">${e.day}${e.anchor ? " · anchor" : ""}</option>`).join("");
+            state.ep = list[0]?.day ?? null;
+          }
+          fillEpisodes();
+          recSel.value = state.rec;
+
+          const traj = { paths: [], fires: [], src: [] };
+          let progress = 1;
+
+          /* For each fire, the normalised moment the fan first sweeps within reach of it.
+             Computed ONCE per episode (700 fires x 30 parcels x 25 steps is nothing) so the
+             per-frame draw is a comparison rather than a nearest-neighbour search — which is
+             what lets the fires ignite in step with the parcels at 60 fps. */
+          function computeIgnition() {
+            const R2 = 0.45 * 0.45;          // ~50 km at this latitude
+            for (const f of traj.fires) {
+              let best = 1;
+              for (const p of traj.paths) {
+                for (let i = 0; i < p.length; i++) {
+                  const dy = p[i][0] - f[0], dx = p[i][1] - f[1];
+                  if (dy * dy + dx * dx < R2) {
+                    const t = i / Math.max(1, p.length - 1);
+                    if (t < best) best = t;
+                    break;
+                  }
+                }
+              }
+              f[3] = best;
+            }
+          }
+
+          const trajLayer = {
+            draw(ctx, X, Y) {
+              // hotspots first, under the parcels — --fire is for point detections only
+              ctx.fillStyle = C.fire;
+              for (const f of traj.fires) {
+                const [la, lo, w, lit] = f;
+                if (lit != null && progress < lit) continue;
+                const age = lit == null ? 1 : Math.min(1, (progress - lit) * 6);
+                ctx.globalAlpha = 0.35 + 0.5 * age;
+                ctx.beginPath();
+                ctx.arc(X(lo), Y(la),
+                        Math.max(1.6, Math.min(5, Math.sqrt(w) * 0.35)) * (0.4 + 0.6 * age),
+                        0, 6.284);
+                ctx.fill();
+              }
+              ctx.globalAlpha = 1;
+              ctx.lineWidth = 1.1;
+              ctx.lineJoin = "round";
+              for (const p of traj.paths) {
+                const n = Math.max(2, Math.round(p.length * progress));
+                const g = ctx.createLinearGradient(X(p[0][1]), Y(p[0][0]),
+                                                   X(p[n - 1][1]), Y(p[n - 1][0]));
+                g.addColorStop(0, C.ramp[4]);
+                g.addColorStop(1, C.accent);
+                ctx.strokeStyle = g;
+                ctx.globalAlpha = 0.55;
+                ctx.beginPath();
+                for (let i = 0; i < n; i++) {
+                  const [la, lo] = p[i];
+                  i ? ctx.lineTo(X(lo), Y(la)) : ctx.moveTo(X(lo), Y(la));
+                }
+                ctx.stroke();
+              }
+              ctx.globalAlpha = 1;
+              // the receptor itself
+              const r = RECEPTOR_XY[state.rec];
+              if (r) {
+                ctx.fillStyle = C.clean;
+                ctx.beginPath(); ctx.arc(X(r[1]), Y(r[0]), 5, 0, 6.284); ctx.fill();
+                ctx.strokeStyle = C.ground; ctx.lineWidth = 2; ctx.stroke();
+              }
+            },
+          };
+          map.add(trajLayer);
+
+          const RECEPTOR_XY = {};
+          for (const [k, v] of Object.entries(receptors?.receptors ?? {}))
+            RECEPTOR_XY[k] = [v.lat, v.lon];
+
+          async function draw() {
+            if (!state.ep) return;
+            attr.innerHTML = '<h3>Attribution</h3><div class="loading skel" style="height:150px"></div>';
+            try {
+              if (state.dir === "back") {
+                const d = await load(`back/${state.rec}/${state.ep}.json`);
+                traj.paths = d.parcels;
+                traj.src = [];
+                // the fires that were burning under the parcels over the same window — the
+                // whole point of the interaction is that the lines LAND on something
+                traj.fires = (d.fires ?? []).map(([la, lo, frp]) => [la, lo, frp]);
+                renderAttr(d);
+              } else {
+                const d = await load(`fwd/${state.ep}.json`);
+                traj.paths = d.parcels.map((p) => p.path);
+                traj.fires = d.parcels.map((p) => [p.src[0], p.src[1], p.w]);
+                renderFwd(d);
+              }
+            } catch (err) {
+              traj.paths = []; traj.fires = [];
+              attr.innerHTML = `<h3>Attribution</h3><div class="empty">No ${
+                state.dir === "back" ? "back" : "forward"}-trajectory set for ${state.ep}.</div>`;
+            }
+            if (state.dir === "back") computeIgnition();
+            else for (const f of traj.fires) f[3] = 0;   // sources are lit from the start
+            animate();
+          }
+
+          function animate() {
+            if (REDUCED) { progress = 1; map.redraw(); return; }
+            progress = 0;
+            const t0 = performance.now();
+            const step = (t) => {
+              progress = Math.min(1, (t - t0) / 900);
+              map.redraw();
+              if (progress < 1) requestAnimationFrame(step);
+            };
+            requestAnimationFrame(step);
+          }
+
+          function renderAttr(d) {
+            const rows = Object.entries(d.attribution ?? {}).sort((a, b) => b[1] - a[1]);
+            if (!rows.length || rows[0][0] === "no attributable source") {
+              attr.innerHTML = `<h3>Attribution</h3>
+                <p class="muted" style="font-size:13px">
+                  <b>No attributable source.</b> The 72-hour back-trajectory from
+                  ${title(state.rec)} on ${d.day} passed over no detected fire. That is the
+                  correct answer on the many bad-air days that are local rather than
+                  transboundary — and saying so is the point of publishing it.</p>`;
+              return;
+            }
+            const max = rows[0][1];
+            attr.innerHTML = `<h3>Where the air came from</h3>
+              <p class="muted" style="font-size:12.5px;margin-bottom:10px">
+                ${title(state.rec)} · ${d.day} · 72 h back · ${d.parcels.length} parcels</p>` +
+              rows.slice(0, 8).map(([p, v]) => `
+                <div style="margin-bottom:8px">
+                  <div style="display:flex;justify-content:space-between;font-family:var(--font-data);font-size:12px">
+                    <span>${p}</span><span class="muted">${(v * 100).toFixed(1)}%</span></div>
+                  <div style="height:7px;background:var(--surface-raised);border-radius:4px;overflow:hidden;margin-top:3px">
+                    <div style="height:100%;width:${(v / max) * 100}%;background:${C.accent};border-radius:4px"></div>
+                  </div></div>`).join("") +
+              `<p class="muted" style="font-size:12px;margin-top:12px;margin-bottom:0">
+                 Province shares are a statement about where the air came from, weighted by the
+                 fire radiative power under each parcel — not about who lit the fire.</p>`;
+          }
+
+          function renderFwd(d) {
+            const tot = d.parcels.reduce((a, p) => a + p.w, 0);
+            attr.innerHTML = `<h3>Forward from ${d.day}</h3>
+              <p class="muted" style="font-size:12.5px">
+                ${d.parcels.length} parcels released above the strongest fire cells, weighted by
+                fire radiative power (${Math.round(tot).toLocaleString()} MW in view), integrated
+                72 hours forward on the same engine that ran backwards a moment ago.</p>
+              <p class="muted" style="font-size:12.5px;margin-bottom:0">
+                Forward and backward sharing one integrator is exactly what gate <b>G-J3</b>
+                tests: if the two disagree about where the smoke came from, that is a bug, and the
+                gate is how we would find out.</p>`;
+          }
+
+          const setDir = (d) => {
+            state.dir = d;
+            document.getElementById("dir-back").setAttribute("aria-pressed", String(d === "back"));
+            document.getElementById("dir-fwd").setAttribute("aria-pressed", String(d === "fwd"));
+            document.getElementById("hero-tag").textContent =
+              d === "back" ? "2-D canvas · 72 h back-trajectories" : "2-D canvas · 72 h forward";
+            draw();
+          };
+          document.getElementById("dir-back").onclick = () => setDir("back");
+          document.getElementById("dir-fwd").onclick = () => setDir("fwd");
+          recSel.onchange = () => { state.rec = recSel.value; fillEpisodes(); draw(); };
+          epSel.onchange = () => { state.ep = epSel.value; draw(); };
+
+          // hover a province
+          map.canvas.addEventListener("pointermove", (e) => {
+            if (!land) return;
+            const [px, py] = map.pxOf(e);
+            const i = land.featureAt(map.hit, px, py);
+            land.geo && (land.paths, 0);
+            if (i >= 0) {
+              const f = land.geo.features[i].properties;
+              tip.show(`<b>${f.adm1_name ?? "—"}</b><br><span class="r">${f.country ?? ""}</span>`,
+                       e.clientX, e.clientY);
+            } else tip.hide();
+          });
+          map.canvas.addEventListener("pointerleave", tip.hide);
+          draw();
+        }
+
+        /* ── 01 · the mask, drawn ───────────────────────────────────────────────── */
+        function maskMap(mask, geo, bbox) {
+          const el = document.getElementById("mask-map");
+          if (!mask) { el.insertAdjacentHTML("afterbegin", '<div class="empty" style="margin:24px">No mask exported.</div>'); return; }
+          const map = CanvasMap(el, bbox);
+          if (geo) map.add(polyLayer(geo, { fill: C.surface, stroke: C.hair }));
+          map.add({
+            draw(ctx, X, Y) {
+              ctx.fillStyle = C.fire;
+              ctx.globalAlpha = 0.9;
+              for (const [la, lo] of mask.cells) {
+                ctx.fillRect(X(lo) - 1.4, Y(la) - 1.4, 2.8, 2.8);
+              }
+              ctx.globalAlpha = 1;
+            },
+          });
+          map.redraw();
+          el.insertAdjacentHTML("beforeend",
+            `<div class="maplegend"><span><i style="background:var(--fire)"></i>${
+              mask.n_core.toLocaleString()} persistent-source cells</span></div>`);
+        }
+
+        function removalComposition(fy) {
+          const el = document.getElementById("removal-comp");
+          if (!fy?.removed_composition) { el.className = "empty"; el.textContent = "No filter audit."; return; }
+          const rows = Object.entries(fy.removed_composition).sort((a, b) => b[1] - a[1]);
+          const tot = rows.reduce((a, r) => a + r[1], 0);
+          const LABEL = {
+            low_confidence: "Low confidence",
+            static_mask: "Static mask (the NRT fix)",
+            type_static: "type 2 · static land source",
+            type_volcano: "type 1 · volcano",
+            type_offshore: "type 3 · offshore",
+          };
+          el.className = "";
+          el.innerHTML =
+            `<div style="font-family:var(--font-data);font-size:12px;color:var(--ink-muted);margin-bottom:10px">
+               ${tot.toLocaleString()} detections removed · ${(fy.removed_share * 100).toFixed(2)}% of the record</div>` +
+            rows.map(([k, v]) => `
+              <div style="margin-bottom:9px">
+                <div style="display:flex;justify-content:space-between;font-family:var(--font-data);font-size:12px">
+                  <span>${LABEL[k] ?? k}</span><span class="muted">${v.toLocaleString()}</span></div>
+                <div style="height:7px;background:var(--surface-raised);border-radius:4px;overflow:hidden;margin-top:3px">
+                  <div style="height:100%;width:${(v / rows[0][1]) * 100}%;background:${
+                    k === "static_mask" ? C.accent : C.muted};border-radius:4px"></div></div></div>`).join("") +
+            `<p class="muted" style="font-size:12px;margin:10px 0 0">
+               Only <b>3.2 %</b> of VIIRS detections are high-confidence, so filtering to high
+               confidence — a tempting-looking quality step — would discard 97 % of the signal.
+               It is explicitly not done.</p>`;
+        }
+
+        function firesByYear(fy) {
+          const host = document.getElementById("ch-year");
+          if (!fy?.detections) { host.innerHTML = '<div class="empty">No yearly counts.</div>'; return; }
+          const data = Object.entries(fy.detections)
+            .map(([y, n]) => ({ y: +y, n, mb: fy.bulk_mb?.[y] ?? null }))
+            .sort((a, b) => a.y - b.y);
+          const W = 900, Hh = 260, m = { t: 14, r: 16, b: 34, l: 58 };
+          const x = d3.scaleBand().domain(data.map((d) => d.y)).range([m.l, W - m.r]).padding(0.32);
+          const y = d3.scaleLinear().domain([0, d3.max(data, (d) => d.n) * 1.08]).range([Hh - m.b, m.t]);
+          const svg = d3.select(host).html("").append("svg")
+            .attr("viewBox", `0 0 ${W} ${Hh}`).attr("role", "img")
+            .attr("aria-label", "Retained VIIRS detections per year");
+          svg.append("g").attr("class", "grid")
+            .selectAll("line").data(y.ticks(4)).join("line")
+            .attr("x1", m.l).attr("x2", W - m.r).attr("y1", y).attr("y2", y);
+          svg.append("g").attr("class", "axis").attr("transform", `translate(0,${Hh - m.b})`)
+            .call(d3.axisBottom(x).tickSizeOuter(0));
+          svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`)
+            .call(d3.axisLeft(y).ticks(4).tickFormat(d3.format("~s")));
+          svg.selectAll("rect.b").data(data).join("rect").attr("class", "b")
+            .attr("x", (d) => x(d.y)).attr("width", x.bandwidth())
+            .attr("y", (d) => y(d.n)).attr("height", (d) => Hh - m.b - y(d.n))
+            .attr("rx", 4)
+            .attr("fill", (d) => ([2015, 2019].includes(d.y) ? C.accent : C.ramp[1]))
+            .on("pointermove", (e, d) => tip.show(
+              `<b>${d.y}</b><br>${d.n.toLocaleString()} detections${
+                d.mb ? `<br><span class="r">bulk CSV ${d.mb} MB</span>` : ""}`,
+              e.clientX, e.clientY))
+            .on("pointerleave", tip.hide);
+          // direct labels on the two anchors — never a number on every bar
+          svg.selectAll("text.lbl").data(data.filter((d) => [2015, 2019].includes(d.y)))
+            .join("text").attr("class", "lbl")
+            .attr("x", (d) => x(d.y) + x.bandwidth() / 2).attr("y", (d) => y(d.n) - 7)
+            .attr("text-anchor", "middle").attr("fill", C.accent)
+            .attr("font-family", "var(--font-data)").attr("font-size", 12)
+            .text((d) => `${d.y} anchor`);
+        }
+
+        /* ── 02 · the risk surface ──────────────────────────────────────────────── */
+        function riskMap(grid, days, geo, bbox) {
+          const el = document.getElementById("risk-map");
+          const list = (days?.risk_days ?? []).slice().sort((a, b) => a.day.localeCompare(b.day));
+          if (!list.length) {
+            el.insertAdjacentHTML("afterbegin", '<div class="empty" style="margin:24px">No risk surfaces exported.</div>');
+            return;
+          }
+          const map = CanvasMap(el, bbox);
+          if (geo) map.add(polyLayer(geo, { fill: C.surface, stroke: C.hair }));
+          let vals = null, fires = [], lead = "1", hoverIdx = -1;
+          const half = grid.deg / 2;
+
+          map.add({
+            draw(ctx, X, Y, k) {
+              if (!vals) return;
+              const wpx = Math.max(2, (grid.deg * k) * Math.cos((((bbox[1] + bbox[3]) / 2) * Math.PI) / 180)) + 0.6;
+              const hpx = Math.max(2, grid.deg * k) + 0.6;
+              for (let i = 0; i < vals.length; i++) {
+                const v = vals[i] / 255;
+                if (v < 0.012) continue;
+                const [la, lo] = grid.cells[i];
+                ctx.fillStyle = rampScale(Math.min(1, v * 3.2));
+                ctx.globalAlpha = 0.42 + 0.58 * Math.min(1, v * 3.2);
+                ctx.fillRect(X(lo - half), Y(la + half), wpx, hpx);
+              }
+              ctx.globalAlpha = 1;
+              ctx.fillStyle = C.fire;
+              for (const [i, n] of fires) {
+                const [la, lo] = grid.cells[i];
+                ctx.beginPath();
+                ctx.arc(X(lo), Y(la), Math.max(1.4, Math.min(4.5, Math.sqrt(n) * 0.55)), 0, 6.284);
+                ctx.fill();
+              }
+              if (hoverIdx >= 0 && vals) {
+                const [la, lo] = grid.cells[hoverIdx];
+                ctx.strokeStyle = C.ink; ctx.lineWidth = 1.4;
+                ctx.strokeRect(X(lo - half), Y(la + half), wpx, hpx);
+              }
+            },
+          });
+
+          const scrub = document.getElementById("day-scrub");
+          const label = document.getElementById("day-label");
+          scrub.max = String(list.length - 1);
+          // default to the worst day in the record — the page should open on the story
+          let idx = list.reduce((best, d, i) => (d.fires > list[best].fires ? i : best), 0);
+          scrub.value = String(idx);
+
+          async function show(i) {
+            idx = i;
+            const d = list[i];
+            label.textContent = `${d.day}${d.anchor ? " · anchor year" : ""} · ${d.fires.toLocaleString()} detections`;
+            try {
+              const j = await load(`risk/${d.day}.json`);
+              vals = j.leads[lead] ?? j.leads["1"];
+              fires = j.fires ?? [];
+            } catch { vals = null; fires = []; }
+            map.redraw();
+          }
+          scrub.addEventListener("input", () => show(+scrub.value));
+          document.querySelectorAll("[data-lead]").forEach((b) => {
+            b.onclick = () => {
+              lead = b.dataset.lead;
+              document.querySelectorAll("[data-lead]").forEach((o) =>
+                o.setAttribute("aria-pressed", String(o === b)));
+              document.getElementById("risk-tag").textContent =
+                `Ignition probability · ${lead}-day lead · 0.25°`;
+              show(idx);
+            };
+          });
+          map.canvas.addEventListener("pointermove", (e) => {
+            if (!vals) return;
+            const [px, py] = map.pxOf(e);
+            let best = -1, bd = 1e9;
+            for (let i = 0; i < grid.cells.length; i++) {
+              const dx = map.X(grid.cells[i][1]) - px, dy = map.Y(grid.cells[i][0]) - py;
+              const dd = dx * dx + dy * dy;
+              if (dd < bd) { bd = dd; best = i; }
+            }
+            if (bd > 900) { hoverIdx = -1; tip.hide(); map.redraw(); return; }
+            hoverIdx = best;
+            const p = vals[best] / 255;
+            tip.show(`<b>${(p * 100).toFixed(1)}% ignition probability</b><br>
+              <span class="r">${grid.province[best] || "—"} · ${grid.cells[best][0].toFixed(2)}, ${grid.cells[best][1].toFixed(2)}<br>
+              peat ${grid.peat_m[best].toFixed(2)} m · ${lead}-day lead</span>`, e.clientX, e.clientY);
+            map.redraw();
+          });
+          map.canvas.addEventListener("pointerleave", () => { hoverIdx = -1; tip.hide(); map.redraw(); });
+
+          document.getElementById("risk-legend").innerHTML =
+            C.ramp.map((c, i) => `<span><i style="background:${c}"></i>${
+              ["0", "", "", "", "high"][i]}</span>`).join("") +
+            '<span><i style="background:var(--fire);border-radius:50%"></i>detection</span>';
+          show(idx);
+        }
+
+        function shapFamilies(skill) {
+          const el = document.getElementById("shap");
+          const sh = skill?.shap?.share;
+          if (!sh || !Object.keys(sh).length) {
+            el.className = "empty"; el.textContent = "SHAP not computed yet."; return;
+          }
+          const rows = Object.entries(sh).sort((a, b) => b[1] - a[1]);
+          const LAB = {
+            dryness: "Dryness · rain deficit, SPI",
+            atmosphere: "Atmosphere · VPD, RH, wind, BLH",
+            soil: "Soil moisture",
+            fuel: "Fuel · peat depth, land cover",
+            fire_history: "Fire history · this cell + neighbours",
+            season: "Season · day-of-year as sin/cos",
+            ocean: "Ocean state · ENSO, SOI, IOD",
+            foresight: "Lead-window weather (reanalysis path only)",
+          };
+          el.className = "";
+          el.innerHTML = rows.map(([k, v]) => `
+            <div style="margin-bottom:9px">
+              <div style="display:flex;justify-content:space-between;font-family:var(--font-data);font-size:12px">
+                <span>${LAB[k] ?? k}</span><span class="muted">${(v * 100).toFixed(0)}%</span></div>
+              <div style="height:7px;background:var(--surface-raised);border-radius:4px;overflow:hidden;margin-top:3px">
+                <div style="height:100%;width:${(v / rows[0][1]) * 100}%;background:${C.accent};border-radius:4px"></div>
+              </div></div>`).join("");
+        }
+
+        function reliability(skill) {
+          const host = document.getElementById("ch-reliability");
+          const bins = skill?.leads?.["1"]?.forecast?.reliability ?? [];
+          if (!bins.length) { host.innerHTML = '<div class="empty">Reliability not computed yet.</div>'; return; }
+          const W = 900, Hh = 300, m = { t: 16, r: 20, b: 42, l: 62 };
+          const hi = Math.max(d3.max(bins, (d) => d.p_mean), d3.max(bins, (d) => d.observed)) * 1.1;
+          const x = d3.scaleLinear().domain([0, hi]).range([m.l, W - m.r]);
+          const y = d3.scaleLinear().domain([0, hi]).range([Hh - m.b, m.t]);
+          const svg = d3.select(host).html("").append("svg")
+            .attr("viewBox", `0 0 ${W} ${Hh}`).attr("role", "img")
+            .attr("aria-label", "Reliability diagram: predicted probability against observed frequency");
+          svg.append("g").attr("class", "grid").selectAll("line").data(y.ticks(5)).join("line")
+            .attr("x1", m.l).attr("x2", W - m.r).attr("y1", y).attr("y2", y);
+          svg.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(hi)).attr("y2", y(hi))
+            .attr("stroke", C.muted).attr("stroke-dasharray", "4 4").attr("stroke-width", 1.5);
+          svg.append("text").attr("x", x(hi) - 4).attr("y", y(hi) + 16).attr("text-anchor", "end")
+            .attr("fill", C.muted).attr("font-family", "var(--font-data)").attr("font-size", 12)
+            .text("perfect calibration");
+          svg.append("g").attr("class", "axis").attr("transform", `translate(0,${Hh - m.b})`)
+            .call(d3.axisBottom(x).ticks(6).tickFormat(d3.format(".1%")));
+          svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`)
+            .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".1%")));
+          svg.append("text").attr("x", (m.l + W - m.r) / 2).attr("y", Hh - 6)
+            .attr("text-anchor", "middle").attr("fill", C.muted)
+            .attr("font-family", "var(--font-data)").attr("font-size", 12)
+            .text("predicted probability");
+          svg.append("text").attr("transform", `rotate(-90)`).attr("x", -(Hh - m.b + m.t) / 2)
+            .attr("y", 16).attr("text-anchor", "middle").attr("fill", C.muted)
+            .attr("font-family", "var(--font-data)").attr("font-size", 12)
+            .text("observed frequency");
+          svg.append("path").datum(bins).attr("fill", "none").attr("stroke", C.accent)
+            .attr("stroke-width", 2)
+            .attr("d", d3.line().x((d) => x(d.p_mean)).y((d) => y(d.observed)));
+          svg.selectAll("circle").data(bins).join("circle")
+            .attr("cx", (d) => x(d.p_mean)).attr("cy", (d) => y(d.observed))
+            .attr("r", 5).attr("fill", C.accent).attr("stroke", C.ground).attr("stroke-width", 2)
+            .on("pointermove", (e, d) => tip.show(
+              `<b>predicted ${(d.p_mean * 100).toFixed(2)}%</b><br>
+               observed ${(d.observed * 100).toFixed(2)}%<br>
+               <span class="r">${d.n.toLocaleString()} cell-days in this bin</span>`,
+              e.clientX, e.clientY))
+            .on("pointerleave", tip.hide);
+        }
+
+        /* ── 03 · skill ─────────────────────────────────────────────────────────── */
+        function skillTable(skill) {
+          const host = document.getElementById("skill-block");
+          const leads = skill?.leads;
+          if (!leads || !Object.keys(leads).length) {
+            host.innerHTML = '<div class="empty">The risk model has not been scored yet.</div>'; return;
+          }
+          const fwi = skill.fwi ?? {};
+          const fwiPer = fwi.per_lead ?? {};
+          const rows = Object.keys(leads).sort((a, b) => +a - +b).map((L) => {
+            const f = leads[L].forecast ?? {}, r = leads[L].reanalysis ?? {};
+            const w = fwiPer[L] ?? {};
+            return { L, f, r, w };
+          });
+          host.innerHTML = `
+            <div class="legend">
+              <span style="color:${C.accent}"><i style="background:${C.accent}"></i>our model</span>
+              <span style="color:${C.up}"><i style="background:${C.up}"></i>day-of-year climatology</span>
+              <span style="color:${C.down}"><i style="background:${C.down}"></i>persistence</span>
+              <span style="color:${C.official}"><i style="background:${C.official}"></i>CEMS Canadian FWI</span>
+            </div>
+            <div class="tscroll"><table><thead><tr>
+              <th>Lead</th><th>Path</th><th class="n">AUC</th><th class="n">Brier</th>
+              <th class="n">BSS vs climatology</th><th class="n">BSS vs persistence</th>
+              <th class="n">BSS vs CEMS FWI</th><th class="n">Base rate</th></tr></thead>
+              <tbody>${rows.map((d) => ["forecast", "reanalysis"].map((p, i) => {
+                const m = d[p === "forecast" ? "f" : "r"];
+                const bssF = p === "forecast" ? d.w.bss_vs_fwi : null;
+                const ok = (v, t) => v == null ? '<span class="muted">—</span>'
+                  : `<span style="color:${v > t ? C.official : C.alert}">${v >= 0 ? "+" : ""}${v.toFixed(3)}</span>`;
+                return `<tr>
+                  ${i === 0 ? `<td rowspan="2"><b>${d.L} d</b></td>` : ""}
+                  <td>${p}</td>
+                  <td class="n" style="color:${m.auc >= 0.8 ? C.official : C.alert}">${m.auc?.toFixed(3) ?? "—"}</td>
+                  <td class="n">${m.brier != null ? m.brier.toExponential(2) : "—"}</td>
+                  <td class="n">${ok(m.bss_vs_climatology, 0)}</td>
+                  <td class="n">${ok(m.bss_vs_persistence, 0)}</td>
+                  <td class="n">${p === "forecast" ? ok(bssF, 0) : '<span class="muted">n/a</span>'}</td>
+                  <td class="n muted">${m.base_rate != null ? (m.base_rate * 100).toFixed(2) + "%" : "—"}</td>
+                </tr>`;
+              }).join("")).join("")}</tbody></table></div>
+            ${fwi.status && fwi.status !== "ok"
+              ? `<p class="muted" style="font-size:13px;margin-top:12px">
+                   <b>The CEMS FWI half of G-J2 is PENDING.</b> ${fwi.reason ?? ""}</p>`
+              : `<p class="muted" style="font-size:13px;margin-top:12px">
+                   The FWI is given the fairest possible treatment: isotonically calibrated to a
+                   probability on the same training folds, so it is compared at its best rather
+                   than as a raw index scored as if it were one.</p>`}`;
+        }
+
+        function foresightGap(skill) {
+          const host = document.getElementById("ch-gap");
+          const leads = skill?.leads;
+          if (!leads) { host.innerHTML = '<div class="empty">Not scored yet.</div>'; return; }
+          const data = Object.keys(leads).sort((a, b) => +a - +b).map((L) => ({
+            L: +L,
+            f: leads[L].forecast?.auc ?? null,
+            r: leads[L].reanalysis?.auc ?? null,
+          })).filter((d) => d.f != null && d.r != null);
+          if (!data.length) { host.innerHTML = '<div class="empty">Not scored yet.</div>'; return; }
+          const W = 900, Hh = 260, m = { t: 18, r: 120, b: 40, l: 58 };
+          const x = d3.scalePoint().domain(data.map((d) => d.L)).range([m.l, W - m.r]).padding(0.6);
+          const lo = Math.min(0.75, d3.min(data, (d) => Math.min(d.f, d.r)) - 0.03);
+          const y = d3.scaleLinear().domain([lo, 1]).range([Hh - m.b, m.t]);
+          const svg = d3.select(host).html("").append("svg")
+            .attr("viewBox", `0 0 ${W} ${Hh}`).attr("role", "img")
+            .attr("aria-label", "AUC by lead for the reanalysis and forecast paths");
+          svg.append("g").attr("class", "grid").selectAll("line").data(y.ticks(5)).join("line")
+            .attr("x1", m.l).attr("x2", W - m.r).attr("y1", y).attr("y2", y);
+          svg.append("line").attr("x1", m.l).attr("x2", W - m.r)
+            .attr("y1", y(0.8)).attr("y2", y(0.8))
+            .attr("stroke", C.alert).attr("stroke-dasharray", "5 4").attr("stroke-width", 1.5);
+          svg.append("text").attr("x", W - m.r + 6).attr("y", y(0.8) + 4)
+            .attr("fill", C.alert).attr("font-family", "var(--font-data)").attr("font-size", 12)
+            .text("G-J2 threshold 0.80");
+          svg.append("g").attr("class", "axis").attr("transform", `translate(0,${Hh - m.b})`)
+            .call(d3.axisBottom(x).tickFormat((d) => `${d} day`));
+          svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`)
+            .call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(".2f")));
+          // the gap itself, as a band — the thing the chapter is about
+          svg.selectAll("line.gap").data(data).join("line").attr("class", "gap")
+            .attr("x1", (d) => x(d.L)).attr("x2", (d) => x(d.L))
+            .attr("y1", (d) => y(d.f)).attr("y2", (d) => y(d.r))
+            .attr("stroke", C.hair).attr("stroke-width", 8).attr("stroke-linecap", "round");
+          for (const [key, col, lab, dash] of [["r", C.up, "reanalysis path (perfect weather foresight)", null],
+                                               ["f", C.accent, "forecast path (information at t only)", "5 4"]]) {
+            svg.append("path").datum(data).attr("fill", "none").attr("stroke", col)
+              .attr("stroke-width", 2).attr("stroke-dasharray", dash)
+              .attr("d", d3.line().x((d) => x(d.L)).y((d) => y(d[key])));
+            svg.selectAll(`circle.${key}`).data(data).join("circle").attr("class", key)
+              .attr("cx", (d) => x(d.L)).attr("cy", (d) => y(d[key])).attr("r", 5)
+              .attr("fill", col).attr("stroke", C.ground).attr("stroke-width", 2)
+              .on("pointermove", (e, d) => tip.show(
+                `<b>${lab.split(" (")[0]}</b><br>lead ${d.L} d · AUC ${d[key].toFixed(3)}`,
+                e.clientX, e.clientY))
+              .on("pointerleave", tip.hide);
+            svg.append("text").attr("x", x(data[data.length - 1].L) + 10)
+              .attr("y", y(data[data.length - 1][key]) + 4)
+              .attr("fill", col).attr("font-family", "var(--font-data)").attr("font-size", 12)
+              .text(key === "r" ? "reanalysis" : "forecast");
+          }
+        }
+
+        /* ── 04 · the plume ─────────────────────────────────────────────────────── */
+        function plumeBlock(stats, national) {
+          const host = document.getElementById("plume-block");
+          const t = stats?.transport_meta ?? {};
+          const cmp = t.cams_comparison ?? {};
+          const gj3 = stats?.gates?.["G-J3"] ?? {};
+          let html = `<div class="tiles">
+            <div class="tile"><div class="v">${t.gfas_height_share != null ? (t.gfas_height_share * 100).toFixed(0) + "%" : "—"}</div>
+              <div class="k">Parcels released at a GFAS height</div>
+              <div class="s">the rest use a parameterised plume rise, and the share is reported</div></div>
+            <div class="tile"><div class="v">${t.parcels ? t.parcels.toLocaleString() : "—"}</div>
+              <div class="k">Parcels integrated</div>
+              <div class="s">${t.scheme ?? "Petterssen 2nd-order"} · ${t.hours ?? 72} h · ${t.dt_min ?? 60} min steps</div></div>
+            <div class="tile ${gj3.pass === false ? "warn" : ""}"><div class="v">${
+              gj3.share_within != null ? (gj3.share_within * 100).toFixed(0) + "%" : "—"}</div>
+              <div class="k">Forward/backward bearing agreement</div>
+              <div class="s">within ±30°, threshold 70% — gate G-J3</div></div>
+            <div class="tile"><div class="v">${t.escaped_domain_share != null ? (t.escaped_domain_share * 100).toFixed(1) + "%" : "—"}</div>
+              <div class="k">Parcels that left the domain</div>
+              <div class="s">terminated and counted, never clamped to the boundary</div></div>
+          </div>`;
+          if (cmp.status === "ok" && Object.keys(cmp.by_receptor ?? {}).length) {
+            html += `<h3 style="margin-top:var(--space-4)">Beside a real chemistry-transport model</h3>
+              <p class="muted" style="font-size:14px">
+                Spearman correlation between our trajectory exposure and the CAMS PM2.5 forecast,
+                <b>aligned by issue time and lead</b> — comparing our day-3 forecast against CAMS's
+                analysis would flatter us by exactly the amount that makes the comparison
+                worthless. This is published as agreement and divergence, not as a score we claim
+                to win.</p>
+              <div class="tscroll"><table><thead><tr><th>Receptor</th>${
+                (cmp.by_receptor[Object.keys(cmp.by_receptor)[0]] ?? []).map((r) =>
+                  `<th class="n">+${r.lead_h} h</th>`).join("")}</tr></thead><tbody>${
+                Object.entries(cmp.by_receptor).map(([k, rows]) =>
+                  `<tr><td>${title(k)}</td>${rows.map((r) =>
+                    `<td class="n">${r.spearman?.toFixed(2) ?? "—"}</td>`).join("")}</tr>`).join("")
+              }</tbody></table></div>`;
+          } else {
+            html += `<div class="empty" style="margin-top:var(--space-3)">
+              The CAMS chemistry comparison is not available in this build${
+                cmp.status ? ` (${cmp.status})` : ""}. It is a pluggable stage: when the CAMS
+              forecast parts land, this table fills in without any other change.</div>`;
+          }
+          host.innerHTML = html;
+        }
+
+        /* ── 05 · receptors ─────────────────────────────────────────────────────── */
+        function receptorPanels(receptors, stats) {
+          const host = document.getElementById("receptors");
+          const recs = receptors?.receptors;
+          if (!recs) { host.innerHTML = '<div class="empty">No receptor series exported.</div>'; return; }
+          const order = Object.entries(recs).sort((a, b) => a[1].tier - b[1].tier);
+          host.innerHTML = `
+            <div class="legend">
+              <span style="color:${C.clean}"><i style="background:${C.clean}"></i>observed PM2.5 (µg/m³)</span>
+              <span style="color:${C.accent}"><i class="dash" style="color:${C.accent}"></i>modelled exposure (index)</span>
+            </div>
+            <p class="muted" style="font-size:12.5px;margin-top:-6px">
+              Two series, two mark styles and two direct labels — the observed/modelled pair sits
+              at ΔE 7.7 under deuteranopia, which is legal only with secondary encoding, so it has
+              some.
+            </p>
+            <div class="tscroll"><table><thead><tr>
+              <th>Receptor</th><th>Tier</th><th>Comparison</th><th class="n">Spearman ρ</th>
+              <th>Coverage</th></tr></thead><tbody>${
+              order.map(([k, v]) => `<tr>
+                <td><b>${title(k)}</b>${v.note ? `<br><span class="muted" style="font-size:12px">${v.note}</span>` : ""}</td>
+                <td><span class="tier tier-${v.tier}">TIER ${v.tier} · ${v.kind?.startsWith("model") ? "MODEL" : "INSTRUMENT"}</span></td>
+                <td class="muted">${v.comparison ?? (v.tier === 3 ? "model vs model" : "model vs instrument")}</td>
+                <td class="n" style="color:${v.rho == null ? C.muted : v.rho >= 0.5 ? C.official : C.alert}">${
+                  v.rho == null ? "—" : v.rho.toFixed(3)}</td>
+                <td class="muted">${v.meta?.first ?? v.coverage ?? "—"}${v.meta?.last ? ` → ${v.meta.last}` : ""}</td>
+              </tr>`).join("")}</tbody></table></div>
+            <div id="rec-charts" style="margin-top:var(--space-4)"></div>
+            <p class="muted" style="font-size:13px;margin-top:var(--space-3)">
+              ${receptors.unmonitored_note ?? ""}
+            </p>`;
+          const chartHost = document.getElementById("rec-charts");
+          for (const [k, v] of order) {
+            if (!v.observed?.day?.length || !v.modelled?.day?.length) continue;
+            const div = document.createElement("div");
+            div.className = "chart";
+            div.style.marginBottom = "var(--space-4)";
+            div.innerHTML = `<h3>${title(k)} <span class="tier tier-${v.tier}">TIER ${v.tier}</span></h3>`;
+            chartHost.appendChild(div);
+            drawReceptor(div, k, v);
+          }
+        }
+
+        function drawReceptor(host, key, v) {
+          const obs = v.observed.day.map((d, i) => ({ d: new Date(d), y: v.observed.pm25[i] }))
+            .filter((r) => r.y != null);
+          const mod = v.modelled.day.map((d, i) => ({ d: new Date(d), y: v.modelled.exposure[i] }))
+            .filter((r) => r.y != null);
+          if (!obs.length || !mod.length) return;
+          const lo = new Date(Math.max(d3.min(obs, (r) => r.d), d3.min(mod, (r) => r.d)));
+          const hi = new Date(Math.min(d3.max(obs, (r) => r.d), d3.max(mod, (r) => r.d)));
+          const O = obs.filter((r) => r.d >= lo && r.d <= hi);
+          const M = mod.filter((r) => r.d >= lo && r.d <= hi);
+          if (!O.length || !M.length) return;
+          const W = 900, Hh = 220, m = { t: 14, r: 74, b: 32, l: 56 };
+          const x = d3.scaleTime().domain([lo, hi]).range([m.l, W - m.r]);
+          const y1 = d3.scaleLinear().domain([0, d3.max(O, (r) => r.y) * 1.1]).range([Hh - m.b, m.t]);
+          // ONE axis is drawn.  The modelled series is normalised onto the observed scale and
+          // labelled as an index, rather than shipping a dual-axis chart.
+          const mmax = d3.max(M, (r) => r.y) || 1;
+          const omax = d3.max(O, (r) => r.y) || 1;
+          const y2 = (v2) => y1((v2 / mmax) * omax);
+          const svg = d3.select(host).append("svg")
+            .attr("viewBox", `0 0 ${W} ${Hh}`).attr("role", "img")
+            .attr("aria-label", `${key}: observed PM2.5 against modelled smoke exposure`);
+          svg.append("g").attr("class", "grid").selectAll("line").data(y1.ticks(4)).join("line")
+            .attr("x1", m.l).attr("x2", W - m.r).attr("y1", y1).attr("y2", y1);
+          svg.append("g").attr("class", "axis").attr("transform", `translate(0,${Hh - m.b})`)
+            .call(d3.axisBottom(x).ticks(7));
+          svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`)
+            .call(d3.axisLeft(y1).ticks(4));
+          svg.append("path").datum(O).attr("fill", "none").attr("stroke", C.clean)
+            .attr("stroke-width", 2)
+            .attr("d", d3.line().x((r) => x(r.d)).y((r) => y1(r.y)));
+          svg.append("path").datum(M).attr("fill", "none").attr("stroke", C.accent)
+            .attr("stroke-width", 2).attr("stroke-dasharray", "5 4")
+            .attr("d", d3.line().x((r) => x(r.d)).y((r) => y2(r.y)));
+          svg.append("text").attr("x", W - m.r + 6).attr("y", y1(O[O.length - 1].y) + 4)
+            .attr("fill", C.clean).attr("font-family", "var(--font-data)").attr("font-size", 12)
+            .text(v.tier === 3 ? "EAC4 (model)" : "observed");
+          svg.append("text").attr("x", W - m.r + 6).attr("y", y2(M[M.length - 1].y) + 4)
+            .attr("fill", C.accent).attr("font-family", "var(--font-data)").attr("font-size", 12)
+            .text("modelled");
+          const bis = d3.bisector((r) => r.d).left;
+          const cross = svg.append("line").attr("y1", m.t).attr("y2", Hh - m.b)
+            .attr("stroke", C.muted).attr("stroke-width", 1).style("opacity", 0);
+          svg.append("rect").attr("x", m.l).attr("y", m.t).attr("width", W - m.r - m.l)
+            .attr("height", Hh - m.b - m.t).attr("fill", "transparent")
+            .on("pointermove", function (e) {
+              const [px] = d3.pointer(e, this);
+              const d0 = x.invert(px + m.l);
+              const io = Math.min(O.length - 1, bis(O, d0));
+              const im = Math.min(M.length - 1, bis(M, d0));
+              cross.attr("x1", x(O[io].d)).attr("x2", x(O[io].d)).style("opacity", 1);
+              tip.show(`<b>${O[io].d.toISOString().slice(0, 10)}</b><br>
+                <span style="color:${C.clean}">●</span> ${
+                  v.tier === 3 ? "EAC4 PM2.5 (model)" : "observed PM2.5"} ${O[io].y.toFixed(1)} µg/m³<br>
+                <span style="color:${C.accent}">●</span> modelled exposure ${M[im].y.toFixed(2)}`,
+                e.clientX, e.clientY);
+            })
+            .on("pointerleave", () => { cross.style("opacity", 0); tip.hide(); });
+        }
+
+        /* ── 06 · anchors ───────────────────────────────────────────────────────── */
+        function anchorBlock(stats, national) {
+          const host = document.getElementById("anchors");
+          const g = stats?.gates?.["G-J5"];
+          if (!g?.anchors) { host.innerHTML = '<div class="empty">The anchor replay has not run.</div>'; return; }
+          const modelled = g.seasonal_series_modelled ?? {};
+          const observed = g.seasonal_series_observed ?? {};
+          const years = Object.keys(observed).map(Number).sort();
+          let html = `<div class="tiles">${Object.entries(g.anchors).map(([y, a]) => `
+            <div class="tile ${a.pass ? "" : "warn"}">
+              <div class="v">${a.modelled_percentile != null ? (a.modelled_percentile * 100).toFixed(0) + "th" : "—"}</div>
+              <div class="k">${y} · modelled severity percentile</div>
+              <div class="s">${a.observed_detections.toLocaleString()} detections observed · never trained on</div>
+            </div>`).join("")}</div>
+            <p class="muted" style="font-size:13px">${g.anchors["2015"]?.reference ?? ""}</p>`;
+          host.innerHTML = html;
+          if (!years.length) return;
+          const div = document.createElement("div");
+          div.className = "chart";
+          host.appendChild(div);
+          const W = 900, Hh = 280, m = { t: 16, r: 20, b: 38, l: 62 };
+          const x = d3.scaleBand().domain(years).range([m.l, W - m.r]).padding(0.3);
+          const y = d3.scaleLinear().domain([0, d3.max(years, (yy) => observed[yy]) * 1.1])
+            .range([Hh - m.b, m.t]);
+          const ym = d3.scaleLinear()
+            .domain([0, d3.max(years, (yy) => modelled[yy] ?? 0) * 1.25 || 1])
+            .range([Hh - m.b, m.t]);
+          const svg = d3.select(div).append("svg").attr("viewBox", `0 0 ${W} ${Hh}`)
+            .attr("role", "img").attr("aria-label", "Seasonal fire severity by year, observed and modelled");
+          svg.append("g").attr("class", "grid").selectAll("line").data(y.ticks(4)).join("line")
+            .attr("x1", m.l).attr("x2", W - m.r).attr("y1", y).attr("y2", y);
+          svg.append("g").attr("class", "axis").attr("transform", `translate(0,${Hh - m.b})`)
+            .call(d3.axisBottom(x).tickSizeOuter(0));
+          svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`)
+            .call(d3.axisLeft(y).ticks(4).tickFormat(d3.format("~s")));
+          svg.selectAll("rect").data(years).join("rect")
+            .attr("x", (yy) => x(yy)).attr("width", x.bandwidth())
+            .attr("y", (yy) => y(observed[yy])).attr("height", (yy) => Hh - m.b - y(observed[yy]))
+            .attr("rx", 4)
+            .attr("fill", (yy) => (g.anchors[yy] ? C.accent : C.ramp[1]))
+            .on("pointermove", (e, yy) => tip.show(
+              `<b>${yy} fire season</b><br>${observed[yy].toLocaleString()} detections observed<br>
+               <span class="r">modelled mean risk ${(modelled[yy] ?? 0).toFixed(4)}</span>`,
+              e.clientX, e.clientY))
+            .on("pointerleave", tip.hide);
+          svg.append("path").datum(years.filter((yy) => modelled[yy] != null))
+            .attr("fill", "none").attr("stroke", C.up).attr("stroke-width", 2)
+            .attr("d", d3.line().x((yy) => x(yy) + x.bandwidth() / 2).y((yy) => ym(modelled[yy])));
+          svg.append("text").attr("x", W - m.r).attr("y", m.t + 2).attr("text-anchor", "end")
+            .attr("fill", C.up).attr("font-family", "var(--font-data)").attr("font-size", 12)
+            .text("modelled seasonal risk (right-hand shape, indexed)");
+        }
+
+        /* ── explore ────────────────────────────────────────────────────────────── */
+        function exploreTable(days) {
+          const tb = document.querySelector("#episode-table tbody");
+          const eps = days?.episodes ?? [];
+          if (!eps.length) {
+            tb.innerHTML = '<tr><td class="muted">No episodes exported yet.</td></tr>'; return;
+          }
+          let sort = "exp";
+          function render() {
+            const rows = eps.slice().sort((a, b) =>
+              sort === "exp" ? (b.exposure ?? 0) - (a.exposure ?? 0) : b.day.localeCompare(a.day));
+            tb.innerHTML = `<tr><th>Receptor</th><th>Day</th><th class="n">Exposure</th>
+              <th>Top source province</th><th class="n">Share</th></tr>` +
+              rows.map((e) => `<tr>
+                <td>${title(e.receptor)}${e.anchor ? ' <span class="tier tier-3">ANCHOR</span>' : ""}</td>
+                <td>${e.day}</td>
+                <td class="n">${(e.exposure ?? 0).toFixed(2)}</td>
+                <td>${e.top_province ?? '<span class="muted">no attributable source</span>'}</td>
+                <td class="n">${e.top_share != null ? (e.top_share * 100).toFixed(1) + "%" : "—"}</td>
+              </tr>`).join("");
+          }
+          document.getElementById("sort-exp").onclick = () => {
+            sort = "exp";
+            document.getElementById("sort-exp").setAttribute("aria-pressed", "true");
+            document.getElementById("sort-day").setAttribute("aria-pressed", "false");
+            render();
+          };
+          document.getElementById("sort-day").onclick = () => {
+            sort = "day";
+            document.getElementById("sort-day").setAttribute("aria-pressed", "true");
+            document.getElementById("sort-exp").setAttribute("aria-pressed", "false");
+            render();
+          };
+          document.getElementById("dl").onclick = () => {
+            const csv = "receptor,day,exposure,top_province,top_share,anchor\n" +
+              eps.map((e) => [e.receptor, e.day, e.exposure ?? "", e.top_province ?? "",
+                              e.top_share ?? "", e.anchor].join(",")).join("\n");
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+            a.download = "fire-haze-episodes.csv";
+            a.click();
+          };
+          render();
+        }
+
+        /* ── gates + vintages ───────────────────────────────────────────────────── */
+        function renderGates(stats) {
+          const g = stats?.gates ?? {};
+          document.querySelectorAll(".gate").forEach((el) => {
+            const id = el.dataset.gate;
+            const r = g[id];
+            const badge = el.querySelector(".badge");
+            const why = el.querySelector(".why");
+            if (!r) { why.textContent = "Not evaluated in this build."; return; }
+            const state = r.pass === true ? "ok" : r.pass === false ? "bad" : "na";
+            el.className = `gate ${state}`;
+            badge.className = `badge ${r.pass === true ? "pass" : r.pass === false ? "fail" : "pending"}`;
+            badge.textContent = r.pass === true ? "PASS" : r.pass === false ? "FAIL"
+              : (r.status ?? "PENDING").toUpperCase();
+            const bits = [];
+            if (id === "G-J1" && r.removed_share != null)
+              bits.push(`removed ${(r.removed_share * 100).toFixed(2)}% overall, ${
+                (r.nrt_removed_share * 100).toFixed(2)}% of the NRT tail; ${
+                r.retained_inside_mask} retained inside the mask`);
+            if (id === "G-J2" && r.per_lead?.["1"])
+              bits.push(`lead 1 d forecast AUC ${r.per_lead["1"].forecast.auc?.toFixed(3) ?? "—"}, BSS vs climatology ${
+                r.per_lead["1"].forecast.bss_vs_climatology?.toFixed(3) ?? "—"}`);
+            if (id === "G-J3" && r.share_within != null)
+              bits.push(`${(r.share_within * 100).toFixed(1)}% of ${r.episode_days} episode days within ±${
+                r.threshold?.within_deg ?? 30}°, median ${r.median_diff_deg?.toFixed(1)}°`);
+            if (id === "G-J4" && r.singapore_rho != null)
+              bits.push(`Singapore ρ = ${r.singapore_rho.toFixed(3)} (tier 1, instrument)`);
+            if (id === "G-J5" && r.anchors)
+              bits.push(Object.entries(r.anchors).map(([y, a]) =>
+                `${y} at the ${a.modelled_percentile != null
+                  ? (a.modelled_percentile * 100).toFixed(0) + "th" : "—"} percentile`).join(", "));
+            if (r.reason) bits.push(`<span style="color:${C.alert}">${r.reason}</span>`);
+            why.innerHTML = bits.join(" · ");
+          });
+        }
+
+        function vintageTable(stats) {
+          const tb = document.querySelector("#vintage tbody");
+          const man = stats?.manifest ?? {};
+          const audit = stats?.fires_audit ?? {};
+          const im = stats?.indices_meta ?? {};
+          const cm = stats?.cams_meta ?? {};
+          const gm = stats?.ground_meta ?? {};
+          const rows = [
+            ["FIRMS VIIRS SNPP", `SP ${audit.seam?.VIIRS_SNPP_SP?.join(" → ") ?? "—"}; NRT ${
+              audit.seam?.VIIRS_SNPP_NRT?.join(" → ") ?? "—"}`],
+            ["ERA5 single levels", (man.era5?.sl_years ?? []).join(", ") || "—"],
+            ["ERA5 precipitation", (man.era5?.tp_years ?? []).join(", ") || "—"],
+            ["ERA5 pressure levels", (man.era5?.pl_years ?? []).join(", ") || "—"],
+            ["CHIRPS v3 monthly", `${im.chirps?.first ?? "—"} → ${im.chirps?.last ?? "—"} (${
+              im.chirps?.base_period_years ?? "—"}-year SPI base)`],
+            ["CEMS fire indices (EWDS)", im.fwi?.status === "complete" || im.fwi?.rows
+              ? `${im.fwi.years ?? "—"} years, ${(im.fwi.rows ?? 0).toLocaleString()} cell-days`
+              : `PENDING — ${im.fwi?.status ?? "not run"}`],
+            ["CAMS GFAS injection heights", `ends ${cm.coverage_notes?.gfas_ends ?? "—"}`],
+            ["CAMS EAC4", `ends ${cm.coverage_notes?.eac4_ends ?? "—"}`],
+            ["Singapore NEA", `${gm.receptors?.singapore?.first ?? "—"} → ${
+              gm.receptors?.singapore?.last ?? "—"}`],
+          ];
+          tb.innerHTML = `<tr><th>Source</th><th>Vintage</th></tr>` +
+            rows.map(([k, v]) => `<tr><td>${k}</td><td class="muted">${v}</td></tr>`).join("");
+
+          const lic = stats?.gates ? null : null;
+          const licHost = document.getElementById("licences");
+          const L = {
+            "NASA FIRMS": "public domain / free and open",
+            "Copernicus ERA5, CAMS, CEMS": "CC BY 4.0",
+            "CHIRPS (UCSB/CHC)": "public-domain dedication",
+            "ESA WorldCover v200": "CC BY 4.0",
+            "PEATGRIDS (Widyastuti et al. 2025)": "CC BY 4.0 · 10.5281/zenodo.12559239",
+            "Singapore NEA": "Singapore Open Data Licence v1.0 — commercial use explicitly permitted",
+            "OpenAQ": "CC BY 4.0",
+            "geoBoundaries": "CC BY 4.0",
+            "OpenStreetMap (volcano nodes)": "ODbL",
+            "NOAA CPC / PSL": "US Government public domain",
+            "Long Paddock daily SOI": "CC BY 4.0 (State of Queensland)",
+          };
+          licHost.innerHTML = Object.entries(L).map(([k, v]) =>
+            `<div style="padding:5px 0;border-bottom:1px solid var(--hairline)"><b>${k}</b> — ${v}</div>`).join("") +
+            `<p style="margin-top:12px">Excluded on licence grounds and named rather than quietly
+             dropped: AQICN (forbids commercial use — so Malaysia is a genuine hole and the
+             transboundary claim here is Indonesia → Singapore only), SPEIbase (ODbL share-alike),
+             the DLR Sentinel-5P aerosol product (a CC-BY vs CC-BY-NC conflict inside its own
+             metadata), and KLHK land cover (no open licence).</p>`;
+        }
+
+        function title(s) {
+          return String(s).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+        }
+
+        /* headline number in chapter 01 */
+        const nrt = document.getElementById("m-nrt");
+        if (firesYear?.nrt_removed_share != null)
+          nrt.textContent = (firesYear.nrt_removed_share * 100).toFixed(1) + "%";
+
+        /* TOC current-section highlight */
+        const links = [...document.querySelectorAll("nav.toc a")];
+        const obs = new IntersectionObserver((entries) => {
+          for (const e of entries) {
+            if (!e.isIntersecting) continue;
+            links.forEach((a) => a.removeAttribute("aria-current"));
+            const a = links.find((l) => l.getAttribute("href") === "#" + e.target.id);
+            a?.setAttribute("aria-current", "true");
+          }
+        }, { rootMargin: "-45% 0px -50% 0px" });
+        document.querySelectorAll("section[id]").forEach((s) => obs.observe(s));
+      })();
+    </script>
   </body>
 </html>

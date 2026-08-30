@@ -160,7 +160,10 @@ FIRE_SEASON_MONTHS = (6, 7, 8, 9, 10, 11)
 FIRMS_BASE = "https://firms.modaps.eosdis.nasa.gov/api"
 FIRMS_AREA_URL = FIRMS_BASE + "/area/csv/{key}/{src}/{w},{s},{e},{n}/{days}/{start}"
 FIRMS_AVAIL_URL = FIRMS_BASE + "/data_availability/csv/{key}/ALL"
-FIRMS_QUOTA_URL = FIRMS_BASE + "/mapserver/mapkey_status/?MAP_KEY={key}"   # self-monitor the 5000
+# CORRECTION 2026-08-30 (build): the quota endpoint is NOT under /api.  ``/api/mapserver/...``
+# returns 400 "Invalid API call"; the live path is the bare host.  Verified returning
+# {"transaction_limit": 5000, "current_transactions": 30, "transaction_interval": "10 minutes"}.
+FIRMS_QUOTA_URL = "https://firms.modaps.eosdis.nasa.gov/mapserver/mapkey_status/?MAP_KEY={key}"
 FIRMS_MAX_DAYS = 5                  # the API's own cap: "Expects [1..5]"
 # The bulk country files are the right route for history: the directory listing 404s under the
 # new PinPoint backend, but the files themselves are live at guessable URLs.  VIIRS SNPP
@@ -210,28 +213,70 @@ PERSISTENT_MIN_DAYS = 120           # active this many days in EVERY year -> ind
 ERA5_SL = "reanalysis-era5-single-levels"
 ERA5_PL = "reanalysis-era5-pressure-levels"
 ERA5_LAND = "reanalysis-era5-land"
+
+# BUILD DECISION 1 — ONLY INSTANTANEOUS FIELDS ARE REQUESTED FROM ERA5.
+# The spec's measured 1.05/1.66/1.42 GB per year is for the full hourly record; 15 years of that
+# is ~58 GB against a 31 GB disk and an 8 GB data budget, so the request has to be cut somewhere
+# and WHERE it is cut is a modelling decision, not a plumbing one.  The cut taken here:
+#   * four synoptic hours a day (00/06/12/18 UTC — 06 UTC is 13:00 WIB, near peak fire danger,
+#     00 UTC is 07:00 WIB, near the humidity maximum), so daily max-T / min-RH are sampled at the
+#     right end of the diurnal cycle rather than averaged away;
+#   * NO ACCUMULATED VARIABLES AT ALL.  total_precipitation, potential_evaporation and the
+#     radiation fields accumulate over the preceding hour, so summing 4 of 24 hours would report
+#     one sixth of the rain — a silent, systematic dry bias exactly where the model is most
+#     sensitive.  Precipitation therefore comes from CHIRPS, which is the drought/SPI source
+#     anyway, and ERA5 supplies only instantaneous state.  This also means the request never
+#     triggers the stepType split described in ingest_era5.py; the join-and-assert code is kept
+#     because the assertion is what proves it.
 ERA5_SL_VARS = [
     "10m_u_component_of_wind", "10m_v_component_of_wind",
     "2m_temperature", "2m_dewpoint_temperature",
-    "total_precipitation", "surface_pressure", "boundary_layer_height",
-    "instantaneous_10m_wind_gust", "potential_evaporation",
+    "surface_pressure", "boundary_layer_height",
+    # ERA5-Land is dropped (decision 2 below); soil water comes from single levels at 0.25 deg.
+    "volumetric_soil_water_layer_1", "volumetric_soil_water_layer_2",
+    "volumetric_soil_water_layer_3",
     # naming corrections found live — the obvious guesses are wrong:
     "leaf_area_index_high_vegetation", "leaf_area_index_low_vegetation",
-    "vertical_integral_of_eastward_water_vapour_flux",
-    "vertical_integral_of_northward_water_vapour_flux",
 ]
+ERA5_SL_HOURS = ["00:00", "06:00", "12:00", "18:00"]
+# ...with ONE exception, requested on its own so it can have all 24 hours.  Precipitation is the
+# single most important predictor in a fire model and it is accumulated, so it cannot be sampled.
+# Asked for alone it costs 1.05/13 = 0.081 GB per year — a rounding error — and it is summed to a
+# genuine daily total rather than reconstructed from a sixth of one.  This is why the "no
+# accumulated fields" rule above is stated as a rule about the MULTI-VARIABLE request.
+ERA5_TP_VARS = ["total_precipitation"]
+ERA5_TP_HOURS = [f"{h:02d}:00" for h in range(24)]
 ERA5_PL_VARS = ["u_component_of_wind", "v_component_of_wind", "vertical_velocity"]
 ERA5_LEVELS = ["925", "850", "700"]
-# ERA5-Land is 0.1 deg against ERA5's 0.25 and costs about the same per year for 9x the
-# resolution — worth it for peat soil moisture, which is the variable that decides whether a
-# peat fire can start at all.
-ERA5_LAND_VARS = ["volumetric_soil_water_layer_1", "volumetric_soil_water_layer_2",
-                  "volumetric_soil_water_layer_3", "volumetric_soil_water_layer_4",
-                  "skin_temperature", "leaf_area_index_low_vegetation"]
+ERA5_PL_HOURS = ["00:00", "06:00", "12:00", "18:00"]
+# Trajectories are only ever run in the burning months, so the pressure-level pull is restricted
+# to them: Feb-Mar (Riau's first peak, the one the Singapore record actually sees in 2014 and
+# 2016) and Jun-Nov (the main Sumatra/Kalimantan season).
+ERA5_PL_MONTHS = (2, 3, 6, 7, 8, 9, 10, 11)
+# BUILD DECISION 2 — ERA5-Land is NOT pulled.  It is 0.1 deg against a 0.25 deg model grid, so
+# nine ERA5-Land cells are averaged into one model cell before the model ever sees them; the
+# resolution is spent and 1.42 GB/year is not.  Soil water layers 1-3 on single levels carry the
+# same physics on the grid we actually model.
+ERA5_LAND_VARS: list[str] = []
 ERA5_SIZE_GB_PER_YEAR = {"single_levels": 1.05, "pressure_levels": 1.66, "era5_land": 1.42}
 ERA5_LAG_DAYS = 6                   # measured: all three end 2026-08-24 against 2026-08-30
-MIN_NONNULL = 0.95                  # assert on every accumulated column (the split-file bug)
+MIN_NONNULL = 0.95                  # assert on every column (the split-file bug)
 WET_DAY_MM = 1.0
+
+# CADS job store — the three Copernicus hosts speak the same OGC-API-Processes dialect, so one
+# tiny client covers CDS, ADS and EWDS.  Submitted job ids are written here so a poll is
+# resumable across process restarts and a queued job is never resubmitted.
+JOBS_JSON = DATA_DIR / "cads_jobs.json"
+CADS_HOSTS = {"cds": CDS_API_URL, "ads": ADS_API_URL, "ewds": EWDS_API_URL}
+# Live-verified 2026-08-30 by submitting real jobs.  These are the exact URLs the account owner
+# must open in a browser and accept; nothing else in this case is blocked.
+POLICY_URLS = {
+    "ads": ["https://ads.atmosphere.copernicus.eu/licences/terms-of-use-ads",
+            "https://ads.atmosphere.copernicus.eu/licences/ads-data-protection-privacy-statement"],
+    "ewds": ["https://ewds.climate.copernicus.eu/licences/terms-of-use-cems"],
+    "earthdata": ["https://urs.earthdata.nasa.gov/ (GES DISC EULA — only if the S5P GES DISC "
+                  "route is ever used; not used in this build)"],
+}
 
 # ── CAMS (ADS) — the chemistry benchmark and the surrogate ground truth ───────────────
 CAMS_FORECAST = "cams-global-atmospheric-composition-forecasts"   # 2015-01-01 -> today, 0-120 h
@@ -247,10 +292,19 @@ CAMS_VARS = ["particulate_matter_2.5um",
 # in the boundary layer or reaches the 850 hPa flow toward Singapore — i.e. it replaces the
 # crudest parameterisation in this case with a published product.  It ends 2025-12-03, so it is
 # a training and backtest layer, not an operational one, and the spec says so.
-CAMS_GFAS_VARS = ["wildfire_flux_of_particulate_matter_d_2_5_um",
-                  "wildfire_flux_of_organic_carbon", "wildfire_flux_of_black_carbon",
-                  "wildfire_radiative_power", "injection_height",
-                  "altitude_of_plume_top", "altitude_of_plume_bottom"]
+# MEASURED 2026-08-30.  Two corrections, both found by requesting variables one at a time:
+#   * ``wildfire_flux_of_particulate_matter_d_2_5_um`` is NOT a valid GFAS variable name — ADS
+#     answers 400 "Request has not produced a valid combination of values".
+#   * A seven-variable request is ACCEPTED and then silently returns only four: the emission
+#     fluxes and plume top come back, ``injection_height`` and ``altitude_of_plume_bottom`` do
+#     not.  Asked for on their own they are there: ``injh`` 0-2,462 m and ``apb`` 0-6,830 m.
+# So the request is narrowed to the four variables this case actually uses.  The emission fluxes
+# are dropped because FRP comes from FIRMS and nothing downstream reads oc/bc — carrying them
+# was what pushed the request into whatever limit silently truncates it.
+CAMS_GFAS_VARS = ["injection_height", "altitude_of_plume_top",
+                  "altitude_of_plume_bottom", "wildfire_radiative_power"]
+CAMS_GFAS_SHORT = {"injh": "injection_height_m", "apt": "plume_top_m",
+                   "apb": "plume_bottom_m", "frpfire": "frp_w_m2"}
 CAMS_GFAS_ENDS = "2025-12-03"
 
 # ── CEMS fire indices (EWDS) — the baseline to beat, and it is nearly free ────────────

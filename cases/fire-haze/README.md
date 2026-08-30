@@ -9,8 +9,10 @@ and 2019 crises are the anchors and are **held out of training entirely**.
 Spec (governing document): `docs/spec-fire-haze.html`.
 Dashboard: port **4334**, base **`/haze`** (`demo-haze.service`, not yet deployed).
 
-Status: **SPEC'D + SCAFFOLDED (2026-08-30).** Sources scouted live and pinned; pipeline stubs
-carry the method contract; nothing has been run. `make rebuild` is the entry point.
+Status: **BUILT (2026-08-30).** Every stage is implemented and has run against live sources.
+The ERA5 backfill is **queue-bound, not code-bound** — see "The one thing that is slow" below —
+so the record length grows every time `make era5` is re-run and every downstream stage rebuilds
+from whatever has landed. `make rebuild` is the entry point.
 
 ## Run
 
@@ -20,24 +22,48 @@ make rebuild     # fires → static → indices → era5 → cams → ground →
 make refresh     # daily: NRT hotspots → risk → transport → export (idempotent by acquisition date)
 ```
 
-Uses `FIRMS_MAP_KEY`, `CDS_API_KEY`, `OPENAQ_API_KEY` and `GFW_API_KEY` from the repo-root `.env`.
-**No new registration is needed anywhere in this case.** One ECMWF personal access token
-authenticates against all three Copernicus stores — CDS, ADS and EWDS. What *is* outstanding is
-**three one-time browser policy clicks**, and they are the only thing standing between the
-scaffold and a full run:
+Uses `FIRMS_MAP_KEY`, `CDS_API_KEY` and `OPENAQ_API_KEY` from the repo-root `.env`.
+**No new registration is needed anywhere in this case**, and one ECMWF personal access token
+authenticates against all three Copernicus stores — CDS, ADS and EWDS.
 
-| Store | What to click | Symptom if you don't |
+### Policy acceptances — status at build time
+
+| Store | Status | Verified how |
 |---|---|---|
-| ADS (CAMS) | Data-protection statement + ADS terms of use | HTTP **403** `user didn't accept all required site policies` |
-| EWDS (CEMS fire) | CEMS Early Warning Data Store terms (rev. 11) | same 403 |
-| Earthdata GES DISC | EULA at the `resolution_url` | 403 `EULA Acceptance Failure` (only if the S5P GES DISC route is ever used) |
+| CDS (ERA5) | **accepted** | jobs run |
+| ADS (CAMS forecasts, EAC4, GFAS) | **accepted 2026-08-30, mid-build** | real submissions to all three collections returned `201 accepted` with live job ids |
+| EWDS (CEMS fire indices) | **accepted 2026-08-30, mid-build** | `cems-fire-historical-v1` returned `201 accepted` |
+| Earthdata GES DISC | **not needed** | the S5P GES DISC route was rejected on licence and volume grounds before it was reached; nothing in this build touches it |
 
-A 403 there is **not** a dead key — anonymous requests return 401, which is how we know the token
-is doing its job. Same shape as the Black Marble licence note in `.env.example`.
+Early in the build both ADS and EWDS returned
+`403 · user didn't accept all required site policies`, naming
+`https://ads.atmosphere.copernicus.eu/licences/terms-of-use-ads`,
+`https://ads.atmosphere.copernicus.eu/licences/ads-data-protection-privacy-statement` and
+`https://ewds.climate.copernicus.eu/licences/terms-of-use-cems`. Those were accepted during the
+build and the CEMS-FWI baseline and the CAMS/GFAS layers are now live rather than pending. The
+policy branch is **kept in the code** — `util.Cads.policy_blocked` still detects it and every
+stage degrades to a named PENDING rather than dying — because the acceptance is per account and
+this pipeline has to build on a fresh one.
 
-ERA5 is the long pole: CDS queues server-side, so `ingest_era5.py` shards by year and
-`pipeline/finish.sh` drives the rest of the DAG once the shards drain (the Case E pattern,
-including the single-threaded gap-filling pass).
+**A caveat worth carrying:** EWDS's `/profiles/v1/account/licences` lists only `cc-by` and still
+accepts these submissions, so that listing is **not authoritative**. The only reliable test is a
+real submit, which is what `pipeline/ingest_indices.py --fwi-only` does.
+
+### The one thing that is slow
+
+ERA5 is the long pole, and the reason is measured rather than assumed. CDS refuses multi-year
+requests — `cost limits exceeded / Your request is too large` — at a ceiling between **16,368 and
+17,856 fields**, and **the cost is computed before the `area` subset is applied**, so asking for a
+small box buys nothing. One year per request is the ceiling. It also caps *queued requests per
+dataset* at about two, and `single-levels` serves both the state variables and precipitation. So
+the backfill is a 45-job serial queue at roughly ten minutes a job, not a parallel pull.
+
+Everything downstream is built for that: `ingest_era5.py` records job ids in
+`data/cads_jobs.json` so a restart never loses a queue position, requests are ordered
+**sl → pl → tp, anchors first, then most-recent-first**, and `features.py` globs
+`era5_parts/{sl,tp}_*.parquet` rather than requiring a consolidated file. The case therefore
+*runs* on a partial drain and simply reports a shorter record; re-running `make era5` then
+`make features risk transport validate export` lengthens it.
 
 ## Six premises that did not survive reconnaissance
 
@@ -108,9 +134,92 @@ point detections, never for UI.
 
 ## Decisions pending user verification
 
+### Made during the build — these are the ones to check
+
+**B1 · Attribution is published at PROVINCE level.** This is the biggest editorial call in the
+case and the spec left it open. The alternative was island level ("Sumatra", "Kalimantan"), which
+is safer and useless: nobody allocates a suppression aircraft, prices a concession, or schedules
+an air-handling change on "Sumatra". The commercial premise of this case is that the answer is
+actionable, and at island level there is no answer. Three things bound it on the page:
+a province share is stated as **where the air came from**, never as who lit the fire; every share
+carries the trajectory ensemble's spread; and **"no attributable source" is a first-class
+outcome**, printed whenever a 72-hour back-trajectory passes over no detected fire — which is the
+correct answer on the many bad-air days that are local rather than transboundary. If you want
+this softened, the one-line change is in `export_web.py` (`attribution_granularity`) plus the
+`attribute()` grouping key in `transport.py`.
+
+**B2 · The forecast path is defined by INFORMATION SET, not by product.** The spec names
+CHIRPS-GEFS as the days-ahead driver. There is no open GEFS reforecast archive covering
+2012–2024, so a model *trained* on forecast fields is not buildable from open data, and
+pretending otherwise would be the exact train/serve skew the spec warns about elsewhere. So:
+the **forecast path** sees only features from days ≤ t and must carry the weather forward itself;
+the **reanalysis path** additionally sees the weather that actually happened over the lead window
+and is an explicit upper bound. The gap between them is published as the cost of forecasting
+rather than hindcasting. CHIRPS-GEFS **is** still ingested (16 leads, same-day, verified live) and
+drives the live refresh panel, labelled as what it is.
+
+**B3 · ERA5 is sampled, and where it is sampled is a modelling decision.** Fifteen years of
+full-hourly ERA5 over the AOI is ~58 GB against a 31 GB shared disk. The cuts taken:
+- four synoptic hours a day for the **state** variables (00 and 06 UTC are 07:00 and 13:00 WIB —
+  the humidity maximum and near peak fire danger, so daily max-T and min-RH are sampled at the
+  right end of the diurnal cycle rather than averaged away);
+- **precipitation requested on its own at all 24 hours**, because `total_precipitation` is an
+  hourly accumulation and summing 4 of 24 would report one sixth of the rain — a silent dry bias
+  precisely where an ignition model is most sensitive. One variable at full resolution costs
+  0.081 GB/year, which is a rounding error;
+- **ERA5-Land dropped entirely.** It is 0.1° against a 0.25° model grid, so nine of its cells are
+  averaged into one model cell before the model sees them; the resolution is spent and 1.42
+  GB/year is not. Soil water layers 1–3 on single levels carry the same physics on the grid we
+  actually model;
+- pressure levels restricted to `ERA5_PL_MONTHS` (Feb–Mar and Jun–Nov), because trajectories are
+  only ever run in the burning months.
+
+**B4 · The steering field is stored as a dense array, not a row per record.** Fifteen years of
+6-hourly winds on three levels is 255 M rows ≈ 5 GB in parquet, most of it the key repeated 255
+million times. As a `(time, level, lat, lon)` int16 array it is ~75 MB a year — and it is the
+shape the integrator wants anyway. This is what makes the transport stage fit on the box.
+
+**B5 · Every AOI country's bulk file is fetched, not just Indonesia's.** The bulk route is per
+country and the `area` route is per bounding box, so an Indonesia-only history plus an AOI-wide
+live tail would put a step change at the 2025 seam that looks exactly like a Malaysian fire season
+starting. Indonesia + Malaysia + Singapore are pulled and all three are clipped to the same box.
+*(This is the same class of bug as the NRT `type` problem, found the same way.)*
+
+**B6 · CHIRPS supplies a 46-year SPI base period, not the daily rainfall.** The spec's
+`prelim/global_daily/fixed/` is a CHIRPS-**2.0** path and 404s under v3.0; the v3 daily tree is
+`daily/{final,prelim}/{sat,rnl}/`, and only `sat` has a prelim stream. Rather than splice daily
+GeoTIFFs, CHIRPS v3 **monthly** globals (1981 → 2026-07, HTTP-Range read to the AOI band) give a
+proper 46-year base for SPI-1/3/6 — the difference between "SPI-3" and "a 14-year z-score wearing
+SPI's name" — and ERA5 supplies the daily rain. SPI is computed here (gamma per cell per calendar
+month with a zero point mass) so the identical code can run on a forecast.
+
+**B7 · G-J3's bearing check is a bearing check, and it may ship red.** A first pass over a single
+year with no GFAS heights gave **60.1 % agreement within ±30°, median difference 21.5°** — below
+the 70 % threshold. The threshold is not moving. Re-running with GFAS injection heights is the
+honest next step, and if it still fails it ships failing with that number and a diagnosis, per
+Case C's G-C5 precedent.
+
+**B8 · Chart colours were validated, and one pair carries a documented WARN.** Against the dark
+surface, `model / climatology / persistence / CEMS FWI` (`#E2569E / #E0A63F / #6B7CA6 / #4BB8A9`)
+passes CVD separation and the normal-vision floor. The `observed / modelled` pair
+(`#7FB2C9 / #E2569E`) sits at ΔE 7.7 under deuteranopia — inside the 6–8 band, which is legal
+**only with secondary encoding** — so those two series carry direct labels *and* different mark
+geometry (solid vs dashed). `--fire` is never used for a series, only for point detections, so the
+house rule that "a red dot means something burned here" holds everywhere.
+
+**B9 · OpenStreetMap's volcano nodes were unavailable on the first run.** All four Overpass
+mirrors refused (406 / 502 / 500 / 504), so the geometric half of the static mask did not run and
+the mask was carried entirely by the empirical persistent-source detector — which is the half the
+spec says is actually relied on. The code now tries `GET ?data=` before `POST`, and the mask
+rebuilds with the volcano buffer whenever a mirror answers. The composition is published either
+way, so the page always says which half of the filter ran.
+
+### From the spec, still open
+
 1. **`[data-case="haze"]` token block** — accent `#E2569E`, `--fire #FF7A45`, `--clean #7FB2C9`,
-   ground `#12100F`. Needs adding to `shared/design/tokens.css` (this agent was scoped out of that
-   file). The rationale above is the argument; the alternative — a fourth orange — is worse.
+   ground `#12100F`. **This has already landed in `shared/design/tokens.css`** and is copied
+   verbatim into `web/src/styles/tokens.css`; no action needed beyond confirming you are happy
+   with it.
 2. **Three-tier ground truth, and calling tier 3 a model.** Singapore NEA is the only long, clean,
    commercially-licensed instrument record in the region (hourly, five regions, **history starts
    ~2016-03** — verified: 2015-10-20 returns zero items, 2013 returns HTTP 500). Indonesian

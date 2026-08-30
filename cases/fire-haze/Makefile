@@ -1,13 +1,18 @@
 # Case J — Fire & Haze Early Warning (static snapshot + optional daily refresh)
 # Spec: docs/spec-fire-haze.html — DAG stages below map 1:1 to pipeline/*.py
 #
-# ingest_era5 is the long pole: CDS queues requests server-side and a multi-year
-# backfill takes hours, so it shards by year and the downstream stages are driven
-# by pipeline/finish.sh once the shards drain (the Case E pattern).
+# ingest_era5 is the long pole, and the reason is measured: CDS refuses multi-year
+# requests above ~16,368 fields (the cost is computed BEFORE the area subset, so a
+# small box buys nothing) and caps queued requests per dataset at about two.  The
+# backfill is therefore a 45-job serial queue, not a parallel pull.  Job ids live in
+# data/cads_jobs.json so a restart never loses a queue position, and every downstream
+# stage builds from WHATEVER YEARS HAVE LANDED — so a partial drain produces a shorter
+# record rather than a failure.  pipeline/finish.sh drives the rest once it goes quiet.
 
 PY := uv run python pipeline
 
-.PHONY: rebuild fires era5 cams static indices ground features risk transport validate export refresh brief web help
+.PHONY: rebuild fires era5 era5-poll cams fwi static indices ground features risk transport \
+        validate export refresh brief web help
 
 help:
 	@echo "rebuild     full DAG: fires -> static -> indices -> era5 -> cams -> ground"
@@ -26,8 +31,13 @@ help:
 	@echo "export      NaN-safe web view-models into web/public/data"
 	@echo "refresh     daily: NRT hotspots -> risk -> transport -> export"
 	@echo ""
-	@echo "NOTE: ADS and EWDS need a ONE-TIME browser policy click each (no new registration —"
-	@echo "      the existing ECMWF token authenticates; a 403 there means the click is pending)."
+	@echo "era5-poll   drain the CDS queue without resubmitting (safe to run repeatedly)"
+	@echo "fwi         drain the EWDS queue only — the CEMS baseline for gate G-J2"
+	@echo ""
+	@echo "NOTE: CDS/ADS/EWDS all authenticate with the one ECMWF token in .env.  ADS and EWDS"
+	@echo "      each needed a ONE-TIME browser policy acceptance; both were accepted 2026-08-30"
+	@echo "      and verified by live submission.  A 403 whose body mentions site policies is"
+	@echo "      that click, not a dead key — every stage degrades to a named PENDING."
 
 rebuild: fires static indices era5 cams ground features risk transport validate export
 
@@ -40,8 +50,14 @@ static:          ## data/peat.tif, data/landcover.tif, data/adm.parquet
 indices:         ## data/enso.parquet, data/chirps.parquet, data/drought.parquet
 	$(PY)/ingest_indices.py
 
-era5:            ## data/era5_parts/*.parquet  (shard with SHARD=n of N; see finish.sh)
+era5:            ## data/era5_parts/{sl,tp}_YYYY.parquet + pl_YYYY.npz — submits and drains
 	$(PY)/ingest_era5.py
+
+era5-poll:       ## drain the CDS queue without submitting anything new
+	$(PY)/ingest_era5.py --poll
+
+fwi:             ## data/fwi_parts/*.parquet — the CEMS baseline gate G-J2 scores against
+	$(PY)/ingest_indices.py --fwi-only
 
 cams:            ## data/cams_forecast.parquet, data/cams_eac4.parquet, data/gfas.parquet
 	$(PY)/ingest_cams.py
