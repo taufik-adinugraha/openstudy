@@ -323,7 +323,7 @@ const pending = !S;
           <h1>How bad will<br />the air be<br />tomorrow?</h1>
           <p>Greater Jakarta gets its air quality the way it gets its weather: after the
           fact. This case turns three open feeds — <b>ERA5 meteorology</b>, <b>NASA fire
-          detections</b> and <b>one working ground sensor</b> — into a PM2.5 forecast with
+          detections</b> and <b>the handful of ground sensors still reporting</b> — into a PM2.5 forecast with
           a horizon and an error bar, graded against the only baseline that matters:
           assuming tomorrow looks like today.</p>
         </div>
@@ -458,7 +458,9 @@ const pending = !S;
     <!-- ══ 05 · one live sensor ════════════════════════════════════════ -->
     <section class="chapter rv">
       <span class="eyebrow">05 · The finding nobody publishes</span>
-      <h2>A metropolis of 32 million is watched by one working public sensor.</h2>
+      <h2>A metropolis of 32 million is watched by
+      {net?.n_live == null ? "almost no" : net.n_live} working public
+      {net?.n_live === 1 ? "sensor" : "sensors"}.</h2>
       <p class="big-stat">The open record lists <b class="num">{net?.n_stations_total ?? "—"}</b>
       PM2.5 stations inside Jabodetabek. <b class="num">{net?.n_live ?? "—"}</b> have reported in
       the last fortnight. <b class="num">{net?.n_stale ?? "—"}</b> went quiet and stayed quiet;
