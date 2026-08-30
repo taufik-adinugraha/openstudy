@@ -392,13 +392,99 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
           },
         };
       }
-      // ?nohero — dev aid for screenshotting the chapters: skips both WebGL scenes.
-      // WebGL may be unavailable (blocked GPU, remote session): degrade, don't die.
+      /* ---------- 2-D canvas fallback (no WebGL required) ---------- */
+      function makeSpace2D(canvas, { interactive }) {
+        const ctx = canvas.getContext("2d");
+        const dpr = devicePixelRatio || 1;
+        let W, H, x, y, lit = new Set(states[latest] ?? []), hover = null, progress = 1, filter = null;
+        const rScale2 = d3.scaleSqrt(d3.extent(space.nodes, (n) => n.trade), [1.6, 9]);
+        const idx = new Map(space.nodes.map((n) => [n.id, n]));
+        function size() {
+          W = canvas.clientWidth; H = canvas.clientHeight;
+          canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          const pad = 40;
+          x = d3.scaleLinear(d3.extent(space.nodes, (n) => n.x), [pad, W - pad]);
+          y = d3.scaleLinear(d3.extent(space.nodes, (n) => n.y), [pad, H - pad]);
+        }
+        const order2 = [...space.nodes].sort((a, b) => sectorOf(a.hs2)[1].localeCompare(sectorOf(b.hs2)[1]) || a.trade - b.trade);
+        function draw() {
+          ctx.fillStyle = INK; ctx.fillRect(0, 0, W, H);
+          const shown = Math.floor(order2.length * Math.min(progress, 1));
+          const visible = new Set(order2.slice(0, shown).map((n) => n.id));
+          if (progress > 0.75) {
+            ctx.globalAlpha = Math.min((progress - 0.75) * 4, 1) * 0.28; ctx.strokeStyle = SILVER; ctx.lineWidth = 0.5;
+            ctx.beginPath();
+            for (const [a, b] of space.edges) {
+              const na = idx.get(a), nb = idx.get(b);
+              if (na && nb && visible.has(a) && visible.has(b)) { ctx.moveTo(x(na.x), y(na.y)); ctx.lineTo(x(nb.x), y(nb.y)); }
+            }
+            ctx.stroke(); ctx.globalAlpha = 1;
+          }
+          for (const n of order2.slice(0, shown)) {
+            const isLit = lit.has(n.id), dim = filter && !filter.has(n.id);
+            ctx.beginPath(); ctx.arc(x(n.x), y(n.y), rScale2(n.trade), 0, Math.PI * 2);
+            ctx.fillStyle = isLit ? COPPER : sectorOf(n.hs2)[2];
+            ctx.globalAlpha = dim ? 0.12 : isLit ? 0.95 : 0.55;
+            ctx.fill();
+            if (isLit && progress >= 1 && !dim) { ctx.shadowColor = COPPER; ctx.shadowBlur = 10; ctx.fill(); ctx.shadowBlur = 0; }
+          }
+          ctx.globalAlpha = 1;
+          if (hover) {
+            const n = idx.get(hover);
+            if (n) { ctx.beginPath(); ctx.arc(x(n.x), y(n.y), rScale2(n.trade) + 4, 0, Math.PI * 2); ctx.strokeStyle = "#E6E8EC"; ctx.lineWidth = 1.2; ctx.stroke(); }
+          }
+        }
+        size(); addEventListener("resize", () => { size(); draw(); });
+        const quad = () => d3.quadtree(space.nodes, (n) => x(n.x), (n) => y(n.y));
+        let q = quad();
+        if (interactive) {
+          const tip = document.getElementById("ps-tip");
+          canvas.addEventListener("mousemove", (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const n = q.find(e.clientX - rect.left, e.clientY - rect.top, 14);
+            hover = n?.id ?? null; draw();
+            if (n) {
+              tip.hidden = false; tip.style.left = e.clientX - rect.left + 14 + "px"; tip.style.top = e.clientY - rect.top + 14 + "px";
+              tip.innerHTML = `<b>${label(n.id)}</b><br>HS ${n.id} · ${sectorOf(n.hs2)[1]}<br>PCI ${n.pci.toFixed(2)} · world trade $${d3.format(".3s")(n.trade * 1e3)}<br>${lit.has(n.id) ? "<span class='copper'>● Indonesia exports competitively</span>" : "<span class='dim'>○ not yet an Indonesian strength</span>"}`;
+            } else tip.hidden = true;
+          });
+          canvas.addEventListener("mouseleave", () => { hover = null; tip.hidden = true; draw(); });
+        }
+        draw();
+        return {
+          setYear(yr) { lit = new Set(states[String(yr)] ?? []); draw(); },
+          setFilter(ids) { filter = ids && ids.size ? ids : null; draw(); },
+          setMode() {},   // no depth in 2-D
+          focus(id) { hover = id; draw(); },
+          animate(ms) {
+            if (reduced) { progress = 1; draw(); return; }
+            progress = 0;
+            const t0 = performance.now();
+            const step = (t) => {
+              progress = Math.min((t - t0) / ms, 1); draw();
+              if (progress < 1) requestAnimationFrame(step);
+              else document.getElementById("hero-status").textContent =
+                `${space.nodes.length} PRODUCTS · ${space.edges.length} LINKS · ${lit.size} INDONESIAN STRENGTHS IN ${latest} · 2-D MODE (ENABLE BROWSER GPU FOR 3-D)`;
+            };
+            requestAnimationFrame(step);
+          },
+        };
+      }
+
+      // ?nohero — dev aid for screenshotting the chapters: skips both scenes.
+      // WebGL may be unavailable (GPU acceleration off, remote session):
+      // fall back to the 2-D canvas renderer — same data, same interactions.
       const NOHERO = location.search.includes("nohero");
       const exploreStub = { setYear() {}, setFilter() {}, setMode() {}, focus() {} };
-      if (!NOHERO) sect("3-D hero", () => makeSpace(document.getElementById("hero-canvas"), { interactive: false }).animate(4600))
-        ?? (document.getElementById("hero-status").textContent = "3-D VIEW NEEDS WEBGL — THE CHARTS BELOW STILL WORK");
-      const explore = (NOHERO ? null : sect("3-D explorer", () => makeSpace(document.getElementById("ps-canvas"), { interactive: true }))) ?? exploreStub;
+      const tryMake = (canvas, opts) => {
+        try { return makeSpace(canvas, opts); }
+        catch (err) {
+          console.warn("WebGL unavailable — 2-D canvas fallback:", err.message ?? err);
+          return sect("product space (2-D fallback)", () => makeSpace2D(canvas, opts));
+        }
+      };
+      if (!NOHERO) tryMake(document.getElementById("hero-canvas"), { interactive: false })?.animate(4600);
+      const explore = (NOHERO ? null : tryMake(document.getElementById("ps-canvas"), { interactive: true })) ?? exploreStub;
       const psYear = document.getElementById("ps-year"), psLabel = document.getElementById("ps-label"), psPlay = document.getElementById("ps-play");
       const setPsYear = (yr) => { psYear.value = yr; psLabel.textContent = yr; explore.setYear(yr); };
       let psTimer = null;

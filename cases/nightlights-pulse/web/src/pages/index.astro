@@ -213,7 +213,7 @@ const maxMean = summary.topMean[0].v;
           .on("mouseleave", () => { guide.style("display", "none"); dots.attr("r", 5); ctip.hidden = true; });
       }
 
-      /* ---------- explore: choropleth ---------- */
+      /* ---------- explore: choropleth (WebGL map · 2-D canvas fallback) ---------- */
       const values = (month, metric) => {
         const idx = metric === "sol" ? 0 : 1;
         const out = new Map();
@@ -223,68 +223,26 @@ const maxMean = summary.topMean[0].v;
         }
         return out;
       };
-      const paint = (month, metric) => {
+      // inject normalized shade value v ∈ [0,1] into feature properties
+      const shade = (month, metric) => {
         const vals = values(month, metric);
         const arr = [...vals.values()].filter((v) => v > 0);
-        const lo = 0, hi = Math.log10((d3.quantile(arr.sort(d3.ascending), 0.995) ?? 1) + 1);
+        const hi = Math.log10((d3.quantile(arr.sort(d3.ascending), 0.995) ?? 1) + 1);
         for (const f of geo.features) {
           const v = vals.get(f.properties.id) ?? 0;
           f.properties.v = Math.min(Math.log10(v + 1) / hi, 1);
         }
-        map.getSource("regencies")?.setData(geo);
       };
-
-      sect("map explorer", () => {
-      const map = new maplibregl.Map({
-        container: "map",
-        style: { version: 8, sources: {}, layers: [
-          { id: "bg", type: "background", paint: { "background-color": "#05070F" } } ] },
-        bounds: [[94.5, -11.5], [141.5, 6.5]],
-        fitBoundsOptions: { padding: 24 },
-        attributionControl: false,
-        dragRotate: false,
-      });
-      map.addControl(new maplibregl.AttributionControl({
-        customAttribution: "NASA Black Marble · geoBoundaries CC BY 3.0 IGO", compact: true }));
-      map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
-
-      map.on("load", () => {
-        paint(state.month, state.metric);
-        map.addSource("regencies", { type: "geojson", data: geo, promoteId: "id" });
-        map.addLayer({ id: "fill", type: "fill", source: "regencies",
-          paint: { "fill-color": ["interpolate", ["linear"], ["get", "v"],
-            0, RAMP[0], 0.25, RAMP[1], 0.5, RAMP[2], 0.75, RAMP[3], 1, RAMP[4]],
-            "fill-opacity": 0.92 } });
-        map.addLayer({ id: "line", type: "line", source: "regencies",
-          paint: { "line-color": "#232B44", "line-width": 0.4 } });
-        map.addLayer({ id: "hover", type: "line", source: "regencies",
-          paint: { "line-color": "#E8A33D", "line-width": 1.4 },
-          filter: ["==", ["get", "id"], ""] });
-      });
-
-      /* tooltip + click panel */
       const tip = document.getElementById("tooltip");
-      map.on("mousemove", "fill", (e) => {
-        const f = e.features[0];
-        const reg = ledger.regions[f.properties.id];
-        const s = reg?.series[state.month];
-        map.setFilter("hover", ["==", ["get", "id"], f.properties.id]);
-        map.getCanvas().style.cursor = "pointer";
-        tip.hidden = false;
-        tip.style.left = e.point.x + 14 + "px";
-        tip.style.top = e.point.y + 14 + "px";
-        tip.innerHTML = `<b>${reg?.name ?? "—"}</b><br>${
-          s ? `SOL ${s[0].toLocaleString()} · mean ${s[1]}` : "no data this month"}`;
-      });
-      map.on("mouseleave", "fill", () => {
-        map.setFilter("hover", ["==", ["get", "id"], ""]);
-        map.getCanvas().style.cursor = ""; tip.hidden = true;
-      });
-
       const panel = document.getElementById("region-panel");
-      map.on("click", "fill", (e) => openPanel(e.features[0].properties.id));
-      document.getElementById("panel-close").onclick = () => { panel.hidden = true; state.region = null; syncHash(); };
-
+      const tipHTML = (id) => {
+        const reg = ledger.regions[id];
+        const s = reg?.series[state.month];
+        return `<b>${reg?.name ?? "—"}</b><br>${s ? `SOL ${s[0].toLocaleString()} · mean ${s[1]}` : "no data this month"}`;
+      };
+      function syncHash() {
+        location.hash = `m=${state.month}&x=${state.metric}${state.region ? `&r=${state.region}` : ""}`;
+      }
       function openPanel(id) {
         const reg = ledger.regions[id];
         if (!reg) return;
@@ -307,29 +265,168 @@ const maxMean = summary.topMean[0].v;
           .attr("cx", (d) => x(d.m)).attr("cy", (d) => y(d.v)).attr("r", 2.5).attr("fill", "#E8A33D");
         syncHash();
       }
+      document.getElementById("panel-close").onclick = () => { panel.hidden = true; state.region = null; syncHash(); };
+
+      function webglMap() {
+      const map = new maplibregl.Map({
+        container: "map",
+        style: { version: 8, sources: {}, layers: [
+          { id: "bg", type: "background", paint: { "background-color": "#05070F" } } ] },
+        bounds: [[94.5, -11.5], [141.5, 6.5]],
+        fitBoundsOptions: { padding: 24 },
+        attributionControl: false,
+        dragRotate: false,
+      });
+      map.addControl(new maplibregl.AttributionControl({
+        customAttribution: "NASA Black Marble · geoBoundaries CC BY 3.0 IGO", compact: true }));
+      map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
+
+      map.on("load", () => {
+        shade(state.month, state.metric);
+        map.addSource("regencies", { type: "geojson", data: geo, promoteId: "id" });
+        map.addLayer({ id: "fill", type: "fill", source: "regencies",
+          paint: { "fill-color": ["interpolate", ["linear"], ["get", "v"],
+            0, RAMP[0], 0.25, RAMP[1], 0.5, RAMP[2], 0.75, RAMP[3], 1, RAMP[4]],
+            "fill-opacity": 0.92 } });
+        map.addLayer({ id: "line", type: "line", source: "regencies",
+          paint: { "line-color": "#232B44", "line-width": 0.4 } });
+        map.addLayer({ id: "hover", type: "line", source: "regencies",
+          paint: { "line-color": "#E8A33D", "line-width": 1.4 },
+          filter: ["==", ["get", "id"], ""] });
+      });
+
+      /* tooltip + click panel */
+      map.on("mousemove", "fill", (e) => {
+        const f = e.features[0];
+        map.setFilter("hover", ["==", ["get", "id"], f.properties.id]);
+        map.getCanvas().style.cursor = "pointer";
+        tip.hidden = false;
+        tip.style.left = e.point.x + 14 + "px";
+        tip.style.top = e.point.y + 14 + "px";
+        tip.innerHTML = tipHTML(f.properties.id);
+      });
+      map.on("mouseleave", "fill", () => {
+        map.setFilter("hover", ["==", ["get", "id"], ""]);
+        map.getCanvas().style.cursor = ""; tip.hidden = true;
+      });
+      map.on("click", "fill", (e) => openPanel(e.features[0].properties.id));
+      return {
+        paint(month, metric) { shade(month, metric); map.getSource("regencies")?.setData(geo); },
+        ready(cb) { map.on("load", cb); },
+      };
+      }
+
+      /* 2-D canvas choropleth — full function without WebGL (GPU acceleration off) */
+      function canvasMap() {
+        const container = document.getElementById("map");
+        container.innerHTML = "";
+        container.style.position = "relative";
+        const canvas = document.createElement("canvas");
+        canvas.style.cssText = "width:100%;height:100%;display:block;cursor:pointer;";
+        container.appendChild(canvas);
+        const note = document.createElement("div");
+        note.style.cssText = "position:absolute;left:12px;bottom:10px;font-family:var(--font-data);font-size:0.62rem;letter-spacing:0.08em;color:var(--ink-muted);";
+        note.textContent = "2-D MAP (BROWSER GPU OFF) · NASA BLACK MARBLE · GEOBOUNDARIES CC BY 3.0 IGO";
+        container.appendChild(note);
+        const ctx = canvas.getContext("2d");
+        const pick = document.createElement("canvas");
+        const pctx = pick.getContext("2d", { willReadFrequently: true });
+        const dpr = Math.min(devicePixelRatio || 1, 2);
+        const B = { w: 94.5, s: -11.5, e: 141.5, n: 6.5 };
+        let W, H, sx, sy, ox, oy, paths = [];
+        const ramp = d3.piecewise(d3.interpolateRgb, RAMP);
+        function project() {
+          W = container.clientWidth; H = container.clientHeight;
+          canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          pick.width = W; pick.height = H; // 1x for exact pixel reads
+          const pad = 20;
+          const k = Math.min((W - 2 * pad) / (B.e - B.w), (H - 2 * pad) / (B.n - B.s));
+          sx = k; sy = -k;
+          ox = (W - k * (B.e - B.w)) / 2; oy = (H + k * (B.n - B.s)) / 2;
+          paths = geo.features.map((f, i) => {
+            const p = new Path2D();
+            const polys = f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
+            for (const poly of polys) for (const ring of poly) {
+              ring.forEach(([lon, lat], j) => {
+                const px = ox + (lon - B.w) * sx, py = oy + (lat - B.s) * sy;
+                j ? p.lineTo(px, py) : p.moveTo(px, py);
+              });
+              p.closePath();
+            }
+            return p;
+          });
+          // picking layer: each feature in a unique flat colour (index-encoded)
+          pctx.setTransform(1, 0, 0, 1, 0, 0);
+          pctx.clearRect(0, 0, W, H);
+          paths.forEach((p, i) => {
+            pctx.fillStyle = `rgb(${(i + 1) & 255},${((i + 1) >> 8) & 255},0)`;
+            pctx.fill(p);
+          });
+        }
+        let hoverIdx = -1;
+        function paintAll() {
+          ctx.fillStyle = "#05070F"; ctx.fillRect(0, 0, W, H);
+          geo.features.forEach((f, i) => {
+            ctx.fillStyle = ramp(f.properties.v ?? 0);
+            ctx.fill(paths[i]);
+            ctx.strokeStyle = "#232B44"; ctx.lineWidth = 0.4; ctx.stroke(paths[i]);
+          });
+          if (hoverIdx >= 0) { ctx.strokeStyle = "#E8A33D"; ctx.lineWidth = 1.4; ctx.stroke(paths[hoverIdx]); }
+        }
+        project();
+        addEventListener("resize", () => { project(); paintAll(); });
+        const featureAt = (e) => {
+          const r = canvas.getBoundingClientRect();
+          const d = pctx.getImageData(e.clientX - r.left, e.clientY - r.top, 1, 1).data;
+          return (d[0] | (d[1] << 8)) - 1;
+        };
+        canvas.addEventListener("mousemove", (e) => {
+          const i = featureAt(e);
+          if (i !== hoverIdx) { hoverIdx = i; paintAll(); }
+          if (i >= 0) {
+            const r = canvas.getBoundingClientRect();
+            tip.hidden = false;
+            tip.style.left = e.clientX - r.left + 14 + "px";
+            tip.style.top = e.clientY - r.top + 14 + "px";
+            tip.innerHTML = tipHTML(geo.features[i].properties.id);
+          } else tip.hidden = true;
+        });
+        canvas.addEventListener("mouseleave", () => { hoverIdx = -1; tip.hidden = true; paintAll(); });
+        canvas.addEventListener("click", (e) => {
+          const i = featureAt(e);
+          if (i >= 0) openPanel(geo.features[i].properties.id);
+        });
+        return {
+          paint(month, metric) { shade(month, metric); paintAll(); },
+          ready(cb) { cb(); },
+        };
+      }
+
+      let mapApi;
+      try { mapApi = webglMap(); }
+      catch (err) {
+        console.warn("WebGL map unavailable — 2-D canvas fallback:", err?.message ?? err);
+        mapApi = sect("map (2-D fallback)", () => canvasMap());
+      }
+      if (mapApi) mapApi.ready(() => mapApi.paint(state.month, state.metric));
 
       /* controls + URL state (options already populated above) */
       const sel = document.getElementById("month-select");
-      sel.onchange = () => { state.month = sel.value; paint(state.month, state.metric); if (state.region) openPanel(state.region); syncHash(); };
+      sel.onchange = () => { state.month = sel.value; mapApi?.paint(state.month, state.metric); if (state.region) openPanel(state.region); syncHash(); };
       const bSol = document.getElementById("btn-sol"), bMean = document.getElementById("btn-mean");
       const setMetric = (metric) => {
         state.metric = metric;
         bSol.classList.toggle("on", metric === "sol");
         bMean.classList.toggle("on", metric === "mean");
-        paint(state.month, state.metric); syncHash();
+        mapApi?.paint(state.month, state.metric); syncHash();
       };
       bSol.onclick = () => setMetric("sol");
       bMean.onclick = () => setMetric("mean");
-      function syncHash() {
-        location.hash = `m=${state.month}&x=${state.metric}${state.region ? `&r=${state.region}` : ""}`;
-      }
       // restore state from URL
       const h = new URLSearchParams(location.hash.slice(1));
       if (h.get("m") && ledger.months.includes(h.get("m"))) { state.month = h.get("m"); sel.value = state.month; }
       if (h.get("x") === "mean") setMetric("mean");
-      if (h.get("r")) map.on("load", () => openPanel(h.get("r")));
-      }) ?? (document.getElementById("map").innerHTML =
-        '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--ink-muted);font-family:var(--font-data);font-size:0.8rem;letter-spacing:0.08em;">THE MAP NEEDS WEBGL — CHARTS ABOVE STILL WORK</div>');
+      if (h.get("r")) mapApi?.ready(() => openPanel(h.get("r")));
     </script>
 
     <style is:global>
