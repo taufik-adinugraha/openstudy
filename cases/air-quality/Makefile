@@ -20,6 +20,9 @@ fire:            ## FIRMS VIIRS hotspots -> upwind sector-day aggregates, raw ne
 
 ingest: ground fire era5
 
+finish:          ## wait for the sharded ERA5 units to drain, gap-fill, then run everything downstream
+	bash pipeline/finish.sh
+
 ## --- Stage 2-4 · modelling ---------------------------------------------
 features:        ## join target + meteorology + upwind fire -> data/features.parquet
 	$(PY)/features.py
