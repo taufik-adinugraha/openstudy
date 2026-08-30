@@ -99,18 +99,28 @@ def arcgis_all(layer: str, dest: Path) -> None:
     if dest.exists() and dest.stat().st_size > 0:
         print(f"[ingest]   {dest.name} cached"); return
     dest.parent.mkdir(parents=True, exist_ok=True)
-    feats, offset = [], 0
+    import time
+
+    feats, offset, page_size = [], 0, 500   # small pages: the server drops big polygon responses
     while True:
-        r = requests.get(f"{layer}/query", params={
-            "where": "1=1", "outFields": "*", "f": "geojson", "outSR": 4326,
-            "resultOffset": offset, "resultRecordCount": 2000}, headers=config.BROWSER_UA, timeout=180)
-        r.raise_for_status()
-        page = r.json()
+        for attempt in range(4):
+            try:
+                r = requests.get(f"{layer}/query", params={
+                    "where": "1=1", "outFields": "*", "f": "geojson", "outSR": 4326,
+                    "resultOffset": offset, "resultRecordCount": page_size},
+                    headers=config.BROWSER_UA, timeout=180)
+                r.raise_for_status()
+                page = r.json()
+                break
+            except (requests.RequestException, ValueError) as err:
+                if attempt == 3:
+                    raise
+                time.sleep(3 * (attempt + 1))
         got = page.get("features", [])
         feats.extend(got)
-        if not got or not page.get("properties", {}).get("exceededTransferLimit", len(got) == 2000):
-            if len(got) < 2000:
-                break
+        print(f"[ingest]     {dest.name}: {len(feats):,} so far", flush=True)
+        if len(got) < page_size:
+            break
         offset += len(got)
     dest.write_text(json.dumps({"type": "FeatureCollection", "features": feats}))
     print(f"[ingest]   {dest.name}: {len(feats):,} features")
@@ -121,9 +131,18 @@ def admin() -> None:
 
 
 def floods() -> None:
-    arcgis_all(config.FLOOD_HISTORY_LAYER, RAW / "floods" / "bpbd_flood_history_2021_2024.geojson")
-    _get(config.UNOSAT_2020_URL, RAW / "floods" / "unosat_FL20200101IDN_shp.zip")
-    _get(config.EOS_2020_URL, RAW / "floods" / "eos_aria_20200102_fpm_shp.zip")
+    errors = []
+    for fn in (
+        lambda: arcgis_all(config.FLOOD_HISTORY_LAYER, RAW / "floods" / "bpbd_flood_history_2021_2024.geojson"),
+        lambda: _get(config.UNOSAT_2020_URL, RAW / "floods" / "unosat_FL20200101IDN_shp.zip"),
+        lambda: _get(config.EOS_2020_URL, RAW / "floods" / "eos_aria_20200102_fpm_shp.zip"),
+    ):
+        try:
+            fn()
+        except Exception as err:  # noqa: BLE001 — each flood source is independent
+            errors.append(f"{type(err).__name__}: {str(err)[:120]}")
+    if errors:
+        raise RuntimeError("; ".join(errors))
 
 
 def main() -> int:
