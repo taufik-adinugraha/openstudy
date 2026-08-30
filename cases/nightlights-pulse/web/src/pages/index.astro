@@ -108,6 +108,12 @@ const maxMean = summary.topMean[0].v;
         </div>
       </div>
       <div id="map"></div>
+      <div class="player" aria-label="month player">
+        <button id="btn-play" aria-label="play">▶</button>
+        <input id="month-range" type="range" min="0" max="0" step="1" value="0" aria-label="month" />
+        <output class="month-out" id="hud-month"></output>
+        <div class="hud"><span id="hud-sol"></span><span id="hud-cov"></span><span id="hud-mover"></span></div>
+      </div>
       <aside id="region-panel" hidden>
         <button id="panel-close" aria-label="close">×</button>
         <h3 id="panel-name"></h3>
@@ -169,20 +175,25 @@ const maxMean = summary.topMean[0].v;
         sel0.value = state.month;
       }
 
+      /* national series — shared by the pulse chart and the month-player HUD */
+      const national = ledger.months.map((m) => {
+        let sol = 0, px = 0;
+        for (const id in ledger.regions) {
+          const s = ledger.regions[id].series[m];
+          if (s) { sol += s[0]; px += s[2]; }
+        }
+        return { m, sol, px };
+      });
+      const peakPx = d3.max(national, (d) => d.px);
+      const regionPeakPx = {};
+      for (const id in ledger.regions)
+        regionPeakPx[id] = d3.max(Object.values(ledger.regions[id].series), (s) => s[2]) || 1;
+
       /* ---------- chapter 2: national pulse ---------- */
       {
         const el = document.getElementById("pulse-chart");
         const W = el.clientWidth, H = 260, M = { t: 16, r: 16, b: 28, l: 64 };
-        const series = [];
-        for (const m of ledger.months) {
-          let sol = 0, px = 0;
-          for (const id in ledger.regions) {
-            const s = ledger.regions[id].series[m];
-            if (s) { sol += s[0]; px += s[2]; }
-          }
-          series.push({ m, sol, px });
-        }
-        const peak = d3.max(series, (d) => d.px);
+        const series = national, peak = peakPx;
         const x = d3.scalePoint(series.map((d) => d.m), [M.l, W - M.r]).padding(0.5);
         const y = d3.scaleLinear([0, d3.max(series, (d) => d.sol) * 1.1], [H - M.b, M.t]);
         const svg = d3.select(el).append("svg").attr("width", W).attr("height", H);
@@ -244,7 +255,7 @@ const maxMean = summary.topMean[0].v;
         return `<b>${reg?.name ?? "—"}</b><br>${s ? `SOL ${s[0].toLocaleString()} · mean ${s[1]}` : "no data this month"}`;
       };
       function syncHash() {
-        location.hash = `m=${state.month}&x=${state.metric}${state.region ? `&r=${state.region}` : ""}`;
+        history.replaceState(null, "", `#m=${state.month}&x=${state.metric}${state.region ? `&r=${state.region}` : ""}`);
       }
       function openPanel(id) {
         const reg = ledger.regions[id];
@@ -265,7 +276,9 @@ const maxMean = summary.topMean[0].v;
         const y = d3.scaleLinear([0, d3.max(pts, (d) => d.v) || 1], [H - 6, 6]);
         const svg = spark.append("svg").attr("width", W).attr("height", H);
         svg.selectAll("circle").data(pts.filter((d) => d.v != null)).join("circle")
-          .attr("cx", (d) => x(d.m)).attr("cy", (d) => y(d.v)).attr("r", 2.5).attr("fill", "#E8A33D");
+          .attr("cx", (d) => x(d.m)).attr("cy", (d) => y(d.v))
+          .attr("r", (d) => (d.m === state.month ? 4 : 2.5))
+          .attr("fill", (d) => (d.m === state.month ? "#FFEFC9" : "#E8A33D"));
         syncHash();
       }
       document.getElementById("panel-close").onclick = () => { panel.hidden = true; state.region = null; syncHash(); };
@@ -328,7 +341,7 @@ const maxMean = summary.topMean[0].v;
         canvas.style.cssText = "width:100%;height:100%;display:block;cursor:pointer;";
         container.appendChild(canvas);
         const note = document.createElement("div");
-        note.style.cssText = "position:absolute;left:12px;bottom:10px;font-family:var(--font-data);font-size:0.62rem;letter-spacing:0.08em;color:var(--ink-muted);";
+        note.style.cssText = "position:absolute;left:12px;top:10px;font-family:var(--font-data);font-size:0.62rem;letter-spacing:0.08em;color:var(--ink-muted);";
         note.textContent = "2-D MAP (BROWSER GPU OFF) · NASA BLACK MARBLE · GEOBOUNDARIES CC BY 3.0 IGO";
         container.appendChild(note);
         const ctx = canvas.getContext("2d");
@@ -448,7 +461,6 @@ const maxMean = summary.topMean[0].v;
 
       /* controls + URL state (options already populated above) */
       const sel = document.getElementById("month-select");
-      sel.onchange = () => { state.month = sel.value; mapApi?.paint(state.month, state.metric); if (state.region) openPanel(state.region); syncHash(); };
       const bSol = document.getElementById("btn-sol"), bMean = document.getElementById("btn-mean");
       const setMetric = (metric) => {
         state.metric = metric;
@@ -463,6 +475,62 @@ const maxMean = summary.topMean[0].v;
       if (h.get("m") && ledger.months.includes(h.get("m"))) { state.month = h.get("m"); sel.value = state.month; }
       if (h.get("x") === "mean") setMetric("mean");
       if (h.get("r")) mapApi?.ready(() => openPanel(h.get("r")));
+
+      /* month-player: scrub or play the whole ledger as a timelapse */
+      const months = ledger.months;
+      const range = document.getElementById("month-range");
+      const btnPlay = document.getElementById("btn-play");
+      const hud = { month: document.getElementById("hud-month"), sol: document.getElementById("hud-sol"),
+                    cov: document.getElementById("hud-cov"), mover: document.getElementById("hud-mover") };
+      range.max = months.length - 1;
+      const fmtSol = d3.format(".3~s"), fmtPct = d3.format(".0%");
+      // largest relative change among regencies with adequate coverage in both months;
+      // year-on-year once the ledger allows it (monsoon seasonality cancels), else month-on-month
+      const topMover = (m) => {
+        const i = months.indexOf(m), j = i >= 12 ? i - 12 : i - 1;
+        if (j < 0) return null;
+        const floor = 0.001 * national[j].sol;
+        let best = null;
+        for (const id in ledger.regions) {
+          const a = ledger.regions[id].series[m], b = ledger.regions[id].series[months[j]];
+          if (!a || !b || b[0] < floor || a[2] < 0.6 * regionPeakPx[id] || b[2] < 0.6 * regionPeakPx[id]) continue;
+          const d = a[0] / b[0] - 1;
+          if (!best || Math.abs(d) > Math.abs(best.d)) best = { id, d, yoy: i >= 12 };
+        }
+        return best;
+      };
+      function renderHUD(m) {
+        const i = months.indexOf(m), n = national[i], cov = n.px / peakPx;
+        hud.month.textContent = m;
+        hud.sol.innerHTML = `SUM OF LIGHTS <b>${fmtSol(n.sol)}</b>`;
+        hud.cov.innerHTML = `COVERAGE <b>${fmtPct(cov)}</b>${cov < 0.5 ? ' <span class="masked">MONSOON-MASKED</span>' : ""}`;
+        const mv = topMover(m);
+        hud.mover.innerHTML = mv
+          ? `TOP MOVER <b class="mover">${ledger.regions[mv.id].name}</b> ${mv.d >= 0 ? "+" : "−"}${fmtPct(Math.abs(mv.d))} ${mv.yoy ? "YOY" : "MOM"}`
+          : "";
+        range.value = i;
+        range.style.setProperty("--pct", `${(i / Math.max(1, months.length - 1)) * 100}%`);
+        sel.value = m;
+      }
+      function setMonth(m) {
+        state.month = m;
+        renderHUD(m);
+        mapApi?.paint(state.month, state.metric);
+        if (state.region) openPanel(state.region);
+        syncHash();
+      }
+      let timer = null;
+      const stop = () => { clearInterval(timer); timer = null; btnPlay.textContent = "▶"; btnPlay.setAttribute("aria-label", "play"); };
+      const play = () => {
+        let i = months.indexOf(state.month);
+        if (i >= months.length - 1) i = -1;
+        btnPlay.textContent = "❚❚"; btnPlay.setAttribute("aria-label", "pause");
+        timer = setInterval(() => { i += 1; setMonth(months[i]); if (i >= months.length - 1) stop(); }, 650);
+      };
+      btnPlay.onclick = () => (timer ? stop() : play());
+      range.oninput = () => setMonth(months[+range.value]);
+      sel.onchange = () => setMonth(sel.value);
+      renderHUD(state.month);
     </script>
 
     <style is:global>
@@ -523,6 +591,26 @@ const maxMean = summary.topMean[0].v;
       .toggle button:focus-visible, .controls select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
       #map { height: 76vh; }
+      .player { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 12;
+        width: min(760px, calc(100% - 40px)); display: grid; grid-template-columns: auto 1fr auto; gap: 8px 14px; align-items: center;
+        padding: 10px 14px 9px; background: color-mix(in srgb, var(--surface-raised) 80%, transparent);
+        backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--hairline); border-radius: 8px; }
+      #btn-play { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--accent); background: var(--accent-ink);
+        color: var(--accent); cursor: pointer; font-size: 0.72rem; display: grid; place-items: center; padding: 0 0 0 1px; }
+      #btn-play:hover { box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent); }
+      #month-range { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; margin: 0; border-radius: 2px; outline: none;
+        background: linear-gradient(90deg, var(--accent) var(--pct, 0%), var(--hairline) var(--pct, 0%)); }
+      #month-range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--accent); cursor: pointer;
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent), 0 0 12px var(--accent); }
+      #month-range::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: var(--accent); cursor: pointer;
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent), 0 0 12px var(--accent); }
+      #month-range:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--ink); }
+      .player .month-out { font-family: var(--font-data); font-size: 0.95rem; color: var(--ink); font-variant-numeric: tabular-nums; min-width: 4.6rem; text-align: right; }
+      .player .hud { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px 18px; font-family: var(--font-data); font-size: 0.64rem; letter-spacing: 0.08em; color: var(--ink-muted); }
+      .player .hud b { color: var(--ink); font-weight: 600; }
+      .player .hud .mover { color: var(--accent); }
+      .player .hud .masked { color: var(--down); }
+      @media (max-width: 640px) { .player { bottom: 12px; } .player .hud { font-size: 0.58rem; gap: 2px 12px; } }
       #chart-tip { position: absolute; z-index: 30; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px; font-family: var(--font-data); font-size: 0.72rem; line-height: 1.6; color: var(--ink); }
       #tooltip { position: absolute; z-index: 10; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px; font-family: var(--font-data); font-size: 0.72rem; line-height: 1.5; color: var(--ink); }
       #region-panel[hidden] { display: none; }
