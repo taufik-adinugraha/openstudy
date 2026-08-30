@@ -364,6 +364,24 @@ def _events_daily(files: list[Path]) -> "pd.DataFrame":
     return daily
 
 
+def finish_chain(fetch_ok: bool = False) -> int:
+    """ledger -> validate -> export, serialized across units by a file lock so the
+    curves unit and the events unit can both call it without racing."""
+    import fcntl
+    import subprocess
+
+    config.DATA_DIR.mkdir(parents=True, exist_ok=True)
+    with open(config.DATA_DIR / ".chain.lock", "w") as lk:
+        fcntl.flock(lk, fcntl.LOCK_EX)
+        rc = ledger()
+        if rc == 0:
+            here = Path(__file__).resolve().parent
+            subprocess.run([sys.executable, str(here / "validate.py")], check=False)
+            subprocess.run([sys.executable, str(here / "export_web.py")]
+                           + ([] if fetch_ok else ["--no-fetch"]), check=False)
+    return rc
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("stage", nargs="?", default="all", choices=["stream", "ledger", "all"])
@@ -374,8 +392,10 @@ def main() -> int:
     rc = 0
     if a.stage in ("stream", "all"):
         rc = stream(a.months, a.redo, min(a.workers, config.EVENTS_WORKERS))
-    if a.stage in ("ledger", "all") and rc == 0:
+    if a.stage == "ledger":
         rc = ledger()
+    elif a.stage == "all" and rc == 0:
+        rc = finish_chain()          # backfill complete: gates + exports refresh themselves
     return rc
 
 

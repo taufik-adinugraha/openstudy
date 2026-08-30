@@ -259,6 +259,11 @@ def main() -> int:
         missing = battery()
     if a.stage in ("curves", "all"):
         curves()
+    if a.stage == "all":
+        # push whatever landed straight through to the dashboard (lock-serialized);
+        # headline samples are fetched only on the final, complete pass
+        import events
+        events.finish_chain(fetch_ok=missing == 0)
     # nonzero => a Restart=on-failure unit re-runs the pass (cache makes it cheap)
     return 1 if missing else 0
 
