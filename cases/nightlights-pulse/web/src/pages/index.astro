@@ -484,18 +484,18 @@ const maxMean = summary.topMean[0].v;
                     cov: document.getElementById("hud-cov"), mover: document.getElementById("hud-mover") };
       range.max = months.length - 1;
       const fmtSol = d3.format(".3~s"), fmtPct = d3.format(".0%");
-      // largest relative change among regencies with adequate coverage in both months;
-      // year-on-year once the ledger allows it (monsoon seasonality cancels), else month-on-month
+      // largest year-on-year change in mean radiance among regencies that are ≥80% observed
+      // in both months — sum-of-lights would move with cloud masking, mean moves with light
       const topMover = (m) => {
-        const i = months.indexOf(m), j = i >= 12 ? i - 12 : i - 1;
+        const i = months.indexOf(m), j = i - 12;
         if (j < 0) return null;
         const floor = 0.001 * national[j].sol;
         let best = null;
         for (const id in ledger.regions) {
           const a = ledger.regions[id].series[m], b = ledger.regions[id].series[months[j]];
-          if (!a || !b || b[0] < floor || a[2] < 0.6 * regionPeakPx[id] || b[2] < 0.6 * regionPeakPx[id]) continue;
-          const d = a[0] / b[0] - 1;
-          if (!best || Math.abs(d) > Math.abs(best.d)) best = { id, d, yoy: i >= 12 };
+          if (!a || !b || b[0] < floor || b[1] <= 0 || a[2] < 0.8 * regionPeakPx[id] || b[2] < 0.8 * regionPeakPx[id]) continue;
+          const d = a[1] / b[1] - 1;
+          if (!best || Math.abs(d) > Math.abs(best.d)) best = { id, d };
         }
         return best;
       };
@@ -503,10 +503,11 @@ const maxMean = summary.topMean[0].v;
         const i = months.indexOf(m), n = national[i], cov = n.px / peakPx;
         hud.month.textContent = m;
         hud.sol.innerHTML = `SUM OF LIGHTS <b>${fmtSol(n.sol)}</b>`;
-        hud.cov.innerHTML = `COVERAGE <b>${fmtPct(cov)}</b>${cov < 0.5 ? ' <span class="masked">MONSOON-MASKED</span>' : ""}`;
+        const flag = cov < 0.02 ? "NO COMPOSITE" : cov < 0.5 ? "MONSOON-MASKED" : "";
+        hud.cov.innerHTML = `COVERAGE <b>${fmtPct(cov)}</b>${flag ? ` <span class="masked">${flag}</span>` : ""}`;
         const mv = topMover(m);
         hud.mover.innerHTML = mv
-          ? `TOP MOVER <b class="mover">${ledger.regions[mv.id].name}</b> ${mv.d >= 0 ? "+" : "−"}${fmtPct(Math.abs(mv.d))} ${mv.yoy ? "YOY" : "MOM"}`
+          ? `TOP MOVER (YOY, MEAN) <b class="mover">${ledger.regions[mv.id].name}</b> ${mv.d >= 0 ? "+" : "−"}${fmtPct(Math.abs(mv.d))}`
           : "";
         range.value = i;
         range.style.setProperty("--pct", `${(i / Math.max(1, months.length - 1)) * 100}%`);
