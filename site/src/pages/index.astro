@@ -443,7 +443,9 @@ const DEMOS = {
       .mini-visual { height: 130px; background: linear-gradient(120deg, var(--ground), var(--surface));
         display: flex; align-items: center; justify-content: center; }
       .mini-visual svg { width: 78%; height: 82%; }
-      .case-visual.roof-grid { align-content: center; justify-content: center; padding: 28px; }
+      .case-visual.roof-grid { align-content: center; justify-content: center; padding: 28px;
+        grid-template-columns: repeat(10, 24px); grid-auto-rows: 24px; gap: 7px; }
+      .case-visual.roof-grid i { width: 24px; height: 24px; border-radius: 3px; }
       .roof-grid { display: grid; grid-template-columns: repeat(10, 12px); grid-auto-rows: 12px; gap: 4px;
         align-content: center; justify-content: center; }
       .roof-grid i { width: 12px; height: 12px; background: var(--accent); opacity: 0.35; border-radius: 2px; }
