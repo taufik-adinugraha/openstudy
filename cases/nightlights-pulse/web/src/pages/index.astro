@@ -189,15 +189,18 @@ const maxMean = summary.topMean[0].v;
         svg.append("g").attr("transform", `translate(${M.l},0)`)
           .call(d3.axisLeft(y).ticks(4).tickFormat(d3.format("~s"))).attr("class", "axis");
         svg.append("g").attr("transform", `translate(0,${H - M.b})`)
-          .call(d3.axisBottom(x)).attr("class", "axis");
+          .call(d3.axisBottom(x)
+            .tickValues(series.map((d) => d.m).filter((m) => m.endsWith("-01")))
+            .tickFormat((m) => m.slice(0, 4)))
+          .attr("class", "axis");
         svg.append("path").datum(series)
           .attr("d", d3.line().x((d) => x(d.m)).y((d) => y(d.sol)))
           .attr("fill", "none").attr("stroke", "#E8A33D").attr("stroke-width", 1.5)
           .attr("stroke-dasharray", series.length < 6 ? "2 4" : null);
         const dots = svg.selectAll("circle").data(series).join("circle")
-          .attr("cx", (d) => x(d.m)).attr("cy", (d) => y(d.sol)).attr("r", 5)
+          .attr("cx", (d) => x(d.m)).attr("cy", (d) => y(d.sol)).attr("r", 3.5)
           .attr("fill", (d) => (d.px / peak < 0.5 ? "transparent" : "#E8A33D"))
-          .attr("stroke", "#E8A33D").attr("stroke-width", 1.5);
+          .attr("stroke", "#E8A33D").attr("stroke-width", 1.4);
         // hover: crosshair + tooltip (coverage explains the hollow months)
         const ctip = document.getElementById("chart-tip");
         const guide = svg.append("line").attr("y1", M.t).attr("y2", H - M.b).attr("stroke", "#E9E4D6").attr("stroke-opacity", 0.4).style("display", "none");
@@ -206,7 +209,7 @@ const maxMean = summary.topMean[0].v;
             const px = d3.pointer(e)[0];
             const d = series.reduce((best, s) => (Math.abs(x(s.m) - px) < Math.abs(x(best.m) - px) ? s : best), series[0]);
             guide.style("display", null).attr("x1", x(d.m)).attr("x2", x(d.m));
-            dots.attr("r", (s) => (s === d ? 7 : 5));
+            dots.attr("r", (s) => (s === d ? 6 : 3.5));
             ctip.hidden = false; ctip.style.left = e.pageX + 14 + "px"; ctip.style.top = e.pageY + 14 + "px";
             ctip.innerHTML = `<b>${d.m}</b><br>sum of lights ${d3.format(",.0f")(d.sol)}<br>coverage ${d3.format(".0%")(d.px / peak)}${d.px / peak < 0.5 ? " — <span style='color:#6B7CA6'>monsoon-masked, low confidence</span>" : ""}`;
           })
@@ -463,7 +466,8 @@ const maxMean = summary.topMean[0].v;
       .share-row .bar i { display: block; height: 100%; background: var(--accent); }
 
       .chart { width: 100%; }
-      .axis { font-family: var(--font-data); font-size: 10px; color: var(--ink-muted); }
+      .axis { font-family: var(--font-data); font-size: 12px; color: var(--ink-muted); }
+      .axis text { fill: var(--ink-muted); }
       .axis path, .axis line { stroke: var(--hairline); }
 
       .top-lists { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
