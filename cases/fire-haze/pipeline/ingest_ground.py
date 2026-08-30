@@ -230,7 +230,10 @@ def main() -> None:
             "days": int(len(sub)),
             "first": str(sub["day"].min().date()) if len(sub) else None,
             "last": str(sub["day"].max().date()) if len(sub) else None,
-            "status": "ok" if len(sub) else ("pending_ads_policy" if m["tier"] == 3 else "empty"),
+            # a tier-3 receptor with no rows is waiting on the ADS EAC4 queue, not on a policy
+            # click — both stores were accepted mid-build and verified by live submission
+            "status": "ok" if len(sub)
+                      else ("awaiting_cams_eac4" if m["tier"] == 3 else "empty"),
         }
     META_OUT.write_text(json.dumps({
         "receptors": meta,

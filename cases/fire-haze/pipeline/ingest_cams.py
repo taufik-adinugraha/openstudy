@@ -294,13 +294,18 @@ def main() -> None:
     util.require(bool(config.CDS_API_KEY), "CDS_API_KEY missing from repo-root .env")
     meta = {"store": "ADS", "policy_urls": config.POLICY_URLS["ads"]}
 
-    log("cams: GFAS injection heights -> EAC4 surrogate -> forecasts (the CTM to stand beside)")
-    meta["gfas"] = util.run_store_jobs("ads", gfas_specs(), reduce_gfas, NC_DIR,
-                                       max_inflight=2, max_minutes=200)
+    # ORDER MATTERS ON A SERIAL QUEUE.  EAC4 is 14 requests and it is the ONLY thing standing
+    # between the three unmonitored receptors — Pekanbaru, Palangkaraya, Pontianak, the cities
+    # this case is actually about — and having any series at all; without it they are blank rows
+    # on the page.  GFAS is 56 quarterly requests and only refines a release height that already
+    # has a stated fallback.  So the surrogate goes first, then the CTM benchmark, then GFAS.
+    log("cams: EAC4 surrogate (tier 3) -> forecasts (the CTM) -> GFAS injection heights")
     meta["eac4"] = util.run_store_jobs("ads", eac4_specs(), reduce_eac4, NC_DIR,
-                                       max_inflight=2, max_minutes=200)
+                                       max_inflight=2, max_minutes=120)
     meta["forecast"] = util.run_store_jobs("ads", fc_specs(), reduce_fc, NC_DIR,
-                                           max_inflight=1, max_minutes=120)
+                                           max_inflight=1, max_minutes=60)
+    meta["gfas"] = util.run_store_jobs("ads", gfas_specs(), reduce_gfas, NC_DIR,
+                                       max_inflight=2, max_minutes=240)
 
     for glob, out, label in ((f"gfas_*.parquet", GFAS_OUT, "gfas"),
                              (f"eac4_*.parquet", EAC4_GRID_OUT, "eac4"),
