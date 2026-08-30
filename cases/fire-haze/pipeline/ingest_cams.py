@@ -261,19 +261,36 @@ def reduce_fc(spec, paths) -> None:
 
 
 def receptor_series(grid):
-    """Nearest model cell to each tier-3 receptor.  Labelled a MODEL, on every row."""
+    """Nearest available EAC4 cell to each tier-3 receptor.  Labelled a MODEL, on every row.
+
+    NEAREST, not exact.  EAC4 is ~0.75 deg and the model grid is 0.25, so after regridding only
+    a sparse subset of 0.25 deg cells carries a value — and a receptor's own cell is often not
+    one of them.  Requiring an exact match silently dropped Pekanbaru and Pontianak, which are
+    two of the three cities this case is actually about.  The distance to the cell that is used
+    is recorded, because at 0.75 deg "nearest" can be 40 km away and the page should say so.
+    """
     import numpy as np
     import pandas as pd
+    have = grid["cell"].unique()
+    hlat, hlon = util.key_to_cell(have)
     rows = []
     for name, m in config.RECEPTORS.items():
         if m.get("source") != "cams_eac4":
             continue
-        clat, clon = util.snap_cell(m["lat"], m["lon"])
-        cell = int(util.cell_key(clat, clon))
+        if len(have) == 0:
+            log(f"  eac4 receptor {name}: no EAC4 grid at all")
+            continue
+        d = util.haversine_km(m["lat"], m["lon"], hlat, hlon)
+        i = int(np.argmin(d))
+        cell = int(have[i])
+        dist = float(d[i])
         s = grid[grid["cell"] == cell].copy()
         if s.empty:
-            log(f"  eac4 receptor {name}: no cell at {clat},{clon}")
+            log(f"  eac4 receptor {name}: no cell near {m['lat']},{m['lon']}")
             continue
+        if dist > 60:
+            log(f"  eac4 receptor {name}: nearest EAC4 cell is {dist:.0f} km away — "
+                f"reported with that distance rather than dropped")
         s["receptor"] = name
         s["tier"] = 3
         s["source"] = "cams_eac4"
@@ -282,9 +299,11 @@ def receptor_series(grid):
             else s.filter(like="pm2").iloc[:, 0].astype("float32") * 1e9
         s["pm25_max"] = s["pm25"]
         s["n_obs"] = 24
-        rows.append(s[["receptor", "day", "pm25", "pm25_max", "n_obs", "tier", "source"]])
-        log(f"  eac4 receptor {name}: {len(s):,} days, peak {s['pm25'].max():.0f} ug/m3 "
-            f"(MODEL, not an observation)")
+        s["grid_km"] = round(dist, 1)
+        rows.append(s[["receptor", "day", "pm25", "pm25_max", "n_obs", "tier", "source",
+                       "grid_km"]])
+        log(f"  eac4 receptor {name}: {len(s):,} days, peak {s['pm25'].max():.0f} ug/m3, "
+            f"nearest EAC4 cell {dist:.0f} km away (MODEL, not an observation)")
     return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
 
 

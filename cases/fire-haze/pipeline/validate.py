@@ -310,16 +310,44 @@ def gate_j5() -> dict:
             "trained_on": False,
         }
         if not ok:
+            rank = (int(modelled.rank(ascending=False)[a]) if a in modelled.index else None)
             fails.append(f"{a}: modelled seasonal severity at percentile "
                          + (f"{pm:.2f}" if pm is not None else "n/a")
-                         + f", below {config.GATE_ANCHOR_DECILE}")
+                         + f", below {config.GATE_ANCHOR_DECILE}"
+                         + (f" (ranked {rank} of {len(modelled)} modelled seasons; "
+                            f"observed it is {po:.2f})" if rank and po is not None else ""))
+
+    # THE SHAPE OF THE FAILURE MATTERS, AND IT IS ARITHMETIC BEFORE IT IS MODELLING.
+    # A percentile rank over N seasons can only take N distinct values, so a >= 0.90 threshold
+    # admits ceil(N/10) of them — with a short modelled record that is exactly ONE season, and
+    # two anchors cannot both occupy it however well the model ranks them.  The threshold is NOT
+    # moved; the arithmetic is published beside it so the reader can tell "the model cannot rank
+    # the crises" from "the record is not yet long enough for this test to be satisfiable".
+    n_seasons = int(len(modelled))
+    admits = max(1, int(round(n_seasons * (1 - config.GATE_ANCHOR_DECILE))))
+    structural = admits < len(config.ANCHOR_YEARS)
     return {
         "gate": "G-J5", "hard": False, "pass": len(fails) == 0,
         "threshold": {"percentile": config.GATE_ANCHOR_DECILE,
                       "scored_on": "the model's own seasonal mean risk, never trained on these "
                                    "years"},
         "anchors": res,
-        "seasons_in_record": int(len(modelled)),
+        "seasons_in_record": n_seasons,
+        "seasons_admitted_by_threshold": admits,
+        "structurally_unsatisfiable": structural,
+        "structural_note": (
+            f"the modelled series is {n_seasons} seasons long — bounded by the Copernicus ERA5 "
+            f"queue, not by the method — and a {config.GATE_ANCHOR_DECILE:.0%} percentile "
+            f"threshold over {n_seasons} values admits {admits} season(s).  Two anchors cannot "
+            f"both occupy one slot, so this gate cannot be satisfied at this record length "
+            f"however well the model ranks them.  The threshold is not being moved; lengthening "
+            f"the ERA5 record is what makes it answerable."
+            if structural else None),
+        "observed_reference": (
+            "against the FULL 15-season FIRMS record the two anchors sit at percentile "
+            f"{res.get('2015', {}).get('observed_percentile')} and "
+            f"{res.get('2019', {}).get('observed_percentile')} — which is the ordering the model "
+            "is being asked to reproduce"),
         "seasonal_series_modelled": {int(k): float(v) for k, v in modelled.items()},
         "seasonal_series_observed": {int(k): int(v) for k, v in observed.items()},
         "reason": "; ".join(fails) or None,

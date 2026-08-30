@@ -1486,6 +1486,39 @@ const CHAPTERS = [
               <div class="k">Parcels that left the domain</div>
               <div class="s">terminated and counted, never clamped to the boundary</div></div>
           </div>`;
+          // G-J3's per-receptor breakdown is the diagnosis, not a footnote: it says WHERE the
+          // integrator agrees with itself and where it does not, and the pattern is physical.
+          const pr = gj3.per_receptor ?? {};
+          if (Object.keys(pr).length) {
+            const rows = Object.entries(pr).sort((a, b) => b[1].share_within - a[1].share_within);
+            const best = rows[0], worst = rows[rows.length - 1];
+            html += `<h3 style="margin-top:var(--space-4)">Where the two directions agree — and
+              where they do not</h3>
+              <p class="muted" style="font-size:14px">
+                Gate G-J3 runs the same integrator forwards from the fires and backwards from the
+                receptor and asks whether they agree about where the smoke came from. Pooled, they
+                agree on <b>${(gj3.share_within * 100).toFixed(1)} %</b> of episode days at a
+                median difference of <b>${gj3.median_diff_deg?.toFixed(1)}°</b> — inside the ±30°
+                tolerance, but below the 70 % share the gate demands, so <b style="color:${C.alert}">it
+                ships red</b>. Broken out, the failure has a shape: agreement is highest at
+                <b>${title(best[0])}</b> (${(best[1].share_within * 100).toFixed(0)} %,
+                median ${best[1].median_diff_deg.toFixed(1)}°) and lowest at
+                <b>${title(worst[0])}</b> (${(worst[1].share_within * 100).toFixed(0)} %,
+                median ${worst[1].median_diff_deg.toFixed(1)}°). The receptors sitting in the fire
+                belt agree; the ones the smoke has to travel furthest to reach do not. That is what
+                a kinematic trajectory model is expected to do — error accumulates with path
+                length and with curvature — and it is the honest bound on how far this method can
+                be pushed.</p>
+              <div class="tscroll"><table><thead><tr><th>Receptor</th>
+                <th class="n">Episode days</th><th class="n">Within ±30°</th>
+                <th class="n">Median difference</th></tr></thead><tbody>${
+                rows.map(([k, v]) => `<tr><td>${title(k)}</td>
+                  <td class="n">${v.n.toLocaleString()}</td>
+                  <td class="n" style="color:${v.share_within >= 0.7 ? C.official : C.alert}">${
+                    (v.share_within * 100).toFixed(1)}%</td>
+                  <td class="n">${v.median_diff_deg.toFixed(1)}°</td></tr>`).join("")
+              }</tbody></table></div>`;
+          }
           if (cmp.status === "ok" && Object.keys(cmp.by_receptor ?? {}).length) {
             html += `<h3 style="margin-top:var(--space-4)">Beside a real chemistry-transport model</h3>
               <p class="muted" style="font-size:14px">
@@ -1627,7 +1660,12 @@ const CHAPTERS = [
               <div class="k">${y} · modelled severity percentile</div>
               <div class="s">${a.observed_detections.toLocaleString()} detections observed · never trained on</div>
             </div>`).join("")}</div>
-            <p class="muted" style="font-size:13px">${g.anchors["2015"]?.reference ?? ""}</p>`;
+            <p class="muted" style="font-size:13px">${g.anchors["2015"]?.reference ?? ""}</p>
+            ${g.structural_note ? `<p class="muted" style="font-size:13px">
+              <b style="color:${C.alert}">This gate ships red, and the shape of the failure is
+              arithmetic before it is modelling.</b> ${g.structural_note}</p>` : ""}
+            ${g.observed_reference ? `<p class="muted" style="font-size:13px">
+              ${g.observed_reference}.</p>` : ""}`;
           host.innerHTML = html;
           if (!years.length) return;
           const div = document.createElement("div");
@@ -1747,6 +1785,7 @@ const CHAPTERS = [
               bits.push(Object.entries(r.anchors).map(([y, a]) =>
                 `${y} at the ${a.modelled_percentile != null
                   ? (a.modelled_percentile * 100).toFixed(0) + "th" : "—"} percentile`).join(", "));
+            if (id === "G-J5" && r.structural_note) bits.push(r.structural_note);
             if (r.reason) bits.push(`<span style="color:${C.alert}">${r.reason}</span>`);
             why.innerHTML = bits.join(" · ");
           });

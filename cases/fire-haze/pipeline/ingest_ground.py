@@ -214,7 +214,7 @@ def main() -> None:
     frames = [f for f in (nea_daily(), pull_openaq(), load_cams_surrogate()) if len(f)]
     util.require(bool(frames), "no ground data at all — tier 1 must at least be present")
     df = pd.concat(frames, ignore_index=True)
-    cols = ["receptor", "day", "pm25", "pm25_max", "n_obs", "tier", "source"]
+    cols = ["receptor", "day", "pm25", "pm25_max", "n_obs", "tier", "source", "grid_km"]
     df = df[[c for c in cols if c in df.columns]]
     df.to_parquet(GROUND_OUT, index=False, compression="zstd")
 
@@ -228,6 +228,9 @@ def main() -> None:
             "coverage_stated": m.get("coverage"),
             "note": m.get("note"),
             "days": int(len(sub)),
+            "grid_km": (float(sub["grid_km"].iloc[0])
+                        if len(sub) and "grid_km" in sub.columns
+                        and sub["grid_km"].notna().any() else None),
             "first": str(sub["day"].min().date()) if len(sub) else None,
             "last": str(sub["day"].max().date()) if len(sub) else None,
             # a tier-3 receptor with no rows is waiting on the ADS EAC4 queue, not on a policy

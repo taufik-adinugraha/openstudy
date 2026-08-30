@@ -331,7 +331,10 @@ def main() -> None:
         "shap": rmeta.get("shap_families", {}),
         "importance": rmeta.get("importance", {}),
         "anchor_scores": rmeta.get("anchor_scores", {}),
-        "folds": rmeta.get("folds", []),
+        # NOT "folds" — that key is already the fold COUNT above, and a second entry with the
+        # same name silently overwrote it with the list, so the page printed "2016,2017,2018
+        # blocked-by-season folds"
+        "fold_years": rmeta.get("folds", []),
         "neg_sample_rate": rmeta.get("neg_sample_rate"),
         "panel": _json("panel_meta.json") or {},
     })
