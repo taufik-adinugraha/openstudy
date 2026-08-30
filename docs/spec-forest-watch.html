@@ -1,0 +1,227 @@
+<title>Forest Watch Spec</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper: #F8FAF7; --surface: #EEF2EC; --ink: #17211A; --muted: #5C6B5F;
+    --hairline: #DEE5DC; --accent: #2E7A44; --accent-soft: #DDEEDF;
+    --teal: #177368; --warn: #B4552A; --warn-soft: #F5E4D7; --code-bg: #E7ECE5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0C120D; --surface: #141C15; --ink: #E7ECE6; --muted: #93A394;
+      --hairline: #243025; --accent: #57B26A; --accent-soft: #10301A;
+      --teal: #4BB8A9; --warn: #D97A4A; --warn-soft: #34200F; --code-bg: #1B241C;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0C120D; --surface: #141C15; --ink: #E7ECE6; --muted: #93A394;
+    --hairline: #243025; --accent: #57B26A; --accent-soft: #10301A;
+    --teal: #4BB8A9; --warn: #D97A4A; --warn-soft: #34200F; --code-bg: #1B241C;
+  }
+  body { background: var(--paper); color: var(--ink); font-family: "Source Serif 4", Georgia, serif; font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 56px 24px 96px; }
+  h1, h2, h3 { font-family: "Archivo", Arial, sans-serif; text-wrap: balance; margin: 0; }
+  h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
+  h2 { font-size: 1.3rem; font-weight: 700; }
+  h3 { font-size: 1rem; font-weight: 600; }
+  p { margin: 0; max-width: 68ch; }
+  a { color: var(--teal); }
+  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+  header.doc { display: flex; flex-direction: column; gap: 14px; padding-bottom: 30px; border-bottom: 2px solid var(--ink); }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px 26px; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--muted); }
+  .meta-row b { color: var(--ink); font-weight: 500; }
+  section { display: flex; flex-direction: column; gap: 16px; margin-top: 48px; }
+  .lede { font-size: 1rem; color: var(--muted); }
+  .q { font-size: 1.15rem; font-style: italic; border-left: 3px solid var(--accent); padding: 6px 0 6px 18px; max-width: 62ch; }
+  table { border-collapse: collapse; width: 100%; font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; line-height: 1.55; }
+  .table-scroll { overflow-x: auto; }
+  th { text-align: left; font-weight: 600; font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 8px 14px 8px 0; border-bottom: 1px solid var(--ink); }
+  td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  code { font-family: "IBM Plex Mono", monospace; font-size: 0.82em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  pre { background: var(--code-bg); padding: 14px 16px; overflow-x: auto; border-radius: 4px; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; line-height: 1.6; margin: 0; }
+  ul.plain, ol.plain { margin: 0; padding-left: 1.35em; display: flex; flex-direction: column; gap: 9px; max-width: 70ch; }
+  ol.plain li::marker, ul.plain li::marker { color: var(--accent); font-family: "IBM Plex Mono", monospace; font-weight: 600; }
+  .stage { display: grid; grid-template-columns: 120px 1fr; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--hairline); }
+  .stage:last-child { border-bottom: 0; }
+  .stage .sname { font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; font-weight: 600; color: var(--accent); padding-top: 3px; }
+  .stage p { font-size: 0.95rem; }
+  @media (max-width: 600px) { .stage { grid-template-columns: 1fr; gap: 4px; } }
+  .gate { border: 1px solid var(--hairline); border-left: 3px solid var(--teal); background: var(--surface); padding: 14px 18px; font-size: 0.95rem; max-width: 70ch; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+  .sw { display: flex; align-items: center; gap: 8px; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+  .sw i { width: 22px; height: 22px; border-radius: 4px; display: inline-block; border: 1px solid var(--hairline); }
+  .check li { list-style: none; position: relative; padding-left: 1.6em; }
+  .check li::before { content: "☐"; position: absolute; left: 0; color: var(--accent); font-family: "IBM Plex Mono", monospace; }
+  .check { padding-left: 0; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 3px; font-family: "IBM Plex Mono", monospace; font-size: 0.64rem; font-weight: 600; letter-spacing: 0.06em; white-space: nowrap; background: var(--warn-soft); color: var(--warn); }
+  footer.doc { margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--hairline); font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header class="doc">
+    <span class="eyebrow">Phase 3 · Case H · Spec v1</span>
+    <h1>Forest &amp; Commodity Watch</h1>
+    <p class="lede">Where Global Forest Watch stops: weekly radar alerts clustered into
+    disturbance events and linked to what the land becomes — oil-palm extent, mill catchments,
+    peat and primary forest — so an alert stops being a pixel and becomes a supply-chain
+    question. National alert ledger; deep dives in Riau, Kalimantan Tengah, Papua.</p>
+    <div class="meta-row">
+      <span>DATE <b>2026-08-30</b></span>
+      <span>REFRESH <b>Static core + optional weekly alert refresh</b></span>
+      <span>IDENTITY <b>Canopy green against burnt umber</b></span>
+      <span>DATA PATH <b>Verified by reconnaissance 2026-08-30 (API queried live)</b></span>
+    </div>
+  </header>
+
+  <section>
+    <span class="eyebrow">H1 · The question</span>
+    <p class="q">“The forest moved last week. Whose supply chain did it move into?”</p>
+    <p>GFW already shows Indonesian deforestation at maturity — repeating it would prove
+    nothing. What GFW's public dashboard does not do is turn alerts into commodity context:
+    was this clearing <em>inside</em> an existing palm estate, on its edge, inside a mill's
+    supply catchment, on peat, in primary forest? That linkage — the question EUDR compliance
+    teams, traders and NGOs actually ask — is buildable entirely from CC BY 4.0 layers
+    (RADD + Descals palm map + Universal Mill List + peat + Margono primary forest), and it is
+    the deliberate reframe recorded in the build plan's portfolio row (“reframe toward
+    concession-linkage analytics GFW doesn't do”).</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">H2 · Data contract</span>
+    <h2>Data contract</h2>
+    <p class="lede">Every row verified live 2026-08-30, including authenticated GFW Data API queries and per-tile HEAD sizes. One registration is required: a free GFW API key (sign-up → token → apikey; expires yearly; goes into <code>.env</code> as <code>GFW_API_KEY</code>).</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Source</th><th>Product / access</th><th>Licence</th><th>Size (IDN)</th><th>Cadence</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>RADD alerts (WUR)</td><td>GFW Data API <code>wur_radd_alerts</code> (v20260823 at scouting; SE Asia from 2020-01-01); GeoTIFF tiles grid <code>10/100000</code> (10 m), <code>date_conf</code> = confidence digit (2 low / 3 high) + days since 2014-12-31; download → 307 → presigned S3, range requests work; direct S3 is requester-pays (403 anonymous)</td><td>CC BY 4.0 (+ WUR attribution line)</td><td>13 land tiles ≈ 0.7–1.2 GB (53–100 MB each, HEAD-verified)</td><td>weekly</td><td><b>Primary alert layer</b></td></tr>
+          <tr><td>GLAD-L alerts (UMD)</td><td><code>umd_glad_landsat_alerts</code> (v20260829), grid <code>10/40000</code> (30 m), same access path</td><td>CC BY 4.0</td><td>~50 MB/tile</td><td>daily</td><td>Optical second opinion (G-H3)</td></tr>
+          <tr><td>GFW query API</td><td><code>POST /dataset/{ds}/latest/query/json</code> with SQL + GeoJSON geometry — live-tested with a key: TCL by year over a Riau polygon in 3.3 s; RADD counts over Kalteng in 6.4 s; admin geostore for IDN exists</td><td>—</td><td>—</td><td>on demand</td><td>Independent totals for G-H1/G-H2</td></tr>
+          <tr><td>Hansen GFC v1.12</td><td>Anonymous GCS <code>earthenginepartners-hansen/GFC-2024-v1.12/</code>: lossyear (2001–2024), treecover2000, datamask; 14 Indonesian tiles (index files verified); v1.13 (loss → 2025) exists in the GFW API — GCS path pinned when published</td><td>CC BY 4.0 (“even commercially”)</td><td>lossyear 0.9 GB · all layers ~5–6 GB</td><td>annual</td><td>Two-decade context layer</td></tr>
+          <tr><td>Oil-palm extent</td><td>Descals et al. 2024 v1.2, Zenodo 13379129: 2021 extent 10 m industrial/smallholder (156.5 MB) + planting year 1990–2021 30 m (146.5 MB); Descals 2021 (2019, 101 MB) as fallback</td><td>CC BY 4.0</td><td>0.3 GB</td><td>static (2021)</td><td><b>Palm linkage + estate dating</b></td></tr>
+          <tr><td>Universal Mill List</td><td>GFW API <code>gfw_universal_mill_list</code> v202508: 1,231 Indonesian mills (239 RSPO-certified), lat/lon + group/parent/RSPO fields, CSV/SHP download with key</td><td>CC BY 4.0</td><td>&lt; 5 MB</td><td>6-monthly</td><td><b>Mill catchments</b></td></tr>
+          <tr><td>Peat + primary forest</td><td><code>gfw_peatlands</code> (global composite) + Margono primary forest 2000 (<code>idn_primary</code>, 60 MB)</td><td>CC BY 4.0</td><td>~0.2 GB</td><td>static</td><td>Compliance flags (EUDR framing)</td></tr>
+          <tr><td>Trase</td><td>Spatial metrics (palm planted area 2004–2024 by kabupaten) + supply-chain v1.2 2013–2022 (DOI 10.48650/X83N-7M36)</td><td>CC BY 4.0</td><td>small</td><td>annual-ish</td><td>Context + mill-share narrative</td></tr>
+          <tr><td>Sentinel-2 chips</td><td>Earth Search STAC <code>sentinel-2-l2a</code>, anonymous COGs on <code>sentinel-cogs</code>; before/after true-colour reads at 20 m overviews</td><td>Copernicus Sentinel licence (commercial OK, attribution)</td><td>~100 MB streamed</td><td>5-day</td><td>Visual evidence panels</td></tr>
+          <tr><td>Boundaries</td><td>HDX COD-AB gdb (ADM1 34 / ADM2 522, P-coded; “Papua” = pre-2022 province, stated); geoBoundaries ADM2 for flagship consistency</td><td>CC BY-IGO / CC BY 3.0 IGO</td><td>219 MB</td><td>2020-04</td><td>Provinces + regencies</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><b>The concession problem (load-bearing honesty):</b> there is no commercially-licensed,
+    redistributable Indonesian concession vector. GFW's API marks its concession sets
+    “CC BY 4.0 <em>excluding Indonesia (view-only)</em>”; the Hub's Indonesian items are 2010-era
+    MoF data with no licence; the ministry's own services
+    (<code>geoportal.planologi.kehutanan.go.id</code> PBPH MapServer, SIGAP WMS) are publicly
+    queryable but carry no licence text, and RSPO notes Indonesian law bars non-government
+    publication of estate boundaries. Therefore: concession outlines appear only as a <em>live,
+    labelled reference overlay</em> rendered from the government's own services at view time —
+    never stored, joined, or redistributed — and the stored linkage uses palm extent + mills +
+    peat/primary instead. <b>Rejected:</b> Nusantara Atlas (<span class="pill">non-commercial</span>),
+    GeoRSPO (<span class="pill">no open licence · IDN excluded</span>), Sentinel-1 RTC own-processing
+    (no anonymous source).</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">H3 · Pipeline</span>
+    <h2>Pipeline — static core + weekly alert refresh</h2>
+    <p class="lede">Raw pull ≈ 7–8 GB once (Hansen dominates), ≈ 1 GB per weekly refresh (latest RADD version tiles). Wall time on the 16 GB server: ingest 1–2 h; alerts pass ~1–2 h nationally (windowed reads, one 10° tile never in RAM whole, peak ~2 GB); link minutes; chips ~30 min. Weekly refresh &lt; 30 min end-to-end.</p>
+    <div>
+      <div class="stage"><span class="sname">ingest</span><p>Hansen tiles (3 layers × 14), latest RADD + GLAD-L versions via the API key, Descals palm extent + planting year, UML CSV, peat + primary rasters, COD-AB. Manifest with dataset versions — every downstream artefact carries the RADD version string.</p></div>
+      <div class="stage"><span class="sname">alerts</span><p>Decode date_conf → weeks; mask to treecover2000 ≥ 30 % + land; 8-connected components over rolling 4-week windows → clusters ≥ 0.5 ha; per cluster: dates, ha, high-conf share, centroid, GLAD-L agreement flag (±60 days). National weekly ledger + per-province cluster tables.</p></div>
+      <div class="stage"><span class="sname">link</span><p>Cluster typology — PALM-INTERNAL (replanting/expansion inside the 2021 extent, dated by planting-year) · PALM-EDGE (≤ 1 km) · MILL-CATCHMENT (≤ 50 km of a UML mill, the Trase FFB radius) · UNLINKED — plus on-peat and in-primary-2000 flags. Per-mill “alert pressure” score (distance-weighted ha, trailing 12 months). Concessions deliberately absent from storage (H2).</p></div>
+      <div class="stage"><span class="sname">chips</span><p>Sentinel-2 before/after pairs for the top 20 clusters per focus province (90-day windows, &lt; 40 % cloud, skip-and-say-so when the monsoon wins); ≤ 60 kB PNGs with the cluster outline burnt in.</p></div>
+      <div class="stage"><span class="sname">validate</span><p>Gates G-H1…G-H4 → <code>stats.json</code>; includes the KLHK-vs-GFW definitional divergence panel (1.12 Mha TCL vs 175.4k ha net deforestation for 2024 — both true, different definitions).</p></div>
+      <div class="stage"><span class="sname">export</span><p>View-models ≤ 3 MB (province ledgers, cluster points, mill scores, linkage-class shares per quarter); weekly refresh re-exports alerts + links only. Insight brief per D11.</p></div>
+    </div>
+    <pre>cases/forest-watch/
+  pipeline/  config.py ingest.py alerts.py link.py chips.py validate.py export_web.py
+  data/      raw/ alerts/ (git-ignored)   web/  Astro app, port 4331, base /forest   Makefile</pre>
+  </section>
+
+  <section>
+    <span class="eyebrow">H4 · Validation gates</span>
+    <h2>Validation gates</h2>
+    <div class="gate"><b>G-H1 — Hansen reconciliation (hard).</b> Our per-province tree-cover-loss hectares (≥ 30 % canopy) vs the GFW query API over the same COD-AB geometry: within ±5 % for every year 2015–2024. National anchors from GFW's own country table: 2023 = 1,395,285 ha, 2024 = 1,120,264 ha (primary-forest loss 292,374 / 258,812 ha). Same source data — this gates our raster plumbing.</div>
+    <div class="gate"><b>G-H2 — Alert reconciliation (hard).</b> Our RADD count + hectares per focus province, trailing 12 months, vs the GFW API's aggregation over the same geometry: within ±10 %; residual differences (forest mask, 0.5 ha cluster floor) quantified in the methodology, not waved at.</div>
+    <div class="gate"><b>G-H3 — Two-sensor agreement.</b> ≥ 60 % of high-confidence RADD clusters ≥ 5 ha carry a GLAD-L alert within ±60 days. Radar and optical agreeing is the trust argument for radar-first monitoring under cloud.</div>
+    <div class="gate"><b>G-H4 — Linkage sanity.</b> Palm+mill-linked share of alert hectares in Riau ≥ 25 % — the literature floor (Gaveau 2022: ~32 % of 2001–19 loss directly to palm; Trase: palm-driven share declining since the 2012 peak). If it lands below, the radii and masks are diagnosed before publish — never tuned to pass.</div>
+  </section>
+
+  <section>
+    <span class="eyebrow">H5 · Dashboard</span>
+    <h2>Dashboard — page anatomy</h2>
+    <p class="lede">Map rule: the user's browser runs with WebGL off — every map ships a full-function 2-D canvas fallback (Path2D + <code>isPointInPath</code>, the nightlights pattern), tagged when active.</p>
+    <ol class="plain">
+      <li><b>Hero — “Fifty-two weeks of alerts.”</b> Signature moment: a focus province in deep canopy green; the year's alert clusters ignite week by week in burnt umber, a HUD counting hectares, then the frame exhales into the linkage split (linked / unlinked). 2-D fallback: the ignition pre-rendered as weekly canvas frames with a scrubber. Reduced motion: final frame + totals.</li>
+      <li><b>Chapter 1 — “Two decades of loss.”</b> Hansen 2001–2024 province small multiples; the GFW-vs-KLHK definitional divergence chart with the plain-words explanation — the honesty move, up front.</li>
+      <li><b>Chapter 2 — “The alerts.”</b> How radar sees through cloud (Reiche 2021: 97.6 % user's accuracy, 74 % confirmed within 24 days); weekly ledger with the GLAD-L agreement band; the G-H2 reconciliation shown as a chart.</li>
+      <li><b>Chapter 3 — “Linked or unlinked.”</b> The payoff: linkage-class shares per province per quarter (stacked areas); PALM-INTERNAL vs frontier split; on-peat and in-primary flags as the EUDR framing.</li>
+      <li><b>Chapter 4 — “The mills.”</b> Mill map sized by alert pressure; group/parent names as published in the UML; Trase kabupaten context. The overlay toggle brings in the government concession services, labelled “reference overlay — official services, no open licence”.</li>
+      <li><b>Explore.</b> Cluster map (points, class-coloured) with week scrubber; click → panel (dates, ha, flags, nearest mills, before/after chips); layer toggles (palm, peat, primary, mills, concession overlay); URL state; chart/table + download.</li>
+      <li><b>Methodology.</b> Alert decoding + masks; cluster rules; linkage definitions and their radii; every gate result; the concession-licence statement verbatim; attributions (WUR/GFW line, UMD/Hansen, Descals, UML, Trase, Copernicus, COD-AB).</li>
+    </ol>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Chart</th><th>Form</th><th>Interactions</th><th>2-D fallback</th></tr></thead>
+        <tbody>
+          <tr><td>Cluster map + week scrubber</td><td>MapLibre circle layers over a dark base</td><td>scrub, hover, click panel, class filter</td><td>canvas points + bbox/Path2D hit test; weekly repaint is cheap (points, not polygons)</td></tr>
+          <tr><td>Ignition hero</td><td>pre-rendered weekly frames (canvas)</td><td>scroll-driven, replay</td><td>native 2-D already</td></tr>
+          <tr><td>Linkage stacked areas / ledgers</td><td>custom d3</td><td>hover crosshair, province tabs</td><td>SVG — no GPU</td></tr>
+          <tr><td>Mill pressure map</td><td>MapLibre circles + catchment rings</td><td>hover mill card, sort table link</td><td>canvas circles, same helper</td></tr>
+          <tr><td>Before/after chips</td><td>static PNG pairs with outline</td><td>click-through per cluster</td><td>native</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">H6 · Design brief</span>
+    <h2>Design brief</h2>
+    <p><b>Identity:</b> canopy against burn. Deep forest ground; canopy green is structure and
+    “intact”; burnt umber (<code>--loss</code>) is reserved exclusively for loss and alerts —
+    green never means alert, umber never means UI. Linkage classes step umber → ochre; peat and
+    primary flags are outline treatments, not new hues.</p>
+    <div class="swatches">
+      <span class="sw"><i style="background:#0C120D"></i> ground #0C120D</span>
+      <span class="sw"><i style="background:#141C15"></i> surface #141C15</span>
+      <span class="sw"><i style="background:#E7ECE6"></i> text #E7ECE6</span>
+      <span class="sw"><i style="background:#57B26A"></i> canopy accent #57B26A</span>
+      <span class="sw"><i style="background:#B4552A"></i> loss / alerts #B4552A</span>
+      <span class="sw"><i style="background:#4BB8A9"></i> official teal #4BB8A9</span>
+    </div>
+    <ul class="plain">
+      <li>Tokens from <code>shared/design/tokens.css</code> (<code>data-case="forest"</code>), copied into <code>web/src/styles/</code>.</li>
+      <li>Every number carries its version: “2,209 high-confidence alerts · RADD v20260823”.</li>
+      <li>One orchestrated moment (the ignition); micro-interactions elsewhere; <code>prefers-reduced-motion</code> respected.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">H7 · Acceptance</span>
+    <h2>Acceptance checklist</h2>
+    <ul class="plain check">
+      <li><code>make rebuild</code> reproduces ledger → links from raw sources on a clean machine given a GFW key; <code>make refresh</code> is idempotent by RADD version (gate 1).</li>
+      <li>G-H1…G-H4 evaluated and published; the KLHK divergence panel present (gates 2–3).</li>
+      <li>Explore interactive &lt; 3 s; cluster files per province ≤ 2 MB; 60 fps; Lighthouse ≥ 90; full function with WebGL disabled (gate 4).</li>
+      <li>Vintage stamps: Hansen v1.12 · RADD vYYYYMMDD · Descals 2021-extent · UML v202508 (gate 5).</li>
+      <li>Attributions incl. the WUR/GNW citation line; the concession-overlay licence statement verbatim; no NC data anywhere (gate 6).</li>
+      <li>Story reads in one scroll; the ignition passes the award test (gates 7, 9).</li>
+      <li>Static hosting + free-tier API key; weekly refresh fits the cron budget (gate 8).</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">H8 · Risks &amp; decisions pending</span>
+    <h2>Risks, unknowns &amp; decisions pending user verification</h2>
+    <ul class="plain">
+      <li><b>GFW API key dependency</b> — free but expires yearly (calendar item, like the Earthdata token) and rate-limit tiers are undocumented; mitigations: all downloads resumable by version, and G-H1/G-H2 queries are one-shot per rebuild.</li>
+      <li><b>Palm extent is 2021</b> — alerts from 2022+ on younger estates read as “frontier”; the planting-year raster bounds the error and the methodology says it; a Descals refresh would slot in unchanged.</li>
+      <li><b>RADD false positives in swamp forest</b> (GFW's own caution) — the peat flag doubles as the caveat trigger; high-confidence-only counts shown beside totals.</li>
+      <li><b>“Global Nature Watch” rebrand</b> — GFW's citation line now names GNW; endpoints may migrate. The dataset slugs are pinned in config and the manifest records the API host per pull.</li>
+      <li><b>Pending user verification:</b> (1) the concession-overlay compromise (view-time government services, nothing stored) — the single biggest editorial call in this case; (2) naming mills/groups from the UML on a public page (fields are published CC BY 4.0, but a Jakarta consultancy may prefer aggregation to group level); (3) the weekly refresh cron vs D3's static rule; (4) Papua = pre-2022 province boundary from COD-AB 2020.</li>
+      <li><b>Out of scope:</b> own Sentinel-1 change detection, carbon/emissions accounting, trader-level flows beyond Trase's published aggregates, KLHK SIMONTANA replication.</li>
+    </ul>
+  </section>
+
+  <footer class="doc">CASE H SPEC v1 · 2026-08-30 · DATA PATH VERIFIED · SIBLINGS: SPEC F, SPEC G · PARENT: BUILD PLAN (docs/build-plan.html)</footer>
+</div>

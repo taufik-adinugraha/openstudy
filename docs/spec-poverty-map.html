@@ -1,0 +1,224 @@
+<title>Poverty Mapping Spec</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --paper: #FAF8F4; --surface: #F3EEE5; --ink: #221B12; --muted: #6E6252;
+    --hairline: #E5DECF; --accent: #A06A1F; --accent-soft: #F3E7CE;
+    --teal: #177368; --warn: #B4472F; --warn-soft: #F7E3DE; --code-bg: #EDE7D9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14100C; --surface: #1E1812; --ink: #F0EAE1; --muted: #A99C8B;
+      --hairline: #332921; --accent: #D99A4E; --accent-soft: #33220D;
+      --teal: #4BB8A9; --warn: #F26D5B; --warn-soft: #3A1E1A; --code-bg: #261E15;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #14100C; --surface: #1E1812; --ink: #F0EAE1; --muted: #A99C8B;
+    --hairline: #332921; --accent: #D99A4E; --accent-soft: #33220D;
+    --teal: #4BB8A9; --warn: #F26D5B; --warn-soft: #3A1E1A; --code-bg: #261E15;
+  }
+  body { background: var(--paper); color: var(--ink); font-family: "Source Serif 4", Georgia, serif; font-size: 17px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 56px 24px 96px; }
+  h1, h2, h3 { font-family: "Archivo", Arial, sans-serif; text-wrap: balance; margin: 0; }
+  h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.015em; line-height: 1.15; }
+  h2 { font-size: 1.3rem; font-weight: 700; }
+  h3 { font-size: 1rem; font-weight: 600; }
+  p { margin: 0; max-width: 68ch; }
+  a { color: var(--teal); }
+  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+  header.doc { display: flex; flex-direction: column; gap: 14px; padding-bottom: 30px; border-bottom: 2px solid var(--ink); }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px 26px; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; color: var(--muted); }
+  .meta-row b { color: var(--ink); font-weight: 500; }
+  section { display: flex; flex-direction: column; gap: 16px; margin-top: 48px; }
+  .lede { font-size: 1rem; color: var(--muted); }
+  .q { font-size: 1.15rem; font-style: italic; border-left: 3px solid var(--accent); padding: 6px 0 6px 18px; max-width: 62ch; }
+  table { border-collapse: collapse; width: 100%; font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; line-height: 1.55; }
+  .table-scroll { overflow-x: auto; }
+  th { text-align: left; font-weight: 600; font-size: 0.66rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 8px 14px 8px 0; border-bottom: 1px solid var(--ink); }
+  td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  code { font-family: "IBM Plex Mono", monospace; font-size: 0.82em; background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+  pre { background: var(--code-bg); padding: 14px 16px; overflow-x: auto; border-radius: 4px; font-family: "IBM Plex Mono", monospace; font-size: 0.78rem; line-height: 1.6; margin: 0; }
+  ul.plain, ol.plain { margin: 0; padding-left: 1.35em; display: flex; flex-direction: column; gap: 9px; max-width: 70ch; }
+  ol.plain li::marker, ul.plain li::marker { color: var(--accent); font-family: "IBM Plex Mono", monospace; font-weight: 600; }
+  .stage { display: grid; grid-template-columns: 120px 1fr; gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--hairline); }
+  .stage:last-child { border-bottom: 0; }
+  .stage .sname { font-family: "IBM Plex Mono", monospace; font-size: 0.76rem; font-weight: 600; color: var(--accent); padding-top: 3px; }
+  .stage p { font-size: 0.95rem; }
+  @media (max-width: 600px) { .stage { grid-template-columns: 1fr; gap: 4px; } }
+  .gate { border: 1px solid var(--hairline); border-left: 3px solid var(--teal); background: var(--surface); padding: 14px 18px; font-size: 0.95rem; max-width: 70ch; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
+  .sw { display: flex; align-items: center; gap: 8px; font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+  .sw i { width: 22px; height: 22px; border-radius: 4px; display: inline-block; border: 1px solid var(--hairline); }
+  .check li { list-style: none; position: relative; padding-left: 1.6em; }
+  .check li::before { content: "☐"; position: absolute; left: 0; color: var(--accent); font-family: "IBM Plex Mono", monospace; }
+  .check { padding-left: 0; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 3px; font-family: "IBM Plex Mono", monospace; font-size: 0.64rem; font-weight: 600; letter-spacing: 0.06em; white-space: nowrap; background: var(--warn-soft); color: var(--warn); }
+  footer.doc { margin-top: 60px; padding-top: 16px; border-top: 1px solid var(--hairline); font-family: "IBM Plex Mono", monospace; font-size: 0.72rem; color: var(--muted); }
+</style>
+
+<div class="wrap">
+  <header class="doc">
+    <span class="eyebrow">Phase 3 · Case F · Spec v1</span>
+    <h1>Poverty Mapping from Space</h1>
+    <p class="lede">Rooftops, lights, land cover and roads as welfare signals — a gradient-boosted
+    small-area model trained on BPS's official regency poverty rates (2016–2025), spatially
+    cross-validated, then carried down to the kecamatan and benchmarked so the official number
+    is never contradicted.</p>
+    <div class="meta-row">
+      <span>DATE <b>2026-08-30</b></span>
+      <span>REFRESH <b>Static snapshot (D3) · annual re-run option</b></span>
+      <span>IDENTITY <b>Ochre on soil — rooftops from above</b></span>
+      <span>DATA PATH <b>Verified by reconnaissance 2026-08-30</b></span>
+    </div>
+  </header>
+
+  <section>
+    <span class="eyebrow">F1 · The question</span>
+    <p class="q">“Which neighbourhoods are poor — in the three-year gap between surveys, and below the level any survey reaches?”</p>
+    <p>BPS publishes poverty for 514 kabupaten/kota once a year; nothing official exists below
+    that. Yet the welfare signal is sitting overhead: how many buildings, how big their roofs,
+    how bright the night, how far the paved road. This case proves the geo-ML capability —
+    train against every official rate 2016–2025, validate out-of-province and out-of-year,
+    then hand a client a kecamatan-level map with honest intervals. The framing matters:
+    <em>the model distributes the official number within a regency; it never replaces it.</em>
+    DHS/Susenas microdata are restricted, and that constraint is disclosed, not hidden.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">F2 · Data contract</span>
+    <h2>Data contract</h2>
+    <p class="lede">Every row verified live 2026-08-30 (HEAD/listing/API probe). Commercial use permitted on every layer used; scouted-and-rejected layers listed below the table.</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Source</th><th>Product / access</th><th>Licence</th><th>Size (IDN)</th><th>Cadence</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>BPS WebAPI</td><td>Dynamic tables var <code>621</code> P0 / <code>622</code> P1 / <code>623</code> P2 / <code>624</code> poverty line, per kabupaten/kota; <code>th</code> param required (th_id 116–125 = 2016–2025, probed with the lab key; 552 rows/yr incl. <code>&lt;b&gt;</code> province headers)</td><td>Free key (exists); cite BPS</td><td>&lt; 1 MB</td><td>annual (March Susenas)</td><td><b>Ground truth</b></td></tr>
+          <tr><td>Google Open Buildings v3</td><td>GCS <code>open-buildings-data/v3/polygons_s2_level_4_gzip/</code> (S2 cells for IDN computed with s2sphere: 36 files; Java = <code>2dd·2e5·2e7</code>; level-6 partition for RAM safety); confidence ≥ 0.70</td><td>CC BY 4.0 <em>or</em> ODbL (we take CC BY 4.0)</td><td>15.8 GB gz · Java 8.4 GB</td><td>static (2023-06)</td><td>Building footprint features</td></tr>
+          <tr><td>Microsoft GlobalML footprints</td><td><code>dataset-links.csv</code> (release 2026-08-13), Location=Indonesia = 601 quadkey files</td><td>CDLA-Permissive-2.0</td><td>4.7 GB gz</td><td>occasional</td><td>Footprint cross-check</td></tr>
+          <tr><td>NASA Black Marble annual</td><td><b>Reused from Flagship A</b>: <code>cases/nightlights-pulse/data/raw/bm/YYYY-01/*A4_radiance.tif</code>, 2012–2025 already on the dev server — never re-downloaded</td><td>Open (NASA), Román et al. 2018</td><td>0 (on disk)</td><td>annual</td><td>Lights features</td></tr>
+          <tr><td>WorldPop R2025A</td><td>Constrained 100 m IDN, 2015–2030 series (2020 + 2025 HEAD-verified, ~168 MB each), annual to match the BPS panel</td><td>CC BY 4.0</td><td>~1.7 GB (10 yrs)</td><td>annual</td><td>Population, per-capita denominators</td></tr>
+          <tr><td>ESA WorldCover 2021 v200</td><td>S3 <code>esa-worldcover</code>, 3°×3° tiles, 81 tiles over 93–141E × 12S–6N (Java 8 tiles / 234 MB); no later vintage exists</td><td>CC BY 4.0 + ESA attribution line</td><td>1.2 GB</td><td>static (2021)</td><td>Land-cover shares</td></tr>
+          <tr><td>GHSL R2023A</td><td>BUILT-S E2020, BUILT-S NRES E2020 (100 m), SMOD E2020 (1 km); JRC FTP tiles R9–R11 × C28–C33</td><td>CC BY 4.0</td><td>~0.4 GB</td><td>5-yearly epochs</td><td>Built-up + urbanisation class</td></tr>
+          <tr><td>OSM (Geofabrik)</td><td><code>indonesia-latest.osm.pbf</code> 1.73 GB (Java sub-extract 896 MB), highway=* only</td><td>ODbL 1.0</td><td>1.7 GB</td><td>daily</td><td>Road density / distance</td></tr>
+          <tr><td>HDX COD-AB (BPS)</td><td>gdb.zip 219 MB + xlsx P-code lookup: ADM2 522 · ADM3 7,069 · ADM4 81,912, P-codes join BPS codes directly; geoBoundaries gbOpen has <em>no</em> ADM3/4 for IDN (gbHumanitarian ADM3, same lineage, is the alternate)</td><td>CC BY-IGO</td><td>219 MB</td><td>2020-04 vintage</td><td>ADM2 + ADM3 topology</td></tr>
+          <tr><td>Sentinel-2 L2A (optional)</td><td>Earth Search STAC <code>sentinel-2-c1-l2a</code>, anonymous COGs; annual NDVI/NDBI medians read from overviews at ~80 m</td><td>Copernicus Sentinel licence (free incl. commercial, attribution)</td><td>streamed</td><td>5-day</td><td>Optional spectral features</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><b>Scouted and rejected</b> (logged so nobody re-scouts): Meta Relative Wealth Index —
+    <span class="pill">CC BY-NC</span>, incompatible with a commercial demo; SMERU 2015 poverty
+    map — <span class="pill">CC BY-NC</span>, cited as literature only; BPS Podes microdata —
+    Silastik registration + fee; Kemendesa IDM — licence unverified, portal TLS broken;
+    satellite embeddings (Major TOM CC BY-SA share-alike; Tessera CC0 but ~200 GB for Java;
+    Open Buildings 2.5D Temporal ~0.5 TB/yr) — v2 candidates, not for a 16 GB server.</p>
+    <p><b>Scope rule (load-bearing):</b> the target is the BPS <em>poverty rate</em> (P0, %
+    below the official line) — never asset wealth, never consumption. Every map states the
+    year and the survey it distributes. Kecamatan values are model estimates benchmarked to
+    the official regency rate; the word “estimate” and the interval appear wherever they do.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">F3 · Pipeline</span>
+    <h2>Pipeline — static rebuild (SCOPE=java fast path · idn full)</h2>
+    <p class="lede">~20 GB through the pipe nationally (~11 GB Java-only), dominated by Open Buildings; run once, keep reduced grids. Estimated wall time on the 16 GB dev server: ingest 3–5 h (bandwidth-bound), features ~1–2 h (DuckDB + exactextract, windowed), train/downscale minutes. Fits in &lt; 8 GB RAM via streaming + COG windows.</p>
+    <div>
+      <div class="stage"><span class="sname">ingest</span><p>BPS P0/P1/P2/line 2016–2025 (one request per var × year, browser UA); COD-AB gdb + P-code xlsx; Open Buildings cells (level-6 partitions, streamed → 100 m counts/areas/size-histogram grid → csv.gz deleted); WorldPop R2025A 2016–2025; WorldCover tiles; GHSL BUILT-S/NRES/SMOD; OSM highways; Black Marble annuals reused from Flagship A. Manifest with sizes + sha256.</p></div>
+      <div class="stage"><span class="sname">features</span><p>One 100 m analysis grid → identical aggregation to ADM2 (519/522) and ADM3 (7,069): building density, footprint share, median/p90 roof size, share &lt; 40 m², lights mean/sum-per-capita/lit-share/trend, WorldCover shares, built-up + non-residential per capita, SMOD class shares, road density by class, population-weighted distance to primary road. Same code path both levels — no train/serve skew.</p></div>
+      <div class="stage"><span class="sname">train</span><p>LightGBM (+ ridge baseline for honesty) on regency P0. CV is spatial: leave-one-province-out (34 folds) headline, 200 km block k-fold sensitivity, random k-fold computed only to show how much it flatters. SHAP per regency for the drilldown.</p></div>
+      <div class="stage"><span class="sname">downscale</span><p>Apply to kecamatan features → benchmark: population-weighted mean per regency equals the official rate, exactly. Intervals: LightGBM quantile p10/p90 widened by the province's CV residual.</p></div>
+      <div class="stage"><span class="sname">validate</span><p>Gates G-F1…G-F4 below → <code>stats.json</code>.</p></div>
+      <div class="stage"><span class="sname">export</span><p>View-models ≤ 3 MB each (NaN-safe): ADM2/ADM3 GeoJSON, ledger (BPS series + prediction + SHAP top-5), estimates with intervals, skill panel (Java/off-Java, spatial-vs-random CV). Insight brief per D11.</p></div>
+    </div>
+    <pre>cases/poverty-map/
+  pipeline/  config.py ingest.py features.py model.py downscale.py validate.py export_web.py
+  data/      raw/ (git-ignored)   web/  Astro app, port 4328, base /poverty   Makefile</pre>
+  </section>
+
+  <section>
+    <span class="eyebrow">F4 · Validation gates</span>
+    <h2>Validation gates</h2>
+    <p class="lede">Thresholds anchored to the literature: Jean 2016 (R² 0.55–0.75, asset wealth), Yeh 2020 (R² ≈ 0.70 villages), Chi 2022 (spatial-CV R² 0.56), and for Indonesia specifically Putri 2022 (East Java: Pearson 0.71, Spearman 0.77, RMSE 3.2 pp vs BPS) and Sartirano 2023 (Spearman 0.75 across 513 regencies).</p>
+    <div class="gate"><b>G-F1 — Out-of-sample skill (hard).</b> Leave-one-province-out on the latest year's cross-section: R² ≥ 0.50, Spearman ρ ≥ 0.70, RMSE ≤ 4.0 pp. Below any of these, the case does not ship.</div>
+    <div class="gate"><b>G-F2 — Java / off-Java disclosure.</b> Both R² published side by side. If off-Java R² &lt; 0.35, every off-Java estimate is labelled “indicative” and its interval widened accordingly. Urban (kota) vs rural (kabupaten) skill shown the same way.</div>
+    <div class="gate"><b>G-F3 — Temporal hold-out.</b> Train ≤ 2023, predict the 2024 and 2025 BPS releases: Spearman ρ ≥ 0.65 each — the “sees forward, not just sideways” test a client will ask about.</div>
+    <div class="gate"><b>G-F4 — Benchmark integrity (hard).</b> After benchmarking, population-weighted kecamatan estimates reproduce every regency's official rate within 0.1 pp. Bookkeeping — must be exact.</div>
+  </section>
+
+  <section>
+    <span class="eyebrow">F5 · Dashboard</span>
+    <h2>Dashboard — page anatomy</h2>
+    <p class="lede">Map rule for the whole case: the user's own browser runs with WebGL off, so every map ships with a full-function 2-D canvas fallback (Path2D + <code>isPointInPath</code> hit-testing, the pattern proven in <code>cases/nightlights-pulse/web</code>) — try MapLibre, catch, degrade with a visible “2-D MAP” tag.</p>
+    <ol class="plain">
+      <li><b>Hero — “What the satellite knows.”</b> Signature moment: a single kampung block rendered as its raw ingredients — footprints fading in one layer at a time (roofs → lights → roads → land cover) — then the layers collapse into one ochre poverty surface. 2-D fallback: the same sequence pre-composited as crossfading static canvases. Reduced motion: final frame.</li>
+      <li><b>Chapter 1 — “The official map, and its resolution.”</b> BPS regency choropleth 2016–2025 with a year scrubber — the truth the model must respect, and its coarseness as the motivation.</li>
+      <li><b>Chapter 2 — “How well it predicts.”</b> The trust chapter, up front: model-vs-BPS scatter (each dot a regency, hover for name/values), spatial-vs-random CV comparison, Java vs off-Java split, temporal hold-out result. All gates rendered with their thresholds.</li>
+      <li><b>Chapter 3 — “What the model looks at.”</b> SHAP feature-family bars; a regency drilldown showing its top-5 contributions in plain words (“small roofs and dim nights pull this one up”).</li>
+      <li><b>Chapter 4 — “Below the survey line.”</b> The payoff: kecamatan estimates inside their regencies, intervals visible, benchmark factor disclosed; “most confident contrasts” list (kecamatan pairs in one regency with non-overlapping intervals).</li>
+      <li><b>Explore.</b> Choropleth (ADM2 ↔ ADM3 toggle, year scrubber, P0/P1/P2 metric switch); click → panel (official vs estimate, interval, SHAP top-5, population); URL state; chart/table toggle + data download per Grapher affordances.</li>
+      <li><b>Methodology.</b> The restricted-microdata disclosure; benchmarking math; CV design; every licence and attribution (BPS, Google Open Buildings CC BY 4.0, Microsoft CDLA, NASA, WorldPop, ESA WorldCover line, GHSL, OSM ODbL, COD-AB CC BY-IGO); rejected-layers note (RWI CC BY-NC et al.).</li>
+    </ol>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Chart</th><th>Form</th><th>Interactions</th><th>2-D fallback</th></tr></thead>
+        <tbody>
+          <tr><td>Poverty choropleth</td><td>MapLibre fill layer, ochre ramp</td><td>hover tooltip, click panel, year scrub, level toggle</td><td>canvas choropleth + Path2D hit test (nightlights pattern)</td></tr>
+          <tr><td>Layer-collapse hero</td><td>canvas compositing (no WebGL needed)</td><td>scroll-driven; replay button</td><td>native 2-D already</td></tr>
+          <tr><td>Model-vs-BPS scatter</td><td>custom d3</td><td>hover crosshair, province filter, CV-scheme toggle</td><td>SVG — no GPU</td></tr>
+          <tr><td>SHAP bars / drilldown</td><td>custom d3</td><td>linked to map selection</td><td>SVG</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">F6 · Design brief</span>
+    <h2>Design brief</h2>
+    <p><b>Identity:</b> ground truth — rooftops and soil. Dark humus ground, ochre accent; the
+    poverty ramp runs soil-dark → ochre → pale sand so “brighter = poorer” never happens
+    (lights are a <em>feature</em>, not the message). BPS official series always in the
+    site-wide provenance teal; model estimates in ochre — the two are never the same hue.</p>
+    <div class="swatches">
+      <span class="sw"><i style="background:#14100C"></i> ground #14100C</span>
+      <span class="sw"><i style="background:#1E1812"></i> surface #1E1812</span>
+      <span class="sw"><i style="background:#F0EAE1"></i> text #F0EAE1</span>
+      <span class="sw"><i style="background:#D99A4E"></i> accent ochre #D99A4E</span>
+      <span class="sw"><i style="background:#4BB8A9"></i> official teal #4BB8A9</span>
+      <span class="sw"><i style="background:#33220D"></i> accent ink #33220D</span>
+    </div>
+    <ul class="plain">
+      <li>Tokens from <code>shared/design/tokens.css</code> (<code>data-case="poverty"</code>), copied into <code>web/src/styles/</code>.</li>
+      <li>Numbers carry year + provenance: “12.4 % · BPS 2025” vs “9.1 % (7.3–11.2) · model estimate”.</li>
+      <li>One orchestrated moment (the layer collapse); everything else 200–300 ms micro-interaction; <code>prefers-reduced-motion</code> respected.</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">F7 · Acceptance</span>
+    <h2>Acceptance checklist</h2>
+    <ul class="plain check">
+      <li><code>make rebuild</code> reproduces features → estimates from raw public data on a clean machine; <code>SCOPE=java</code> documented as the fast path (gate 1).</li>
+      <li>G-F1…G-F4 evaluated and published on the methodology page (gates 2–3).</li>
+      <li>Explore interactive &lt; 3 s; 60 fps; ADM3 GeoJSON ≤ 3 MB or PMTiles; Lighthouse ≥ 90 (gate 4). Full function with WebGL disabled.</li>
+      <li>Vintage stamps everywhere (BPS release · Black Marble year · Open Buildings v3 2023-06 · WorldCover 2021) (gate 5).</li>
+      <li>Attributions complete incl. the ESA WorldCover required line and the CC BY-NC rejections noted (gate 6).</li>
+      <li>The story reads in one scroll; the layer-collapse hero passes the award test (gates 7, 9).</li>
+      <li>Static hosting only; no recurring cost (gate 8).</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="eyebrow">F8 · Risks &amp; decisions pending</span>
+    <h2>Risks, unknowns &amp; decisions pending user verification</h2>
+    <ul class="plain">
+      <li><b>Open Buildings volume vs the 16 GB box</b> — cell <code>2e7</code> alone is 5.9 GB gz; mitigated by the level-6 partition + streaming reduction; the fallback is Microsoft footprints (4.7 GB, CDLA-Permissive).</li>
+      <li><b>Feature vintages straddle the panel</b> — WorldCover is 2021-only, Open Buildings ~2023, GHSL 2020 epochs; annual variation is carried by lights + WorldPop only. Disclosed; the model is primarily a <em>spatial</em> disaggregator.</li>
+      <li><b>522 vs 514/519 ADM2 units</b> — COD-AB (522) vs BPS publication (514) vs geoBoundaries (519); reconciled through P-codes + the flagship's pemekaran crosswalk before training.</li>
+      <li><b>Ecological fallacy at ADM3</b> — a regency model applied to kecamatan features; the benchmark + intervals are the mitigation, and the methodology says so in plain words.</li>
+      <li><b>Pending user verification:</b> (1) accept the CC BY-4.0 election for Open Buildings and drop of RWI/SMERU (both CC BY-NC) — this removed the planned independent wealth cross-check; (2) COD-AB as the ADM3 topology instead of geoBoundaries (which lacks ADM3); (3) Kemendesa IDM as an optional village-level check once its licence is clarified; (4) whether an annual re-run (each March release) is worth a cron slot vs D3's static rule.</li>
+      <li><b>Out of scope:</b> individual/household targeting, consumption prediction, embedding models (Tessera/Major TOM — v2), Podes purchase.</li>
+    </ul>
+  </section>
+
+  <footer class="doc">CASE F SPEC v1 · 2026-08-30 · DATA PATH VERIFIED · SIBLINGS: SPEC G, SPEC H · PARENT: BUILD PLAN (docs/build-plan.html)</footer>
+</div>
