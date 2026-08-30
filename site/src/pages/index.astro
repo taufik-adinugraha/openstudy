@@ -12,6 +12,7 @@ const DEMOS = {
   narrative: "http://localhost:4326/narrative",     // TODO prod: /narrative
   transit: "http://localhost:4329/transit",         // TODO prod: /transit
   forest: "http://localhost:4331/forest",           // TODO prod: /forest
+  poverty: "http://localhost:4332/poverty",         // TODO prod: /poverty
 };
 ---
 <html lang="en" data-theme="dark">
@@ -217,6 +218,20 @@ const DEMOS = {
         </div>
       </a>
 
+      <a class="case live" data-case="poverty" href={DEMOS.poverty} target="_blank" rel="noopener">
+        <div class="case-visual roof-grid" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+        <div class="case-body">
+          <h2>Poverty Mapping from Space</h2>
+          <p>Rooftops, lights and land cover as welfare signals across 7,069
+          kecamatan. Its headline gate <b>fails</b> — and that is the finding:
+          57% of the error is one constant per province, because a satellite
+          cannot see the poverty line the roofs are judged against.</p>
+          <span class="meta">GEO-ML · 7,069 KECAMATAN · GATE PUBLISHED RED · BENCHMARKED TO BPS</span>
+        </div>
+      </a>
+
       <div class="case building" data-case="airquality">
         <div class="case-visual aq-visual" aria-hidden="true">
           <span class="aq-sun"></span>
@@ -233,21 +248,6 @@ const DEMOS = {
         </div>
       </div>
 
-      <div class="queued-head">
-        <span class="stamp">PHASE 3 — IN BUILD</span>
-      </div>
-      <div class="queued-grid">
-        <div class="mini-case" data-case="poverty">
-          <div class="mini-visual roof-grid" aria-hidden="true">
-            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
-          </div>
-          <h3>Poverty Mapping from Space</h3>
-          <p>Rooftops, lights and roads as welfare signals — kecamatan-level
-          poverty estimates, benchmarked to official BPS rates and validated
-          out-of-province.</p>
-          <span class="meta">GEO-ML · OPEN BUILDINGS · SMALL-AREA ESTIMATION</span>
-        </div>
-      </div>
       <p class="parked-note">Parked: maritime traffic analytics — the credible open AIS source is licensed
       non-commercial; it returns if a commercial feed appears.</p>
     </section>
@@ -443,6 +443,7 @@ const DEMOS = {
       .mini-visual { height: 130px; background: linear-gradient(120deg, var(--ground), var(--surface));
         display: flex; align-items: center; justify-content: center; }
       .mini-visual svg { width: 78%; height: 82%; }
+      .case-visual.roof-grid { align-content: center; justify-content: center; padding: 28px; }
       .roof-grid { display: grid; grid-template-columns: repeat(10, 12px); grid-auto-rows: 12px; gap: 4px;
         align-content: center; justify-content: center; }
       .roof-grid i { width: 12px; height: 12px; background: var(--accent); opacity: 0.35; border-radius: 2px; }
