@@ -121,9 +121,20 @@ def parse(payload: dict, var: int, total_turvar: int, turtahun_map: dict[int, in
     return pd.DataFrame(rows)
 
 
+# Kabupaten whose NAME begins with "kota" — the word is part of the toponym, not a
+# city marker, and BPS/geoBoundaries disagree on whether it is one word or two.
+# Without this, "Kotawaringin Barat" -> "waringinbarat" but "Kota Waringin Barat"
+# -> "kotawaringinbarat": two keys for one regency, and the loser drops out of the
+# calibration silently. Matched before any prefix handling.
+_KOTA_TOPONYMS = re.compile(r"^kota\s*(baru|waringin)\b")
+
+
 def _norm(name: str) -> str:
     n = name.lower().strip()
-    kota = bool(re.match(r"^kota\b(?!\s*baru)", n))  # "Kota Baru" is a kabupaten (S. Kalimantan)
+    if _KOTA_TOPONYMS.match(n):
+        # keep the whole toponym, collapse the optional space: kabupaten, not kota
+        return re.sub(r"[^a-z]", "", n.replace("kepulauan", "kep"))
+    kota = bool(re.match(r"^kota\b", n))
     n = re.sub(r"^(kab\.|kabupaten|kota adm\.|kota administrasi|kota)\s*", "", n)
     n = n.replace("kepulauan", "kep")
     return ("kota" if kota else "") + re.sub(r"[^a-z]", "", n)
@@ -135,7 +146,17 @@ def recode_map(bps_codes: pd.DataFrame) -> pd.DataFrame:
     xw = xw[xw["match"] != "EXCLUDED"]
     have = dict(zip(bps_codes["bps_code"], bps_codes["bps_name"]))
     rows, unmatched = [], []
-    spare = {_norm(n): c for c, n in have.items() if c not in set(xw["bps_code"])}
+    # A name key that maps to two different regencies would silently attach one
+    # regency's PDRB to another. Fail loudly instead of calibrating on it.
+    spare_pairs = [(_norm(n), c, n) for c, n in have.items() if c not in set(xw["bps_code"])]
+    seen: dict[str, tuple[str, str]] = {}
+    for k, c, n in spare_pairs:
+        if k in seen and seen[k][0] != c:
+            raise ValueError(
+                f"[bps] name-key collision {k!r}: {seen[k][0]} {seen[k][1]!r} vs {c} {n!r} — "
+                "two regencies would compete for one PDRB series; fix _norm before calibrating")
+        seen[k] = (c, n)
+    spare = {k: c for k, c, _ in spare_pairs}
     for r in xw.itertuples():
         if r.bps_code in have:
             rows.append({"xw_code": r.bps_code, "bps_code": r.bps_code, "how": "same"})
