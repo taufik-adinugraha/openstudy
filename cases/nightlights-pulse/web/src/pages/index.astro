@@ -340,6 +340,8 @@ const maxMean = summary.topMean[0].v;
         function project() {
           W = container.clientWidth; H = container.clientHeight;
           canvas.width = W * dpr; canvas.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          // isPointInPath returns false outside the canvas bitmap — size the hit-test canvas to match
+          hitCtx.canvas.width = W; hitCtx.canvas.height = H;
           const pad = 20;
           const k = Math.min((W - 2 * pad) / (B.e - B.w), (H - 2 * pad) / (B.n - B.s));
           sx = k; sy = -k;
