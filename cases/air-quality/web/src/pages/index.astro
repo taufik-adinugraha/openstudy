@@ -476,8 +476,8 @@ const pending = !S;
       <div class="panel">
         <div class="panel-head"><h3>Where they are</h3>
           <span class="stamp dim">2-D CANVAS · NO WEBGL · HOVER OR TAB FOR DETAIL</span></div>
-        <div class="cv-wrap"><canvas id="c-map" class="chart" height="380" role="img"
-          aria-label="Map of PM2.5 station locations across Jabodetabek"></canvas></div>
+        <div class="cv-wrap"><canvas id="c-map" class="chart" height="380" role="img" tabindex="0"
+          aria-label="Map of PM2.5 station locations across Jabodetabek. Focus this map and use the arrow keys to step through stations."></canvas></div>
       </div>
       <p class="sowhat"><b>So what:</b> a dense city-wide nowcast grid cannot be honestly
       validated here, so this case does not claim one. The forecast is scoped to the stations
@@ -594,6 +594,29 @@ const pending = !S;
           seal: () => { done = true; },
           arm: () => { done = false; },     // a deliberate state change re-animates
         };
+      };
+
+      /* designed empty states — never a blank rectangle */
+      const emptySvg = (svg, w, h, title, hint) => {
+        const g = svg.append("g").attr("transform", `translate(${w / 2},${h / 2})`);
+        g.append("rect").attr("x", -w / 2 + 12).attr("y", -h / 2 + 10)
+          .attr("width", w - 24).attr("height", h - 20).attr("rx", 6)
+          .attr("fill", "none").attr("stroke", HAIR).attr("stroke-dasharray", "5 5");
+        g.append("text").attr("class", "lbl strong").attr("text-anchor", "middle")
+          .attr("y", -4).style("letter-spacing", ".14em").text(title);
+        g.append("text").attr("class", "lbl").attr("text-anchor", "middle")
+          .attr("y", 18).style("letter-spacing", ".1em").text(hint);
+      };
+      const emptyCanvas = (ctx, w, h, title, hint) => {
+        ctx.save();
+        ctx.strokeStyle = HAIR; ctx.setLineDash([5, 5]);
+        ctx.strokeRect(12, 10, w - 24, h - 20); ctx.setLineDash([]);
+        ctx.font = '600 12px "IBM Plex Mono", ui-monospace, monospace';
+        ctx.fillStyle = INK; ctx.textAlign = "center";
+        ctx.fillText(title, w / 2, h / 2 - 4);
+        ctx.fillStyle = MUTED; ctx.font = '500 12px "IBM Plex Mono", ui-monospace, monospace';
+        ctx.fillText(hint, w / 2, h / 2 + 16);
+        ctx.restore();
       };
       const debounce = (fn, ms = 140) => { let h; return () => { clearTimeout(h); h = setTimeout(fn, ms); }; };
 
@@ -912,8 +935,7 @@ const pending = !S;
           const m = { l: 48, r: 14, t: 14, b: 30 };
           const iw = w - m.l - m.r, ih = h - m.t - m.b;
           if (!data.length) {
-            ctx.fillStyle = MUTED; ctx.font = '500 12px "IBM Plex Mono", monospace';
-            ctx.fillText("AWAITING GROUND DATA", m.l, h / 2); return;
+            emptyCanvas(ctx, w, h, "AWAITING GROUND DATA", "make ground"); return;
           }
           const x = d3.scaleTime().domain(d3.extent(data, (d) => d.t)).range([m.l, m.l + iw]);
           const maxV = Math.max(40, d3.max(data, (d) => d.v) * 1.1);
@@ -1009,8 +1031,7 @@ const pending = !S;
           const w = node.clientWidth || 800, h = 330;
           svg.attr("viewBox", `0 0 ${w} ${h}`).selectAll("*").remove();
           if (!rows.length) {
-            svg.append("text").attr("class", "lbl").attr("x", 20).attr("y", h / 2)
-               .text("AWAITING MODEL EVALUATION"); return;
+            emptySvg(svg, w, h, "AWAITING MODEL EVALUATION", "run make model"); return;
           }
           const m = { l: 54, r: 16, t: 18, b: 46 };
           const iw = w - m.l - m.r, ih = h - m.t - m.b;
@@ -1128,7 +1149,7 @@ const pending = !S;
           const w = node.clientWidth || 800, h = 420;
           svg.attr("viewBox", `0 0 ${w} ${h}`).selectAll("*").remove();
           if (!rows.length) {
-            svg.append("text").attr("class", "lbl").attr("x", 20).attr("y", h / 2).text("AWAITING MODEL"); return;
+            emptySvg(svg, w, h, "AWAITING FEATURE ATTRIBUTION", "run make model"); return;
           }
           const m = { l: Math.min(210, w * 0.38), r: 60, t: 10, b: 26 };
           const iw = w - m.l - m.r, ih = h - m.t - m.b;
@@ -1323,7 +1344,7 @@ const pending = !S;
           const w = node.clientWidth || 800, h = 220;
           svg.attr("viewBox", `0 0 ${w} ${h}`).selectAll("*").remove();
           if (!months.length) {
-            svg.append("text").attr("class", "lbl").attr("x", 16).attr("y", h / 2).text("AWAITING FIRE INGEST"); return;
+            emptySvg(svg, w, h, "AWAITING FIRE INGEST", "make fire"); return;
           }
           const m = { l: 54, r: 12, t: 12, b: 30 };
           const iw = w - m.l - m.r, ih = h - m.t - m.b;
@@ -1368,7 +1389,7 @@ const pending = !S;
           const rowH = 21, m = { l: Math.min(200, w * 0.34), r: 16, t: 24, b: 30 };
           const h = m.t + m.b + sts.length * rowH;
           svg.attr("viewBox", `0 0 ${w} ${h}`).attr("height", h).selectAll("*").remove();
-          if (!sts.length) { svg.append("text").attr("class", "lbl").attr("x", 16).attr("y", 40).text("AWAITING INVENTORY"); return; }
+          if (!sts.length) { emptySvg(svg, w, Math.max(h, 120), "AWAITING STATION INVENTORY", "make inventory"); return; }
           const g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
           const iw = w - m.l - m.r;
           const dates = sts.flatMap((s) => [s.first_utc, s.last_utc]).filter(Boolean).map((d) => new Date(d));
@@ -1484,6 +1505,12 @@ const pending = !S;
           cv._pts = pts;
         };
 
+        const stationRows = (s) => [
+          ["Status", s.status], ["Provider", s.provider ?? "—"],
+          ["Hours on record", f0(s.n_hours)],
+          ["90-day completeness", s.completeness_90d == null ? "—" : `${(s.completeness_90d * 100).toFixed(0)}%`],
+          ["Last reading", s.last_utc ? String(s.last_utc).slice(0, 10) : "never"],
+        ];
         cv.addEventListener("pointermove", (ev) => {
           if (!cv._pts) return;
           const r = cv.getBoundingClientRect();
@@ -1491,15 +1518,29 @@ const pending = !S;
           let best = null, bd = 1e9;
           cv._pts.forEach((p) => { const d = Math.hypot(p.px - mx, p.py - my); if (d < bd) { bd = d; best = p; } });
           if (!best || bd > best.r + 9) return hideTip();
-          const s = best.s;
-          showTip(ev.clientX, ev.clientY, s.name, [
-            ["Status", s.status], ["Provider", s.provider ?? "—"],
-            ["Hours on record", f0(s.n_hours)],
-            ["90-day completeness", s.completeness_90d == null ? "—" : `${(s.completeness_90d * 100).toFixed(0)}%`],
-            ["Last reading", s.last_utc ? String(s.last_utc).slice(0, 10) : "never"],
-          ]);
+          showTip(ev.clientX, ev.clientY, best.s.name, stationRows(best.s));
         });
         cv.addEventListener("pointerleave", hideTip);
+
+        /* keyboard parity with the pointer — the panel promises it, so it works */
+        let kIdx = -1;
+        const focusStation = (step) => {
+          if (!cv._pts?.length) return;
+          kIdx = (kIdx + step + cv._pts.length) % cv._pts.length;
+          const p = cv._pts[kIdx];
+          drawMap();
+          const ctx = cv.getContext("2d");
+          ctx.beginPath(); ctx.arc(p.px, p.py, p.r + 6, 0, Math.PI * 2);
+          ctx.strokeStyle = ACCENT; ctx.lineWidth = 2; ctx.stroke();
+          const r = cv.getBoundingClientRect();
+          showTip(r.left + p.px, r.top + p.py, p.s.name, stationRows(p.s));
+        };
+        cv.addEventListener("keydown", (ev) => {
+          if (ev.key === "ArrowRight" || ev.key === "ArrowDown") { ev.preventDefault(); focusStation(1); }
+          else if (ev.key === "ArrowLeft" || ev.key === "ArrowUp") { ev.preventDefault(); focusStation(-1); }
+          else if (ev.key === "Escape") { hideTip(); kIdx = -1; drawMap(); }
+        });
+        cv.addEventListener("blur", () => { hideTip(); kIdx = -1; drawMap(); });
         addEventListener("resize", debounce(() => { drawLives(); drawMap(); }));
 
         load("network.json").then((N) => {
@@ -1525,7 +1566,7 @@ const pending = !S;
           const iw = w - m.l - m.r, ih = h - m.t - m.b;
           ctx.font = '500 12px "IBM Plex Mono", ui-monospace, monospace';
           if (!rows.length) {
-            ctx.fillStyle = MUTED; ctx.fillText("AWAITING BACKTEST", m.l, h / 2); return;
+            emptyCanvas(ctx, w, h, "AWAITING BACKTEST", "make model"); return;
           }
           const x = d3.scaleTime().domain(d3.extent(rows, (d) => d.t)).range([m.l, m.l + iw]);
           const maxV = d3.max(rows, (d) => Math.max(d.y, d.hi)) * 1.08;
