@@ -3,7 +3,7 @@
 
 PY := uv run python pipeline
 
-.PHONY: rebuild pulse validate brief deploy
+.PHONY: rebuild pulse validate brief deploy partners
 
 # Gate 1 (reproducibility): full rebuild from raw BACI on a clean machine.
 rebuild:
@@ -27,3 +27,10 @@ brief:
 
 deploy:
 	$(PY)/extracts.py publish
+
+# Partners + imports (chapters 07-10). Streams the BACI zip year by year and
+# never rebuilds the 330M-row DuckDB; the slice stage is resumable.
+partners:
+	pipeline/fetch_baci.sh
+	$(PY)/partners.py slice --release $(RELEASE)
+	$(PY)/partners.py facts
