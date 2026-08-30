@@ -265,8 +265,8 @@ def injection_height(cells, day, gfas):
     if gfas is not None and len(gfas):
         g = gfas[gfas["day"] == pd.Timestamp(day)]
         if len(g):
-            col = next((c for c in ("injection_height", "apt", "mami", "altitude_of_plume_top")
-                        if c in g.columns), None)
+            col = next((c for c in ("injection_height_m", "injh", "injection_height",
+                                    "plume_top_m", "apt") if c in g.columns), None)
             if col:
                 m = dict(zip(g["cell"].to_numpy(), g[col].to_numpy()))
                 h = np.array([m.get(int(c), np.nan) for c in cells], dtype=float)

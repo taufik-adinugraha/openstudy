@@ -149,15 +149,41 @@ def reduce_gfas(spec, paths) -> None:
     again, the stage fails loudly instead of writing a table of plume tops and letting
     transport.py quietly fall back to a parameterisation.
     """
+    import numpy as np
     import pandas as pd
     ds = _open(paths)
-    g = _to_cells(ds, "mean")
+    df = ds.to_dataframe().reset_index()
     ds.close()
-    g = g.rename(columns=config.CAMS_GFAS_SHORT)
-    util.require("injection_height_m" in g.columns,
-                 f"GFAS returned {sorted(g.columns)} with no injection height — the request was "
+    df = df[df["lat"].between(config.AOI[1], config.AOI[3])
+            & df["lon"].between(config.AOI[0], config.AOI[2])]
+    df = df.rename(columns=config.CAMS_GFAS_SHORT)
+    util.require("injection_height_m" in df.columns,
+                 f"GFAS returned {sorted(df.columns)} with no injection height — the request was "
                  f"accepted and truncated (see config.CAMS_GFAS_VARS)")
-    g.to_parquet(spec["dest"], index=False, compression="zstd")
+    df["day"] = pd.to_datetime(df["t"]).dt.normalize()
+    df["clat"], df["clon"] = util.snap_cell(df["lat"], df["lon"])
+    df["cell"] = util.cell_key(df["clat"], df["clon"])
+
+    # ** THE HEIGHTS ARE FRP-WEIGHTED, NOT AVERAGED. **
+    # GFAS is 0.1 deg and the model grid is 0.25, so six or seven GFAS cells fall inside each
+    # model cell and most of them have no fire at all.  A plain mean of `injh` over those cells
+    # divides a real 200 m injection height by the number of empty neighbours and reports 3 m —
+    # which would then be handed to the trajectory model as a release height.  Weighting by FRP
+    # asks the right question: at what height did the smoke that this cell actually produced
+    # enter the atmosphere?  Cells with no fire get NaN, and transport.py falls back for them.
+    w = df["frp_w_m2"].fillna(0.0).to_numpy()
+    out = df.groupby(["cell", "day"], as_index=False).agg(frp_w_m2=("frp_w_m2", "mean"))
+    for col in ("injection_height_m", "plume_top_m", "plume_bottom_m"):
+        if col not in df.columns:
+            continue
+        num = df.assign(_n=df[col].fillna(0.0) * w, _d=w)
+        agg = num.groupby(["cell", "day"], as_index=False)[["_n", "_d"]].sum()
+        agg[col] = np.where(agg["_d"] > 0, agg["_n"] / agg["_d"], np.nan)
+        out = out.merge(agg[["cell", "day", col]], on=["cell", "day"], how="left")
+    for c in out.columns:
+        if out[c].dtype == "float64":
+            out[c] = out[c].astype("float32")
+    out.to_parquet(spec["dest"], index=False, compression="zstd")
 
 
 # ── EAC4: tier-3 surrogate truth ──────────────────────────────────────────────────────

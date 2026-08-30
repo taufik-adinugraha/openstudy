@@ -60,6 +60,7 @@ DAYS_OUT = config.DATA_DIR / "risk_days.parquet"
 NAT_OUT = config.DATA_DIR / "risk_national.parquet"
 META_OUT = config.DATA_DIR / "risk_meta.json"
 MODEL_DIR = config.DATA_DIR / "model"
+SCRATCH = config.DATA_DIR / "risk_scratch"
 
 NEG_RATE = 0.06             # keep every positive, 6 % of negatives, weight 1/0.06
 CLIM_WINDOW = 15            # +-15 days around the day of year
@@ -309,8 +310,16 @@ def main() -> None:
     log(f"risk: {len(yrs)} years, anchors {config.ANCHOR_YEARS} held out entirely, "
         f"{len(folds)} blocked-by-season folds")
 
-    oof_frames, meta = [], {"leads": {}, "folds": folds, "anchors": list(config.ANCHOR_YEARS),
-                            "neg_sample_rate": NEG_RATE, "n_rounds": N_ROUNDS}
+    SCRATCH.mkdir(parents=True, exist_ok=True)
+    for stale in SCRATCH.glob("*.parquet"):
+        stale.unlink()
+    meta = {"leads": {}, "folds": folds, "n_folds": len(folds),
+            "anchors": list(config.ANCHOR_YEARS), "era5_years": yrs,
+            "neg_sample_rate": NEG_RATE, "n_rounds": N_ROUNDS,
+            "fold_caveat": (f"{len(folds)} blocked-by-season folds — the ERA5 record is bounded "
+                            f"by the CDS queue, not by the method, so these metrics carry more "
+                            f"sampling variance than the same metrics on a full 15-year record")
+            if len(folds) < 5 else None}
     final = {}
     for lead in config.LEAD_DAYS:
         clim_cache = {}
@@ -331,24 +340,43 @@ def main() -> None:
                     res = res.drop(columns=["doy"])
                 else:
                     res["p_clim"] = np.nan
-                oof_frames.append(res)
+                # one fold, one file.  Every (lead, path, fold) slice is ~715 k rows; holding all
+                # of them — 11 folds x 3 leads x 2 paths — would be ~47 M rows in memory, which
+                # this does not have.  Metrics are computed one (lead, path) slice at a time.
+                res.to_parquet(SCRATCH / f"oof_{lead}_{path}_{test_year}.parquet",
+                               index=False, compression="zstd")
                 log(f"  lead {lead}d {path:11s} fold {test_year}: "
                     f"n={len(res):,} pos={int(res['y'].sum()):,} "
                     f"AUC={auc(res['p'], res['y']):.3f}")
+                del res
                 final[(lead, path)] = (booster, cols, iso)
 
-    oof = pd.concat(oof_frames, ignore_index=True)
-    # the climatology baseline is path-independent; carry the forecast-path values across so the
-    # reanalysis path is scored against the same reference
-    cl = (oof[oof["path"] == "forecast"][["cell", "day", "lead", "p_clim"]]
-          .drop_duplicates(["cell", "day", "lead"]))
-    oof = oof.drop(columns=["p_clim"]).merge(cl, on=["cell", "day", "lead"], how="left")
-    oof.to_parquet(OOF_OUT, index=False, compression="zstd")
+    def oof_slice(lead: int, path: str):
+        """One (lead, path) worth of out-of-fold predictions, with the shared climatology.
+
+        The climatology baseline is path-independent, so the reanalysis path is scored against
+        exactly the same reference the forecast path is — otherwise the two BSS numbers would be
+        against two different denominators and the comparison between them would mean nothing.
+        """
+        parts = sorted(SCRATCH.glob(f"oof_{lead}_{path}_*.parquet"))
+        if not parts:
+            return pd.DataFrame()
+        s = pd.concat([pd.read_parquet(p) for p in parts], ignore_index=True)
+        if path != "forecast":
+            fp = sorted(SCRATCH.glob(f"oof_{lead}_forecast_*.parquet"))
+            if fp:
+                cl = pd.concat([pd.read_parquet(p, columns=["cell", "day", "p_clim"])
+                                for p in fp], ignore_index=True)
+                s = s.drop(columns=["p_clim"]).merge(cl, on=["cell", "day"], how="left")
+        return s
 
     for lead in config.LEAD_DAYS:
         meta["leads"][str(lead)] = {}
         for path in ("forecast", "reanalysis"):
-            s = oof[(oof["lead"] == lead) & (oof["path"] == path)]
+            s = oof_slice(lead, path)
+            if s.empty:
+                meta["leads"][str(lead)][path] = {"status": "no folds"}
+                continue
             m = {
                 "n": int(len(s)), "positives": int(s["y"].sum()),
                 "base_rate": float(s["y"].mean()),
@@ -364,15 +392,29 @@ def main() -> None:
             meta["leads"][str(lead)][path] = m
             log(f"  lead {lead}d {path:11s}: AUC {m['auc']:.3f}  BSS(clim) "
                 f"{m['bss_vs_climatology']:+.3f}  BSS(persist) {m['bss_vs_persistence']:+.3f}")
+            if path == "forecast":
+                # keep a light copy for the FWI comparison and for anyone who wants to re-score
+                s.sample(n=min(400_000, len(s)), random_state=5).to_parquet(
+                    SCRATCH / f"oofkeep_{lead}.parquet", index=False, compression="zstd")
+            del s
         f, r = (meta["leads"][str(lead)]["forecast"], meta["leads"][str(lead)]["reanalysis"])
-        meta["leads"][str(lead)]["foresight_gap_auc"] = r["auc"] - f["auc"]
+        if "auc" in f and "auc" in r and f["auc"] is not None and r["auc"] is not None:
+            meta["leads"][str(lead)]["foresight_gap_auc"] = r["auc"] - f["auc"]
 
-    # ── the FWI baseline — the half of G-J2 that the EWDS policy click gates ───────────
-    meta["fwi"] = score_against_fwi(oof)
+    # ── the FWI baseline — the external index gate G-J2 actually scores against ────────
+    meta["fwi"] = score_against_fwi()
+    keep = [pd.read_parquet(p) for p in sorted(SCRATCH.glob("oofkeep_*.parquet"))]
+    if keep:
+        pd.concat(keep, ignore_index=True).to_parquet(OOF_OUT, index=False, compression="zstd")
+    for p in SCRATCH.glob("oof_*.parquet"):
+        p.unlink()
 
     # ── final model on every non-anchor year, then the anchors scored blind ────────────
     log("risk: fitting the final model on all non-anchor years, then scoring the anchors blind")
-    anchors, days_rows, nat_rows = [], [], []
+    SCRATCH.mkdir(parents=True, exist_ok=True)
+    for stale in SCRATCH.glob("pred_*.parquet"):
+        stale.unlink()
+    anchors, nat_rows = [], []
     for lead in config.LEAD_DAYS:
         tr = [y for y in train_pool if y != train_pool[-1]]
         calib = train_pool[-1]
@@ -411,13 +453,19 @@ def main() -> None:
                      .reset_index())
             nat["lead"] = lead
             nat_rows.append(nat)
-            days_rows.append(d[["cell", "day", "clat", "clon", "p", "lead", "n_fire"]])
+            # ** DO NOT ACCUMULATE THE PREDICTIONS IN MEMORY. **  Fifteen years x three leads x
+            # 715 k cell-days is 32 M rows; held as frames that is well over the 3 GB cap this
+            # runs under.  Each (lead, year) goes straight to a scratch parquet and the export
+            # selection — which needs the national series to exist first — reads them back in a
+            # second pass and keeps only the chosen days.
+            sp = SCRATCH / f"pred_{lead}_{y}.parquet"
+            d[["cell", "day", "clat", "clon", "p", "lead", "n_fire"]].to_parquet(
+                sp, index=False, compression="zstd")
             del d
     nat = pd.concat(nat_rows, ignore_index=True)
     nat.to_parquet(NAT_OUT, index=False, compression="zstd")
 
     # export days: the anchors' seasons, the worst days on record, and the recent tail
-    allday = pd.concat(days_rows, ignore_index=True)
     sev = nat[nat["lead"] == config.LEAD_DAYS[0]].sort_values("fires", ascending=False)
     pick = set(pd.to_datetime(sev["day"].head(config.EXPORT_EPISODE_DAYS // 2)))
     pick |= set(pd.to_datetime(nat["day"]).sort_values().unique()[-60:])
@@ -425,8 +473,15 @@ def main() -> None:
         s = nat[(nat["lead"] == config.LEAD_DAYS[0])
                 & (pd.to_datetime(nat["day"]).dt.year == a)]
         pick |= set(pd.to_datetime(s.sort_values("fires", ascending=False)["day"].head(60)))
-    allday["day"] = pd.to_datetime(allday["day"])
-    sel = allday[allday["day"].isin(pick)]
+    keep = []
+    for sp in sorted(SCRATCH.glob("pred_*.parquet")):
+        part = pd.read_parquet(sp)
+        part["day"] = pd.to_datetime(part["day"])
+        part = part[part["day"].isin(pick)]
+        if len(part):
+            keep.append(part)
+        sp.unlink()
+    sel = pd.concat(keep, ignore_index=True) if keep else pd.DataFrame()
     sel.to_parquet(DAYS_OUT, index=False, compression="zstd")
     log(f"risk: exported {sel['day'].nunique():,} days x {sel['cell'].nunique():,} cells "
         f"x {sel['lead'].nunique()} leads -> {DAYS_OUT.name}")
@@ -458,7 +513,7 @@ def util_nan_safe(o):
     return o
 
 
-def score_against_fwi(oof) -> dict:
+def score_against_fwi() -> dict:
     """G-J2's second half: beat the operational Canadian FWI, not just climatology.
 
     The FWI is given the fairest possible treatment — isotonically calibrated to probability on
@@ -480,7 +535,11 @@ def score_against_fwi(oof) -> dict:
     fwi["day"] = pd.to_datetime(fwi["day"])
     out = {}
     for lead in config.LEAD_DAYS:
-        s = oof[(oof["lead"] == lead) & (oof["path"] == "forecast")].copy()
+        keep = SCRATCH / f"oofkeep_{lead}.parquet"
+        if not keep.exists():
+            out[str(lead)] = {"status": "no out-of-fold predictions"}
+            continue
+        s = pd.read_parquet(keep)
         s["day"] = pd.to_datetime(s["day"])
         s = s.merge(fwi[["cell", "day", "fwi"]], on=["cell", "day"], how="left")
         s = s[s["fwi"].notna()]
