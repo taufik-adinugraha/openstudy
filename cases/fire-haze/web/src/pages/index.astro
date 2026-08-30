@@ -204,6 +204,10 @@ const CHAPTERS = [
       .tier-1 { background: color-mix(in srgb, var(--official) 20%, transparent); color: var(--official); }
       .tier-2 { background: color-mix(in srgb, var(--clean) 20%, transparent); color: var(--clean); }
       .tier-3 { background: color-mix(in srgb, var(--alert) 20%, transparent); color: var(--alert); }
+      /* an anchor year is not a tier; reusing the tier-3 badge for it would say "model" */
+      .anchor-tag { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.1em;
+                    padding: 2px 6px; border-radius: 3px; white-space: nowrap;
+                    background: var(--accent-ink); color: var(--accent); }
 
       /* ── charts ─────────────────────────────────────────────────────── */
       .chart { width: 100%; min-width: 0; }
@@ -511,8 +515,11 @@ const CHAPTERS = [
         <span class="chnum">Chapter 07</span>
         <h2>Explore</h2>
         <p class="lede">
-          Every episode in the archive, with its attribution and its uncertainty. State is in the
-          URL, so a row you find is a link you can send.
+          Every episode with a precomputed trajectory set, with its attribution and its
+          uncertainty. <b>Exposure is an index, not a concentration</b> — a fire-radiative-power
+          weighted, travel-time-decayed count of parcels reaching within 75 km of the receptor.
+          It is comparable between days and receptors and it is not µg/m³, which is why chapter 05
+          scores it by rank correlation rather than by error.
         </p>
         <div class="controls">
           <span class="ctl-label" id="lbl-sort">Sort</span>
@@ -1734,11 +1741,12 @@ const CHAPTERS = [
           function render() {
             const rows = eps.slice().sort((a, b) =>
               sort === "exp" ? (b.exposure ?? 0) - (a.exposure ?? 0) : b.day.localeCompare(a.day));
-            tb.innerHTML = `<tr><th>Receptor</th><th>Day</th><th class="n">Exposure</th>
+            tb.innerHTML = `<tr><th>Receptor</th><th>Day</th>
+              <th class="n">Exposure (index)</th>
               <th>Top source province</th><th class="n">Share</th>
               <th class="n">Ensemble agreement</th></tr>` +
               rows.map((e) => `<tr>
-                <td>${title(e.receptor)}${e.anchor ? ' <span class="tier tier-3">ANCHOR</span>' : ""}</td>
+                <td>${title(e.receptor)}${e.anchor ? ' <span class="anchor-tag">ANCHOR</span>' : ""}</td>
                 <td>${e.day}</td>
                 <td class="n">${(e.exposure ?? 0).toFixed(2)}</td>
                 <td>${e.top_province ?? '<span class="muted">no attributable source</span>'}</td>
