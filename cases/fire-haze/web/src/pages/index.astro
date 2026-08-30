@@ -122,10 +122,12 @@ const CHAPTERS = [
       .maptag { position: absolute; left: 10px; top: 9px; font-family: var(--font-data);
                 font-size: 12px; letter-spacing: 0.09em; color: var(--ink-muted);
                 text-transform: uppercase; pointer-events: none; }
-      .maplegend { position: absolute; right: 10px; bottom: 9px; display: flex; gap: 12px;
+      .maplegend { position: absolute; right: 10px; bottom: 9px; left: 10px; display: flex;
+                   gap: 10px 14px; justify-content: flex-end;
                    font-family: var(--font-data); font-size: 12px; color: var(--ink-muted);
-                   background: color-mix(in srgb, var(--ground) 78%, transparent);
-                   padding: 5px 8px; border-radius: 4px; pointer-events: none; flex-wrap: wrap; }
+                   pointer-events: none; flex-wrap: wrap; }
+      .maplegend > span { background: color-mix(in srgb, var(--ground) 82%, transparent);
+                          padding: 4px 7px; border-radius: 4px; white-space: nowrap; }
       .maplegend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px;
                      margin-right: 5px; vertical-align: -1px; }
 
@@ -1280,9 +1282,9 @@ const CHAPTERS = [
 
           document.getElementById("risk-legend").innerHTML =
             `<span style="display:flex;align-items:center;gap:4px">low` +
-            C.ramp.map((c) => `<i style="background:${c};width:14px;margin:0"></i>`).join("") +
+            C.ramp.map((c) => `<i style="background:${c};width:15px;margin:0"></i>`).join("") +
             `high</span>` +
-            '<span><i style="background:var(--fire);border-radius:50%"></i>detection</span>';
+            '<span><i style="background:var(--fire);border-radius:50%"></i>fire detected</span>';
           show(idx);
         }
 
@@ -1328,9 +1330,10 @@ const CHAPTERS = [
             .attr("x1", m.l).attr("x2", W - m.r).attr("y1", y).attr("y2", y);
           svg.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(hi)).attr("y2", y(hi))
             .attr("stroke", C.muted).attr("stroke-dasharray", "4 4").attr("stroke-width", 1.5);
-          svg.append("text").attr("x", x(hi * 0.62)).attr("y", y(hi * 0.62) - 10)
+          const lx = x(hi * 0.42), ly = y(hi * 0.42) + 22;
+          svg.append("text").attr("x", lx).attr("y", ly)
             .attr("fill", C.muted).attr("font-family", "var(--font-data)").attr("font-size", 12)
-            .attr("transform", `rotate(-38, ${x(hi * 0.62)}, ${y(hi * 0.62) - 10})`)
+            .attr("transform", `rotate(-36, ${lx}, ${ly})`)
             .text("perfect calibration");
           svg.append("g").attr("class", "axis").attr("transform", `translate(0,${Hh - m.b})`)
             .call(d3.axisBottom(x).ticks(6).tickFormat(d3.format(".1%")));

@@ -127,8 +127,8 @@ their numbers.
 |---|---|---|
 | G-J1 · hotspot hygiene | hard | **PASS** — 11.92 % of the record removed, **10.69 % of the NRT tail**, and **zero** retained detections inside the mask on any product |
 | G-J2 · ignition skill | hard | **PASS** — AUC ≥ 0.80 and BSS > 0 against climatology *and* the CEMS FWI, at every lead, on both paths |
-| G-J3 · transport direction | soft | **FAIL** — 64.5 % agreement within ±30°, threshold 70 % (median difference 17.4°) |
-| G-J4 · receptor correlation | hard | **PASS** — Singapore ρ = **0.622**, threshold 0.50 |
+| G-J3 · transport direction | soft | **FAIL** — 61.3 % agreement within ±30° over 8,286 episode days, threshold 70 % (median difference 19.7°) |
+| G-J4 · receptor correlation | hard | **PASS** — Singapore ρ = **0.525**, threshold 0.50 |
 | G-J5 · anchor replay | soft | **FAIL** — 2015 ranks 1st of 7 modelled seasons, 2019 ranks 2nd; the threshold admits one |
 
 **G-J2 in detail.** Both external baselines are isotonically calibrated to a probability on the
@@ -136,9 +136,9 @@ same held-out season the model is, so each is compared at its best:
 
 | lead | model AUC | CEMS FWI AUC | BSS vs FWI | BSS vs climatology | BSS vs persistence |
 |---|---|---|---|---|---|
-| 1 day | **0.875** | 0.806 | **+0.133** | +0.116 | +0.071 |
-| 3 days | **0.848** | 0.774 | **+0.105** | +0.075 | +0.048 |
-| 7 days | **0.822** | 0.738 | **+0.086** | +0.013 | +0.012 |
+| 1 day | **0.875** | 0.806 | **+0.131** | +0.116 | +0.071 |
+| 3 days | **0.848** | 0.774 | **+0.104** | +0.075 | +0.048 |
+| 7 days | **0.822** | 0.738 | **+0.055** | +0.013 | +0.012 |
 
 The interesting part is not that the model wins. It is that **the FWI decays faster with lead
 than the model does** (0.806 → 0.738 against 0.875 → 0.822): the index is a description of
@@ -155,11 +155,45 @@ That is the price of not knowing the weather, and it grows exactly where you wou
 model's own cross-validation folds, on two years it was never trained on, and the model puts them
 first and second of seven seasons, which is the observed ordering exactly.
 
-**What the model is actually using**, by mean |SHAP| aggregated to families: fire history 43 %,
-atmosphere 18 %, fuel 12 %, soil moisture 11 %, ocean state 7 %, season 7 %, dryness 3 %. The
+**What the model is actually using**, by mean |SHAP| aggregated to families: fire history 44 %,
+atmosphere 18 %, fuel 11 %, soil moisture 11 %, ocean state 9 %, season 5 %, dryness 3 %. The
 dryness share is low *because* daily rainfall has barely drained — the family is currently almost
 entirely SPI. Expect it to rise and fire history to fall as `tp` lands, and that shift is itself
 worth watching.
+
+**G-J4 receptor by receptor**, including the ones that fail, each with its tier:
+
+| receptor | tier | comparison | n | Spearman ρ |
+|---|---|---|---|---|
+| Singapore | 1 · instrument | model vs instrument | 795 | **0.525** |
+| West Sumatra | 2 · instrument | model vs instrument | 393 | 0.562 |
+| Palembang | 2 · instrument | model vs instrument | 112 | 0.439 |
+| Medan | 2 · instrument | model vs instrument | 33 | −0.026 |
+| Palangkaraya | 3 · **model** | **model vs model** | 1,079 | 0.685 |
+| Pontianak | 3 · **model** | **model vs model** | 1,079 | 0.637 |
+| Pekanbaru | 3 · **model** | **model vs model** | 1,079 | 0.571 |
+
+Medan fails outright on 33 overlapping days and is published anyway. And note the ordering: the
+tier-3 correlations are the *highest* on the page — which is exactly what you would expect when
+both sides of the comparison are models, and precisely why they are labelled **model vs model**
+rather than presented as validation.
+
+**G-J3's failure has a shape**, and it is the physically expected one — agreement falls with the
+distance the smoke has to travel:
+
+| receptor | episode days | within ±30° | median difference |
+|---|---|---|---|
+| Pekanbaru | 1,300 | 69.0 % | 15.1° |
+| Palembang | 1,345 | 67.1 % | 16.5° |
+| West Sumatra | 1,126 | 64.9 % | 15.0° |
+| Palangkaraya | 1,167 | 62.6 % | 18.1° |
+| Pontianak | 1,191 | 57.1 % | 23.2° |
+| Singapore | 1,247 | 55.1 % | 24.6° |
+| Medan | 910 | 50.0 % | 30.1° |
+
+Receptors sitting in the fire belt agree; the ones the smoke must travel furthest to reach do not.
+Error accumulating with path length and curvature is what a kinematic trajectory model does, and
+this table is the honest bound on how far the method can be pushed. **The threshold is not moved.**
 
 ## Six premises that did not survive reconnaissance
 
