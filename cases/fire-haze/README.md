@@ -291,6 +291,74 @@ way, so the page always says which half of the filter ran.
    `tifs/` carries residuals), and the model is **trained on prelim too**, or it has train/serve
    skew.
 
+## Homepage card — copy for `site/src/pages/index.astro`
+
+This case is scoped out of `site/`, so the change is described rather than applied. Two edits:
+
+**1. Add the route to the `DEMOS` map** (after the `airquality` line):
+
+```js
+  haze: "http://localhost:4334/haze",               // TODO prod: /haze
+```
+
+**2. Add the tile.** It follows the `forest` card's shape exactly — `data-case="haze"` picks up
+the plume-magenta identity that is already in `shared/design/tokens.css`, so no new CSS is needed
+beyond a `.haze-visual` entry alongside `.aq-visual, .forest-visual, .transit-visual` in the
+`padding: 0; overflow: hidden` rule.
+
+```html
+<a class="case live" data-case="haze" href={DEMOS.haze} target="_blank" rel="noopener">
+  <div class="case-visual haze-visual" aria-hidden="true">
+    <svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="hz-sky" x1="0" y1="0" x2="0.3" y2="1">
+          <stop offset="0%" stop-color="#12100F"/><stop offset="60%" stop-color="#1A1715"/>
+          <stop offset="100%" stop-color="#241419"/>
+        </linearGradient>
+        <linearGradient id="hz-plume" x1="0" y1="1" x2="1" y2="0">
+          <stop offset="0%" stop-color="#F6C9DE" stop-opacity="0.85"/>
+          <stop offset="100%" stop-color="#E2569E" stop-opacity="0.15"/>
+        </linearGradient>
+      </defs>
+      <rect width="400" height="240" fill="url(#hz-sky)"/>
+      <!-- 72-hour back-trajectory fan, converging on a receptor -->
+      <g fill="none" stroke="url(#hz-plume)" stroke-width="1.6">
+        <path d="M318 78 C262 92 214 120 168 132 C126 143 88 138 40 154"/>
+        <path d="M318 78 C266 100 222 132 178 148 C138 163 98 160 46 178"/>
+        <path d="M318 78 C258 84 206 104 156 112 C112 119 74 112 28 124"/>
+        <path d="M318 78 C270 110 236 148 200 170 C164 192 128 196 84 214"/>
+        <path d="M318 78 C254 76 196 88 142 92 C100 95 62 88 18 96"/>
+      </g>
+      <!-- the fires the parcels land on -->
+      <g fill="#FF7A45">
+        <circle cx="146" cy="112" r="3.4"/><circle cx="128" cy="120" r="2.6"/>
+        <circle cx="168" cy="132" r="4.2"/><circle cx="92"  cy="139" r="2.2"/>
+        <circle cx="178" cy="148" r="3.0"/><circle cx="60"  cy="152" r="2.6"/>
+        <circle cx="200" cy="170" r="2.4"/><circle cx="112" cy="163" r="3.2"/>
+      </g>
+      <!-- the receptor -->
+      <circle cx="318" cy="78" r="5.2" fill="#7FB2C9"/>
+      <circle cx="318" cy="78" r="11" fill="none" stroke="#7FB2C9" stroke-width="1" opacity="0.45"/>
+      <text x="18" y="212" fill="#E2569E" opacity="0.95" font-size="12" letter-spacing="1.5"
+            font-family="ui-monospace,monospace">72 HOURS UPWIND</text>
+    </svg>
+  </div>
+  <div class="case-body">
+    <span class="badge">LIVE DEMO</span>
+    <h2>Fire &amp; Haze Early Warning</h2>
+    <p>2.68 million VIIRS detections cleaned of the volcanoes and gas flares that make
+    Indonesia's hotspot table partly a geology table — a tenth of the live feed, where the
+    field everyone filters on does not exist. Then ignition risk days ahead, and
+    back-trajectories that name the provinces a bad-air day in Singapore came from.</p>
+    <span class="meta">VIIRS · ERA5 · CAMS GFAS · 11.9% FILTERED · INDONESIA → SINGAPORE</span>
+  </div>
+</a>
+```
+
+Alternative one-line pitch if the grid needs something shorter: *"Where fire starts, and where
+the smoke goes — an ignition-risk surface days ahead, scored against the operational Canadian
+Fire Weather Index, and a trajectory model that says whose land the air was standing on."*
+
 ## Resource behaviour
 
 Every download loop checks free disk before the next chunk and exits 0 (resumable) below 10 GB.

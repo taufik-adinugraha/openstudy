@@ -157,9 +157,21 @@ def reduce_gfas(spec, paths) -> None:
     df = df[df["lat"].between(config.AOI[1], config.AOI[3])
             & df["lon"].between(config.AOI[0], config.AOI[2])]
     df = df.rename(columns=config.CAMS_GFAS_SHORT)
-    util.require("injection_height_m" in df.columns,
-                 f"GFAS returned {sorted(df.columns)} with no injection height — the request was "
-                 f"accepted and truncated (see config.CAMS_GFAS_VARS)")
+    # ** GFAS DOES NOT CARRY INJECTION HEIGHT FOR THE WHOLE ARCHIVE. **
+    # Verified 2026-08-30: a request for `injection_height` over 2019 Q1 returns `injh`; the
+    # identical request over 2015 Q1 is ACCEPTED and comes back with the variable simply absent,
+    # in a two-variable request as well as a four-variable one.  So this is an archive boundary,
+    # not a truncation bug, and it lands squarely on the 2015 anchor.
+    # The response is the mechanism that was already designed for it: the column is written as
+    # NaN, transport.py falls back to config.PLUME_RISE for those days, and the fallback share is
+    # published per run.  It is NOT fatal — one missing quarter must not take the stage down —
+    # and it raises rather than sys.exit()s so run_store_jobs records it per request.
+    if "injection_height_m" not in df.columns:
+        import numpy as np
+        log(f"  {spec['key']}: GFAS has no injection height for this period "
+            f"(returned {sorted(c for c in df.columns if c not in ('lat', 'lon', 't'))}) — "
+            f"written as NaN; transport falls back to PLUME_RISE and reports the share")
+        df["injection_height_m"] = np.nan
     df["day"] = pd.to_datetime(df["t"]).dt.normalize()
     df["clat"], df["clon"] = util.snap_cell(df["lat"], df["lon"])
     df["cell"] = util.cell_key(df["clat"], df["clon"])
@@ -174,7 +186,8 @@ def reduce_gfas(spec, paths) -> None:
     w = df["frp_w_m2"].fillna(0.0).to_numpy()
     out = df.groupby(["cell", "day"], as_index=False).agg(frp_w_m2=("frp_w_m2", "mean"))
     for col in ("injection_height_m", "plume_top_m", "plume_bottom_m"):
-        if col not in df.columns:
+        if col not in df.columns or not df[col].notna().any():
+            out[col] = np.nan
             continue
         num = df.assign(_n=df[col].fillna(0.0) * w, _d=w)
         agg = num.groupby(["cell", "day"], as_index=False)[["_n", "_d"]].sum()
