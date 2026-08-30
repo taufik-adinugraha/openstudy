@@ -25,6 +25,24 @@ const e24 = evalRows.find((r) => r.horizon_h === 24) ?? null;
 const generated = S?.generated_utc ?? null;
 const groundLast = S?.vintage?.ground_last_utc ?? null;
 const pending = !S;
+
+// The static-source mask (README decision 7b): what it holds, and what share
+// of the near-real-time product it removes. Published because the number is
+// the evidence that the fix was needed, not decoration.
+const ff = S?.fire_filter ?? null;
+const ffNrt = ff?.by_product?.find((p) => /NRT/.test(p.src)) ?? null;
+const ffSp = ff?.by_product?.find((p) => /_SP/.test(p.src)) ?? null;
+const maskCells = ff?.mask_cells
+  ? ` (${n0(ff.mask_cells)} cells, ${n0(ff.mask_core_cells)} of them flagged directly)`
+  : "";
+const maskEffect = ffNrt
+  ? `It removes ${pct(ffNrt.share_removed, 1)} of otherwise-qualifying near-real-time ` +
+    `detections against ${ffSp ? pct(ffSp.share_removed, 1) : "—"} of archive ones — the ` +
+    `archive needs less help because its own labels already caught most of them, and that ` +
+    `asymmetry is exactly what used to land at the seam. In April 2026, the one month the ` +
+    `seam falls inside, both products now read as roughly a third static (34% archive, 36% ` +
+    `near-real-time); before the fix the near-real-time side read as zero.`
+  : "";
 ---
 
 <html lang="en" data-case="airquality" data-theme="dark">
@@ -466,7 +484,8 @@ const pending = !S;
           aria-label="Airshed rose: PM2.5 by wind direction, and fire hotspots by sector and distance"></canvas></div>
         <p class="footnote" style="margin-top:12px">Hover a petal for the numbers. Fires are
         attributed to a three-sector arc around the bearing from Jakarta and lagged one day,
-        so an afternoon satellite overpass never informs that morning's forecast.</p>
+        so an afternoon satellite overpass never informs that morning's forecast. Volcanoes,
+        gas flares and other permanently hot ground are excluded — see below.</p>
       </div>
       <div class="panel">
         <div class="panel-head"><h3>Fire hotspots detected across the airshed, by month</h3>
@@ -475,6 +494,17 @@ const pending = !S;
           aria-label="Monthly fire hotspot counts across the airshed"></svg></div>
         <p class="footnote" style="margin-top:12px" id="fire-peak"></p>
       </div>
+      <p><b>Not every hot pixel is a fire.</b> Indonesia has around 130 active volcanoes and
+      a great deal of gas flaring, and VIIRS sees all of it. The satellite does label those
+      detections — but only in the <b>standard-processing archive</b>; the near-real-time
+      product that covers the last few months omits the label entirely. Filtering on the label
+      alone would therefore clean the history and leave the recent tail full of volcanoes,
+      putting a step change in this chart exactly where the two products meet — and fire counts
+      feed the forecast, so the step would propagate into the model. Instead the archive is
+      swept across its full record for everything it ever flagged as a volcano, flare or
+      offshore source; those locations are gridded to {ff?.cell_deg ?? 0.01}° cells with a
+      one-cell buffer for pointing jitter, and the resulting mask{maskCells} is applied to
+      <em>every</em> row of <em>both</em> products. {maskEffect}</p>
       <p class="sowhat"><b>So what:</b> the same fire is worth a lot or nothing depending on
       where the wind is. That is why the model sees <em>upwind</em> fire counts, not a
       regional total.</p>
@@ -568,10 +598,11 @@ const pending = !S;
           <p>Direct multi-horizon gradient boosting (one model per horizon, 1–72 h), trained
           on log1p PM2.5 with issue-time-only features: lagged PM2.5 and its rolling
           statistics, ERA5 boundary-layer height, wind, temperature, humidity, precipitation
-          and solar radiation, upwind VIIRS fire counts in three distance rings, and
-          local-time diurnal and seasonal terms. Uncertainty is 10th/90th-percentile quantile
-          regression. Evaluation is one time-based split; nothing here is cross-validated at
-          random.</p>
+          and solar radiation, upwind VIIRS fire counts in three distance rings — with
+          volcanoes, gas flares and other static heat sources masked out of both FIRMS
+          products, not just the one that labels them — and local-time diurnal and seasonal
+          terms. Uncertainty is 10th/90th-percentile quantile regression. Evaluation is one
+          time-based split; nothing here is cross-validated at random.</p>
         </div>
         <div>
           <h3>Limits, stated plainly</h3>

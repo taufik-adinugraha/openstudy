@@ -3,7 +3,7 @@
 
 PY := uv run python pipeline
 
-.PHONY: ingest ground era5 fire features model validate export all refresh
+.PHONY: ingest ground era5 fire firemask features model validate export all refresh
 
 ## --- Stage 1 · acquisition (each resumable, safe to rerun) -------------
 ground:          ## OpenAQ v3 PM2.5 ground sensors -> data/ground_hourly.parquet + stations.json
@@ -17,6 +17,9 @@ era5:            ## ERA5 hourly meteorology, newest month first -> data/era5_hou
 
 fire:            ## FIRMS VIIRS hotspots -> upwind sector-day aggregates, raw never stored
 	$(PY)/ingest_firms.py
+
+firemask:        ## static-source mask (volcanoes/flares/offshore) from the SP archive — cached, built once
+	$(PY)/ingest_firms.py --mask-only
 
 ingest: ground fire era5
 

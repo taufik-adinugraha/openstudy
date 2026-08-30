@@ -26,6 +26,7 @@ import numpy as np
 import pandas as pd
 
 import config
+import ingest_firms as firms
 
 STATS = config.DATA_DIR / "stats.json"
 MIXING = ("blh", "ventilation")
@@ -34,6 +35,39 @@ WINDY = ("wind_speed", "wind_from_sin", "wind_from_cos")
 
 def log(msg: str) -> None:
     print(f"[validate] {msg}", flush=True)
+
+
+def fire_filter_stats(mask: pd.DataFrame, audit: pd.DataFrame) -> dict:
+    """What the static-source mask actually removed, per FIRMS product.
+
+    Reported rather than asserted, because the mask exists to fix a real
+    defect: VIIRS emits `type` (volcano / flare / offshore) only in the
+    standard-processing archive, so filtering on it alone cleans history and
+    leaves the near-real-time tail full of volcanoes — a step change at the
+    product seam, in a series the model uses as a feature. If the mask were
+    removing a negligible share of NRT detections it would not be doing its
+    job, so the share is published next to the chart it protects.
+    """
+    out = {
+        "cell_deg": firms.MASK_CELL_DEG,
+        "buffer_cells": firms.MASK_BUFFER_CELLS,
+        "min_windows": firms.MASK_MIN_WINDOWS,
+        "mask_cells": int(len(mask)),
+        "mask_core_cells": int(mask["is_core"].sum()) if len(mask) else 0,
+        "by_product": [],
+    }
+    if len(audit):
+        for src, g in audit.groupby("src"):
+            kept, dropped = int(g["n_kept"].sum()), int(g["n_mask_dropped"].sum())
+            out["by_product"].append({
+                "src": str(src),
+                "n_windows": int(len(g)),
+                "n_kept": kept,
+                "n_mask_dropped": dropped,
+                "n_type_dropped": int(g["n_type_static"].sum()),
+                "share_removed": round(dropped / max(kept + dropped, 1), 4),
+            })
+    return out
 
 
 def gate(gid, name, passed, value, threshold, detail):
@@ -59,6 +93,10 @@ def main() -> None:
     meta = json.loads((config.DATA_DIR / "model_meta.json").read_text())
     fire_path = config.DATA_DIR / "fire_daily.parquet"
     fire = pd.read_parquet(fire_path) if fire_path.exists() else pd.DataFrame()
+    mask_path = config.DATA_DIR / "firms_static_mask.parquet"
+    audit_path = config.DATA_DIR / "fire_filter_audit.parquet"
+    fire_mask = pd.read_parquet(mask_path) if mask_path.exists() else pd.DataFrame()
+    fire_audit = pd.read_parquet(audit_path) if audit_path.exists() else pd.DataFrame()
 
     gates = []
 
@@ -160,6 +198,7 @@ def main() -> None:
             "fire_last_date": str(fire["acq_date"].max()) if len(fire) else None,
             "era5_split_cut_utc": meta["split_cut_utc"],
         },
+        "fire_filter": fire_filter_stats(fire_mask, fire_audit),
         "network": {
             "n_stations_total": len(stations["stations"]),
             "n_live": len(live),
@@ -187,6 +226,12 @@ def main() -> None:
     }
     STATS.write_text(json.dumps(stats, indent=2, allow_nan=False))
 
+    ff = stats["fire_filter"]
+    log(f"static-source mask: {ff['mask_cells']:,} cells ({ff['mask_core_cells']:,} core)")
+    for p in ff["by_product"]:
+        log(f"  {p['src']}: mask removed {p['n_mask_dropped']:,} of "
+            f"{p['n_mask_dropped'] + p['n_kept']:,} otherwise-kept detections "
+            f"({p['share_removed'] * 100:.2f}%)")
     log(f"{stats['gates_passed']}/{stats['gates_total']} gates pass")
     for g in gates:
         log(f"  {g['status'].upper():>12}  {g['id']}  {g['name']}")
