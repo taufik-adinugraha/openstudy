@@ -112,26 +112,31 @@ def fetch(label: str, params: dict, retries: int = config.DOCAPI_MAX_RETRIES) ->
 
 
 def fetch_timeline(qid: str, query: str, mode: str) -> dict | None:
-    """Full-window timeline. Falls back to one request per calendar year when the
-    API either downgrades resolution for the long span or keeps refusing the
-    full-range request (heavy queries — the sourcecountry negation — reset)."""
+    """Timeline for the full window. Verified 2026-08-30: only the plain
+    "Indonesia" query survives a 2017->now request — any multi-keyword or
+    negation query runs >100 s server-side, gets its connection reset, AND
+    earns the calling IP a several-minute penalty box. So every other query
+    is fetched as ten cheap per-year windows and stitched."""
     params = {"query": query, "mode": mode, "startdatetime": config.WINDOW_START,
               "enddatetime": window_end()}
-    js = fetch(f"{qid}__{mode}", params)
-    if js is not None and js.get("query_details", {}).get("date_resolution", "day") == "day":
-        return js
-    why = "refused" if js is None else f"resolution {js['query_details']['date_resolution']}"
-    if js is not None and "_error" in js:
-        return js
-    print(f"[doc_api] {qid}/{mode}: full range {why} — trying per year", flush=True)
+    if qid == "indonesia":
+        js = fetch(f"{qid}__{mode}", params)
+        if js is not None and (("_error" in js) or js.get("query_details", {}).get("date_resolution", "day") == "day"):
+            return js
+        why = "refused" if js is None else f"resolution {js['query_details']['date_resolution']}"
+        print(f"[doc_api] {qid}/{mode}: full range {why} — trying per year", flush=True)
+    else:
+        js = None
     stitched: dict[str, dict] = {}
     incomplete = False
     for year in range(config.EVENTS_START_YEAR, _today_utc().year + 1):
         end = min(f"{year + 1}0101000000", window_end())
         p = {**params, "startdatetime": f"{year}0101000000", "enddatetime": end}
-        part = fetch(f"{qid}__{mode}__{year}", p, retries=2)
+        part = fetch(f"{qid}__{mode}__{year}", p, retries=3)
         if part is None:
             incomplete = True
+            continue
+        if "_error" in part:
             continue
         for s in part.get("timeline", []):
             tgt = stitched.setdefault(s["series"], {"series": s["series"], "data": []})
@@ -215,8 +220,13 @@ def curves() -> None:
     if not rows:
         print("[doc_api] no cached timelines yet — run `battery` first")
         return
-    df = pd.DataFrame(rows).drop_duplicates(["qid", "mode", "series", "date"]).sort_values(["qid", "mode", "series", "date"])
+    df = pd.DataFrame(rows)
     df["date"] = pd.to_datetime(df["date"])
+    # overlapping windows repeat dates; sub-daily windows split them — mean is
+    # correct for both (values are normalized intensities / tones per interval)
+    df = (df.groupby(["qid", "mode", "series", "date"], as_index=False)
+            .agg(value=("value", "mean"), norm=("norm", "mean"))
+            .sort_values(["qid", "mode", "series", "date"]))
     config.DATA_DIR.mkdir(parents=True, exist_ok=True)
     df.to_parquet(config.CURVES, index=False)
     span = f"{df['date'].min().date()} -> {df['date'].max().date()}"
