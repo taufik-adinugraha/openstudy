@@ -114,6 +114,42 @@ The two anchor years are the two worst of the six drained so far, and 2015 is ne
 2017. That ordering is what gate G-J5 asks the model — which never saw either year — to
 reproduce.
 
+## Where it stands
+
+Numbers below are from the run on the **six ERA5 years drained so far** (2012, 2015, 2016, 2017,
+2018, 2019 — both anchors among them) and **without daily rainfall**, because `tp` sits behind
+`sl` on the same CDS dataset queue. They will move as the record lengthens; `data/stats.json` and
+the dashboard are the source of truth, not this table.
+
+**G-J2, the hard one, passes on both halves.** Against per-cell day-of-year climatology, and
+against the operational CEMS Canadian Fire Weather Index — an index we did not design and cannot
+tune, isotonically calibrated to a probability on the same folds so that it is compared at its
+best:
+
+| lead | model AUC | CEMS FWI AUC | BSS vs FWI | BSS vs climatology |
+|---|---|---|---|---|
+| 1 day | **0.887** | 0.806 | **+0.133** | +0.134 |
+| 3 days | **0.864** | 0.774 | **+0.105** | +0.089 |
+| 7 days | **0.846** | 0.738 | **+0.086** | +0.064 |
+
+The interesting part is not that the model wins; it is that **the FWI decays faster with lead
+than the model does** (0.806 → 0.738 against 0.887 → 0.846). The index is a description of today's
+fire weather, and asking it about next week is asking it something it was not built to answer.
+That gap *is* the commercial opening the spec identified.
+
+**The foresight gap is real and monotonic.** Letting the model see the weather that actually
+happened over the lead window is worth +0.003 AUC at one day, +0.023 at three, **+0.035 at seven**.
+That is the honest price of not knowing the weather, and it grows exactly where you would expect.
+
+**The anchors, scored blind:** 2015 AUC **0.908**, 2019 AUC **0.904** — both higher than the
+model's own cross-validation folds, on two years it was never trained on.
+
+**What the model is actually using**, by mean |SHAP| aggregated to families: fire history 43 %,
+atmosphere 18 %, fuel 12 %, soil moisture 11 %, ocean state 7 %, season 7 %, dryness 3 %. The
+dryness share is low *because* daily rainfall has not drained yet — the family is currently just
+SPI. Expect it to rise and fire history to fall once `tp` lands, and that shift is itself worth
+watching.
+
 ## Six premises that did not survive reconnaissance
 
 Recorded here because each one changes the build, and because the third is a live bug in another
