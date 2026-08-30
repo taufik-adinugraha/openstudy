@@ -57,11 +57,15 @@ def main() -> int:
     regions: dict = {}
     for _, row in xwalk.iterrows():
         regions[row["shapeID"]] = {"name": row["shapeName"], "bps": row["bps_code"], "series": {}}
+    fin = lambda v, nd: round(float(v), nd) if np.isfinite(v) else 0.0
     for _, r in ledger.iterrows():
+        # fully-masked monsoon cells yield NaN — browsers reject NaN in JSON,
+        # so export 0 and let n_px=0 carry the "no data" signal
+        n_px = int(r["n_px"]) if np.isfinite(r["n_px"]) else 0
         regions[r["region_id"]]["series"][r["month"]] = [
-            round(float(r["sol"]), 1), round(float(r["mean_rad"]), 2), int(r["n_px"])]
+            fin(r["sol"], 1), fin(r["mean_rad"], 2), n_px]
     (WEB / "public" / "data" / "ledger.json").write_text(
-        json.dumps({"months": months, "regions": regions}))
+        json.dumps({"months": months, "regions": regions}, allow_nan=False))
 
     # --- build-time summary ---
     national = ledger.groupby("month").agg(sol=("sol", "sum"), n_px=("n_px", "sum"))
@@ -83,7 +87,7 @@ def main() -> int:
         "topMean": [{"name": r.region_name, "v": round(float(r.mean_rad), 1)}
                     for r in top_mean.itertuples()],
     }
-    (WEB / "src" / "data" / "summary.json").write_text(json.dumps(summary, indent=1))
+    (WEB / "src" / "data" / "summary.json").write_text(json.dumps(summary, indent=1, allow_nan=False))
 
     # --- hero image ---
     preview = config.DATA_DIR / "raw" / "bm" / latest / "VJ146A3_preview.png"
