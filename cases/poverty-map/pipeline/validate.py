@@ -45,35 +45,53 @@ def run() -> dict:
     g1c = [chk("R² (leave-one-province-out)", skill["lopo"]["r2"], config.GATE_R2_MIN, ">="),
            chk("Spearman ρ", skill["lopo"]["spearman"], config.GATE_SPEARMAN_MIN, ">="),
            chk("RMSE", skill["lopo"]["rmse"], config.GATE_RMSE_MAX_PP, "<=", "pp")]
+    dec = ms.get("decomposition", {})
     g1 = gate("G-F1", f"Out-of-sample skill — leave-one-province-out, {latest} cross-section",
               all(c["ok"] for c in g1c) if all(c["ok"] is not None for c in g1c) else None,
-              f"{ms['folds']['lopo']} province folds over {skill['lopo']['n']} regencies; "
-              f"random k-fold on the same rows reaches R² {skill['random']['r2']} — the "
-              f"inflation a non-spatial fold buys.", g1c, hard=True)
+              f"{ms['folds']['lopo']} province folds over {skill['lopo']['n']} regencies. "
+              f"A random k-fold on the same rows reaches R² {skill['random']['r2']} — the "
+              f"inflation a non-spatial fold buys, and the reason this number is the one "
+              f"published." +
+              (f" Where the error lives: {dec['offset_share_of_sse']:.0%} of the squared error "
+               f"is a single constant offset for a whole province, and once that offset is "
+               f"removed the model orders regencies inside their province at ρ "
+               f"{dec['within_province_spearman']:.2f}."
+               if dec.get("offset_share_of_sse") is not None else ""), g1c, hard=True)
 
-    oj = skill["lopo_offjava"]
+    oj, kt = skill["lopo_offjava"], skill["lopo_kota"]
     g2c = [chk("Java R²", skill["lopo_java"]["r2"], config.GATE_R2_OFFJAVA_MIN, ">="),
            chk("off-Java R²", oj["r2"], config.GATE_R2_OFFJAVA_MIN, ">="),
-           chk("kota R²", skill["lopo_kota"]["r2"], config.GATE_R2_OFFJAVA_MIN, ">="),
-           chk("kabupaten R²", skill["lopo_kabupaten"]["r2"], config.GATE_R2_OFFJAVA_MIN, ">=")]
+           chk("kota (urban) R²", kt["r2"], config.GATE_R2_OFFJAVA_MIN, ">="),
+           chk("kabupaten (rural) R²", skill["lopo_kabupaten"]["r2"],
+               config.GATE_R2_OFFJAVA_MIN, ">=")]
     indicative = bool(oj["r2"] is not None and oj["r2"] < config.GATE_R2_OFFJAVA_MIN)
+    kota_ind = bool(kt["r2"] is not None and kt["r2"] < config.GATE_R2_OFFJAVA_MIN)
+    flagged = [n for n, f in (("off-Java", indicative), ("kota", kota_ind)) if f]
     g2 = gate("G-F2", "Java / off-Java and urban / rural skill disclosed separately",
               None if oj["r2"] is None else True,
-              ("Both sides measured and published. " +
-               (f"Off-Java R² {oj['r2']} is below {config.GATE_R2_OFFJAVA_MIN}, so every "
-                "off-Java estimate is labelled indicative and its interval widened."
-                if indicative else
-                "Off-Java skill clears the indicative-labelling threshold.")), g2c)
+              ("A disclosure gate: it is satisfied by measuring and publishing both sides, "
+               "and a red value below is a finding, not a gate failure. " +
+               (f"{' and '.join(flagged)} skill sits under {config.GATE_R2_OFFJAVA_MIN}, so "
+                f"every {' and '.join(flagged)} estimate is labelled indicative. "
+                if flagged else "Both splits clear the indicative-labelling threshold. ") +
+               (f"Urban R² of {kt['r2']} is below zero — for kota the model does worse than "
+                f"predicting the national mean, and city estimates should be read as "
+                f"indicative only." if kt["r2"] is not None and kt["r2"] < 0 else "")), g2c)
+    g2["status"] = "disclosed" if g2["status"] == "pass" else g2["status"]
 
     g3c = [chk(f"Spearman ρ {y}", skill[f"temporal_{y}"]["spearman"],
                config.GATE_TEMPORAL_SPEARMAN, ">=")
            for y in config.TEMPORAL_HOLDOUT_YEARS]
+    g3c += [chk(f"ρ {y} · province ALSO held out", skill.get(f"temporal_strict_{y}", {}).get("spearman"),
+                config.GATE_TEMPORAL_SPEARMAN, ">=") for y in config.TEMPORAL_HOLDOUT_YEARS]
     g3 = gate("G-F3", "Temporal hold-out — train ≤ 2023, predict 2024 and 2025",
-              all(c["ok"] for c in g3c) if all(c["ok"] is not None for c in g3c) else None,
+              all(c["ok"] for c in g3c[:2]) if all(c["ok"] is not None for c in g3c[:2]) else None,
               "Fitted on 2016–2023 only, then asked for the two releases it has never seen. "
-              "The features that vary annually are lights and population; roofs and land "
-              "cover are single-vintage, so this is a demanding test of the spatial signal.",
-              g3c)
+              "Read the first two rows with care: the same regencies appear in training in "
+              "earlier years and the roof and land-cover layers are single-vintage, so what "
+              "they mostly measure is how persistent a regency's rate is. The last two rows "
+              "are the strict version — the province is held out as well as the year — and "
+              "that is the number to quote to a client.", g3c)
 
     # ---- G-F4: recompute the benchmark identity from the shipped estimates
     worst = None
@@ -101,6 +119,21 @@ def run() -> dict:
     gates = [g1, g2, g3, g4]
     hard_fail = [g["id"] for g in gates if g["hard"] and g["status"] == "fail"]
     recon = fm["recon"]
+
+    # input coverage, measured rather than assumed: a kecamatan with no building footprints
+    # or no population is predicted from the remaining families and must be disclosed.
+    cover = {}
+    if config.FEATURES_ADM3.exists():
+        f3 = pd.read_parquet(config.FEATURES_ADM3, columns=["pcode", "year", "bld_count", "pop",
+                                                            "lc_pixels", "lights_mean"])
+        row = f3[f3["year"] == latest]
+        cover = {
+            "adm3": int(len(row)),
+            "no_buildings": int((row["bld_count"].fillna(0) <= 0).sum()),
+            "no_population": int((row["pop"].fillna(0) <= 0).sum()),
+            "no_landcover": int((row["lc_pixels"].fillna(0) <= 0).sum()),
+            "no_lights": int(row["lights_mean"].isna().sum()),
+        }
     stats = {
         "case": "poverty-map",
         "vintage": str(date.today()),
@@ -109,15 +142,24 @@ def run() -> dict:
         "ships": not hard_fail,
         "hard_failures": hard_fail,
         "offjava_indicative": indicative,
+        "kota_indicative": kota_ind,
         "skill": skill,
         "skill_panel_lopo": ms["skill_panel_lopo"],
+        "decomposition": ms.get("decomposition", {}),
         "folds": ms["folds"],
         "coverage": {
             "adm2_units": fm["adm2_units"], "adm3_units": fm["adm3_units"],
             "years": fm["years"], "n_features": ms["n_features"],
-            "reconciliation": recon,
+            "reconciliation": recon, "inputs": cover,
         },
         "caveats": [
+            "G-F1 fails on this run and is published as measured. The BPS headcount is a count "
+            "of people under a nominal, region-specific poverty line, not an asset index, and "
+            "the satellite feature families cannot see the line — which is why the published "
+            "literature's asset-wealth R² values are not the right expectation here."
+            if hard_fail else
+            "The headline skill number is leave-one-province-out; the random k-fold figure is "
+            "published only to show how much a non-spatial fold flatters this kind of model.",
             "Kecamatan values are model estimates that distribute the official regency rate; "
             "they are not survey measurements and BPS publishes nothing below the regency.",
             "Open Buildings is a single 2023 vintage and ESA WorldCover a single 2021 vintage; "
@@ -129,6 +171,12 @@ def run() -> dict:
             "no BPS code by construction and receive no estimate.",
         ],
     }
+    if cover.get("no_buildings"):
+        stats["caveats"].append(
+            f"{cover['no_buildings']} of {cover['adm3']} kecamatan have no Open Buildings "
+            "footprints above the 0.70 confidence cut — mostly very small urban units and "
+            "remote islands. They still receive an estimate, driven by the lights, population "
+            "and land-cover families, and it is correspondingly weaker.")
     if recon["unresolved"]:
         stats["caveats"].append(
             f"{len(recon['unresolved'])} administrative codes could not be reconciled between "

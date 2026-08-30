@@ -149,19 +149,25 @@ def run() -> dict:
     df["rfold"] = df["bps_code"].map(rfold).astype(str)
 
     t0 = time.time()
+    all_obs = np.isfinite(y)
     preds = {}
-    preds["lopo"] = cv_predict(df, cols, df["prov_code"], is_latest)
+    # One LOPO pass over the whole panel: the training set of a fold does not depend on
+    # which rows are scored, so the headline cross-section is a slice of the panel fit.
+    # (It also sets the per-province residual spread the downscale widens intervals by.)
+    preds["lopo_panel"] = cv_predict(df, cols, df["prov_code"], all_obs)
+    preds["lopo"] = np.where(is_latest, preds["lopo_panel"], np.nan)
     print(f"[model] leave-one-province-out: {df['prov_code'].nunique()} folds, "
           f"{time.time()-t0:.0f}s", flush=True)
     preds["block"] = cv_predict(df, cols, df["block"], is_latest)
     preds["random"] = cv_predict(df, cols, df["rfold"], is_latest)
     preds["lopo_ridge"] = cv_predict(df, cols, df["prov_code"], is_latest, learner="ridge")
 
-    # full-panel LOPO — the residual spread per province sets the interval widening
-    all_obs = np.isfinite(y)
-    preds["lopo_panel"] = cv_predict(df, cols, df["prov_code"], all_obs)
-
-    # ---- G-F3 temporal: train on <= 2023 only, predict the last two releases
+    # ---- G-F3 temporal: train on <= 2023 only, predict the last two releases.
+    # NOTE the same regencies appear in training in earlier years, and the roof and
+    # land-cover features are single-vintage, so this measures how persistent a regency's
+    # rate is far more than how well the model generalises. It is the test the spec asks
+    # for; the strict version below holds out the province AND the year, and that is the
+    # number the page quotes next to it.
     tr = (df["year"] <= 2023).to_numpy() & all_obs
     temporal = np.full(len(df), np.nan)
     if tr.sum() > 100:
@@ -169,6 +175,15 @@ def run() -> dict:
         te = (df["year"] >= 2024).to_numpy() & all_obs
         temporal[te] = mt.predict(df.loc[te, cols])
     preds["temporal"] = temporal
+
+    strict = np.full(len(df), np.nan)
+    te_all = (df["year"] >= 2024).to_numpy() & all_obs
+    for p in sorted(df["prov_code"].dropna().unique()):
+        te = te_all & (df["prov_code"] == p).to_numpy()
+        trp = tr & (df["prov_code"] != p).to_numpy()
+        if te.any() and trp.sum() > 100:
+            strict[te] = fit_lgbm(df.loc[trp, cols], y[trp]).predict(df.loc[te, cols])
+    preds["temporal_strict"] = strict
 
     out = df[["bps_code", "bps_name", "prov_code", "prov_name", "year", "is_java", "is_kota",
               "lon", "lat", config.TARGET, "p1_gap", "p2_severity", "poverty_line_idr",
@@ -226,6 +241,34 @@ def run() -> dict:
     for yr in config.TEMPORAL_HOLDOUT_YEARS:
         m = (df["year"] == yr).to_numpy() & all_obs
         stats["skill"][f"temporal_{yr}"] = metrics(y[m], temporal[m])
+        stats["skill"][f"temporal_strict_{yr}"] = metrics(y[m], strict[m])
+
+    # ---- where the error actually lives: is it a province-level offset, or misordering
+    # inside the province? The benchmark supplies the level, so this is the decomposition
+    # that says whether the model is fit for the job it is actually asked to do.
+    lo = preds["lopo"]
+    m = is_latest & np.isfinite(lo)
+    dd = pd.DataFrame({"prov": df.loc[m, "prov_code"].values, "y": y[m], "p": lo[m]})
+    gy = dd.groupby("prov")
+    dd["yc"] = dd["y"] - gy["y"].transform("mean")
+    dd["pc"] = dd["p"] - gy["p"].transform("mean")
+    sse_within = float(((dd["yc"] - dd["pc"]) ** 2).sum())
+    sst_within = float((dd["yc"] ** 2).sum())
+    sse_total = float(((dd["y"] - dd["p"]) ** 2).sum())
+    offs = gy.apply(lambda g: len(g) * (g["p"].mean() - g["y"].mean()) ** 2, include_groups=False)
+    from scipy import stats as sstats
+
+    rhos = [(len(g), float(sstats.spearmanr(g["y"], g["p"]).statistic))
+            for _, g in dd.groupby("prov") if len(g) >= 5 and g["y"].nunique() > 2]
+    stats["decomposition"] = {
+        "within_province_r2": round(1 - sse_within / sst_within, 4) if sst_within > 0 else None,
+        "within_province_spearman": round(sum(n * r for n, r in rhos) / sum(n for n, _ in rhos), 4)
+        if rhos else None,
+        "provinces_scored": len(rhos),
+        "offset_share_of_sse": round(float(offs.sum()) / sse_total, 4) if sse_total > 0 else None,
+        "note": ("Fraction of the squared error that is a constant offset for a whole province, "
+                 "versus misordering of regencies inside it."),
+    }
 
     (config.DATA_DIR / "model_stats.json").write_text(json.dumps(stats, indent=1))
     s = stats["skill"]["lopo"]

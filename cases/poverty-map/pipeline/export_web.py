@@ -289,9 +289,10 @@ def export_ledger(manifest: dict) -> None:
             for r in c.itertuples() if np.isfinite(getattr(r, config.TARGET))]}
         tem = cv[cv["year"].isin(config.TEMPORAL_HOLDOUT_YEARS)]
         scatter["temporal"] = [[int(r.year), jnum(getattr(r, config.TARGET), 2),
-                                jnum(r.pred_temporal, 2)]
+                                jnum(r.pred_temporal, 2), jnum(r.pred_temporal_strict, 2),
+                                r.bps_code]
                                for r in tem.itertuples()
-                               if np.isfinite(r.pred_temporal or np.nan)]
+                               if r.pred_temporal is not None and np.isfinite(r.pred_temporal)]
 
     fam = None
     ms_path = config.DATA_DIR / "model_stats.json"

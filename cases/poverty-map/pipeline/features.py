@@ -29,6 +29,7 @@ from __future__ import annotations
 import json
 import re
 import sys
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -300,12 +301,26 @@ def build() -> tuple[pd.DataFrame, pd.DataFrame]:
 
     # ingest.merge keeps lights_mean (intensive); recover the pixel count so the rollup can
     # re-derive a correct area-weighted mean instead of averaging averages.
+    # The Black Marble grid is identical every year, so a unit's pixel count is constant:
+    # take it from any year that has light and reuse it. Doing this per year instead would
+    # turn a genuinely DARK year into a missing value — and "dark" is the signal, not a gap.
+    per_year = {}
     for year in range(2012, 2026):
         s, m = f"lights_sol_{year}", f"lights_mean_{year}"
         if s in raw.columns and m in raw.columns:
-            raw[f"lights_px_{year}"] = np.where(raw[m].to_numpy("float64") > 0,
-                                                raw[s].to_numpy("float64") / raw[m].replace(0, np.nan),
-                                                np.nan)
+            mm = raw[m].to_numpy("float64")
+            per_year[year] = np.where(mm > 0, raw[s].to_numpy("float64") / np.where(mm > 0, mm, 1.0),
+                                      np.nan)
+    if per_year:
+        with warnings.catch_warnings():        # a unit dark in every year is expected here
+            warnings.simplefilter("ignore", RuntimeWarning)
+            px = np.nanmedian(np.vstack(list(per_year.values())), axis=0)
+        px = np.where(np.isfinite(px) & (px > 0), np.round(px), np.nan)
+        for year in per_year:
+            raw[f"lights_px_{year}"] = px
+        dark = int(np.isnan(px).sum())
+        print(f"[features] lights: pixel count recovered for {len(px) - dark} ADM3 units; "
+              f"{dark} have no lit pixel in any year and keep a missing radiance", flush=True)
 
     bps = pd.read_parquet(config.DATA_DIR / "bps_poverty.parquet")
     mapping, audit, summary = recode(force=True)

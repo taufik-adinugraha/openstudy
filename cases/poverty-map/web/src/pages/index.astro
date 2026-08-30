@@ -61,8 +61,9 @@ import "maplibre-gl/dist/maplibre-gl.css";
           Below that line nothing official exists. But the signal is overhead: how many roofs,
           how big they are, how bright the night, how much of the ground is built.
           This case learns the relationship against every official rate from 2016 to 2025,
-          proves it out-of-province and out-of-year, and then carries it down to the
-          kecamatan — <em>distributing</em> the official number, never replacing it.</p>
+          tests it on provinces the model has never seen, publishes the result whichever way
+          it falls, and then carries it down to the kecamatan — <em>distributing</em> the
+          official number, never replacing it.</p>
           <div class="hero-ctl" id="hero-ctl" hidden>
             <div class="segmented" role="group" aria-label="Left-hand layer">
               <button data-sees="bld_per_km2" class="on">Roofs</button>
@@ -80,6 +81,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
       <!-- ═══════════════════════════ big stats ═══════════════════════════ -->
       <section id="stats" class="band reveal">
+        <p class="verdict" id="verdict" hidden></p>
         <div class="stat-row" id="stat-row"></div>
       </section>
 
@@ -171,8 +173,10 @@ import "maplibre-gl/dist/maplibre-gl.css";
             <figure class="card">
               <figcaption>
                 <h3>Sees forward, not just sideways</h3>
-                <p class="cap">Trained on 2016–2023 only, then asked for the 2024 and 2025
-                releases it has never seen.</p>
+                <p class="cap">Trained on 2016–2023, then asked for releases it has never
+                seen. Plotted against the strict version, where the regency's whole province
+                is held out too — otherwise the model can simply remember the level it
+                learned from that regency's earlier years.</p>
               </figcaption>
               <div class="chart short" id="temporal-chart"></div>
             </figure>
@@ -441,7 +445,7 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
          the raw satellite layers are a neutral steel so they read as instrument, not result. */
       const RAMP_POV = ["#1F1710", "#4A3218", "#8A5A22", "#C58B3C", "#EBD9B8"];
       const RAMP_OFF = ["#101F1D", "#173F39", "#22685E", "#39958A", "#8FD8CE"];
-      const RAMP_SEE = ["#15161A", "#2A3038", "#4C555F", "#7D8794", "#C8D0DA"];
+      const RAMP_SEE = ["#242830", "#3B434F", "#5D6774", "#8994A3", "#D6DDE6"];
       const povScale = d3.piecewise(d3.interpolateRgb, RAMP_POV);
       const offScale = d3.piecewise(d3.interpolateRgb, RAMP_OFF);
       const seeScale = d3.piecewise(d3.interpolateRgb, RAMP_SEE);
@@ -574,6 +578,7 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
           ox = (W - k * (be - bw)) / 2 + panX;
           oy = (H + k * (bn - bs)) / 2 + panY;
           buildPaths();
+          bufA = bufB = null;                 // geometry moved: the cached bitmaps are stale
         }
         function buildPaths() {
           paths = []; boxes = [];
@@ -593,24 +598,42 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
             boxes.push([x0, y0, x1, y1]);
           }
         }
-        function paintSet(cols) {
+        // Each colour set is rendered once into an offscreen bitmap; the wipe and every
+        // hover then composite bitmaps instead of re-stroking 400,000 points, which is what
+        // keeps a 7,069-polygon map at 60 fps with no GPU.
+        let bufA = null, bufB = null;
+        function paintSet(g, cols) {
           for (let i = 0; i < paths.length; i++) {
-            ctx.fillStyle = cols[i] || "#1A1610";
-            ctx.fill(paths[i]);
+            g.fillStyle = cols[i] || "#1A1610";
+            g.fill(paths[i]);
           }
           if (opts.stroke !== false) {
-            ctx.strokeStyle = HAIR; ctx.lineWidth = layer.units.length > 2000 ? 0.28 : 0.5;
-            for (let i = 0; i < paths.length; i++) ctx.stroke(paths[i]);
+            g.strokeStyle = HAIR; g.lineWidth = layer.units.length > 2000 ? 0.28 : 0.5;
+            for (let i = 0; i < paths.length; i++) g.stroke(paths[i]);
           }
         }
+        function buffer(cols) {
+          if (!cols) return null;
+          const c = document.createElement("canvas");
+          c.width = canvas.width; c.height = canvas.height;
+          const g = c.getContext("2d");
+          g.setTransform(dpr, 0, 0, dpr, 0, 0);
+          g.fillStyle = ground; g.fillRect(0, 0, W, H);
+          paintSet(g, cols);
+          return c;
+        }
+        function rebuild() { bufA = buffer(colours); bufB = buffer(coloursB); }
         function paint() {
           if (!layer || !W) return;
+          if (!bufA) rebuild();
           ctx.save();
           ctx.fillStyle = ground; ctx.fillRect(0, 0, W, H);
-          if (coloursB && wipe < 1) {
+          if (bufB && wipe < 1) {
             const x = Math.round(wipe * W);
-            ctx.save(); ctx.beginPath(); ctx.rect(0, 0, x, H); ctx.clip(); paintSet(colours); ctx.restore();
-            ctx.save(); ctx.beginPath(); ctx.rect(x, 0, W - x, H); ctx.clip(); paintSet(coloursB); ctx.restore();
+            ctx.save(); ctx.beginPath(); ctx.rect(0, 0, x, H); ctx.clip();
+            ctx.drawImage(bufA, 0, 0, W, H); ctx.restore();
+            ctx.save(); ctx.beginPath(); ctx.rect(x, 0, W - x, H); ctx.clip();
+            ctx.drawImage(bufB, 0, 0, W, H); ctx.restore();
             ctx.save();
             const g = ctx.createLinearGradient(x - 26, 0, x + 26, 0);
             g.addColorStop(0, "rgba(217,154,78,0)");
@@ -621,7 +644,7 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
             ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
             ctx.restore();
           } else {
-            paintSet(colours);
+            ctx.drawImage(bufA, 0, 0, W, H);
           }
           if (hoverIdx >= 0 && paths[hoverIdx]) {
             ctx.strokeStyle = "#F0EAE1"; ctx.lineWidth = 1.6; ctx.stroke(paths[hoverIdx]);
@@ -707,8 +730,11 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
 
         return {
           canvas,
-          setLayer(l) { layer = l; colours = new Array(l.units.length).fill(ground); coloursB = null; hoverIdx = -1; fit(); paint(); },
-          setColours(a, b = null, wipeAt = 1) { colours = a; coloursB = b; wipe = wipeAt; paint(); },
+          // deliberately does NOT paint: every caller follows with setColours, and rendering
+          // 7,069 polygons twice is the difference between a 2 s and a 5 s level switch
+          setLayer(l) { layer = l; colours = new Array(l.units.length).fill(ground); coloursB = null;
+            hoverIdx = -1; selected = null; bufA = bufB = null; fit(); },
+          setColours(a, b = null, wipeAt = 1) { colours = a; coloursB = b; wipe = wipeAt; rebuild(); paint(); },
           setWipe(x) { wipe = x; paint(); },
           setSelected(id) { selected = id; paint(); },
           resetView() { zoom = 1; panX = 0; panY = 0; fit(); paint(); },
@@ -752,7 +778,9 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
         let p = null;
         return () => (p ||= j("adm3.geo.json").then((raw) => (ADM3 = raw ? buildLayer(raw) : null)));
       })();
-      if (ready("adm3_geo")) loadAdm3();
+      // kecamatan geometry is the hero's subject once estimates exist, so it is fetched in
+      // parallel with everything else and awaited only just before the hero is composed
+      if (ready("adm3_geo")) await loadAdm3();
 
       const YEARS = ledger.years;
       const LATEST = YEARS[YEARS.length - 1];
@@ -797,6 +825,39 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
       latestVals.sort((a, b) => d3.ascending(a.v, b.v));
 
       /* ══════════════════════════════ big stats ═══════════════════════════════════ */
+      sect("verdict", () => {
+        const el = document.getElementById("verdict");
+        if (!statsJson) {
+          el.hidden = false;
+          el.className = "verdict pending";
+          el.innerHTML = "<b>Result pending.</b> The dashboard is built; the model has not been " +
+            "fitted, because the last data partitions are still landing and they land in " +
+            "geographic order. No number on this page is estimated from a partial pull.";
+          return;
+        }
+        const dec = statsJson.decomposition || {};
+        const s = statsJson.skill;
+        el.hidden = false;
+        el.className = "verdict " + (statsJson.ships ? "ok" : "fail");
+        el.innerHTML = statsJson.ships
+          ? `<b>All hard gates pass.</b> Held out province by province, the model reaches ` +
+            `R² ${fmt2(s.lopo.r2)} and Spearman ρ ${fmt2(s.lopo.spearman)} against the official ` +
+            `${statsJson.latest_year} rates, and kecamatan estimates reproduce every regency total exactly.`
+          : `<b>The headline gate fails, and it is published failing.</b> Held out province by ` +
+            `province the model reaches R² ${fmt2(s.lopo.r2)}, ρ ${fmt2(s.lopo.spearman)} and ` +
+            `RMSE ${fmt1(s.lopo.rmse)} pp, against thresholds of 0.50, 0.70 and 4.0 pp. The ` +
+            `diagnosis is specific rather than general: ` +
+            `${dec.offset_share_of_sse == null ? "most" : d3.format(".0%")(dec.offset_share_of_sse)} ` +
+            `of the squared error is a single constant offset for an entire province. A satellite ` +
+            `can measure roofs and light; it cannot see the <em>nominal poverty line</em> those ` +
+            `roofs are judged against, and that line is what sets a province's level. Remove the ` +
+            `offsets and the ordering inside a province is ρ ` +
+            `${dec.within_province_spearman == null ? "—" : fmt2(dec.within_province_spearman)} ` +
+            `across ${dec.provinces_scored ?? "—"} provinces: real signal, still short of what ` +
+            `household targeting would need. What this case ships is therefore a benchmarked ` +
+            `<em>disaggregator</em> for exploration and prioritisation — not a substitute for the survey.`;
+      });
+
       sect("stat row", () => {
         const row = document.getElementById("stat-row");
         const last = national[national.length - 1];
@@ -815,10 +876,15 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
           statsJson
             ? (() => {
                 const g1 = statsJson.gates.find((g) => g.id === "G-F1");
+                const dec = statsJson.decomposition || {};
                 const r2 = g1.checks[0].value, rho = g1.checks[1].value;
                 return { k: g1.status === "pass" ? "model" : "fail",
-                  big: `R²&nbsp;${fmt2(r2)}`, lab: "Held-out skill, leave-one-province-out",
-                  sub: `Spearman ρ ${fmt2(rho)} · RMSE ${fmt1(g1.checks[2].value)} pp · gate G-F1 ${g1.status}` };
+                  big: `R²&nbsp;${fmt2(r2)}`,
+                  lab: `Held-out skill, leave-one-province-out — gate G-F1 ${g1.status}`,
+                  sub: `ρ ${fmt2(rho)} · RMSE ${fmt1(g1.checks[2].value)} pp` +
+                    (dec.within_province_spearman != null
+                      ? ` · but ρ ${fmt2(dec.within_province_spearman)} once the province's own level is set by BPS`
+                      : "") };
               })()
             : { k: "pending", big: "—", lab: "Held-out skill, leave-one-province-out",
                 sub: "gate G-F1 runs when every partition has landed" },
@@ -893,24 +959,25 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
           lc_built: { label: "Built-up share", unit: "of land", fmt: (v) => (v == null ? "—" : d3.format(".1%")(v)),
                          log: false, headline: "LAND · ESA WORLDCOVER v200 · 2021" },
         };
+        // The satellite layers are shaded by RANK, not by value. Built-up share and roof
+        // density are so skewed that a linear or even log ramp collapses 90 % of the country
+        // into one tone — which would be a picture of the distribution, not of the country.
+        // Ranking makes each instrument legible; the tooltip always carries the real value
+        // and its unit, so nothing is being hidden by the choice.
         function seeLayer(lay, keyName) {
           if (!estimates?.sees?.[keyName]) return null;
-          const idx = new Map(estimates.pcodes.map((p, i) => [p, i]));
           const arr = estimates.sees[keyName];
-          const m = new Map();
-          for (const u of lay.units) {
-            const i = idx.get(u.id);
-            m.set(u.id, i == null ? null : arr[i]);
-          }
-          const def = SEE_DEFS[keyName];
-          const vals = [...m.values()].map((v) => (v != null && def.log ? Math.log1p(Math.max(v, 0)) : v));
-          const n = norm(vals);
-          return { ...def, get: (id) => m.get(id),
-                   colours: lay.units.map((u) => {
-                     const raw = m.get(u.id);
-                     const t = n(raw != null && def.log ? Math.log1p(Math.max(raw, 0)) : raw);
-                     return t == null ? "#16181C" : seeScale(t);
-                   }) };
+          const raw = lay.units.map((u) => {
+            const i = estIdx?.get(u.id);
+            return i == null ? null : arr[i];
+          });
+          const order = raw.map((v, i) => [v, i]).filter(([v]) => v != null && isFinite(v))
+            .sort((a, b) => a[0] - b[0]);
+          const rank = new Array(raw.length).fill(null);
+          order.forEach(([, i], k) => { rank[i] = order.length > 1 ? k / (order.length - 1) : 0.5; });
+          const byId = new Map(lay.units.map((u, i) => [u.id, raw[i]]));
+          return { ...SEE_DEFS[keyName], get: (id) => byId.get(id),
+                   colours: rank.map((t) => (t == null ? "#16181C" : seeScale(Math.pow(t, 0.9)))) };
         }
 
         /* ---- pending state: BPS official only, plate on the model half ---- */
@@ -1000,10 +1067,12 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
           if (reduced || ms === 0) { map.setColours(toCols); onDone?.(); return; }
           const t0 = performance.now();
           const mix = new Array(toCols.length);
+          // interpolators built once, not once per element per frame
+          const interp = toCols.map((c, i) => d3.interpolateRgb(fromCols[i] ?? "#0F0C09", c));
           const step = (now) => {
             const t = Math.min(1, (now - t0) / ms);
             const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-            for (let i = 0; i < toCols.length; i++) mix[i] = d3.interpolateRgb(fromCols[i], toCols[i])(e);
+            for (let i = 0; i < toCols.length; i++) mix[i] = interp[i](e);
             map.setColours(mix);
             if (t < 1) requestAnimationFrame(step); else onDone?.();
           };
@@ -1208,7 +1277,7 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
         }
         const rows = ledger.scatter.rows.map(([code, y, lopo, rand, block, ridge, java, kota]) =>
           ({ code, y, lopo, random: rand, block, lopo_ridge: ridge, java, kota }));
-        const W = Math.max(el.clientWidth, 280), H = 380, M = { t: 16, r: 16, b: 40, l: 46 };
+        const W = Math.max(el.clientWidth, 280), H = 470, M = { t: 16, r: 16, b: 44, l: 48 };
         const svg = d3.select(el).append("svg").attr("width", "100%").attr("height", H)
           .attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img")
           .attr("aria-label", "Scatter of model predictions against official BPS regency rates");
@@ -1298,7 +1367,12 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
         if (!ledger.scatter?.temporal?.length || !statsJson) {
           plate(el, "pending", "Temporal hold-out pending.", PENDING_BODY); return;
         }
-        const rows = ledger.scatter.temporal.map(([yr, obs, pred]) => ({ yr, obs, pred }));
+        // plotted against the STRICT hold-out (province held out as well as the year); the
+        // same-province variant is in the tooltip, because on its own it mostly measures
+        // how little a regency's rate moves from one release to the next.
+        const rows = ledger.scatter.temporal
+          .map(([yr, obs, loose, strict, code]) => ({ yr, obs, pred: strict ?? loose, loose, strict, code }))
+          .filter((d) => d.pred != null);
         const W = Math.max(el.clientWidth, 280), H = 176, M = { t: 12, r: 12, b: 30, l: 42 };
         const svg = d3.select(el).append("svg").attr("width", "100%").attr("height", H)
           .attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img")
@@ -1318,17 +1392,20 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
         svg.selectAll("circle").data(rows).join("circle")
           .attr("cx", (d) => x(d.obs)).attr("cy", (d) => y(d.pred)).attr("r", 2.6)
           .attr("fill", (d) => cols[d.yr] ?? OCHRE).attr("fill-opacity", 0.55)
-          .on("mousemove", (e, d) => showTip(`<b>${d.yr} release</b>` +
+          .on("mousemove", (e, d) => showTip(`<b>${nameOf(d.code)} · ${d.yr} release</b>` +
             `<div class="t-row"><span>Official</span><b class="teal">${pp(d.obs)}</b></div>` +
-            `<div class="t-row"><span>Predicted (unseen year)</span><b class="ochre">${pp(d.pred)}</b></div>`, e))
+            `<div class="t-row"><span>Year <i>and</i> province unseen</span><b class="ochre">${pp(d.strict)}</b></div>` +
+            `<div class="t-row"><span>Year unseen only</span><b>${pp(d.loose)}</b></div>`, e))
           .on("mouseleave", hideTip);
         const leg = svg.append("g").attr("transform", `translate(${M.l + 6},${M.t + 4})`);
         Object.entries(cols).forEach(([yr, c], i) => {
+          const st = statsJson.skill[`temporal_strict_${yr}`]?.spearman;
+          const lo = statsJson.skill[`temporal_${yr}`]?.spearman;
           const gg = leg.append("g").attr("transform", `translate(0,${i * 16})`);
           gg.append("circle").attr("r", 3.4).attr("fill", c);
           gg.append("text").attr("x", 10).attr("y", 4).attr("font-size", 12).attr("fill", MUTED)
             .attr("font-family", "IBM Plex Mono, monospace")
-            .text(`${yr} · ρ ${statsJson.skill[`temporal_${yr}`]?.spearman != null ? fmt2(statsJson.skill[`temporal_${yr}`].spearman) : "—"}`);
+            .text(`${yr} · ρ ${st != null ? fmt2(st) : "—"} strict · ${lo != null ? fmt2(lo) : "—"} same-province`);
         });
       });
 
@@ -1342,16 +1419,25 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
         }
         const s = statsJson.skill;
         const g1 = statsJson.gates[0];
+        const dec = statsJson.decomposition || {};
         const inflate = s.random?.r2 != null && s.lopo?.r2 != null ? s.random.r2 - s.lopo.r2 : null;
         el.innerHTML =
           (g1.status === "pass"
             ? `The model reproduces the official ranking of ${s.lopo.n} regencies it was never trained on (Spearman ρ ${fmt2(s.lopo.spearman)}, RMSE ${fmt1(s.lopo.rmse)} pp). `
-            : `<b class="bad-inline">G-F1 fails on this run</b> (R² ${fmt2(s.lopo.r2)}, ρ ${fmt2(s.lopo.spearman)}, RMSE ${fmt1(s.lopo.rmse)} pp against thresholds 0.50 / 0.70 / 4.0). It is published as it stands. `) +
+            : `<b class="bad-inline">G-F1 fails on this run and goes up red</b> — R² ${fmt2(s.lopo.r2)}, ρ ${fmt2(s.lopo.spearman)}, RMSE ${fmt1(s.lopo.rmse)} pp against thresholds of 0.50, 0.70 and 4.0 pp. Those thresholds were set from an asset-wealth literature; the target here is a headcount against a <em>nominal, region-specific poverty line</em>, and no satellite can see a price level. `) +
           (inflate != null
-            ? `A random k-fold on the same rows would have reported R² ${fmt2(s.random.r2)} instead of ${fmt2(s.lopo.r2)} — ${fmt2(inflate)} of pure fold design. `
+            ? `A random k-fold on the same rows would have reported R² ${fmt2(s.random.r2)} instead of ${fmt2(s.lopo.r2)} — ${fmt2(inflate)} of pure fold design, and the reason the honest number is the published one. `
             : "") +
-          `Off-Java R² is ${s.lopo_offjava?.r2 == null ? "—" : fmt2(s.lopo_offjava.r2)} against ${s.lopo_java?.r2 == null ? "—" : fmt2(s.lopo_java.r2)} on Java` +
-          (statsJson.offjava_indicative ? ", so every off-Java estimate on this page is labelled indicative." : ".");
+          (dec.offset_share_of_sse != null
+            ? `<b>${d3.format(".0%")(dec.offset_share_of_sse)} of the squared error is a single constant offset for a whole province</b> — the model cannot guess a price level from orbit. Strip the offsets and regencies are ordered inside their province at ρ ${fmt2(dec.within_province_spearman)} across ${dec.provinces_scored} provinces: the weaker half of the job, but the half chapter 4 actually needs, because benchmarking takes the level from BPS. `
+            : "") +
+          (s.temporal_strict_2025?.spearman != null
+            ? `The temporal test tells the same story twice: ρ ${fmt2(s.temporal_2025.spearman)} when the model has seen the regency in earlier years, ρ ${fmt2(s.temporal_strict_2025.spearman)} when the province is held out too. `
+            : "") +
+          `Off-Java R² is ${s.lopo_offjava?.r2 == null ? "—" : fmt2(s.lopo_offjava.r2)} against ${s.lopo_java?.r2 == null ? "—" : fmt2(s.lopo_java.r2)} on Java, and urban kota ${s.lopo_kota?.r2 == null ? "—" : fmt2(s.lopo_kota.r2)}` +
+          (statsJson.kota_indicative || statsJson.offjava_indicative
+            ? " — below zero for cities, so every kota estimate here is labelled indicative."
+            : ".");
       });
 
       /* ══════════════════════════ CH3 — signals ═══════════════════════════════════ */
@@ -1429,11 +1515,12 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
             .transition().duration(DUR).ease(d3.easeCubicOut)
             .attr("x", (d) => (d.v >= 0 ? x(0) : x(d.v)))
             .attr("width", (d) => Math.max(1.5, Math.abs(x(d.v) - x(0))));
+          // label on the empty side of the axis, never on top of its own bar
           all.select("text.lab")
             .attr("y", (d) => yb(d.phrase) + yb.bandwidth() / 2 + 4)
             .attr("font-size", 12).attr("fill", "#F0EAE1")
-            .attr("text-anchor", (d) => (d.v >= 0 ? "start" : "end"))
-            .attr("x", (d) => (d.v >= 0 ? x(0) + 8 : x(0) - 8))
+            .attr("text-anchor", (d) => (d.v >= 0 ? "end" : "start"))
+            .attr("x", (d) => (d.v >= 0 ? x(0) - 10 : x(0) + 10))
             .text((d) => `${d.phrase} (${d.v > 0 ? "+" : ""}${fmt2(d.v)} pp)`);
           all.on("mousemove", (e, d) => showTip(`<b>${d.phrase}</b><span class="t-sub">${d.f}</span>` +
             `<div class="t-row"><span>Contribution</span><b class="${d.v >= 0 ? "ochre" : ""}">${d.v > 0 ? "+" : ""}${fmt2(d.v)} pp</b></div>`, e))
@@ -1492,8 +1579,8 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
             name: estimates.names[i], est: estimates.est[yearKey][i],
             lo: estimates.lo[i], hi: estimates.hi[i], pop: estimates.pop[i],
           })).filter((r) => r.est != null).sort((a, b) => d3.descending(a.est, b.est));
-          const rowH = 20, H = Math.max(160, rows.length * rowH + 46);
-          const W = Math.max(el.clientWidth, 280), M = { t: 12, r: 54, b: 30, l: 132 };
+          const rowH = 20, H = Math.max(160, rows.length * rowH + 62);
+          const W = Math.max(el.clientWidth, 280), M = { t: 26, r: 54, b: 30, l: 132 };
           svgSel.attr("height", H).attr("viewBox", `0 0 ${W} ${H}`)
             .attr("aria-label", `Kecamatan poverty estimates inside ${nameOf(code)} with intervals`);
           svgSel.selectAll("*").remove();
@@ -1509,9 +1596,10 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
           if (official != null) {
             svgSel.append("rect").attr("x", x(official) - 1).attr("y", M.t)
               .attr("width", 2).attr("height", H - M.b - M.t).attr("fill", TEAL).attr("opacity", 0.9);
-            svgSel.append("text").attr("x", x(official)).attr("y", H - 8).attr("text-anchor", "middle")
+            svgSel.append("text").attr("x", x(official)).attr("y", M.t - 10)
+              .attr("text-anchor", x(official) > W - M.r - 90 ? "end" : "middle")
               .attr("font-size", 12).attr("fill", TEAL).attr("font-family", "IBM Plex Mono, monospace")
-              .text(`official ${fmt1(official)}%`);
+              .text(`OFFICIAL BPS ${fmt1(official)}%`);
           }
           const g = svgSel.selectAll("g.k").data(rows).join("g").attr("class", "k");
           g.append("line").attr("y1", (d) => yb(d.name) + yb.bandwidth() / 2)
@@ -1563,11 +1651,13 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
           return;
         }
         el.innerHTML =
-          `In ${fmtI(contrasts.n_separable)} of ${fmtI(contrasts.n_regencies)} regencies the poorest ` +
-          `and least-poor kecamatan are separable at the published interval — a median internal ` +
-          `spread of ${fmt1(contrasts.spread_median)} pp, reaching ${fmt1(contrasts.spread_max)} pp ` +
-          `at the extreme. That is targeting resolution the official series cannot give, delivered ` +
-          `without ever contradicting it.`;
+          `Inside a typical regency the model spreads the official rate over ` +
+          `${fmt1(contrasts.spread_median)} pp of range, reaching ${fmt1(contrasts.spread_max)} pp ` +
+          `at the extreme — variation the published series cannot show. But only ` +
+          `<b>${fmtI(contrasts.n_separable)} of ${fmtI(contrasts.n_regencies)}</b> regencies have a ` +
+          `poorest and a least-poor kecamatan whose intervals actually clear each other, because ` +
+          `those intervals carry the province's own out-of-sample error. Both numbers are the ` +
+          `product: a map fine enough to argue about, honest enough to say where the argument stops.`;
       });
 
       /* ══════════════════════════ EXPLORE ═════════════════════════════════════════ */
@@ -1615,7 +1705,7 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
             `<span class="lg-ramp" style="background:linear-gradient(90deg,${stops.join(",")})"></span>` +
             `<span class="lg-ends stamp"><b>${METRIC[state.metric].fmt(sc.lo)}</b><b>${METRIC[state.metric].fmt(sc.hi)}</b></span>` +
             (state.level === "adm3"
-              ? `<span class="lg-note stamp">MODEL ESTIMATE · BENCHMARKED TO THE OFFICIAL REGENCY RATE${statsJson?.offjava_indicative ? " · OFF-JAVA INDICATIVE" : ""}</span>`
+              ? `<span class="lg-note stamp">MODEL ESTIMATE · BENCHMARKED TO THE OFFICIAL REGENCY RATE${statsJson?.offjava_indicative ? " · OFF-JAVA INDICATIVE" : ""}${statsJson?.kota_indicative ? " · KOTA INDICATIVE" : ""}</span>`
               : `<span class="lg-note stamp">SOURCE: BPS MARCH SUSENAS · ${currentLayer.units.length} UNITS</span>`);
         }
         const tipFor = (u) => {
@@ -1680,8 +1770,10 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
           }
           const sh = document.getElementById("panel-shap");
           const rows = REG[code]?.shap;
+          // attribution is fitted at the regency level, so say whose it is when the panel
+          // is showing a kecamatan
           sh.innerHTML = rows?.length
-            ? `<span class="stamp dim">WHY THE MODEL SAYS SO</span><ul class="mini-shap">` +
+            ? `<span class="stamp dim">WHY THE MODEL SAYS SO${isReg ? "" : ` — FOR ${String(nameOf(code)).toUpperCase()}, THE REGENCY`}</span><ul class="mini-shap">` +
               rows.map(([f, v, phrase]) => `<li class="${v >= 0 ? "up" : "down"}"><span>${phrase}</span><b>${v > 0 ? "+" : ""}${fmt2(v)} pp</b></li>`).join("") + "</ul>"
             : "";
           syncHash();
@@ -1799,8 +1891,8 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
         /* ---- table view + CSV ---- */
         const tableWrap = document.getElementById("table-wrap");
         const table = document.getElementById("data-table");
-        let lastRows = [];
-        function renderTable(vals) {
+        let tableStale = true;
+        function buildRows(vals) {
           const rows = currentLayer.units.map((u) => {
             const v = vals.get(u.id);
             return state.level === "adm2"
@@ -1810,7 +1902,14 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
                   estimate_p0: v, official_regency_p0: val(u.parent, "p0", state.year) };
           }).filter((r) => Object.values(r).some((x) => x != null));
           rows.sort((a, b) => d3.descending(a.value ?? a.estimate_p0 ?? 0, b.value ?? b.estimate_p0 ?? 0));
-          lastRows = rows;
+          return rows;
+        }
+        function renderTable(vals) {
+          // the table view is usually hidden; building 7,069 rows on every repaint would
+          // cost more than the map does
+          if (tableWrap.hidden) { tableStale = true; return; }
+          tableStale = false;
+          const rows = buildRows(vals);
           const cols = Object.keys(rows[0] || { code: "", name: "" });
           table.querySelector("thead").innerHTML =
             `<tr>${cols.map((c) => `<th>${c.replace(/_/g, " ")}</th>`).join("")}</tr>`;
@@ -1822,11 +1921,13 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
           const isTable = b.dataset.view === "table";
           tableWrap.hidden = !isTable;
           document.querySelector(".map-shell").hidden = isTable;
+          if (isTable && tableStale) renderTable(valuesFor());
         }));
         document.getElementById("dl-csv").addEventListener("click", () => {
-          if (!lastRows.length) return;
-          const cols = Object.keys(lastRows[0]);
-          const csv = [cols.join(",")].concat(lastRows.map((r) =>
+          const dlRows = buildRows(valuesFor());
+          if (!dlRows.length) return;
+          const cols = Object.keys(dlRows[0]);
+          const csv = [cols.join(",")].concat(dlRows.map((r) =>
             cols.map((c) => {
               const v = r[c];
               return v == null ? "" : typeof v === "string" && /[",]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
@@ -1967,6 +2068,8 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
         background: color-mix(in srgb, var(--ground) 78%, transparent); }
       .hl.left { color: #C8D0DA; border-left: 2px solid #7D8794; }
       .hl.right { color: var(--accent); border-right: 2px solid var(--accent); }
+      /* the two labels collide on a phone; the note under the controls names the layer anyway */
+      @media (max-width: 620px) { .hero-labels { display: none; } }
       .hero-pending { position: absolute; right: 20px; top: 68px; width: min(360px, calc(100% - 40px));
         background: color-mix(in srgb, var(--surface) 94%, transparent); border: 1px solid var(--hairline);
         border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 14px 16px;
@@ -2010,6 +2113,7 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
       .picker { appearance: none; background: var(--surface); color: var(--ink);
         border: 1px solid var(--hairline); border-radius: var(--radius); padding: 8px 10px;
         font-family: var(--font-data); font-size: 13px; max-width: 100%; margin-top: 8px; }
+      .picker:disabled { display: none; }
 
       /* ── layout ── */
       .band { max-width: var(--content-width); margin: 0 auto; padding: 26px 22px; }
@@ -2050,6 +2154,18 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
       .sowhat em { color: var(--ink); }
 
       /* ── stats ── */
+      .verdict { max-width: var(--prose-width); margin: 0 0 20px; padding: 15px 20px;
+        border-radius: var(--radius); font-size: 16px; line-height: 1.6;
+        border: 1px solid var(--hairline); border-left-width: 3px; background: var(--surface); }
+      .verdict b { font-family: var(--font-display); }
+      .verdict em { color: var(--ink); font-style: italic; }
+      .verdict.ok { border-left-color: var(--official); }
+      .verdict.ok b { color: var(--official); }
+      .verdict.fail { border-left-color: #F26D5B;
+        background: linear-gradient(90deg, rgba(242,109,91,0.10), var(--surface) 70%); }
+      .verdict.fail b { color: #F26D5B; }
+      .verdict.pending { border-left-color: var(--accent); }
+      .verdict.pending b { color: var(--accent); }
       .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
       @media (max-width: 980px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
       @media (max-width: 540px) { .stat-row { grid-template-columns: 1fr; } }
@@ -2078,7 +2194,9 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
       @media (max-width: 620px) { .gate-grid { grid-template-columns: 1fr; } }
       .gate { border: 1px solid var(--hairline); border-radius: var(--radius); padding: 14px 16px;
         background: var(--surface); border-left: 3px solid var(--hairline); }
-      .gate.pass { border-left-color: var(--official); }
+      .gate.pass, .gate.disclosed { border-left-color: var(--official); }
+      .gate-status.disclosed { background: color-mix(in srgb, var(--official) 18%, transparent);
+        color: var(--official); }
       .gate.fail { border-left-color: #F26D5B; background: linear-gradient(180deg, #2A1512, var(--surface)); }
       .gate.pending { border-left-color: var(--ink-muted); }
       .gate-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -2138,7 +2256,13 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
       .lg-ends { display: flex; justify-content: space-between; }
       .lg-ends b { font-weight: 500; color: var(--ink); }
       .lg-note { text-transform: uppercase; opacity: 0.8; line-height: 1.4; }
-      @media (max-width: 620px) { .legend { width: calc(100% - 24px); } }
+      /* on a narrow screen the archipelago's 2.7:1 aspect leaves a tall box mostly empty and
+         a floating legend covers what is left — so shorten the frame and drop the legend out */
+      @media (max-width: 720px) {
+        #map { height: 260px; min-height: 0; }
+        .legend { position: static; width: auto; border: 0; border-top: 1px solid var(--hairline);
+          border-radius: 0; backdrop-filter: none; }
+      }
 
       .panel { position: absolute; right: 12px; top: 12px; width: min(320px, calc(100% - 24px));
         max-height: calc(100% - 24px); overflow: auto; background: color-mix(in srgb, var(--surface) 95%, transparent);
