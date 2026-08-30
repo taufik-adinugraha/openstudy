@@ -78,7 +78,7 @@ const pending = !S;
         backdrop-filter: blur(14px) saturate(1.3);
       }
       .stamp {
-        font-family: var(--font-data); font-size: 11.5px; letter-spacing: .13em;
+        font-family: var(--font-data); font-size: 12px; letter-spacing: .13em;
         text-transform: uppercase; color: var(--ink);
       }
       .stamp.dim { color: var(--ink-muted); }
@@ -94,7 +94,7 @@ const pending = !S;
       }
       .chapter p, .chapter h2, .chapter .big-stat { max-width: var(--prose-width); }
       .eyebrow {
-        display: block; font-family: var(--font-data); font-size: 11.5px;
+        display: block; font-family: var(--font-data); font-size: 12px;
         letter-spacing: .17em; text-transform: uppercase; color: var(--accent);
         margin-bottom: var(--space-3);
       }
@@ -166,7 +166,7 @@ const pending = !S;
         bottom: clamp(88px, 13vh, 132px); text-align: right;
         pointer-events: none; min-width: 15rem;
       }
-      .hud-cat { font-family: var(--font-data); font-size: 11.5px; letter-spacing: .15em;
+      .hud-cat { font-family: var(--font-data); font-size: 12px; letter-spacing: .15em;
         text-transform: uppercase; display: block; margin-bottom: 2px; }
       .hud-num {
         font-family: var(--font-display); font-weight: 800; letter-spacing: -.04em;
@@ -174,7 +174,7 @@ const pending = !S;
         font-variant-numeric: tabular-nums; text-shadow: 0 8px 40px rgba(0,0,0,.7);
       }
       .hud-unit { font-size: .3em; letter-spacing: 0; font-weight: 600; color: var(--ink-muted); }
-      .hud-when { font-family: var(--font-data); font-size: 11.5px; letter-spacing: .1em;
+      .hud-when { font-family: var(--font-data); font-size: 12px; letter-spacing: .1em;
         color: var(--ink-muted); display: block; margin-top: 6px; text-transform: uppercase; }
       .scrub-wrap {
         position: absolute; z-index: 3; left: 0; right: 0; bottom: 0;
@@ -182,7 +182,7 @@ const pending = !S;
         max-width: var(--content-width); margin: 0 auto;
       }
       .scrub-labels { display: flex; justify-content: space-between;
-        font-family: var(--font-data); font-size: 11px; letter-spacing: .12em;
+        font-family: var(--font-data); font-size: 12px; letter-spacing: .12em;
         color: var(--ink-muted); text-transform: uppercase; margin-bottom: 6px; }
       input[type="range"].scrub {
         -webkit-appearance: none; appearance: none; width: 100%; height: 26px;
@@ -204,7 +204,7 @@ const pending = !S;
         overflow: hidden; background: var(--surface); }
       .toggle button {
         appearance: none; border: 0; background: transparent; color: var(--ink-muted);
-        font-family: var(--font-data); font-size: 11px; letter-spacing: .11em;
+        font-family: var(--font-data); font-size: 12px; letter-spacing: .11em;
         text-transform: uppercase; padding: 7px 14px; cursor: pointer;
         transition: color .25s, background .25s;
       }
@@ -235,7 +235,7 @@ const pending = !S;
 
       /* ── legend ───────────────────────────────────────────────────── */
       .ramp-legend { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-        font-family: var(--font-data); font-size: 11px; letter-spacing: .09em;
+        font-family: var(--font-data); font-size: 12px; letter-spacing: .09em;
         text-transform: uppercase; color: var(--ink-muted); }
       .ramp-legend i { width: 13px; height: 13px; border-radius: 3px; display: inline-block;
         margin-right: 5px; vertical-align: -2px; }
@@ -249,7 +249,7 @@ const pending = !S;
       }
       .gates li:first-child { border-top: 0; }
       .chip {
-        font-family: var(--font-data); font-size: 10.5px; letter-spacing: .12em;
+        font-family: var(--font-data); font-size: 12px; letter-spacing: .12em;
         text-transform: uppercase; padding: 4px 9px; border-radius: 999px;
         border: 1px solid currentColor; white-space: nowrap; align-self: start; font-weight: 600;
       }
@@ -270,7 +270,7 @@ const pending = !S;
       .kpi:hover { transform: translateY(-3px); border-color: rgba(111,199,214,.35); box-shadow: var(--glow); }
       .kpi .k-v { font-family: var(--font-display); font-weight: 700; font-size: 1.9rem;
         letter-spacing: -.03em; font-variant-numeric: tabular-nums; display: block; line-height: 1.05; }
-      .kpi .k-l { font-family: var(--font-data); font-size: 10.5px; letter-spacing: .12em;
+      .kpi .k-l { font-family: var(--font-data); font-size: 12px; letter-spacing: .12em;
         text-transform: uppercase; color: var(--ink-muted); display: block; margin-top: 5px; }
       /* uppercase turns µg/m³ into MG/M³ — units opt out */
       .unit { text-transform: none !important; }
@@ -296,7 +296,7 @@ const pending = !S;
       @media (max-width: 720px) {
         .stamp-bar { padding: 8px 16px; gap: 8px; }
         .stamp-bar .stamp:nth-child(2) { display: none; }
-        .stamp-bar .stamp:last-child { margin-left: 0 !important; font-size: 10.5px; }
+        .stamp-bar .stamp:last-child { margin-left: 0 !important; font-size: 12px; }
         .hud { position: static; text-align: left; margin-top: var(--space-4);
           padding: 0 clamp(16px, 4vw, 48px); }
         .hero { min-height: auto; padding-bottom: var(--space-5); }
@@ -1283,7 +1283,7 @@ const pending = !S;
               .attr("text-anchor", "end").text(niceName(r.feature));
             g.append("text").attr("class", "lbl").attr("x", iw + 8)
               .attr("y", y(r.feature) + y.bandwidth() / 2 + 4)
-              .attr("fill", col).style("font-size", "11.5px").text(fam);
+              .attr("fill", col).style("font-size", "12px").text(fam);
           });
           g.append("g").attr("class", "axis").attr("transform", `translate(0,${ih})`)
             .call(d3.axisBottom(x).ticks(4)).select(".domain").remove();
@@ -1572,7 +1572,7 @@ const pending = !S;
               g.append("rect").attr("x", 0).attr("y", yy).attr("width", iw).attr("height", rowH - 9)
                 .attr("fill", "none").attr("stroke", HAIR).attr("stroke-dasharray", "3 4");
               g.append("text").attr("class", "lbl").attr("x", 6).attr("y", yy + 10)
-                .style("font-size", "11px").text("never reported");
+                .style("font-size", "12px").text("never reported");
             } else {
               // faint rule = the provider's claimed lifetime; solid bar = the
               // hours this build actually holds
@@ -1586,7 +1586,7 @@ const pending = !S;
                 const before = winStart && new Date(s.last_utc) < new Date(winStart);
                 g.append("text").attr("class", "lbl")
                   .attr("x", Math.min(mx1 + 8, iw - 190)).attr("y", yy + 10)
-                  .style("font-size", "11px")
+                  .style("font-size", "12px")
                   .text(before ? "ended before the build window" : "too short to model");
                 return;
               }
