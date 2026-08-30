@@ -33,6 +33,32 @@ resumable: the API cache makes reruns free, the event stream skips months whose
 parquet exists (the current month is always redone), and the ledger/validate/
 export stages run against whatever has landed.
 
+Launch/resume commands (idempotent — safe to re-run after any crash/reboot;
+`reset-failed` first if the unit name lingers):
+
+```
+sudo systemctl reset-failed nn-curves nn-events 2>/dev/null
+sudo systemd-run --unit nn-curves --uid ubuntu --gid ubuntu -p MemoryMax=2G \
+  -p Restart=on-failure -p RestartSec=180 \
+  -p WorkingDirectory=/home/ubuntu/demo-lab/cases/global-narrative \
+  --setenv=HOME=/home/ubuntu --setenv=PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin \
+  /home/ubuntu/.local/bin/uv run python pipeline/doc_api.py all
+sudo systemd-run --unit nn-events --uid ubuntu --gid ubuntu -p MemoryMax=4G \
+  -p Restart=on-failure -p RestartSec=120 \
+  -p WorkingDirectory=/home/ubuntu/demo-lab/cases/global-narrative \
+  --setenv=HOME=/home/ubuntu --setenv=PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin \
+  /home/ubuntu/.local/bin/uv run python pipeline/events.py stream
+```
+
+`nn-curves` exits non-zero while any query is still refused and re-runs itself
+(cache-first) until the battery is complete, then exits 0 and stops. After both
+finish, rebuild everything downstream with
+`uv run python pipeline/events.py ledger && uv run python pipeline/validate.py; uv run python pipeline/export_web.py`.
+
+**Nightly refresh (enable only AFTER the backfill completes** — a second
+streamer would race the backfill on the current month): `make refresh`, e.g. as
+a systemd timer or `cron: 30 19 * * * cd ~/demo-lab/cases/global-narrative && PATH=$HOME/.local/bin:$PATH make refresh`.
+
 Sync code from the worktree (data is produced on the server, never synced):
 
 ```

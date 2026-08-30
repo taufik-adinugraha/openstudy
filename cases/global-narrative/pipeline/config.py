@@ -110,6 +110,8 @@ STATS = DATA_DIR / "stats.json"
 #   report_only — computed and published, but not a pass/fail claim (spec: G20 tone)
 ANCHORS = {
     "2018-09-28": {"label": "Palu earthquake & tsunami", "expect": ["attention", "tone_drop"], "window": 4},
+    # added 2026-08-30: the decade's single loudest day in the measured data
+    "2018-12-22": {"label": "Anak Krakatau tsunami", "expect": ["attention", "tone_drop"], "window": 4},
     # Riots: overall attention barely moves (the election kept the baseline high);
     # the spec's tested claim is the PROTEST-THEME spike (~5x) — that is the gate.
     "2019-05-22": {"label": "post-election riots, Jakarta", "expect": ["theme_protest", "protest", "tone_drop"], "window": 3},
