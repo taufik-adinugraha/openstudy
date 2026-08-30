@@ -356,14 +356,17 @@ const DEMOS = {
       .narrative-visual span:nth-child(12) { height: 48px; animation-delay: 1.1s; }
       @keyframes pulse-bar { 50% { transform: scaleY(0.55); } }
       /* air-quality visual: haze layers drifting across a hidden sun */
-      .aq-visual { position: relative; overflow: hidden; }
-      .aq-sun { position: absolute; left: 24%; top: 26%; width: 70px; height: 70px; border-radius: 50%;
-        background: radial-gradient(circle, #F3D9A4 0%, rgba(243,217,164,0.25) 55%, transparent 75%); }
-      .aq-haze { position: absolute; left: -30%; width: 160%; height: 34%; border-radius: 50%;
-        filter: blur(18px); animation: haze-drift 14s ease-in-out infinite alternate; }
-      .aq-haze.z1 { top: 8%; background: rgba(151,161,172,0.16); }
-      .aq-haze.z2 { top: 36%; background: rgba(151,161,172,0.26); animation-duration: 18s; }
-      .aq-haze.z3 { top: 64%; background: rgba(111,199,214,0.14); animation-duration: 23s; }
+      .aq-visual { position: relative; overflow: hidden;
+        background: linear-gradient(180deg, #1B2330 0%, #2A323C 45%, #4A4C4B 100%) !important; }
+      .aq-sun { position: absolute; left: 26%; top: 22%; width: 96px; height: 96px; border-radius: 50%;
+        background: radial-gradient(circle, #FBE2AE 0%, rgba(251,226,174,0.45) 45%, transparent 72%); }
+      .aq-haze { position: absolute; left: -30%; width: 160%; height: 40%; border-radius: 50%;
+        filter: blur(16px); animation: haze-drift 14s ease-in-out infinite alternate; }
+      .aq-haze.z1 { top: 4%; background: rgba(170,178,186,0.22); }
+      .aq-haze.z2 { top: 34%; background: rgba(140,146,152,0.42); animation-duration: 18s; }
+      .aq-haze.z3 { top: 62%; background: rgba(111,199,214,0.20); animation-duration: 23s; }
+      .aq-visual::after { content: ""; position: absolute; left: 22px; right: 22px; bottom: 36px; height: 1px;
+        background: linear-gradient(90deg, #57B26A 0 35%, #E0A63F 35% 70%, #F26D5B 70% 100%); opacity: 0.8; }
       @keyframes haze-drift { to { transform: translateX(9%); } }
       .aq-reading { position: absolute; left: 22px; bottom: 16px; font-family: var(--font-data);
         font-size: 0.62rem; letter-spacing: 0.12em; color: var(--accent); }
@@ -382,7 +385,7 @@ const DEMOS = {
       .mini-visual svg { width: 78%; height: 82%; }
       .roof-grid { display: grid; grid-template-columns: repeat(10, 12px); grid-auto-rows: 12px; gap: 4px;
         align-content: center; justify-content: center; }
-      .roof-grid i { background: var(--accent); opacity: 0.35; border-radius: 2px; }
+      .roof-grid i { width: 12px; height: 12px; background: var(--accent); opacity: 0.35; border-radius: 2px; }
       .roof-grid i:nth-child(3n) { opacity: 0.7; }
       .roof-grid i:nth-child(7n) { opacity: 0.16; }
       .roof-grid i:nth-child(11n) { background: #6FC7D6; opacity: 0.85; }
