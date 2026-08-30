@@ -35,6 +35,11 @@ _session = requests.Session()
 _session.headers.update(config.BROWSER_UA)
 _last_call = 0.0
 _live_calls = 0
+_fail_streak = 0          # consecutive failed live attempts across all queries
+
+
+class CoolDown(Exception):
+    """The API is refusing everything — stop poking, let the IP penalty decay."""
 
 
 def _today_utc() -> dt.date:
@@ -54,7 +59,7 @@ def _cache_path(label: str, params: dict) -> Path:
 def fetch(label: str, params: dict, retries: int = config.DOCAPI_MAX_RETRIES) -> dict | None:
     """One DOC-API call, cache-first. Returns the parsed JSON, {'_error': …} for a
     cached empty/invalid verdict, or None when the API refused this pass."""
-    global _last_call, _live_calls
+    global _last_call, _live_calls, _fail_streak
     config.DOCAPI_CACHE.mkdir(parents=True, exist_ok=True)
     path = _cache_path(label, params)
     if path.exists():
@@ -72,11 +77,15 @@ def fetch(label: str, params: dict, retries: int = config.DOCAPI_MAX_RETRIES) ->
             r = _session.get(config.DOC_API, params=params, timeout=config.DOCAPI_TIMEOUT_S)
             _live_calls += 1
         except requests.RequestException as err:
+            _fail_streak += 1
+            if _fail_streak >= 10:
+                raise CoolDown(f"{_fail_streak} consecutive refusals at {label}")
             backoff = min(60 * 2 ** attempt, 600)
             print(f"[doc_api] {label}: network error {err.__class__.__name__}; retry in {backoff}s", flush=True)
             time.sleep(backoff)
             continue
         if r.status_code == 200:
+            _fail_streak = 0
             text = r.text.strip()
             if not text.startswith("{"):
                 low = text.lower()
@@ -100,6 +109,9 @@ def fetch(label: str, params: dict, retries: int = config.DOCAPI_MAX_RETRIES) ->
             path.write_text(json.dumps(js))
             return js
         if r.status_code in (429, 500, 502, 503, 504):
+            _fail_streak += 1
+            if _fail_streak >= 10:
+                raise CoolDown(f"{_fail_streak} consecutive refusals at {label}")
             backoff = min(60 * 2 ** attempt, 900)
             print(f"[doc_api] {label}: HTTP {r.status_code}; backing off {backoff}s", flush=True)
             time.sleep(backoff)
@@ -163,26 +175,31 @@ def battery() -> int:
     """Returns the number of queries still missing after this pass."""
     t0 = time.monotonic()
     n = missing = 0
-    for qid, (query, modes) in config.QUERIES.items():
-        for mode in modes:
-            js = fetch_timeline(qid, query, mode)
-            n += 1
-            if js is None:            # refused this pass — retried on the next unit run
+    try:
+        for qid, (query, modes) in config.QUERIES.items():
+            for mode in modes:
+                js = fetch_timeline(qid, query, mode)
+                n += 1
+                if js is None:        # refused this pass — retried on the next unit run
+                    missing += 1
+                    continue
+                if "_error" in js:    # deterministic empty/invalid verdict — done, not missing
+                    print(f"[doc_api] {qid:22s} {mode:22s} EMPTY/INVALID (cached verdict)", flush=True)
+                    continue
+                npts = sum(len(s.get("data", [])) for s in js.get("timeline", []))
+                print(f"[doc_api] {qid:22s} {mode:22s} series={len(js.get('timeline', []))} points={npts}", flush=True)
+        for day, spec in config.ANCHORS.items():
+            js = fetch_anchor_articles(day, spec["window"])
+            if js is None:
                 missing += 1
                 continue
-            if "_error" in js:        # deterministic empty/invalid verdict — done, not missing
-                print(f"[doc_api] {qid:22s} {mode:22s} EMPTY/INVALID (cached verdict)", flush=True)
-                continue
-            npts = sum(len(s.get("data", [])) for s in js.get("timeline", []))
-            print(f"[doc_api] {qid:22s} {mode:22s} series={len(js.get('timeline', []))} points={npts}", flush=True)
-    for day, spec in config.ANCHORS.items():
-        js = fetch_anchor_articles(day, spec["window"])
-        if js is None:
-            missing += 1
-            continue
-        print(f"[doc_api] artlist {day}: {len(js.get('articles', []))} articles", flush=True)
-    print(f"[doc_api] battery pass done: {n} timelines + {len(config.ANCHORS)} article lists, "
-          f"{missing} still missing, {_live_calls} live calls, {time.monotonic() - t0:.0f}s", flush=True)
+            print(f"[doc_api] artlist {day}: {len(js.get('articles', []))} articles", flush=True)
+    except CoolDown as why:
+        missing += 1
+        print(f"[doc_api] COOLING DOWN — {why}; ending this pass so the IP penalty can decay "
+              f"(the unit restarts after RestartSec)", flush=True)
+    print(f"[doc_api] battery pass done: {n} timelines tried, {missing}+ still missing, "
+          f"{_live_calls} live calls, {time.monotonic() - t0:.0f}s", flush=True)
     return missing
 
 
