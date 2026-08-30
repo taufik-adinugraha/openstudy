@@ -10,6 +10,7 @@ const DEMOS = {
   trade: "http://localhost:4325/trade",             // TODO prod: /trade
   jakarta: "http://localhost:4327/jakarta",         // TODO prod: /jakarta
   narrative: "http://localhost:4326/narrative",     // TODO prod: /narrative
+  transit: "http://localhost:4329/transit",         // TODO prod: /transit
 };
 ---
 <html lang="en" data-theme="dark">
@@ -147,6 +148,38 @@ const DEMOS = {
         </div>
       </a>
 
+      <a class="case live" data-case="transit" href={DEMOS.transit} target="_blank" rel="noopener">
+        <div class="case-visual transit-visual" aria-hidden="true">
+          <svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid meet">
+            <!-- one hour of transit, drawn as reach: dense core, thinning periphery -->
+            <defs>
+              <radialGradient id="reach" cx="38%" cy="52%" r="46%">
+                <stop offset="0%" stop-color="#E4562E" stop-opacity="0.55"/>
+                <stop offset="55%" stop-color="#E4562E" stop-opacity="0.14"/>
+                <stop offset="100%" stop-color="#E4562E" stop-opacity="0"/>
+              </radialGradient>
+            </defs>
+            <rect x="0" y="0" width="400" height="240" fill="url(#reach)"/>
+            <polyline points="18,168 96,168 152,112 384,112" fill="none" stroke="#E4562E" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <polyline points="18,54 128,54 190,128 190,226" fill="none" stroke="#3E8EDE" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <polyline points="52,226 52,140 128,84 384,40" fill="none" stroke="#57B26A" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <g fill="#101216" stroke="#E9EAED" stroke-width="2.4">
+              <circle cx="152" cy="112" r="5.5"/><circle cx="128" cy="54" r="5.5"/>
+              <circle cx="190" cy="128" r="5.5"/><circle cx="96" cy="168" r="5.5"/><circle cx="128" cy="84" r="5.5"/>
+            </g>
+            <text x="18" y="222" fill="#E4562E" opacity="0.9" font-size="12" letter-spacing="1.6" font-family="ui-monospace,monospace">ONE HOUR · 86× GAP</text>
+          </svg>
+        </div>
+        <div class="case-body">
+          <h2>Transit Access &amp; Urban Equity</h2>
+          <p>Four transit systems collapsed into one routing graph. An hour of
+          public transport buys Jakarta’s median resident 4.29% of the region’s
+          jobs — and Bodetabek’s median resident 0.05%. 38% of Jabodetabek
+          cannot reach a hospital within the hour.</p>
+          <span class="meta">GTFS · OSM · R5 ROUTING · 1,511 KELURAHAN · GINI 0.74</span>
+        </div>
+      </a>
+
       <div class="case building" data-case="airquality">
         <div class="case-visual aq-visual" aria-hidden="true">
           <span class="aq-sun"></span>
@@ -176,23 +209,6 @@ const DEMOS = {
           poverty estimates, benchmarked to official BPS rates and validated
           out-of-province.</p>
           <span class="meta">GEO-ML · OPEN BUILDINGS · SMALL-AREA ESTIMATION</span>
-        </div>
-        <div class="mini-case" data-case="transit">
-          <div class="mini-visual" aria-hidden="true">
-            <svg viewBox="0 0 220 120" preserveAspectRatio="xMidYMid meet">
-              <polyline points="10,95 60,95 95,60 210,60" fill="none" stroke="#E4562E" stroke-width="5" stroke-linejoin="round"/>
-              <polyline points="10,30 80,30 120,70 120,112" fill="none" stroke="#3E8EDE" stroke-width="5" stroke-linejoin="round"/>
-              <polyline points="30,112 30,75 75,45 210,22" fill="none" stroke="#57B26A" stroke-width="5" stroke-linejoin="round"/>
-              <g fill="#101216" stroke="#E9EAED" stroke-width="2.5">
-                <circle cx="95" cy="60" r="5"/><circle cx="80" cy="30" r="5"/><circle cx="120" cy="70" r="5"/>
-                <circle cx="60" cy="95" r="5"/><circle cx="75" cy="45" r="5"/>
-              </g>
-            </svg>
-          </div>
-          <h3>Transit Access &amp; Urban Equity</h3>
-          <p>Four transit systems, one routing graph: who reaches jobs and
-          hospitals in an hour — and how unequally that hour is shared.</p>
-          <span class="meta">GTFS · OSM · GRAPH ROUTING · EQUITY</span>
         </div>
         <div class="mini-case" data-case="forest">
           <div class="mini-visual" aria-hidden="true">
@@ -400,7 +416,7 @@ const DEMOS = {
 
       /* queued phase-3 grid */
       .queued-head { margin-top: 8px; }
-      .queued-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+      .queued-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
       @media (max-width: 860px) { .queued-grid { grid-template-columns: 1fr; } }
       .mini-case { border: 1px solid var(--hairline); border-radius: 8px; overflow: hidden;
         background: var(--surface); display: flex; flex-direction: column; }
