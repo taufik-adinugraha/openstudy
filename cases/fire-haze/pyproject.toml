@@ -2,7 +2,7 @@
 name = "fire-haze"
 version = "0.1.0"
 description = "Case J pipeline: fire-ignition risk and haze transport for Indonesia and the transboundary receptors"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<3.14"   # pinned: 3.14 wheels for rasterio/lightgbm are not universal
 dependencies = [
     "requests>=2.32",          # NOT urllib: header case is preserved (forest-watch lesson)
     "numpy>=1.26",
@@ -21,6 +21,7 @@ dependencies = [
     "exactextract>=0.2",
     "cdsapi>=0.7",             # ERA5 + CEMS fire indices (~/.cdsapirc already present)
     "pillow>=10.4",
+    "shap>=0.46",              # SHAP by feature family — chapter 02 has to say *why* a cell is red
 ]
 
 [tool.uv]

@@ -1,39 +1,55 @@
 #!/usr/bin/env bash
-# Case J — run the rest of the pipeline once the ERA5 shards have drained.
+# Case J — run the rest of the pipeline once the Copernicus queues have drained enough.
 #
-# CDS queues requests server-side and a multi-year backfill takes hours to days, so the
-# downstream stages cannot simply be chained behind them in a Makefile.  This waits for the
-# sharded ingest to go quiet, makes one single-threaded pass to pick up any month a shard
-# skipped on a transient error, then runs features -> risk -> transport -> validate -> export.
+# CDS refuses multi-year ERA5 requests (measured ceiling ~16,368 fields, and the cost is computed
+# BEFORE the area subset), and it caps queued requests per dataset at about two.  So the ERA5
+# backfill is a 45-job serial queue at roughly ten minutes a job, not a parallel pull, and the
+# downstream stages cannot simply be chained behind it in a Makefile.
 #
-# Every stage is idempotent, so re-running this is always safe.
-#   sudo -n systemd-run --unit fh-finish --uid ubuntu --gid ubuntu \
+# This waits for the long-running ingest units to go quiet, makes one unsharded sweep to pick up
+# anything a transient error dropped, then runs features -> risk -> transport -> validate ->
+# export.  Every stage is idempotent and every stage builds from WHATEVER YEARS HAVE LANDED, so
+# running this against a partial drain produces a shorter record rather than a failure — and
+# running it again later simply lengthens the record.
+#
+#   sudo -n systemd-run --unit hz-finish --uid ubuntu --gid ubuntu \
 #     -p MemoryMax=3G -p WorkingDirectory=/home/ubuntu/demo-lab/cases/fire-haze \
 #     --setenv=HOME=/home/ubuntu --setenv=PATH=/home/ubuntu/.local/bin:/usr/bin:/bin \
 #     bash pipeline/finish.sh
 set -uo pipefail
 cd "$(dirname "$0")/.."
 UV="${UV:-$HOME/.local/bin/uv}"
-SHARDS="${SHARDS:-4}"
+WAIT_UNITS="${WAIT_UNITS:-hz-era5 hz-cams hz-fwi}"
+MAX_WAIT_MIN="${MAX_WAIT_MIN:-240}"
 say() { echo "[finish] $*"; }
 
-say "waiting for fh-era5-* to drain (${SHARDS} shards)"
+say "waiting for [${WAIT_UNITS}] to go quiet (cap ${MAX_WAIT_MIN} min)"
+deadline=$(( $(date +%s) + MAX_WAIT_MIN * 60 ))
 while :; do
   busy=0
-  for i in $(seq 0 $((SHARDS - 1))); do
-    systemctl is-active --quiet "fh-era5-$i" && busy=1
+  for u in $WAIT_UNITS; do
+    systemctl is-active --quiet "$u" && busy=1
   done
   [ "$busy" -eq 0 ] && break
+  [ "$(date +%s)" -ge "$deadline" ] && { say "wait cap reached — proceeding on what has landed"; break; }
   sleep 120
 done
-say "shards done: $(ls data/era5_parts 2>/dev/null | wc -l) monthly parts on disk"
+say "era5 parts on disk: $(ls data/era5_parts 2>/dev/null | wc -l)"
+say "cams parts on disk: $(ls data/cams_parts 2>/dev/null | wc -l)"
+say "fwi  parts on disk: $(ls data/fwi_parts  2>/dev/null | wc -l)"
 
-# One unsharded sweep: any month a shard dropped on a transient CDS error is still missing,
-# and this is the pass that notices.
-say "gap-filling pass"
-"$UV" run python pipeline/ingest_era5.py || say "gap-fill returned $? — continuing with what exists"
+# One unsharded sweep: anything a transient error dropped is still missing, and this notices.
+say "gap-filling pass (era5)"
+"$UV" run python pipeline/ingest_era5.py --max-minutes 20 \
+  || say "gap-fill returned $? — continuing with what exists"
 
-for stage in ingest_cams features risk transport validate export_web; do
+# Fold whatever CAMS and CEMS parts have landed into the tables without waiting for the queues.
+say "consolidating cams parts"
+"$UV" run python pipeline/ingest_cams.py --consolidate-only || say "cams consolidate: $?"
+say "consolidating cems fire-index parts"
+"$UV" run python pipeline/ingest_indices.py --fwi-only --consolidate-only || say "fwi consolidate: $?"
+
+for stage in features risk transport validate export_web; do
   say "stage: $stage"
   if ! "$UV" run python "pipeline/${stage}.py"; then
     say "stage $stage FAILED — stopping; rerun this script after fixing"
