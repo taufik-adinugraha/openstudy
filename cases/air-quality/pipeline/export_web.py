@@ -54,23 +54,63 @@ def write(name: str, payload, also_src: bool = False) -> None:
     log(f"{name}: {path.stat().st_size / 1024:.0f} kB")
 
 
+def _read(name: str) -> pd.DataFrame:
+    p = config.DATA_DIR / name
+    return pd.read_parquet(p) if p.exists() else pd.DataFrame()
+
+
 def main() -> None:
-    stats = json.loads((config.DATA_DIR / "stats.json").read_text())
-    feats = pd.read_parquet(config.DATA_DIR / "features.parquet")
-    preds = pd.read_parquet(config.DATA_DIR / "predictions.parquet")
-    fc_path = config.DATA_DIR / "forecast.parquet"
-    fc = pd.read_parquet(fc_path) if fc_path.exists() else pd.DataFrame()
-    fire_path = config.DATA_DIR / "fire_daily.parquet"
-    fire = pd.read_parquet(fire_path) if fire_path.exists() else pd.DataFrame()
+    # Emit whatever is ready. A half-finished pipeline should still produce a
+    # page with honest pending states rather than a crash.
+    stats_p = config.DATA_DIR / "stats.json"
+    stats = json.loads(stats_p.read_text()) if stats_p.exists() else None
+    feats = _read("features.parquet")
+    preds = _read("predictions.parquet")
+    fc = _read("forecast.parquet")
+    fire = _read("fire_daily.parquet")
+
+    if stats is None:
+        st = json.loads((config.DATA_DIR / "stations.json").read_text())["stations"]
+        stats = {"generated_utc": None, "gates": [], "gates_passed": 0, "gates_total": 6,
+                 "vintage": {}, "observed": {}, "model": {"eval": [], "top_drivers": []},
+                 "network": {"stations": st, "n_stations_total": len(st), "n_modelled": 0,
+                             "n_live": sum(s["status"] == "live" for s in st),
+                             "n_stale": sum(s["status"] == "stale" for s in st),
+                             "n_silent": sum(s["status"] == "silent" for s in st)}}
+        log("stats.json missing — exporting only the chapters that do not need the model")
 
     write("summary.json", stats, also_src=True)
+    if len(feats) == 0:
+        log("features.parquet missing — live/backtest/drivers chapters stay pending")
 
+    if len(feats):
+        feats["ts_utc"] = pd.to_datetime(feats["ts_utc"], utc=True)
+        _live_and_backtest(stats, feats, preds, fc)
+    _airshed(stats, feats, fire)
+    _network(stats)
+    write("drivers.json", {
+        "horizon_h": int((stats["model"]["top_drivers"] or [{}])[0].get("horizon_h", 24)),
+        "features": stats["model"]["top_drivers"],
+    })
+
+
+def _live_and_backtest(stats, feats, preds, fc) -> None:
     # ── the live chapter: last 21 days of observation, plus the forecast ──
-    feats["ts_utc"] = pd.to_datetime(feats["ts_utc"], utc=True)
-    primary = int(max(stats["network"]["stations"],
-                      key=lambda s: (s["status"] == "live", s.get("n_hours") or 0))["location_id"])
+    # The hero station is whichever one can be forecast from the most recent
+    # issue time — which, given the state of the network, is not necessarily
+    # the one with the longest record.
+    if len(fc):
+        primary = int(fc.sort_values("issue_utc").iloc[-1]["location_id"])
+    else:
+        primary = int(max(stats["network"]["stations"],
+                          key=lambda s: (s["status"] == "live", s.get("n_hours") or 0))["location_id"])
     g = feats[feats["location_id"] == primary].sort_values("ts_utc")
-    recent = g[g["ts_utc"] > g["ts_utc"].max() - pd.Timedelta(days=21)]
+    obs_only = g.dropna(subset=["pm25"])
+    last_obs = obs_only["ts_utc"].max() if len(obs_only) else None
+    # 21 days back from the last ACTUAL reading, not from the end of the join —
+    # otherwise a sparse sensor renders as an empty chart.
+    anchor = last_obs if last_obs is not None else g["ts_utc"].max()
+    recent = g[(g["ts_utc"] > anchor - pd.Timedelta(days=21)) & (g["ts_utc"] <= anchor)]
     live = {
         "location_id": primary,
         "observed": [{"t": t.isoformat(), "pm25": v}
@@ -98,36 +138,53 @@ def main() -> None:
             })
         live["issue_utc"] = pd.Timestamp(f["issue_utc"].max()).isoformat() if len(f) else None
         live["pm25_now"] = float(f["pm25_now"].iloc[0]) if len(f) else None
+    live["last_observation_utc"] = last_obs.isoformat() if last_obs is not None else None
+    live["observation_age_h"] = (
+        None if last_obs is None
+        else round(float((pd.Timestamp.now(tz="UTC") - last_obs).total_seconds() / 3600), 1))
+    live["n_observed_21d"] = int(recent["pm25"].notna().sum())
     write("live.json", live)
 
     # ── the validation chapter: 24 h backtest trace ──────────────────────
+    if not len(preds):
+        log("predictions.parquet missing — backtest chapter stays pending")
+        return
     h = 24 if 24 in preds["horizon_h"].unique() else int(preds["horizon_h"].max())
-    b = preds[(preds["horizon_h"] == h) & (preds["location_id"] == primary)].copy()
+    ph = preds[preds["horizon_h"] == h]
+    # Trace the station with the most held-out hours — the clearest read of
+    # the backtest, and stated as such on the page.
+    bt_station = int(ph["location_id"].value_counts().idxmax()) if len(ph) else primary
+    b = ph[ph["location_id"] == bt_station].copy()
     b["valid_utc"] = pd.to_datetime(b["issue_utc"], utc=True) + pd.Timedelta(hours=h)
     b = b.sort_values("valid_utc")
     if len(b) > 2400:                              # keep the payload lean, keep the shape
         b = b.iloc[:: max(1, len(b) // 2400)]
     write("backtest.json", {
-        "horizon_h": h, "location_id": primary,
+        "horizon_h": h, "location_id": bt_station,
+        "station_name": next((s["name"] for s in stats["network"]["stations"]
+                              if s["location_id"] == bt_station), None),
+        "n_test_hours_all_stations": int(len(ph)),
         "rows": [{"t": t.isoformat(), "y": y, "p": p, "lo": lo, "hi": hi, "b": pb}
                  for t, y, p, lo, hi, pb in zip(b["valid_utc"], b["observed"], b["predicted"],
                                                 b["lo"], b["hi"], b["persistence"])],
         "eval": stats["model"]["eval"],
     })
 
+def _airshed(stats, feats, fire) -> None:
     # ── the airshed chapter: wind rose + fire rose ───────────────────────
-    fr = feats.dropna(subset=["wind_from_sector", "pm25"])
     rose = []
-    for s in SECTORS:
-        sub = fr[fr["wind_from_sector"] == s]
-        rose.append({
-            "sector": s,
-            "hours": int(len(sub)),
-            "share": float(len(sub) / max(len(fr), 1)),
-            "mean_pm25": float(sub["pm25"].mean()) if len(sub) else None,
-            "p90_pm25": float(sub["pm25"].quantile(0.9)) if len(sub) else None,
-            "episode_rate": float((sub["pm25"] >= config.EPISODE_THRESHOLD).mean()) if len(sub) else None,
-        })
+    if len(feats):
+        fr = feats.dropna(subset=["wind_from_sector", "pm25"])
+        for s in SECTORS:
+            sub = fr[fr["wind_from_sector"] == s]
+            rose.append({
+                "sector": s,
+                "hours": int(len(sub)),
+                "share": float(len(sub) / max(len(fr), 1)),
+                "mean_pm25": float(sub["pm25"].mean()) if len(sub) else None,
+                "p90_pm25": float(sub["pm25"].quantile(0.9)) if len(sub) else None,
+                "episode_rate": float((sub["pm25"] >= config.EPISODE_THRESHOLD).mean()) if len(sub) else None,
+            })
     fire_rose = []
     if len(fire):
         fd = fire.copy()
@@ -146,19 +203,19 @@ def main() -> None:
                            "jakarta": {"lat": config.JKT_LAT, "lon": config.JKT_LON},
                            "rings_km": [0, 100, 400, 1200]})
 
+
+def _network(stats) -> None:
     # ── the network chapter: the station map (2-D canvas, no WebGL) ──────
     write("network.json", {
         "bbox": list(config.AQ_BBOX),
+        "window_start": config.START,
         "stations": [{k: s.get(k) for k in
                       ("location_id", "name", "lat", "lon", "provider", "status",
-                       "days_stale", "first_utc", "last_utc", "n_hours",
-                       "mean_pm25", "completeness_90d")}
+                       "days_stale", "first_utc", "last_utc", "obs_first_utc",
+                       "obs_last_utc", "n_hours", "mean_pm25",
+                       "completeness_span", "completeness_90d")}
                      for s in stats["network"]["stations"]],
     })
-
-    # ── drivers ──────────────────────────────────────────────────────────
-    write("drivers.json", {"horizon_h": int(stats["model"]["top_drivers"][0].get("horizon_h", 24)),
-                           "features": stats["model"]["top_drivers"]})
 
 
 if __name__ == "__main__":

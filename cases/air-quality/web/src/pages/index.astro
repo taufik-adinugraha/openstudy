@@ -320,14 +320,15 @@ const pending = !S;
         </div>
       </div>
       <div class="hud" id="hud">
-        <span class="hud-cat" id="hud-cat">FORECAST</span>
-        <span class="hud-num num" id="hud-num">—<span class="hud-unit"> µg/m³</span></span>
+        <span class="hud-cat" id="hud-cat" style="color:var(--ink-muted)">FORECAST</span>
+        <span class="hud-num num" id="hud-num" style="color:var(--ink-muted);opacity:.4">··<span class="hud-unit"> µg/m³</span></span>
         <span class="hud-when" id="hud-when">loading forecast…</span>
       </div>
       <div class="scrub-wrap">
         <div class="scrub-labels"><span>Now</span><span>+24 h</span><span>+48 h</span><span>+72 h</span></div>
         <input class="scrub" id="scrub" type="range" min="0" max="72" value="0" step="1"
                aria-label="Forecast hour ahead" />
+        <span class="stamp dim" id="issue-note" style="display:block;margin-top:4px"></span>
       </div>
     </section>
 
@@ -448,10 +449,12 @@ const pending = !S;
       PM2.5 stations inside Jabodetabek. <b class="num">{net?.n_live ?? "—"}</b> have reported in
       the last fortnight. <b class="num">{net?.n_stale ?? "—"}</b> went quiet and stayed quiet;
       <b class="num">{net?.n_silent ?? "—"}</b> are registered but have never returned a reading.</p>
-      <p>Each line below is one station's life: when it started reporting, when it stopped.
-      Read left to right and the network does not grow — it flickers. This is not a data-access
-      problem that a bigger API key would fix; the instruments are simply not there, and the
-      ones that are there are mostly low-cost units run by embassies, NGOs and volunteers.</p>
+      <p>Each line below is one station's life. The <b>solid bar</b> is the hours this build
+      actually holds; the <b>faint rule</b> behind it is the lifetime the provider's metadata
+      claims — the two diverge, and the gap is itself worth knowing before anyone budgets for
+      an analysis. Read left to right and the network does not grow: it flickers. This is not
+      an access problem a bigger API key would fix. The instruments are not there, and the ones
+      that are there are mostly low-cost units run by embassies, NGOs and volunteers.</p>
       <div class="panel">
         <div class="panel-head"><h3>Station lifetimes · every PM2.5 station in the bbox</h3>
           <div class="ramp-legend">
@@ -574,6 +577,19 @@ const pending = !S;
       addEventListener("unhandledrejection", (e) => failBanner("Load error: " + (e.reason?.message ?? e.reason)));
       const sect = (name, fn) => { try { return fn(); } catch (err) { console.error(name, err); failBanner(`${name} failed: ${err.message ?? err}`); return null; } };
 
+      /* Animate the FIRST paint only. A resize (or an off-screen relayout)
+         must not restart every bar from zero — that reads as a broken chart. */
+      const once = () => {
+        let done = false;
+        return {
+          t: (sel, ms = 700, delay = 0) =>
+            (done || reduced) ? sel : sel.transition().duration(ms).delay(delay).ease(d3.easeCubicOut),
+          seal: () => { done = true; },
+          arm: () => { done = false; },     // a deliberate state change re-animates
+        };
+      };
+      const debounce = (fn, ms = 140) => { let h; return () => { clearTimeout(h); h = setTimeout(fn, ms); }; };
+
       const base = import.meta.env.BASE_URL.replace(/\/$/, "");
       const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
       const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
@@ -656,12 +672,12 @@ const pending = !S;
         const layers = [];
         for (let L = 0; L < 3; L++) {
           const pts = []; let x = -20;
-          const baseH = [0.13, 0.2, 0.3][L], varH = [0.07, 0.12, 0.2][L];
+          const baseH = [0.05, 0.08, 0.13][L], varH = [0.04, 0.07, 0.13][L];
           while (x < w + 40) {
-            const bw = 16 + rnd() * (26 + L * 22);
-            const bh = h * (baseH + rnd() * varH);
-            pts.push({ x, w: bw, h: bh, lit: rnd() });
-            x += bw + 2 + rnd() * 7;
+            const bw = 14 + rnd() * (22 + L * 24);
+            const bh = h * (baseH + rnd() * rnd() * varH * 2);
+            pts.push({ x, w: bw, h: bh, lit: rnd(), seed: rnd() });
+            x += bw + 2 + rnd() * 8;
           }
           layers.push(pts);
         }
@@ -670,9 +686,12 @@ const pending = !S;
 
       function drawHero(cv, hours, idx) {
         const { ctx, w, h } = fitCanvas(cv, cv.clientHeight || 640);
-        const cur = hours[Math.min(idx, hours.length - 1)] ?? { v: 0, lo: 0, hi: 0, t: null, h: 0 };
-        const band = aqiBand(cur.v);
-        const haze = Math.max(0, Math.min(1, cur.v / 120));
+        const has = hours.length > 0;
+        const cur = has ? hours[Math.min(idx, hours.length - 1)] : { v: 0, lo: 0, hi: 0, t: null, h: 0 };
+        // before data arrives the sky is neutral, not "green" — an empty state
+        // must never read as a measurement
+        const band = has ? aqiBand(cur.v) : { c: "#6E7C8A", n: "—" };
+        const haze = has ? Math.max(0, Math.min(1, cur.v / 120)) : 0.22;
 
         // sky
         const g = ctx.createLinearGradient(0, 0, 0, h);
@@ -689,35 +708,50 @@ const pending = !S;
 
         // skyline, three depth layers veiled by haze
         const L = skyline(w, h, 20260830);
-        const bases = [h * 0.985, h * 0.995, h * 1.005];
+        const bases = [h * 0.9, h * 0.955, h * 1.01];
         L.forEach((pts, i) => {
           const depth = (2 - i) / 2;
-          const veil = 0.22 + depth * 0.5 * (0.35 + haze * 0.75);
-          ctx.fillStyle = d3.interpolateRgb("#05070B", band.c)(0.05 + depth * 0.16 * (0.4 + haze));
-          ctx.globalAlpha = 1;
+          // haze veil BEHIND this layer, faded in so there is no seam
+          const vTop = bases[i] - h * 0.55, vBot = bases[i] + 10;
+          const vg = ctx.createLinearGradient(0, vTop, 0, vBot);
+          const vA = (0.06 + haze * 0.16) * (0.4 + depth);
+          vg.addColorStop(0, d3.color(band.c).copy({ opacity: 0 }) + "");
+          vg.addColorStop(0.55, d3.color(band.c).copy({ opacity: vA * 0.7 }) + "");
+          vg.addColorStop(1, d3.color(band.c).copy({ opacity: vA }) + "");
+          ctx.fillStyle = vg;
+          ctx.fillRect(0, vTop, w, h - vTop + 10);
+
+          const body = d3.interpolateRgb("#04060A", band.c)(0.04 + depth * 0.15 * (0.35 + haze));
           pts.forEach((b) => {
             const y = bases[i] - b.h;
-            ctx.fillRect(b.x, y, b.w, b.h + 40);
-            if (i === 2 && b.lit > 0.55) {           // windows on the near layer only
-              ctx.fillStyle = d3.color(WARN).copy({ opacity: 0.10 + (1 - haze) * 0.3 }) + "";
-              for (let wy = y + 7; wy < bases[i] - 6; wy += 11)
-                for (let wx = b.x + 4; wx < b.x + b.w - 5; wx += 9)
-                  if (((wx * 7 + wy * 13) % 11) > 6) ctx.fillRect(wx, wy, 3, 4.5);
-              ctx.fillStyle = d3.interpolateRgb("#05070B", band.c)(0.05 + depth * 0.16 * (0.4 + haze));
+            ctx.fillStyle = body;
+            ctx.fillRect(b.x, y, b.w, b.h + 60);
+            if (i === 2 && b.lit > 0.4) {           // lit windows on the near layer only
+              ctx.fillStyle = d3.color(WARN).copy({ opacity: 0.14 + (1 - haze) * 0.34 }) + "";
+              let k = Math.floor(b.seed * 9973) + 1;
+              for (let wy = y + 8; wy < bases[i] - 8; wy += 10)
+                for (let wx = b.x + 5; wx < b.x + b.w - 6; wx += 8) {
+                  k = (k * 1103515245 + 12345) % 2147483648;
+                  if (k / 2147483648 > 0.66) ctx.fillRect(wx, wy, 2.6, 4);
+                }
             }
           });
-          // haze veil in front of this layer
-          ctx.fillStyle = d3.color(band.c).copy({ opacity: veil * 0.16 }) + "";
-          ctx.fillRect(0, bases[i] - h * 0.42, w, h);
         });
 
         // the Monas obelisk — the one landmark that says Jakarta
-        const mx = w * 0.2, mBase = bases[2], mh = h * 0.34;
-        ctx.fillStyle = d3.interpolateRgb("#05070B", band.c)(0.2 + haze * 0.2);
-        ctx.fillRect(mx - 5, mBase - mh, 10, mh);
-        ctx.fillRect(mx - 26, mBase - 26, 52, 26);
-        ctx.beginPath(); ctx.moveTo(mx - 9, mBase - mh); ctx.lineTo(mx, mBase - mh - 22); ctx.lineTo(mx + 9, mBase - mh); ctx.closePath();
-        ctx.fillStyle = d3.color(WARN).copy({ opacity: 0.5 - haze * 0.34 }) + ""; ctx.fill();
+        const mx = w * 0.17, mBase = bases[1], mh = h * 0.19;
+        ctx.fillStyle = d3.interpolateRgb("#04060A", band.c)(0.16 + haze * 0.18);
+        ctx.fillRect(mx - 4, mBase - mh, 8, mh);
+        ctx.fillRect(mx - 21, mBase - 20, 42, 22);
+        ctx.beginPath(); ctx.moveTo(mx - 7, mBase - mh); ctx.lineTo(mx, mBase - mh - 17); ctx.lineTo(mx + 7, mBase - mh); ctx.closePath();
+        ctx.fillStyle = d3.color(WARN).copy({ opacity: 0.55 - haze * 0.36 }) + "";
+        ctx.shadowColor = d3.color(WARN).copy({ opacity: 0.5 - haze * 0.4 }) + ""; ctx.shadowBlur = 12;
+        ctx.fill(); ctx.shadowBlur = 0;
+
+        // ground shadow so the city sits on something
+        const gg = ctx.createLinearGradient(0, h * 0.86, 0, h);
+        gg.addColorStop(0, "rgba(0,0,0,0)"); gg.addColorStop(1, "rgba(0,0,0,.55)");
+        ctx.fillStyle = gg; ctx.fillRect(0, h * 0.86, w, h * 0.14);
 
         // suspended particles — more of them as the air worsens
         const np = Math.round(haze * 190);
@@ -798,7 +832,7 @@ const pending = !S;
           if (d) {
             const b = aqiBand(d.v);
             hudNum.innerHTML = `${d.v.toFixed(0)}<span class="hud-unit"> µg/m³</span>`;
-            hudNum.style.color = b.c;
+            hudNum.style.color = b.c; hudNum.style.opacity = "1";
             hudCat.textContent = b.n.toUpperCase();
             hudCat.style.color = b.c;
             hudWhen.textContent = (heroState.idx === 0 ? "NOW · " : `+${heroState.idx} H · `) +
@@ -809,9 +843,18 @@ const pending = !S;
         };
 
         scrub.addEventListener("input", () => { heroState.playing = false; setIdx(+scrub.value); });
-        addEventListener("resize", () => paint());
+        addEventListener("resize", debounce(() => paint()));
 
         load("live.json").then((live) => {
+          const note = document.getElementById("issue-note");
+          const age = live.observation_age_h;
+          if (age != null) {
+            const days = age / 24;
+            note.textContent = age < 6
+              ? `ISSUED FROM A READING ${age.toFixed(0)} H OLD · ${live.n_observed_21d} OBSERVED HOURS IN THE PRECEDING 21 DAYS`
+              : `⚠ ISSUED FROM THE LAST AVAILABLE READING — ${days < 2 ? age.toFixed(0) + " HOURS" : days.toFixed(0) + " DAYS"} OLD. THE PIPELINE IS LIVE; THE SENSOR NETWORK IS NOT. SEE CHAPTER 05.`;
+            if (age >= 6) note.style.color = "var(--up)";
+          }
           const fc = (live.forecast ?? []).slice().sort((a, b) => a.h - b.h);
           if (!fc.length) {
             hudWhen.textContent = "FORECAST PENDING — RUN make model";
@@ -919,7 +962,7 @@ const pending = !S;
           ]);
         });
         cv.addEventListener("pointerleave", hideTip);
-        addEventListener("resize", draw);
+        addEventListener("resize", debounce(draw));
 
         load("live.json").then((live) => {
           data = (live.observed ?? []).map((d) => ({ t: new Date(d.t), v: d.pm25 }));
@@ -928,7 +971,7 @@ const pending = !S;
           return load("network.json").then((nw) => {
             const st = (nw.stations ?? []).find((s) => s.location_id === live.location_id);
             if (st) document.getElementById("live-station").textContent =
-              `${st.name} · ${st.provider ?? "—"}`.toUpperCase();
+              `${st.name} · ${st.provider ?? "—"} · ${data.length} HOURS REPORTED OF 504`.toUpperCase();
           });
         }).catch((e) => { draw(); console.warn(e); });
 
@@ -951,6 +994,7 @@ const pending = !S;
          ════════════════════════════════════════════════════════════ */
       sect("skill", () => {
         const svg = d3.select("#s-skill");
+        const anim = once();
         let rows = [], metric = "mae";
         const draw = () => {
           const node = svg.node(); if (!node) return;
@@ -996,9 +1040,8 @@ const pending = !S;
                   ["Test hours", f0(r[`${k}_n`] ?? r.model_n)],
                 ]))
                 .on("pointerleave", hideTip);
-              bar.transition().duration(reduced ? 0 : 700).delay(reduced ? 0 : x(r.horizon_h) * 0.5)
-                 .ease(d3.easeCubicOut)
-                 .attr("y", y(v)).attr("height", Math.max(0, ih - y(v)));
+              anim.t(bar, 700, x(r.horizon_h) * 0.5)
+                  .attr("y", y(v)).attr("height", Math.max(0, ih - y(v)));
             });
             // skill label above the group
             const sk = r.skill_mae_vs_persistence;
@@ -1015,6 +1058,7 @@ const pending = !S;
           lg.append("stop").attr("offset", "0%").attr("stop-color", ACCENT).attr("stop-opacity", 0.95);
           lg.append("stop").attr("offset", "100%").attr("stop-color", ACCENT).attr("stop-opacity", 0.35);
 
+          anim.seal();
           const leg = svg.append("g").attr("transform", `translate(${m.l},${h - 12})`);
           keys.forEach(([k, c, label], i) => {
             const gx = i * 130;
@@ -1026,9 +1070,9 @@ const pending = !S;
         document.getElementById("skill-toggle").addEventListener("click", (e) => {
           const b = e.target.closest("button"); if (!b) return;
           document.querySelectorAll("#skill-toggle button").forEach((x) => x.classList.toggle("on", x === b));
-          metric = b.dataset.m; draw();
+          metric = b.dataset.m; anim.arm(); draw();
         });
-        addEventListener("resize", draw);
+        addEventListener("resize", debounce(draw));
         load("summary.json").then((S) => {
           rows = (S.model?.eval ?? []).slice().sort((a, b) => a.horizon_h - b.horizon_h);
           draw();
@@ -1069,6 +1113,7 @@ const pending = !S;
 
       sect("drivers", () => {
         const svg = d3.select("#s-drivers");
+        const anim = once();
         let rows = [];
         const draw = () => {
           const node = svg.node(); if (!node) return;
@@ -1093,7 +1138,7 @@ const pending = !S;
                 ["Family", fam], ["Δ MAE when shuffled", r.importance.toFixed(4)],
                 ["± sd", (r.sd ?? 0).toFixed(4)]]))
               .on("pointerleave", hideTip);
-            bar.transition().duration(reduced ? 0 : 750).ease(d3.easeCubicOut).attr("width", x(r.importance));
+            anim.t(bar, 750).attr("width", x(r.importance));
             g.append("text").attr("class", "lbl strong").attr("x", -10).attr("y", y(r.feature) + y.bandwidth() / 2 + 4)
               .attr("text-anchor", "end").text(niceName(r.feature));
             g.append("text").attr("class", "lbl").attr("x", iw + 8)
@@ -1102,8 +1147,9 @@ const pending = !S;
           });
           g.append("g").attr("class", "axis").attr("transform", `translate(0,${ih})`)
             .call(d3.axisBottom(x).ticks(4)).select(".domain").remove();
+          anim.seal();
         };
-        addEventListener("resize", draw);
+        addEventListener("resize", debounce(draw));
         load("drivers.json").then((D) => {
           rows = (D.features ?? []).slice(0, 12); draw();
         }).catch((e) => { draw(); console.warn(e); });
@@ -1222,7 +1268,7 @@ const pending = !S;
           }
         });
         cv.addEventListener("pointerleave", hideTip);
-        addEventListener("resize", draw);
+        addEventListener("resize", debounce(draw));
 
         document.getElementById("rose-toggle").addEventListener("click", (e) => {
           const b = e.target.closest("button"); if (!b) return;
@@ -1262,6 +1308,7 @@ const pending = !S;
 
         /* monthly fire bars */
         const svg = d3.select("#s-fire");
+        const fireAnim = once();
         let months = [];
         const drawFire = () => {
           const node = svg.node(); if (!node) return;
@@ -1285,14 +1332,14 @@ const pending = !S;
             .on("pointermove", (ev, d) => showTip(ev.clientX, ev.clientY, d.m,
               [["Hotspots detected", f0(d.n)], ["Airshed", "95–119°E, 9°S–6°N"]]))
             .on("pointerleave", hideTip)
-            .transition().duration(reduced ? 0 : 700).ease(d3.easeCubicOut)
-            .attr("y", (d) => y(d.n)).attr("height", (d) => ih - y(d.n));
+            .call((s) => fireAnim.t(s, 700).attr("y", (d) => y(d.n)).attr("height", (d) => ih - y(d.n)));
+          fireAnim.seal();
           g.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(4).tickFormat(d3.format("~s"))).select(".domain").remove();
           g.append("g").attr("class", "axis").attr("transform", `translate(0,${ih})`)
             .call(d3.axisBottom(x).tickValues(months.filter((d, i) => i % Math.ceil(months.length / 8) === 0).map((d) => d.m)))
             .select(".domain").remove();
         };
-        addEventListener("resize", drawFire);
+        addEventListener("resize", debounce(drawFire));
         load("airshed.json").then((A) => { months = A.fire_monthly ?? []; drawFire(); })
           .catch(() => drawFire());
       });
@@ -1303,7 +1350,8 @@ const pending = !S;
       sect("network", () => {
         const svg = d3.select("#s-lives");
         const cv = document.getElementById("c-map");
-        let sts = [], bbox = [106.3, -6.9, 107.2, -5.9];
+        const anim = once();
+        let sts = [], bbox = [106.3, -6.9, 107.2, -5.9], winStart = null;
         const colFor = (s) => s.status === "live" ? OFFICIAL : s.status === "stale" ? WARN : HAIR;
 
         const drawLives = () => {
@@ -1317,6 +1365,23 @@ const pending = !S;
           const iw = w - m.l - m.r;
           const dates = sts.flatMap((s) => [s.first_utc, s.last_utc]).filter(Boolean).map((d) => new Date(d));
           const x = d3.scaleTime().domain([d3.min(dates), d3.max(dates)]).nice().range([0, iw]);
+          /* Everything before the build window was never fetched — say so
+             rather than let the empty space imply the network was silent. */
+          const wStart = winStart ? x(new Date(winStart)) : null;
+          if (wStart != null && wStart > 60) {
+            g.append("rect").attr("x", 0).attr("y", -6).attr("width", wStart)
+              .attr("height", sts.length * rowH + 4)
+              .attr("fill", "rgba(255,255,255,.022)")
+              .attr("stroke", "rgba(151,161,172,.22)").attr("stroke-dasharray", "3 4");
+            g.append("text").attr("class", "lbl")
+              .attr("x", wStart / 2).attr("y", sts.length * rowH * 0.5)
+              .attr("text-anchor", "middle").style("font-size", "12px")
+              .text("outside this build's window");
+            g.append("text").attr("class", "lbl")
+              .attr("x", wStart / 2).attr("y", sts.length * rowH * 0.5 + 16)
+              .attr("text-anchor", "middle").style("font-size", "12px")
+              .text(`— not fetched (from ${String(winStart).slice(0, 7)})`);
+          }
           g.selectAll("line.gridline").data(x.ticks(6)).join("line").attr("class", "gridline")
             .attr("y1", -8).attr("y2", sts.length * rowH).attr("x1", (d) => x(d)).attr("x2", (d) => x(d));
           g.append("g").attr("class", "axis").attr("transform", `translate(0,${sts.length * rowH})`)
@@ -1334,25 +1399,34 @@ const pending = !S;
               g.append("text").attr("class", "lbl").attr("x", 6).attr("y", yy + 10)
                 .style("font-size", "11px").text("never reported");
             } else {
-              const x0 = x(new Date(s.first_utc)), x1 = Math.max(x0 + 2, x(new Date(s.last_utc)));
+              // faint rule = the provider's claimed lifetime; solid bar = the
+              // hours this build actually holds
+              const mx0 = x(new Date(s.first_utc)), mx1 = x(new Date(s.last_utc));
+              g.append("line").attr("x1", mx0).attr("x2", mx1)
+                .attr("y1", yy + (rowH - 9) / 2).attr("y2", yy + (rowH - 9) / 2)
+                .attr("stroke", d3.color(c).copy({ opacity: 0.28 }) + "").attr("stroke-width", 1);
+              const of = s.obs_first_utc ?? s.first_utc, ol = s.obs_last_utc ?? s.last_utc;
+              const x0 = x(new Date(of)), x1 = Math.max(x0 + 2, x(new Date(ol)));
               const rect = g.append("rect").attr("x", x0).attr("y", yy).attr("height", rowH - 9).attr("rx", 2)
                 .attr("width", 0).attr("fill", d3.color(c).copy({ opacity: 0.75 }) + "")
                 .style("cursor", "pointer");
               rect.on("pointermove", (ev) => showTip(ev.clientX, ev.clientY, s.name, [
                   ["Status", s.status], ["Provider", s.provider ?? "—"],
-                  ["First reading", String(s.first_utc).slice(0, 10)],
-                  ["Last reading", String(s.last_utc).slice(0, 10)],
+                  ["Held here", `${String(of).slice(0, 10)} → ${String(ol).slice(0, 10)}`],
+                  ["Provider claims", `${String(s.first_utc).slice(0, 10)} → ${String(s.last_utc).slice(0, 10)}`],
                   ["Hours on record", f0(s.n_hours)],
+                  ["Completeness in span", s.completeness_span == null ? "—" : `${(s.completeness_span * 100).toFixed(0)}%`],
                   ["Mean PM2.5", s.mean_pm25 == null ? "—" : `${f1(s.mean_pm25)} µg/m³`],
                 ])).on("pointerleave", hideTip);
-              rect.transition().duration(reduced ? 0 : 800).delay(reduced ? 0 : i * 26)
-                  .ease(d3.easeCubicOut).attr("width", x1 - x0);
+              anim.t(rect, 800, i * 26).attr("width", x1 - x0);
               if (s.status === "live")
                 g.append("circle").attr("cx", x1 + 7).attr("cy", yy + (rowH - 9) / 2).attr("r", 3.2).attr("fill", OFFICIAL);
             }
           });
+
           svg.append("text").attr("class", "lbl").attr("x", m.l).attr("y", 14)
-            .text("● = still reporting");
+            .text("solid = hours held here · faint rule = lifetime the provider claims · ● = still reporting");
+          anim.seal();
         };
 
         const drawMap = () => {
@@ -1418,10 +1492,10 @@ const pending = !S;
           ]);
         });
         cv.addEventListener("pointerleave", hideTip);
-        addEventListener("resize", () => { drawLives(); drawMap(); });
+        addEventListener("resize", debounce(() => { drawLives(); drawMap(); }));
 
         load("network.json").then((N) => {
-          bbox = N.bbox ?? bbox;
+          bbox = N.bbox ?? bbox; winStart = N.window_start ?? null;
           const order = { live: 0, stale: 1, silent: 2 };
           sts = (N.stations ?? []).slice().sort((a, b) =>
             (order[a.status] - order[b.status]) ||
@@ -1501,9 +1575,13 @@ const pending = !S;
           document.querySelectorAll("#bt-toggle button").forEach((x) => x.classList.toggle("on", x === b));
           mode = b.dataset.m; draw();
         });
-        addEventListener("resize", draw);
+        addEventListener("resize", debounce(draw));
         load("backtest.json").then((B) => {
           rows = (B.rows ?? []).map((d) => ({ t: new Date(d.t), y: d.y, p: d.p, lo: d.lo, hi: d.hi, b: d.b }));
+          const hd = document.querySelector("#c-bt").closest(".panel").querySelector("h3");
+          if (hd && B.station_name)
+            hd.textContent = `${B.horizon_h}-hour forecast vs observation · ${B.station_name} · ` +
+              `${(B.n_test_hours_all_stations ?? 0).toLocaleString("en-US")} held-out hours across all stations`;
           draw();
         }).catch((e) => { draw(); console.warn(e); });
       });

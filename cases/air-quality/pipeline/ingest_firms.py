@@ -84,9 +84,27 @@ def bearing_deg(lat: np.ndarray, lon: np.ndarray) -> np.ndarray:
 
 
 def reduce_window(raw: pd.DataFrame) -> pd.DataFrame:
+    """Hotspots -> (day x sector x ring) counts.
+
+    Two filters applied before anything else, both of them load-bearing here:
+
+      type == 0    VIIRS flags active volcanoes (1), other static land sources
+                   such as flares and industrial heat (2) and offshore (3).
+                   Indonesia has ~130 active volcanoes and a lot of flaring, so
+                   without this the "fire" series is partly a geology series.
+      confidence   drop 'l' (low). The NRT and standard-processing products
+                   disagree most in the low-confidence tail, and this case
+                   splices them — filtering keeps the seam honest.
+    """
     if raw.empty:
         return pd.DataFrame(columns=["acq_date", "sector", "ring", "n_fire", "frp_sum"])
     raw = raw[pd.to_numeric(raw["latitude"], errors="coerce").notna()].copy()
+    if "type" in raw.columns:
+        raw = raw[pd.to_numeric(raw["type"], errors="coerce") == 0]
+    if "confidence" in raw.columns:
+        raw = raw[~raw["confidence"].astype(str).str.lower().str.startswith("l")]
+    if raw.empty:
+        return pd.DataFrame(columns=["acq_date", "sector", "ring", "n_fire", "frp_sum"])
     lat = raw["latitude"].astype(float).to_numpy()
     lon = raw["longitude"].astype(float).to_numpy()
     dist = haversine_km(lat, lon)

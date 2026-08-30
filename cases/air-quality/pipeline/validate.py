@@ -129,7 +129,13 @@ def main() -> None:
             per_station.append({**s, "n_hours": 0, "mean_pm25": None, "completeness_90d": None})
             continue
         g = ground[ground["location_id"] == loc]
+        span_h = max(1.0, (g["ts_utc"].max() - g["ts_utc"].min()).total_seconds() / 3600)
         per_station.append({**s, "n_hours": int(len(g)),
+                            # what we actually HOLD, as distinct from what the
+                            # provider's metadata claims the station's life to be
+                            "obs_first_utc": g["ts_utc"].min().isoformat(),
+                            "obs_last_utc": g["ts_utc"].max().isoformat(),
+                            "completeness_span": round(float(len(g) / span_h), 4),
                             "mean_pm25": round(float(g["pm25"].mean()), 2),
                             "p95_pm25": round(float(g["pm25"].quantile(0.95)), 2),
                             "completeness_90d": round(float(covmap.get(loc, 0.0)), 4)})
