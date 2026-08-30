@@ -36,7 +36,11 @@ const pending = !S;
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
 
-    <style>
+    <!-- is:global is load-bearing: Astro scopes <style> by stamping the
+         template's elements, and half this page's DOM (tooltip rows, the KPI
+         cards, the AQI legend swatches) is built at runtime by d3, so scoped
+         rules would silently never match it. -->
+    <style is:global>
       /* ── ramp: AQI, data only ─────────────────────────────────────── */
       :root {
         --aqi-0: #63C08A;   /* good        0–12    */
@@ -286,6 +290,9 @@ const pending = !S;
       footer.method a:hover { border-bottom-color: var(--accent); }
 
       @media (max-width: 720px) {
+        .stamp-bar { padding: 8px 16px; gap: 8px; }
+        .stamp-bar .stamp:nth-child(2) { display: none; }
+        .stamp-bar .stamp:last-child { margin-left: 0 !important; font-size: 10.5px; }
         .hud { position: static; text-align: left; margin-top: var(--space-4);
           padding: 0 clamp(16px, 4vw, 48px); }
         .hero { min-height: auto; padding-bottom: var(--space-5); }
@@ -978,11 +985,12 @@ const pending = !S;
         // KPI row from the summary payload
         load("summary.json").then((S) => {
           const o = S.observed ?? {}, n = S.network ?? {}, ev = (S.model?.eval ?? []).find((r) => r.horizon_h === 24);
+          const pc = (v) => (v == null || Number.isNaN(v) ? "—" : (v * 100).toFixed(0) + "%");
           const kpis = [
             [f1(o.mean_pm25), "MEAN PM2.5 µg/m³"],
-            [(o.hours_above_who_daily_15 * 100).toFixed(0) + "%", "HOURS ABOVE WHO 15"],
-            [f0(n.n_modelled), "STATIONS MODELLED"],
-            [ev ? (ev.skill_mae_vs_persistence * 100).toFixed(0) + "%" : "—", "24 H SKILL VS PERSISTENCE"],
+            [pc(o.hours_above_who_daily_15), "HOURS ABOVE WHO 15"],
+            [n.n_modelled ? f0(n.n_modelled) : "—", "STATIONS MODELLED"],
+            [pc(ev?.skill_mae_vs_persistence), "24 H SKILL VS PERSISTENCE"],
           ];
           document.getElementById("kpi-row").innerHTML = kpis
             .map(([v, l]) => `<div class="kpi"><span class="k-v">${v}</span><span class="k-l">${l}</span></div>`).join("");
