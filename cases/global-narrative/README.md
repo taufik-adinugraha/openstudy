@@ -141,6 +141,21 @@ reversible in `pipeline/config.py` unless noted.
    rewritten, never the data.
 10. `make backfill` / `make refresh` replaced the placeholder `backfill.py` /
     `refresh.py` targets with the real stages (no separate scripts).
+11. **Anchor added:** Anak Krakatau tsunami 2018-12-22 — the decade's single
+    loudest measured day (4.00 % of world coverage, attention 4.07×, tone
+    −4.2) surfaced by the data itself; now a tested anchor.
+12. **Per-year API strategy + circuit breaker** (see Data facts): full-range
+    requests are only used for the plain "Indonesia" query; everything else is
+    ten stitched per-year windows; ten consecutive refusals end a pass and the
+    unit cools down 15 min. Verified from two IPs that heavy full-range
+    queries get reset AND penalize the caller.
+13. **Units finish the pipeline themselves:** `nn-curves` runs
+    ledger→validate→export after every pass (themes appear on the dashboard as
+    they land); `nn-events` runs it once the backfill completes. The two are
+    serialized by a file lock (`data/.chain.lock`). No timer is installed —
+    enable `make refresh` as a nightly cron only after the backfill finishes.
+14. **Astro dev toolbar disabled** in `web/astro.config.mjs` (it floated over
+    the dashboard in the served dev-mode demo); `demo-narrative` restarted.
 
 ## Gates
 
