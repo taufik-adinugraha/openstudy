@@ -1035,7 +1035,12 @@ const maxMean = summary.topMean[0].v;
       .chapter.wide { max-width: 60rem; }
       .calib .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
       @media (max-width: 880px) { .calib .tiles { grid-template-columns: 1fr 1fr; } }
-      .tile { background: var(--surface); border: 1px solid var(--hairline); border-radius: 6px; padding: 14px 16px; display: flex; flex-direction: column; gap: 7px; }
+      /* subgrid keeps label / figure / note on one baseline across all four tiles,
+         however many lines a label wraps to */
+      .calib .tiles { grid-template-rows: auto; }
+      .tile { background: linear-gradient(158deg, var(--surface-raised), var(--surface)); border: 1px solid var(--hairline); border-radius: 6px; padding: 14px 16px;
+        display: grid; grid-template-rows: subgrid; grid-row: span 3; gap: 7px; align-content: start; }
+      @supports not (grid-template-rows: subgrid) { .tile { display: flex; flex-direction: column; } }
       .tile .t-label { font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.1em; color: var(--ink-muted); text-transform: uppercase; }
       .tile .t-value { font-family: var(--font-data); font-size: 1.45rem; font-weight: 600; color: var(--ink); line-height: 1.1; }
       .tile .t-sub { font-size: 0.75rem; color: var(--ink-muted); line-height: 1.55; }

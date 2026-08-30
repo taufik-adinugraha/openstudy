@@ -763,12 +763,35 @@ const exportsB = summary.totalExports ? Math.round(summary.totalExports / 1e6) :
           // only where the cell can actually hold it at that size — otherwise the tile
           // stays clean and the tooltip carries the detail.
           const small = (d) => Math.min(d.x1 - d.x0, d.y1 - d.y0) < 90;
-          const nameFits = (d) => { const fs = small(d) ? 12 : 12.5; const pad = small(d) ? 8 : 12; return d.x1 - d.x0 > d.data.name.length * fs * 0.54 + pad * 2; };
+          // A name that will not fit on one line wraps to a second rather than
+          // spilling over its neighbours or vanishing; only then is it dropped.
+          const budget = (d) => { const fs = small(d) ? 12 : 12.5, pad = small(d) ? 8 : 12; return Math.floor((d.x1 - d.x0 - pad * 2) / (fs * 0.54)); };
+          const wrapName = (d) => {
+            const n = d.data.name, cap = budget(d);
+            if (d.y1 - d.y0 < 28 || cap < 4) return [];
+            if (n.length <= cap) return [n];
+            if (d.y1 - d.y0 < 46) return [];
+            const words = n.split(" ");
+            const lines = [""];
+            for (const w of words) {
+              if (!lines.at(-1)) lines[lines.length - 1] = w;
+              else if ((lines.at(-1) + " " + w).length <= cap) lines[lines.length - 1] += " " + w;
+              else lines.push(w);
+            }
+            return lines.length <= 2 && lines.every((l) => l.length <= cap) ? lines : [];
+          };
           g.select(".tm-name").attr("x", (d) => (small(d) ? 8 : 12)).attr("y", (d) => (small(d) ? 18 : 24))
             .style("font-size", (d) => (small(d) ? "12px" : "12.5px"))
-            .text((d) => (d.y1 - d.y0 > 28 && nameFits(d)) ? d.data.name : "");
-          g.select(".tm-pct").attr("x", (d) => (small(d) ? 8 : 12)).attr("y", (d) => (small(d) ? 34 : 43))
-            .text((d) => (d.x1 - d.x0 > 52 && d.y1 - d.y0 > 46) ? d3.format(".0%")(d.data.v / total) : "");
+            .each(function (d) {
+              const lines = wrapName(d), t = d3.select(this);
+              t.selectAll("tspan").remove();
+              t.text(null);
+              lines.forEach((l, i) => t.append("tspan").attr("x", small(d) ? 8 : 12).attr("dy", i === 0 ? 0 : "1.15em").text(l));
+              d._nameLines = lines.length;
+            });
+          g.select(".tm-pct").attr("x", (d) => (small(d) ? 8 : 12))
+            .attr("y", (d) => (small(d) ? 34 : 43) + ((d._nameLines > 1 ? 1 : 0) * (small(d) ? 14 : 15)))
+            .text((d) => { const need = 46 + ((d._nameLines > 1 ? 1 : 0) * 15); return (d.x1 - d.x0 > 52 && d.y1 - d.y0 > need) ? d3.format(".0%")(d.data.v / total) : ""; });
         }
         render(latest);
         document.getElementById("tm-year").addEventListener("input", (e) => { render(e.target.value); document.getElementById("tm-label").textContent = e.target.value; });
