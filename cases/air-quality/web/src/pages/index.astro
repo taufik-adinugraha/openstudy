@@ -429,8 +429,11 @@ const pending = !S;
       <div class="panel">
         <div class="panel-head">
           <h3 id="rose-title">Wind rose · mean PM2.5 by arrival direction</h3>
-          <div class="toggle" role="group" aria-label="rose layer" id="rose-toggle">
-            <button data-m="wind" class="on">WIND × PM2.5</button><button data-m="fire">FIRE HOTSPOTS</button>
+          <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+            <div class="ramp-legend" id="rose-ramp"></div>
+            <div class="toggle" role="group" aria-label="rose layer" id="rose-toggle">
+              <button data-m="wind" class="on">WIND × PM2.5</button><button data-m="fire">FIRE HOTSPOTS</button>
+            </div>
           </div>
         </div>
         <div class="cv-wrap"><canvas id="c-rose" class="chart" height="440" role="img"
@@ -1229,6 +1232,10 @@ const pending = !S;
 
           if (mode === "wind") {
             const maxShare = d3.max(wind, (d) => d.share) || 1;
+            // say what the radius means — a rose with no radial scale is decoration
+            ctx.fillStyle = d3.color(MUTED).copy({ opacity: 0.85 }) + "";
+            ctx.fillText(`${(maxShare * 100).toFixed(0)}% of hours`, cx + 6, cy - R - 6);
+            ctx.fillText(`${(maxShare * 25).toFixed(0)}%`, cx + 6, cy - R * 0.5 - 5);
             wind.forEach((d, i) => {
               if (!d.hours) return;
               const a0 = (i * 45 - 90 - 20) * Math.PI / 180, a1 = (i * 45 - 90 + 20) * Math.PI / 180;
@@ -1316,6 +1323,9 @@ const pending = !S;
           document.getElementById("rose-title").textContent = mode === "wind"
             ? "Wind rose · mean PM2.5 by arrival direction"
             : "Fire rose · VIIRS hotspots by sector and distance";
+          document.getElementById("rose-ramp").innerHTML = mode === "wind"
+            ? AQI.slice(0, 4).map((a) => `<span><i style="background:${a.c}"></i>${a.n}</span>`).join("")
+            : RINGS.map((r, i) => `<span><i style="background:${RINGC[r]}"></i>${["0–100", "100–400", "400–1200"][i]} km</span>`).join("");
           if (reduced) { anim = 1; draw(); return; }
           anim = 0;
           const t0 = performance.now();
@@ -1330,6 +1340,8 @@ const pending = !S;
 
         load("airshed.json").then((A) => {
           wind = A.wind_rose ?? []; fire = A.fire_rose ?? [];
+          document.getElementById("rose-ramp").innerHTML =
+            AQI.slice(0, 4).map((a) => `<span><i style="background:${a.c}"></i>${a.n}</span>`).join("");
           if (reduced) { draw(); return; }
           anim = 0;
           const io = new IntersectionObserver((en) => {
