@@ -198,6 +198,14 @@ const CHAPTERS = [
          and the brief forbids horizontal scroll at 390px */
       .chart svg { display: block; width: 100%; height: auto; overflow: hidden; }
       .axis text { font-family: var(--font-data); font-size: 12px; fill: var(--ink-muted); }
+      /* A 900-unit viewBox scaled into a 358 px phone renders 12 px axis text at 4.8 px.  On
+         narrow screens the chart therefore keeps its own width and scrolls inside itself — the
+         page still never scrolls horizontally, and nothing drops below 12 px. */
+      @media (max-width: 780px) {
+        .chart { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .chart > svg { min-width: 900px; }
+        #probe-curve { min-width: 0; }
+      }
       .axis line, .axis path { stroke: var(--hairline); }
       .gridline { stroke: var(--hairline); stroke-dasharray: 2 4; }
 
@@ -553,6 +561,27 @@ const CHAPTERS = [
         <div class="panel pad" style="margin-top:var(--space-4)">
           <span class="stamp">The data path, and where it changed</span>
           <div id="path-note" style="margin-top:10px"></div>
+        </div>
+
+        <div class="panel pad" style="margin-top:var(--space-4)">
+          <span class="stamp">What would close the gap</span>
+          <p class="prose" style="margin-top:10px">
+            Every gate here fails for one reason, and it is a <b>resolution</b> problem rather
+            than a modelling one. The detector asks of each 100 m cell "did this cell go through
+            a flood-to-heading cycle?", and answers it well — the extent it returns agrees with a
+            published 10 m rice map on <b>83 %</b> of its own area. It cannot ask "how many
+            hectares of rice were harvested here?", because a 1 ha cell holds several 0.3–0.5 ha
+            plots on different calendars and the cell mean averages the second cycle away.
+          </p>
+          <p class="prose" style="margin-top:12px">
+            The fix is not a better model. It is a smaller cell, and the source data already
+            supports it: the shipped route is <b>10 m</b> γ⁰ and this analysis reads it at 80 m
+            to fit a 100 m grid. Detecting at 20–30 m over the same six regencies is roughly
+            twenty times the cells — an afternoon of compute on a bigger box rather than a
+            research programme — and it is the single change that would move G-I1, G-I2 and G-I3
+            together, because all three are measuring the same damping. That is the honest scope
+            of the next pilot, and it is why this page ships red rather than tuned.
+          </p>
         </div>
 
         <div class="panel pad" style="margin-top:var(--space-4)">
@@ -1491,7 +1520,7 @@ const CHAPTERS = [
           .attr("fill", C.muted).style("font", "600 12px var(--font-data)").text("MONSOON ONSET (CHIRPS, STATED RULE)");
         svg.append("text").attr("transform", `translate(16,${H / 2}) rotate(-90)`).attr("text-anchor", "middle")
           .attr("fill", C.muted).style("font", "600 12px var(--font-data)").text("MEDIAN TRANSPLANTING (RADAR)");
-        const leg = svg.append("g").attr("transform", `translate(${M.l + 8},${H - M.b - 30})`);
+        const leg = svg.append("g").attr("transform", `translate(${M.l + 8},${M.t + 4})`);
         kabList.forEach((k, i) => {
           const g = leg.append("g").attr("transform", `translate(${(i % 3) * 128},${Math.floor(i / 3) * 15})`);
           g.append("circle").attr("r", 4).attr("fill", shape(k));
@@ -1500,12 +1529,18 @@ const CHAPTERS = [
         const lag = d3.mean(pts, (p) => p.trans - p.onset);
         const r = CAL.rule ?? {};
         document.getElementById("cal-note").innerHTML = `
-          Across every kabupaten and season we measured, transplanting follows monsoon onset by a
-          median of <b>${lag.toFixed(0)} days</b>. Onset has a dozen definitions in the literature
-          and they disagree by weeks, so ours is stated: the first pentad whose own and next
-          pentad's rainfall reach <b>${r.accum_mm ?? 40} mm</b>, with no following dry spell.
-          Points above the dashed 1:1 line are seasons where the crop went in later than the rain
-          arrived — irrigation buys that choice, rainfed regencies do not have it.`;
+          Every point is above the dashed 1:1 line: across all six regencies and all four seasons,
+          the crop goes in <em>after</em> the rain arrives, never before. The median gap is
+          <b>${lag.toFixed(0)} days</b> — read that as a season-wide figure, not a first-planting
+          one, because the y-axis is the median transplanting date over <em>all</em> detected
+          cycles in the season and the second crop pulls it late.
+          <br><br>
+          Onset has a dozen definitions in the literature and they disagree by weeks, so ours is
+          stated rather than assumed: the first pentad whose own and next pentad's rainfall reach
+          <b>${r.accum_mm ?? 40} mm</b> with no following dry spell, from CHIRPS v3 pentads with
+          <b>zero</b> pentads missing across 2018–2026. The spread along the x-axis is the thing
+          a procurement plan actually feels: onset moved by six weeks between seasons in the same
+          regency, and the harvest moved with it.`;
       })().catch((e) => console.error("calendar", e));
 
       /* ══════════════════════════════════════════════════════════════════
@@ -1592,12 +1627,26 @@ const CHAPTERS = [
           })
           .on("mouseleave", () => { tip.hidden = true; });
         const g5 = SUM?.gates?.find((g) => g.id === "G-I5");
+        const f2b = (v) => (v == null ? "—" : (+v).toFixed(2));
         document.getElementById("holdout-note").innerHTML = `
-          The ${hs} season never entered the calibration. Scored once, on arrival:
-          <b>MAPE ${g5?.uncalibrated?.mape ?? "—"} %</b> uncalibrated and
-          <b>${g5?.calibrated?.mape ?? "—"} %</b> calibrated against the monthly KSA panel, with a
-          timing error of <b>${g5?.timing?.median_abs_error_weeks ?? "—"} weeks</b>. In-sample
-          agreement with a benchmark you fitted to is not evidence; this is.`;
+          The ${hs} season never entered the calibration. Scored once, on arrival — and the
+          honest reading is right there in the shape of the lines.
+          <br><br>
+          <b>The level lands; the month does not.</b> Over the whole season our calibrated
+          estimate is <b>${f2b(g5?.calibrated?.diff_pct)} %</b> from BPS's total, against
+          <b>${f2b(g5?.uncalibrated?.diff_pct)} %</b> for the raw detection — so the calibration
+          transfers out of sample, which is the thing a calibration has to prove. But its monthly
+          <b>MAPE is ${f2b(g5?.calibrated?.mape)} %</b> against
+          <b>${f2b(g5?.uncalibrated?.mape)} %</b> uncalibrated, because a per-month scaling built
+          on a damped detector flattens the seasonality it is scaling. The forecast issued at
+          transplanting keeps the shape and misses the date by
+          <b>${f2b(g5?.timing?.median_abs_error_weeks)} weeks</b>.
+          <br><br>
+          <b>So the six-week claim is not yet earned, and the page says so rather than implying
+          otherwise.</b> What is earned is the lead itself: the shaded band is real — we hold a
+          number for months in which BPS has not published one — and the seasonal <em>structure</em>
+          is reproduced from radar alone. Closing the gap is a resolution problem with a known
+          answer (see the method note), not a modelling one.`;
       })();
 
       /* ══════════════════════════════════════════════════════════════════
@@ -1652,22 +1701,28 @@ const CHAPTERS = [
         const host = document.getElementById("gate-list");
         const gs = SUM?.gates ?? [];
         if (!gs.length) { setEmpty(host, "Gates not evaluated in this run", "err"); return; }
+        const n2 = (v) => (v == null ? "—" : (+v).toFixed(2));
         const detail = (g) => {
           if (g.id === "G-I1") {
             const v = g.variants ?? {};
-            return `Aggregate worst year <b>${v.uncalibrated?.worst_abs_diff_pct}%</b> uncalibrated,
-              <b>${v.calibrated?.worst_abs_diff_pct}%</b> calibrated (threshold ±${g.threshold.aggregate_pct}%).
-              Kabupaten-year fit R² <b>${v.uncalibrated?.kabupaten_r2}</b> / MAPE
-              <b>${v.uncalibrated?.kabupaten_mape}%</b> uncalibrated; R² <b>${v.calibrated?.kabupaten_r2}</b> /
-              MAPE <b>${v.calibrated?.kabupaten_mape}%</b> calibrated
-              (thresholds R² ≥ ${g.threshold.kabupaten_r2}, MAPE ≤ ${g.threshold.kabupaten_mape}%),
-              over ${v.uncalibrated?.n_kabupaten_years} kabupaten-years.`;
+            return `Aggregate worst year <b>${n2(v.uncalibrated?.worst_abs_diff_pct)} %</b> uncalibrated,
+              <b>${n2(v.calibrated?.worst_abs_diff_pct)} %</b> calibrated (threshold ±${g.threshold.aggregate_pct} %).
+              Kabupaten-year fit R² <b>${n2(v.uncalibrated?.kabupaten_r2)}</b> / MAPE
+              <b>${n2(v.uncalibrated?.kabupaten_mape)} %</b> uncalibrated; R² <b>${n2(v.calibrated?.kabupaten_r2)}</b> /
+              MAPE <b>${n2(v.calibrated?.kabupaten_mape)} %</b> calibrated
+              (thresholds R² ≥ ${g.threshold.kabupaten_r2}, MAPE ≤ ${g.threshold.kabupaten_mape} %),
+              over ${v.uncalibrated?.n_kabupaten_years} kabupaten-years.
+              <b>The calibrated series clears every threshold and the gate is still red</b>, because
+              a gate that only passes after fitting to the benchmark is not a gate.`;
           }
           if (g.id === "G-I2") {
-            return `Median |error| <b>${g.median_abs_error_weeks ?? "—"} weeks</b> against a
+            return `Median |error| <b>${n2(g.median_abs_error_weeks)} weeks</b> against a
               ${g.threshold.median_abs_error_weeks}-week threshold; worst unit bias
-              <b>${g.worst_unit_bias_weeks ?? "—"} weeks</b> against ${g.threshold.max_unit_bias_weeks}.
-              ${g.n_kabupaten_seasons} kabupaten-seasons. ${g.note}`;
+              <b>${n2(g.worst_unit_bias_weeks)} weeks</b> against ${g.threshold.max_unit_bias_weeks},
+              over ${g.n_kabupaten_seasons} ${g.unit ?? "unit-years"}.
+              The error is mostly a systematic <em>late</em> bias rather than noise, and in four
+              of ${g.n_kabupaten_seasons} unit-years the detector locks onto the wrong lobe of a
+              bimodal harvest. <span style="color:var(--ink-muted)">${g.note}</span>`;
           }
           if (g.id === "G-I3") {
             return Object.entries(g.units ?? {}).map(([k, v]) =>
@@ -1682,9 +1737,12 @@ const CHAPTERS = [
               ${d3.format(",")(g.ours_only_cells)} are ours only — the disagreement is the interesting part.`;
           }
           if (g.id === "G-I5") {
-            return `${g.holdout_season} held out entirely. Uncalibrated MAPE
-              <b>${g.uncalibrated?.mape ?? "—"}%</b>, calibrated <b>${g.calibrated?.mape ?? "—"}%</b>;
-              timing error <b>${g.timing?.median_abs_error_weeks ?? "—"} weeks</b> over ${g.n_rows} rows.`;
+            return `${g.holdout_season} held out entirely and scored once. Uncalibrated MAPE
+              <b>${n2(g.uncalibrated?.mape)} %</b> at <b>${n2(g.uncalibrated?.diff_pct)} %</b> on the
+              total; calibrated MAPE <b>${n2(g.calibrated?.mape)} %</b> at
+              <b>${n2(g.calibrated?.diff_pct)} %</b> on the total — the calibration lands the
+              <em>level</em> and not the month. Timing error
+              <b>${n2(g.timing?.median_abs_error_weeks)} weeks</b>, over ${g.n_rows} kabupaten-months.`;
           }
           return "";
         };
