@@ -327,6 +327,15 @@ where the FRP-weighted value is **248 m** — and 3 m would have been handed to 
 model as a release height, putting every parcel in the surface layer. Worth stating because it is
 the kind of aggregation bug that produces a plausible-looking map.
 
+**B12 · About a quarter of parcels leave the domain, and that is a stated bias, not a bug.**
+The AOI runs 95–119 °E, and a parcel in a 10 m/s flow covers 23° of longitude in 72 hours, so
+**28.9 %** of released parcels reach the boundary before the integration ends. They are terminated
+and counted — never clamped, because a clamped parcel piles up on the edge and invents a source
+region that is not there. The consequence is a **downward bias in exposure from distant sources**,
+and the share is printed in chapter 04 so the reader can size it. Widening `ERA5_AREA` for the
+pressure levels would reduce it and would cost a re-request of every pressure-level year; that is
+the trade recorded here rather than made silently.
+
 **B9 · OpenStreetMap's volcano nodes were unavailable on the first run.** All four Overpass
 mirrors refused (406 / 502 / 500 / 504), so the geometric half of the static mask did not run and
 the mask was carried entirely by the empirical persistent-source detector — which is the half the
