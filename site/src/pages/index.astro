@@ -281,6 +281,23 @@ const DEMOS = {
       document.getElementById("try-form").addEventListener("submit", (e) => {
         e.preventDefault(); tryAsk();
       });
+
+      /* Entrance reveal for the case gallery. The hidden state is applied only once
+         this runs, so a JS failure leaves every card visible rather than blank. */
+      (() => {
+        const cases = [...document.querySelectorAll(".case")];
+        if (!cases.length || !("IntersectionObserver" in window)) return;
+        const wrap = document.querySelector(".cases");
+        if (!wrap) return;
+        wrap.classList.add("reveal-on");
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) { cases.forEach((c) => c.classList.add("in")); return; }
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); } });
+        }, { rootMargin: "0px 0px -12% 0px", threshold: 0.08 });
+        cases.forEach((c) => io.observe(c));
+        // belt and braces: never leave a card stuck invisible
+        setTimeout(() => cases.forEach((c) => c.classList.add("in")), 4000);
+      })();
     </script>
 
     <style is:global>
@@ -302,9 +319,16 @@ const DEMOS = {
 
       .cases { max-width: 62rem; margin: 0 auto; padding: 0 24px 10vh; display: flex; flex-direction: column; gap: 28px; }
       .case { display: grid; grid-template-columns: 1.1fr 1fr; border: 1px solid var(--hairline); border-radius: 8px;
-        overflow: hidden; background: var(--surface); text-decoration: none; color: var(--ink);
-        transition: border-color 0.25s ease, transform 0.25s ease; }
-      a.case:hover { border-color: var(--accent); transform: translateY(-2px); }
+        overflow: hidden; background: linear-gradient(160deg, var(--surface-raised), var(--surface) 70%); text-decoration: none; color: var(--ink);
+        transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease; }
+      a.case:hover { border-color: var(--accent); transform: translateY(-3px);
+        box-shadow: 0 18px 44px -20px rgba(0,0,0,0.9), 0 0 0 1px color-mix(in srgb, var(--accent) 22%, transparent),
+                    0 8px 40px -18px color-mix(in srgb, var(--accent) 55%, transparent); }
+      a.case:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-color: var(--accent); }
+      /* Entrance reveal is opt-in from JS, so the cards are never hidden without it. */
+      .reveal-on .case { opacity: 0; transform: translateY(14px); transition: opacity 0.6s ease, transform 0.6s ease, border-color 0.25s ease, box-shadow 0.25s ease; }
+      .reveal-on .case.in { opacity: 1; transform: none; }
+      @media (prefers-reduced-motion: reduce) { .reveal-on .case { opacity: 1; transform: none; } }
       @media (max-width: 720px) { .case { grid-template-columns: 1fr; } }
       .case img { width: 100%; height: 100%; min-height: 240px; object-fit: cover; display: block; background: var(--ground); }
       /* DIY visuals blend into the card instead of butting against it with a hard seam */

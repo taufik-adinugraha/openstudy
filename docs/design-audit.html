@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Design Audit — Demo Lab</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+<link rel="stylesheet" href="../shared/design/tokens.css" />
+<style>
+  body { margin: 0; background: var(--ground); color: var(--ink); }
+  .wrap { max-width: 68rem; margin: 0 auto; padding: 8vh 24px 12vh; }
+  .eyebrow { font-family: var(--font-data); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent); }
+  h1 { font-size: clamp(2rem, 4.6vw, 3rem); line-height: 1.06; letter-spacing: -0.02em; margin: 14px 0 18px; max-width: 22ch; }
+  .lede { color: var(--ink-muted); font-size: 1.05rem; line-height: 1.65; max-width: 68ch; margin: 0 0 10px; }
+  .stamp { font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.1em; color: var(--ink-muted); }
+
+  .scoreboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1px;
+    background: var(--hairline); border: 1px solid var(--hairline); border-radius: 10px; overflow: hidden; margin: 34px 0 46px; }
+  .score { background: linear-gradient(155deg, color-mix(in srgb, var(--surface) 92%, var(--accent) 8%), var(--ground));
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 4px; }
+  .score b { font-family: var(--font-display); font-size: 1.7rem; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .score .ok { color: var(--official); }
+
+  h2 { font-size: 1.5rem; margin: 48px 0 6px; letter-spacing: -0.01em; }
+  h2 + p { color: var(--ink-muted); margin: 0 0 20px; max-width: 68ch; line-height: 1.65; }
+
+  .find { border: 1px solid var(--hairline); border-left: 3px solid var(--sev); border-radius: 0 10px 10px 0;
+    background: linear-gradient(100deg, color-mix(in srgb, var(--sev) 7%, var(--surface)), var(--ground) 65%);
+    padding: 16px 20px; margin: 0 0 12px; display: grid; gap: 8px; }
+  .find[data-sev="critical"] { --sev: #F26D5B; }
+  .find[data-sev="high"]     { --sev: #E0A63F; }
+  .find[data-sev="medium"]   { --sev: #5BC8DB; }
+  .find-head { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; }
+  .find-head b { font-family: var(--font-display); font-size: 1.02rem; }
+  .tag { font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.09em; text-transform: uppercase;
+    border: 1px solid var(--hairline); border-radius: 4px; padding: 3px 8px; color: var(--ink-muted); }
+  .tag.sev { color: var(--sev); border-color: color-mix(in srgb, var(--sev) 55%, transparent); }
+  .tag.page { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+  .find p { margin: 0; color: var(--ink-muted); line-height: 1.65; max-width: 78ch; font-size: 0.95rem; }
+  .find p.fix { color: var(--ink); }
+  .find p.fix::before { content: "Fixed — "; font-family: var(--font-data); font-size: 0.8rem;
+    letter-spacing: 0.08em; color: var(--official); text-transform: uppercase; }
+  .find p.open::before { content: "Left alone — "; color: var(--up); }
+
+  table { border-collapse: collapse; width: 100%; font-family: var(--font-data); font-size: 0.82rem; margin-top: 10px; }
+  th { text-align: left; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted);
+    border-bottom: 1px solid var(--ink-muted); padding: 8px 12px 8px 0; }
+  td { padding: 9px 12px 9px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .pass { color: var(--official); } .was { color: var(--ink-muted); }
+  .scroll { overflow-x: auto; }
+  footer { margin-top: 60px; padding-top: 22px; border-top: 1px solid var(--hairline); color: var(--ink-muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="eyebrow">Design pass · art direction &amp; information design</span>
+  <h1>Design audit: the five shipped pages.</h1>
+  <p class="lede">Audited against the award-level bar — signature moment, editorial structure, typographic craft,
+  depth, purposeful motion, interaction completeness, designed states, responsive behaviour, case identity,
+  accessibility. Every page was screenshot at 1440&times;900 and 390&times;844 before and after, with a console-error
+  and sub-12px-text check on each pass. No number, claim, gate result or methodology sentence was changed.</p>
+
+  <div class="scoreboard">
+    <div class="score"><span class="stamp">TEXT BELOW 12PX</span><b><span class="was">187 → </span><span class="ok">0</span></b><span class="stamp">across all 5 pages</span></div>
+    <div class="score"><span class="stamp">CONSOLE ERRORS</span><b><span class="was">10 → </span><span class="ok">0</span></b><span class="stamp">GPU-off browser</span></div>
+    <div class="score"><span class="stamp">HORIZONTAL SCROLL</span><b><span class="was">1 → </span><span class="ok">0</span></b><span class="stamp">at 390px</span></div>
+    <div class="score"><span class="stamp">PAGES TOUCHED</span><b>5</b><span class="stamp">of 5 in scope</span></div>
+  </div>
+
+  <h2>1 · Known defects, cleared first</h2>
+  <p>The four defects called out before the pass began — all on the global-narrative page.</p>
+
+  <div class="find" data-sev="critical">
+    <div class="find-head"><b>Hero anchor annotations collided and overran the plot</b>
+      <span class="tag sev">Critical</span><span class="tag page">global-narrative</span></div>
+    <p>At 1440px the nine dated captions were staggered by a fixed 330px assumed width, so they read as a floating
+    slab of text; at 390px they ran clean off the left edge — four of them rendered as “ake &amp; tsunami”,
+    “akatau tsunami”, “n riots, Jakarta”, “0-19 cases announced”.</p>
+    <p class="fix">captions are now measured from their own string length, clamped inside the plot, and assigned the
+    first stagger row their true interval clears; each is joined to its dot by a leader with a horizontal jog where
+    clamping moved it. Below 760px the plot switches to numbered markers and the captions move to an ordered key
+    beneath the chart, which removes the clipping entirely rather than shrinking type to hide it.</p>
+  </div>
+
+  <div class="find" data-sev="critical">
+    <div class="find-head"><b>22 text elements rendered below 12px</b>
+      <span class="tag sev">Critical</span><span class="tag page">all five pages</span></div>
+    <p>A full sweep found far more than the reported 22: <b>187 sub-12px text nodes</b> across the five pages,
+    down to 9px. Sources were <code>.stamp</code>, <code>.eyebrow</code>, chips, table headers, toggles, verdicts,
+    tooltips, SVG annotations, canvas <code>fillText</code> calls and one hard-coded <code>font-size="9"</code>.</p>
+    <p class="fix">every declaration below the floor raised to ≥12px on all five pages, including the canvas and SVG
+    paths that a CSS-only sweep would miss. Verified 0 remaining sub-12px nodes at both viewports.</p>
+  </div>
+
+  <div class="find" data-sev="high">
+    <div class="find-head"><b>“LOADING THE PULSE…” outlived the render</b>
+      <span class="tag sev">High</span><span class="tag page">global-narrative</span></div>
+    <p>The status line was only rewritten in the completion callback of a 5.2-second animated wipe, so for five
+    seconds the page claimed to be loading a chart the reader could already watch drawing itself.</p>
+    <p class="fix">the headline figures publish the moment the data is in hand, before the wipe starts. The pending
+    state is now reachable only when data is genuinely absent, and it was redesigned — a spinner and a framed
+    panel rather than a bare grey line.</p>
+  </div>
+
+  <div class="find" data-sev="high">
+    <div class="find-head"><b>Dead space across the right half of the hero</b>
+      <span class="tag sev">High</span><span class="tag page">global-narrative</span></div>
+    <p>Copy was capped at 40rem in a single left column, leaving roughly 45% of the hero empty above the chart —
+    and the page had no big-stat display moment anywhere.</p>
+    <p class="fix">the hero is a two-column grid; the right column carries four figures — days observed, peak share,
+    decade mean, anchor events — built from the exact numbers that were already in the status line. On mobile they
+    stack 2&times;2 under the copy.</p>
+  </div>
+
+  <h2>2 · Found during the audit</h2>
+  <p>Additional findings from screenshotting every page at both viewports.</p>
+
+  <div class="find" data-sev="critical">
+    <div class="find-head"><b>Era band labels overprinted into an unreadable smear</b>
+      <span class="tag sev">Critical</span><span class="tag page">global-narrative</span></div>
+    <p>At 390px the five era labels on the hero collapsed on top of one another, rendering literally as
+    “ASEANECHARDABOWEARA”.</p>
+    <p class="fix">a band label is now drawn only where its own band is wide enough to hold it; narrow bands stay
+    unlabelled and are separated by a tinted rule instead. The eras chapter immediately below names all five.</p>
+  </div>
+
+  <div class="find" data-sev="critical">
+    <div class="find-head"><b>Ten console errors on a GPU-off browser</b>
+      <span class="tag sev">Critical</span><span class="tag page">trade-complexity</span></div>
+    <p>The 2-D canvas fallback was already correct and looks excellent, but <code>THREE.WebGLRenderer</code> logged
+    ten console errors on the way to throwing — which is precisely what the owner's own browser produces, on the
+    path they actually see.</p>
+    <p class="fix">probe for a WebGL context before constructing the renderer and go straight to the 2-D path when
+    there is none. A GPU-off browser is a supported configuration here, not a fault worth shouting about.</p>
+  </div>
+
+  <div class="find" data-sev="high">
+    <div class="find-head"><b>Horizontal body scroll at 390px</b>
+      <span class="tag sev">High</span><span class="tag page">global-narrative</span></div>
+    <p>The document was 404px wide in a 390px viewport, so the whole page rocked sideways under a thumb.</p>
+    <p class="fix">responsive hero breakpoints at 900px and 640px, plus a max-width guard on the document. Verified
+    no horizontal scroll on any of the five pages at 390px.</p>
+  </div>
+
+  <div class="find" data-sev="high">
+    <div class="find-head"><b>Long chart legends clipped against the plot edge</b>
+      <span class="tag sev">High</span><span class="tag page">global-narrative</span></div>
+    <p>Descriptive legends were drawn as single unwrappable SVG <code>&lt;text&gt;</code> nodes inside the plot. The
+    methodology chart's legend measured 1,194px inside a 342px-wide plot — most of it invisible.</p>
+    <p class="fix">a legend is a caption, not a datum. The four longest now render in the document flow with colour
+    swatches, wrapping to the container at any width and selectable as text.</p>
+  </div>
+
+  <div class="find" data-sev="medium">
+    <div class="find-head"><b>Treemap names spilled over neighbouring tiles at the 12px floor</b>
+      <span class="tag sev">Medium</span><span class="tag page">trade-complexity</span></div>
+    <p>Raising small-cell labels from 10.5px to the floor made long sector names overflow their rectangles.</p>
+    <p class="fix">a name too long for one line wraps to a second (with the share figure pushed down to match) and
+    is dropped only if it still will not fit; “Gems &amp; gold” stayed legible and nothing spills.</p>
+  </div>
+
+  <div class="find" data-sev="medium">
+    <div class="find-head"><b>Calibration figures sat on ragged baselines</b>
+      <span class="tag sev">Medium</span><span class="tag page">nightlights-pulse</span></div>
+    <p>Once labels wrapped to two lines at the larger size, the four big figures no longer aligned, so the row read
+    as four unrelated boxes rather than one set of display moments.</p>
+    <p class="fix">subgrid puts label, figure and note on a shared baseline across all four tiles however many lines
+    each label wraps to; flat surface fills replaced with layered gradients.</p>
+  </div>
+
+  <div class="find" data-sev="medium">
+    <div class="find-head"><b>Case cards had no focus ring, no depth on hover, no entrance</b>
+      <span class="tag sev">Medium</span><span class="tag page">landing page</span></div>
+    <p>Keyboard users got no visible focus target on the primary navigation of the whole site, and the cards lifted
+    on hover without any accompanying light.</p>
+    <p class="fix">focus-visible rings, an accent glow and deeper shadow on hover, and an IntersectionObserver
+    entrance reveal. The hidden state is applied by script only after it runs and a 4s failsafe forces every card
+    visible, so a JS failure can never blank the gallery; reduced-motion skips the animation.</p>
+  </div>
+
+  <h2>3 · Verification</h2>
+  <p>Measured on the live dev servers with Chromium launched <code>--disable-3d-apis</code>, matching the owner's
+  browser, so the 2-D fallbacks are what was audited.</p>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Page</th><th class="num">Sub-12px before</th><th class="num">After</th><th class="num">Console errors</th><th class="num">H-scroll @390</th></tr></thead>
+    <tbody>
+      <tr><td>Landing page</td><td class="num">21</td><td class="num pass">0</td><td class="num pass">0</td><td class="num pass">none</td></tr>
+      <tr><td>Nightlights pulse</td><td class="num">54</td><td class="num pass">0</td><td class="num pass">0</td><td class="num pass">none</td></tr>
+      <tr><td>Trade complexity</td><td class="num">42</td><td class="num pass">0</td><td class="num pass">0</td><td class="num pass">none</td></tr>
+      <tr><td>Global narrative</td><td class="num">187 total incl. 70 here</td><td class="num pass">0</td><td class="num pass">0</td><td class="num pass">none <span class="was">(was 404&gt;390)</span></td></tr>
+      <tr><td>Jakarta sinking</td><td class="num">1</td><td class="num pass">0</td><td class="num pass">0</td><td class="num pass">none</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>4 · Deliberately left alone</h2>
+  <div class="find" data-sev="medium">
+    <div class="find-head"><b>Jakarta and nightlights heroes</b><span class="tag page">no change</span></div>
+    <p class="open">both already clear the bar. Nightlights runs a full-bleed Black Marble timelapse with a ticking
+    year counter and progress ticks; Jakarta runs a full-bleed subsidence map with a &minus;32&nbsp;cm display figure and a
+    scroll cue. Sharpening beat rebuilding here — neither was touched beyond the type floor.</p>
+  </div>
+  <div class="find" data-sev="medium">
+    <div class="find-head"><b>Token file</b><span class="tag page">shared/design</span></div>
+    <p class="open">all six copies of <code>tokens.css</code> were already byte-identical and the per-case identities
+    are well judged. Every fix landed in page-level CSS instead, so the copies stay in sync with no fan-out risk
+    while four other case pages are being built against them.</p>
+  </div>
+
+  <footer>
+    <span class="stamp">DEMO LAB · DESIGN PASS · SCOPE: LANDING + NIGHTLIGHTS + TRADE + NARRATIVE + JAKARTA</span>
+  </footer>
+</div>
+</body>
+</html>
