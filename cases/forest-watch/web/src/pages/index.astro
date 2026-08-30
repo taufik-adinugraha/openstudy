@@ -1,28 +1,1555 @@
 ---
-// Case H — Forest & Commodity Watch. Skeleton until the pipeline lands.
-// Spec: docs/spec-forest-watch.html (H5 dashboard anatomy).
+// Case H — Forest & Commodity Watch.  Spec: docs/spec-forest-watch.html (H5 dashboard anatomy).
+// View-models are fetched at runtime from /forest/data/*.json so the pipeline can re-export
+// without a site rebuild.  Every map ships a full-function 2-D canvas path: the hero is canvas
+// natively, and the explorer falls back to Path2D hit-testing when WebGL is unavailable.
 import "../styles/tokens.css";
 ---
+
 <html lang="en" data-case="forest" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Forest &amp; Commodity Watch</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+    <title>Forest &amp; Commodity Watch — Demo Lab</title>
+    <meta name="description" content="Weekly radar deforestation alerts across Indonesia, clustered into events and linked to oil-palm estates, mill catchments, peat and primary forest." />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
   </head>
+
   <body>
-    <main style="min-height:100vh;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:16px;padding:0 6vw;">
-      <span style="font-family:var(--font-data);font-size:0.72rem;letter-spacing:0.14em;color:var(--accent);">CASE H · SCAFFOLDED · PIPELINE PENDING</span>
-      <h1 style="font-size:clamp(2rem,5vw,3.2rem);margin:0;line-height:1.1;">Forest &amp; Commodity Watch</h1>
-      <p style="color:var(--ink-muted);max-width:36rem;margin:0;">Where Global Forest Watch stops: weekly radar
-      deforestation alerts clustered into events and linked to concessions, oil-palm plantations and mills —
-      so a disturbance becomes a supply-chain question, not just a pixel.</p>
-      <!-- TODO per spec H5: hero "canopy to burn" — a province's alert clusters igniting week by week
-           (canvas 2-D fallback: pre-rendered weekly frames on a 2-D canvas with a scrubber) →
-           chapters (two decades of loss · the alerts · linked or unlinked — the concession share ·
-           the mills) → explore (cluster map + concession/mill layers, before/after Sentinel-2 chips,
-           filters) → methodology. Map rule (WebGL off): try MapLibre, catch → 2-D canvas, as in
-           cases/nightlights-pulse/web. -->
+    <a class="skip" href="#ch1">Skip to the analysis</a>
+
+    <!-- ══ HERO — the signature moment ══════════════════════════════════════════ -->
+    <header class="hero" id="hero">
+      <div class="hero-canvas-wrap">
+        <canvas id="ignition" aria-label="Weekly deforestation alerts igniting across Indonesia"></canvas>
+        <div class="hero-vignette" aria-hidden="true"></div>
+      </div>
+
+      <div class="hero-copy">
+        <span class="stamp">CASE H · FOREST &amp; COMMODITY WATCH</span>
+        <h1>The forest moved last&nbsp;week.<br /><em>Whose supply chain did it move into?</em></h1>
+        <p class="lede">Radar sees through the monsoon. Every week, Sentinel-1 flags forest that
+        has just been cleared somewhere across the archipelago. Global Forest Watch shows you
+        the pixels. This page asks the question a compliance desk actually has to answer —
+        <strong>was that clearing inside an oil-palm estate, on its edge, inside a mill's
+        sourcing radius, on peat, in primary forest?</strong></p>
+      </div>
+
+      <div class="hud" id="hud" aria-live="polite">
+        <div class="hud-week"><b id="hud-date">—</b><span id="hud-weekno">week —</span></div>
+        <div class="hud-figs">
+          <div class="fig"><b id="hud-ha">0</b><span>hectares alerted, cumulative</span></div>
+          <div class="fig"><b id="hud-linked">—</b><span>linked to palm or a mill</span></div>
+        </div>
+        <div class="hud-scrub">
+          <button id="hud-play" class="play" aria-label="Pause the timelapse">❚❚</button>
+          <input id="hud-range" type="range" min="0" max="0" value="0" aria-label="Week" />
+        </div>
+        <div class="hud-legend">
+          <span><i class="dot lk"></i>linked</span>
+          <span><i class="dot un"></i>unlinked</span>
+          <span class="vstamp" id="hud-vintage">RADD —</span>
+        </div>
+      </div>
+      <div class="scroll-cue" aria-hidden="true"><span>scroll</span><i></i></div>
+    </header>
+
+    <main>
+      <!-- ══ 01 ═══════════════════════════════════════════════════════════════════ -->
+      <section class="chapter" id="ch1">
+        <div class="ch-head reveal">
+          <span class="ch-num">01</span>
+          <h2>Two decades of loss, and two ways to count it</h2>
+          <p class="ch-lede">Before the weekly alerts mean anything, the long record has to be
+          honest. Indonesia has two official-looking numbers for the same year, and they differ
+          by a factor of six. Neither is wrong.</p>
+        </div>
+
+        <div class="bigstat reveal">
+          <div><b id="s-loss24">—</b><span>hectares of tree-cover loss, 2024<em id="s-loss24-src">Hansen / UMD, ≥30% canopy</em></span></div>
+          <div class="vs">vs</div>
+          <div><b class="official" id="s-klhk24">175,400</b><span>hectares of net deforestation, 2024<em>KLHK, Indonesian government</em></span></div>
+        </div>
+
+        <div class="panel reveal">
+          <div class="panel-head">
+            <h3>Gross tree-cover loss against net deforestation</h3>
+            <p>Two definitions, plotted on one axis so the gap is visible rather than argued about.</p>
+          </div>
+          <figure id="divergence" class="chart"></figure>
+          <figcaption class="note" id="divergence-note"></figcaption>
+        </div>
+
+        <div class="panel reveal">
+          <div class="panel-head">
+            <h3>Where the loss lands, province by province</h3>
+            <p>Annual tree-cover loss 2001&ndash;2024 at &ge;30&thinsp;% canopy. Hover a spark to read
+            the year.</p>
+          </div>
+          <div id="smallmults" class="smallmults"></div>
+        </div>
+
+        <p class="sowhat reveal"><b>So what.</b> A single headline hectare figure is unusable for
+        compliance. The rest of this page therefore never reports a number without the definition,
+        the sensor and the version string attached to it.</p>
+      </section>
+
+      <!-- ══ 02 ═══════════════════════════════════════════════════════════════════ -->
+      <section class="chapter" id="ch2">
+        <div class="ch-head reveal">
+          <span class="ch-num">02</span>
+          <h2>What the radar saw</h2>
+          <p class="ch-lede">RADD reads Sentinel-1 backscatter, so cloud is irrelevant — the
+          reason a radar-first alert layer is the only credible weekly monitor in the wet tropics.
+          We decode the raw <code>date_conf</code> tiles ourselves, group touching alert pixels into
+          disturbance <em>events</em>, and stitch events that straddle a processing seam so nothing
+          is counted twice.</p>
+        </div>
+
+        <div class="statrow reveal" id="alertstats"></div>
+
+        <div class="panel reveal">
+          <div class="panel-head">
+            <h3>The weekly ledger</h3>
+            <p>Alerted hectares per week, split by whether the event links to the palm-oil
+            system. Switch province to see a different frontier.</p>
+          </div>
+          <div class="tabs" id="ledger-tabs" role="tablist"></div>
+          <figure id="ledger" class="chart"></figure>
+        </div>
+
+        <p class="sowhat reveal"><b>So what.</b> Alerts arrive as a continuous stream, not an annual
+        report. The unit of action is the <em>event</em> — and an event is only actionable once you
+        know whose land it sits on.</p>
+      </section>
+
+      <!-- ══ 03 ═══════════════════════════════════════════════════════════════════ -->
+      <section class="chapter" id="ch3">
+        <div class="ch-head reveal">
+          <span class="ch-num">03</span>
+          <h2>Linked, or unlinked</h2>
+          <p class="ch-lede">This is the part the public dashboards stop short of. Every event is
+          tested against mapped oil-palm plantation, against the 50&nbsp;km fresh-fruit-bunch
+          catchment of every mill on the Universal Mill List, and against peat and primary forest.
+          Four mutually exclusive classes, evaluated in order.</p>
+        </div>
+
+        <div class="classcards reveal" id="classcards"></div>
+
+        <div class="panel reveal">
+          <div class="panel-head">
+            <h3>Linkage composition by quarter</h3>
+            <p>Share of alerted hectares by class. The frontier and the estate behave
+            differently — and they move differently over time.</p>
+          </div>
+          <div class="tabs" id="link-tabs" role="tablist"></div>
+          <figure id="linkchart" class="chart"></figure>
+        </div>
+
+        <div class="flags reveal" id="flags"></div>
+
+        <p class="sowhat reveal"><b>So what.</b> The linked share is the number an EUDR desk, a
+        trader and an NGO all need and none of them can get off a public map. The unlinked share is
+        the honest residual — frontier clearing that no mill catchment or mapped estate explains.
+        And because RADD can only see inside forest that was primary in 2001, every one of these
+        shares is a <em>floor</em>, not an estimate.</p>
+      </section>
+
+      <!-- ══ 04 ═══════════════════════════════════════════════════════════════════ -->
+      <section class="chapter" id="ch4">
+        <div class="ch-head reveal">
+          <span class="ch-num">04</span>
+          <h2>The mills, ranked by pressure</h2>
+          <p class="ch-lede">A mill cannot be blamed for a clearing inside its catchment — a
+          50&nbsp;km radius is a sourcing hypothesis, not a chain of custody. It is, however, exactly
+          the screen a due-diligence team runs first. Alert pressure = alerted hectares in the
+          catchment over the trailing twelve months.</p>
+        </div>
+
+        <div class="panel reveal">
+          <div class="panel-head">
+            <h3>Alert pressure by mill</h3>
+            <p>Circle area is alerted hectares in the catchment; a ring marks RSPO-certified
+            mills. Hover for the mill card.</p>
+          </div>
+          <div class="millwrap">
+            <canvas id="millmap" aria-label="Palm oil mills sized by alert pressure"></canvas>
+            <div class="milltable" id="milltable"></div>
+          </div>
+        </div>
+
+        <p class="sowhat reveal"><b>So what.</b> Pressure ranking turns 1,000-odd mills into a
+        shortlist of a dozen worth a field visit — which is the entire value of the exercise.</p>
+      </section>
+
+      <!-- ══ EXPLORE ═════════════════════════════════════════════════════════════ -->
+      <section class="chapter wide" id="explore">
+        <div class="ch-head reveal">
+          <span class="ch-num">05</span>
+          <h2>Explore every event</h2>
+          <p class="ch-lede">Click any event for its dates, size, flags and nearest mill. Filters
+          and the selected event live in the URL, so a finding can be sent as a link.</p>
+        </div>
+
+        <div class="explorer reveal">
+          <div class="controls" id="controls">
+            <div class="ctl">
+              <label for="f-prov">Province</label>
+              <select id="f-prov"></select>
+            </div>
+            <div class="ctl">
+              <label for="f-class">Linkage</label>
+              <select id="f-class">
+                <option value="">All classes</option>
+                <option value="PALM-INTERNAL">Palm — internal</option>
+                <option value="PALM-EDGE">Palm — edge</option>
+                <option value="MILL-CATCHMENT">Mill catchment</option>
+                <option value="UNLINKED">Unlinked</option>
+              </select>
+            </div>
+            <div class="ctl">
+              <label for="f-min">Minimum size <b id="f-min-val">0 ha</b></label>
+              <input id="f-min" type="range" min="0" max="100" value="0" />
+            </div>
+            <div class="ctl toggles">
+              <label><input type="checkbox" id="f-peat" /> On peat</label>
+              <label><input type="checkbox" id="f-primary" /> In primary forest</label>
+            </div>
+            <div class="ctl grow">
+              <span class="count" id="f-count">—</span>
+              <a class="dl" id="dl-json" download="forest-watch-clusters.json">Download shown events (JSON)</a>
+            </div>
+          </div>
+
+          <div class="mapwrap">
+            <div id="map"></div>
+            <canvas id="mapcanvas"></canvas>
+            <span class="maptag" id="maptag" hidden>2-D canvas renderer</span>
+            <div class="mapkey" id="mapkey"></div>
+          </div>
+
+          <aside class="detail" id="detail">
+            <div class="detail-empty" id="detail-empty">
+              <svg viewBox="0 0 48 48" width="34" height="34" aria-hidden="true"><circle cx="24" cy="24" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M31 31 42 42" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+              <p>Select an event on the map to see its dates, size, compliance flags and nearest
+              mill.</p>
+            </div>
+            <div class="detail-body" id="detail-body" hidden></div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ══ METHODOLOGY ═════════════════════════════════════════════════════════ -->
+      <section class="chapter" id="method">
+        <div class="ch-head reveal">
+          <span class="ch-num">06</span>
+          <h2>Methodology, gates and licences</h2>
+          <p class="ch-lede">Everything below is reproducible from public sources with one free
+          API key. Where a check did not pass, it says so.</p>
+        </div>
+
+        <div class="panel reveal">
+          <div class="panel-head"><h3>Validation gates</h3>
+          <p>Our hectares against Global Forest Watch's own server-side aggregation of the same
+          tiles over the same geometry — so the comparison isolates our plumbing.</p></div>
+          <div id="gates" class="gates"></div>
+        </div>
+
+        <div class="panel reveal">
+          <div class="panel-head"><h3>How an event is built</h3></div>
+          <ol class="method-steps">
+            <li><b>Decode.</b> RADD publishes <code>date_conf</code> as
+            <code>confidence × 10000 + days since 2014-12-31</code>; 2&nbsp;= low, 3&nbsp;= high
+            confidence. We read the 10&nbsp;m tiles in 10,000&nbsp;px blocks so a 10-degree tile
+            (20&nbsp;GB uncompressed) never enters memory whole.</li>
+            <li><b>Cluster.</b> 8-connected components over alert pixels; events smaller than
+            0.5&nbsp;ha are dropped. Events crossing a block seam are re-joined with a union-find
+            over the block edges, so a single clearing is one event, not two.</li>
+            <li><b>Measure.</b> Hectares use the true geodetic pixel area at each pixel's latitude,
+            not a nominal constant.</li>
+            <li><b>Link.</b> Palm, peat and primary forest are sampled in the same pass — every
+            layer sits on the identical 10-degree grid, so co-location is exact rather than a
+            spatial join. Mill catchments come from the Universal Mill List points via a KD-tree
+            on the unit sphere, which also yields the distance and identity of the nearest mill.</li>
+            <li><b>No forest mask is applied to the alerts.</b> RADD is already a
+            forest-disturbance product, and gate G-H2 compares against GFW's own unmasked
+            aggregation — masking here would compare unlike with unlike.</li>
+          </ol>
+        </div>
+
+        <div class="panel reveal">
+          <div class="panel-head"><h3>Sources and licences</h3>
+          <p>Every stored layer is CC&nbsp;BY&nbsp;4.0 with no country carve-out. Licence strings are
+          read live from the API's own dataset metadata, not assumed.</p></div>
+          <div id="licences" class="lic"></div>
+        </div>
+
+        <div class="panel reveal warn">
+          <div class="panel-head"><h3>The concession problem</h3></div>
+          <p>There is no commercially-licensed, redistributable Indonesian concession vector.
+          Global Forest Watch's API marks its oil-palm and wood-fibre concession sets
+          <b>&ldquo;CC BY 4.0 (excluding Indonesia)&rdquo;</b>; the RSPO layer carries a map-publication
+          disclaimer rather than an open licence; the ministry's own
+          <code>idn_wood_fiber</code> is published as <b>&ldquo;View Only, Not Downloadable.&rdquo;</b>
+          Indonesian law bars non-government publication of estate boundaries. <b>Therefore this
+          page stores and redistributes no concession boundary at all.</b> The stored linkage uses
+          mapped plantation extent, mill catchments, peat and primary forest — all openly licensed.
+          Government concession services remain available as a live, labelled reference overlay at
+          view time.</p>
+          <div id="rejected" class="rejected"></div>
+        </div>
+      </section>
     </main>
+
+    <footer class="foot">
+      <p id="attrib"></p>
+      <span class="stamp dim" id="footstamp">A DEMO-LAB CASE · PUBLIC DATA ONLY · NO CLIENT DATA</span>
+    </footer>
+
+    <div id="tip" class="tip" role="tooltip" hidden></div>
+
+    <style is:global>
+      *, *::before, *::after { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0; background: var(--ground); color: var(--ink);
+        font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+        -webkit-font-smoothing: antialiased;
+      }
+      body::before {
+        content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+        background:
+          radial-gradient(1200px 600px at 78% -8%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 68%),
+          radial-gradient(900px 500px at 6% 104%, color-mix(in srgb, var(--loss) 7%, transparent), transparent 70%);
+      }
+      main, header, footer { position: relative; z-index: 1; }
+      h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.018em; margin: 0; }
+      em { font-style: normal; color: var(--accent); }
+      code { font-family: var(--font-data); font-size: 0.86em; color: var(--accent);
+             background: color-mix(in srgb, var(--accent) 10%, transparent);
+             padding: 1px 5px; border-radius: 4px; }
+      a { color: var(--accent); }
+      .skip { position: absolute; left: -999px; top: 0; z-index: 200; background: var(--surface-raised);
+              padding: 10px 16px; border-radius: 0 0 var(--radius) 0; }
+      .skip:focus { left: 0; }
+      :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+      .stamp { font-family: var(--font-data); font-size: 11px; letter-spacing: 0.16em;
+               text-transform: uppercase; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); }
+      b, .num { font-variant-numeric: tabular-nums; }
+
+      /* ── hero ─────────────────────────────────────────────────────── */
+      .hero { position: relative; min-height: 100svh; display: grid;
+              grid-template-rows: 1fr auto; overflow: hidden; }
+      .hero-canvas-wrap { position: absolute; inset: 0; }
+      #ignition { width: 100%; height: 100%; display: block; }
+      .hero-vignette { position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(120% 80% at 50% 40%, transparent 30%, var(--ground) 96%),
+                    linear-gradient(180deg, color-mix(in srgb, var(--ground) 82%, transparent) 0%, transparent 26%, transparent 58%, var(--ground) 100%); }
+      .hero-copy { position: relative; align-self: center; max-width: 46rem;
+                   padding: 0 clamp(20px, 6vw, 84px); }
+      .hero-copy h1 { font-size: clamp(2rem, 4.1vw, 3.35rem); line-height: 1.05; margin: 14px 0 20px;
+                      text-shadow: 0 2px 30px var(--ground); font-weight: 800; }
+      .lede { color: var(--ink); font-size: clamp(1rem, 1.35vw, 1.12rem); max-width: 34rem;
+              text-shadow: 0 1px 20px var(--ground); }
+      .lede strong { color: var(--ink); font-weight: 600;
+                     box-shadow: inset 0 -0.55em 0 color-mix(in srgb, var(--loss) 26%, transparent); }
+      .hud { position: relative; margin: 0 clamp(20px, 6vw, 84px) clamp(24px, 5vh, 56px);
+             display: grid; gap: 14px 26px; padding: 16px 20px;
+             grid-template-columns: minmax(150px, auto) 1fr; align-items: center;
+             background: linear-gradient(180deg, color-mix(in srgb, var(--surface-raised) 88%, transparent),
+                                                 color-mix(in srgb, var(--surface) 92%, transparent));
+             border: 1px solid var(--hairline); border-radius: 10px;
+             backdrop-filter: blur(9px);
+             box-shadow: 0 18px 50px -22px #000, inset 0 1px 0 color-mix(in srgb, #fff 6%, transparent); }
+      .hud-week b { display: block; font-family: var(--font-display); font-size: 1.55rem; line-height: 1.1; }
+      .hud-week span, .fig span { font-family: var(--font-data); font-size: 11px; letter-spacing: 0.09em;
+                                  text-transform: uppercase; color: var(--ink-muted); }
+      .hud-figs { display: flex; gap: clamp(16px, 4vw, 48px); flex-wrap: wrap; }
+      .fig b { display: block; font-family: var(--font-display); font-size: 1.55rem; line-height: 1.1;
+               color: var(--loss); }
+      .fig:nth-child(2) b { color: var(--accent); }
+      .hud-scrub { grid-column: 1 / -1; display: flex; gap: 12px; align-items: center; }
+      .play { width: 34px; height: 34px; flex: none; border-radius: 50%; cursor: pointer;
+              border: 1px solid var(--hairline); background: var(--surface-raised); color: var(--ink);
+              font-size: 11px; line-height: 1; transition: background .2s, border-color .2s; }
+      .play:hover { background: var(--accent-ink); border-color: var(--accent); }
+      input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 4px;
+        background: linear-gradient(90deg, var(--loss) var(--pct, 0%), var(--hairline) var(--pct, 0%));
+        border-radius: 3px; cursor: pointer; }
+      input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px;
+        border-radius: 50%; background: var(--ink); border: 3px solid var(--loss); cursor: pointer;
+        box-shadow: 0 0 12px color-mix(in srgb, var(--loss) 70%, transparent); }
+      input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%;
+        background: var(--ink); border: 3px solid var(--loss); }
+      .hud-legend { grid-column: 1 / -1; display: flex; gap: 18px; align-items: center; flex-wrap: wrap;
+                    font-family: var(--font-data); font-size: 11px; color: var(--ink-muted);
+                    letter-spacing: 0.07em; text-transform: uppercase; }
+      .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 6px;
+             vertical-align: -1px; }
+      .dot.lk { background: var(--loss); box-shadow: 0 0 8px var(--loss); }
+      .dot.un { background: #7A8A7C; }
+      .vstamp { margin-left: auto; color: var(--accent); }
+      .scroll-cue { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+                    display: flex; flex-direction: column; align-items: center; gap: 5px;
+                    font-family: var(--font-data); font-size: 9.5px; letter-spacing: 0.2em;
+                    text-transform: uppercase; color: var(--ink-muted); opacity: .7; }
+      .scroll-cue i { width: 1px; height: 22px; background: linear-gradient(var(--ink-muted), transparent);
+                      animation: drop 2.1s ease-in-out infinite; }
+      @keyframes drop { 0%,100% { transform: scaleY(.4); opacity: .3 } 50% { transform: scaleY(1); opacity: 1 } }
+
+      /* ── chapters ─────────────────────────────────────────────────── */
+      .chapter { max-width: var(--content-width); margin: 0 auto; padding: clamp(64px, 10vh, 120px) clamp(20px, 5vw, 40px); }
+      .chapter.wide { max-width: 96rem; }
+      .ch-head { max-width: var(--prose-width); margin-bottom: 40px; }
+      .ch-num { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.22em; color: var(--loss);
+                display: block; margin-bottom: 10px; }
+      .ch-head h2 { font-size: clamp(1.7rem, 3.4vw, 2.5rem); line-height: 1.12; margin-bottom: 14px; }
+      .ch-lede { color: var(--ink-muted); font-size: 1.03rem; margin: 0; }
+      .ch-lede code { color: var(--accent); }
+      .sowhat { max-width: var(--prose-width); margin: 34px 0 0; padding: 16px 20px;
+                border-left: 2px solid var(--accent); color: var(--ink);
+                background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 70%);
+                border-radius: 0 var(--radius) var(--radius) 0; }
+      .sowhat b { color: var(--accent); }
+
+      .bigstat { display: flex; align-items: center; gap: clamp(16px, 4vw, 46px); flex-wrap: wrap;
+                 margin: 0 0 40px; }
+      .bigstat > div { display: flex; flex-direction: column; }
+      .bigstat b { font-family: var(--font-display); font-weight: 800;
+                   font-size: clamp(2.4rem, 6vw, 4rem); line-height: 1; color: var(--loss);
+                   text-shadow: 0 0 44px color-mix(in srgb, var(--loss) 42%, transparent); }
+      .bigstat b.official { color: var(--official); text-shadow: 0 0 44px color-mix(in srgb, var(--official) 34%, transparent); }
+      .bigstat span { font-size: 0.9rem; color: var(--ink-muted); margin-top: 8px; max-width: 15rem; }
+      .bigstat em { display: block; font-family: var(--font-data); font-size: 10.5px; letter-spacing: 0.1em;
+                    text-transform: uppercase; color: var(--ink-muted); opacity: .8; margin-top: 4px; }
+      .bigstat .vs { font-family: var(--font-display); color: var(--ink-muted); font-size: 1.1rem;
+                     align-self: center; }
+
+      .panel { background: linear-gradient(180deg, var(--surface-raised), var(--surface));
+               border: 1px solid var(--hairline); border-radius: 12px; padding: 22px clamp(16px, 2.6vw, 26px);
+               margin: 0 0 26px; box-shadow: 0 22px 48px -32px #000; }
+      .panel.warn { border-color: color-mix(in srgb, var(--loss) 40%, var(--hairline)); }
+      .panel-head { margin-bottom: 18px; }
+      .panel-head h3 { font-size: 1.06rem; }
+      .panel-head p { margin: 6px 0 0; color: var(--ink-muted); font-size: 0.9rem; max-width: 56ch; }
+      .chart { margin: 0; }
+      .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+      .note { font-size: 0.85rem; color: var(--ink-muted); margin-top: 12px; max-width: 70ch; }
+
+      .smallmults { display: grid; gap: 12px;
+                    grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); }
+      .sm { border: 1px solid var(--hairline); border-radius: 8px; padding: 10px 12px 6px;
+            background: color-mix(in srgb, var(--ground) 40%, transparent);
+            transition: transform .25s cubic-bezier(.2,.8,.3,1), border-color .25s, box-shadow .25s; }
+      .sm:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--loss) 55%, var(--hairline));
+                  box-shadow: 0 14px 28px -18px var(--loss); }
+      .sm h4 { margin: 0; font-family: var(--font-body); font-size: 12.5px; font-weight: 600; }
+      .sm .peak { font-family: var(--font-data); font-size: 11px; color: var(--ink-muted); }
+
+      .statrow { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+                 margin-bottom: 26px; }
+      .tile { border: 1px solid var(--hairline); border-radius: 10px; padding: 16px 18px;
+              background: linear-gradient(160deg, var(--surface-raised), var(--surface)); }
+      .tile b { display: block; font-family: var(--font-display); font-weight: 700;
+                font-size: 1.85rem; line-height: 1.05; }
+      .tile span { font-size: 12.5px; color: var(--ink-muted); display: block; margin-top: 6px; }
+
+      .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+      .tabs button { font-family: var(--font-data); font-size: 11.5px; letter-spacing: 0.07em;
+                     text-transform: uppercase; padding: 6px 11px; border-radius: 999px; cursor: pointer;
+                     background: transparent; color: var(--ink-muted); border: 1px solid var(--hairline);
+                     transition: all .22s; }
+      .tabs button:hover { color: var(--ink); border-color: var(--ink-muted); }
+      .tabs button[aria-selected="true"] { background: var(--accent-ink); color: var(--accent);
+                     border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+
+      .classcards { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+                    margin-bottom: 26px; }
+      .cc { position: relative; border: 1px solid var(--hairline); border-radius: 10px; padding: 16px 18px;
+            background: var(--surface); overflow: hidden;
+            transition: transform .25s cubic-bezier(.2,.8,.3,1), box-shadow .25s; }
+      .cc:hover { transform: translateY(-3px); box-shadow: 0 16px 34px -20px #000; }
+      .cc::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--c); }
+      .cc::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+                   background: radial-gradient(120% 100% at 0% 0%, color-mix(in srgb, var(--c) 16%, transparent), transparent 60%); }
+      .cc h4 { margin: 0 0 8px; font-family: var(--font-data); font-size: 11px; letter-spacing: 0.13em;
+               text-transform: uppercase; color: var(--c); }
+      .cc b { font-family: var(--font-display); font-size: 1.9rem; line-height: 1; display: block; }
+      .cc p { margin: 8px 0 0; font-size: 12.5px; color: var(--ink-muted); line-height: 1.45; }
+
+      .flags { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+      .flag { border: 1px dashed color-mix(in srgb, var(--loss) 50%, var(--hairline));
+              border-radius: 10px; padding: 16px 18px; background: color-mix(in srgb, var(--ground) 45%, transparent); }
+      .flag b { font-family: var(--font-display); font-size: 1.6rem; display: block; }
+      .flag span { font-size: 12.5px; color: var(--ink-muted); }
+
+      .millwrap { display: grid; gap: 16px; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
+      #millmap { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: 8px;
+                 background: color-mix(in srgb, var(--ground) 70%, #000); cursor: crosshair; }
+      .milltable { max-height: 340px; overflow-y: auto; }
+      table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+      th { text-align: left; font-family: var(--font-data); font-size: 10.5px; letter-spacing: 0.1em;
+           text-transform: uppercase; color: var(--ink-muted); font-weight: 500;
+           border-bottom: 1px solid var(--hairline); padding: 7px 8px; position: sticky; top: 0;
+           background: var(--surface); }
+      td { padding: 7px 8px; border-bottom: 1px solid color-mix(in srgb, var(--hairline) 55%, transparent); }
+      td.n { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-data); }
+      tr.hot td.n { color: var(--loss); }
+      tbody tr { transition: background .18s; }
+      tbody tr:hover { background: color-mix(in srgb, var(--loss) 10%, transparent); }
+
+      /* ── explorer ─────────────────────────────────────────────────── */
+      .explorer { display: grid; gap: 14px; grid-template-columns: minmax(0, 1fr) 22rem;
+                  grid-template-areas: "ctl ctl" "map det"; }
+      .controls { grid-area: ctl; display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-end;
+                  padding: 14px 18px; border: 1px solid var(--hairline); border-radius: 10px;
+                  background: linear-gradient(180deg, var(--surface-raised), var(--surface)); }
+      .ctl { display: flex; flex-direction: column; gap: 6px; min-width: 9rem; }
+      .ctl.grow { margin-left: auto; align-items: flex-end; min-width: 0; }
+      .ctl label, .ctl .count { font-family: var(--font-data); font-size: 11px; letter-spacing: 0.09em;
+                                text-transform: uppercase; color: var(--ink-muted); }
+      .ctl label b { color: var(--accent); }
+      select { background: var(--ground); color: var(--ink); border: 1px solid var(--hairline);
+               border-radius: 6px; padding: 7px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+      .toggles { flex-direction: row; gap: 16px; align-items: center; }
+      .toggles label { display: flex; gap: 7px; align-items: center; text-transform: none;
+                       letter-spacing: 0; font-family: var(--font-body); font-size: 13px;
+                       color: var(--ink); cursor: pointer; }
+      input[type=checkbox] { accent-color: var(--loss); width: 15px; height: 15px; cursor: pointer; }
+      .count { color: var(--ink) !important; font-size: 12px !important; }
+      .dl { font-family: var(--font-data); font-size: 11px; letter-spacing: 0.06em; }
+      .mapwrap { grid-area: map; position: relative; border: 1px solid var(--hairline);
+                 border-radius: 10px; overflow: hidden; aspect-ratio: 16 / 10;
+                 background: color-mix(in srgb, var(--ground) 70%, #000); }
+      #map, #mapcanvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+      #mapcanvas { display: none; }
+      .maptag { position: absolute; top: 10px; left: 10px; z-index: 4; font-family: var(--font-data);
+                font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+                background: color-mix(in srgb, var(--ground) 84%, transparent); color: var(--accent);
+                padding: 4px 9px; border-radius: 999px; border: 1px solid var(--hairline); }
+      .mapkey { position: absolute; right: 10px; bottom: 10px; z-index: 4; display: flex; gap: 12px;
+                flex-wrap: wrap; padding: 7px 11px; border-radius: 8px;
+                background: color-mix(in srgb, var(--ground) 84%, transparent);
+                border: 1px solid var(--hairline); font-family: var(--font-data); font-size: 10.5px;
+                letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); }
+      .detail { grid-area: det; border: 1px solid var(--hairline); border-radius: 10px; padding: 18px;
+                background: linear-gradient(180deg, var(--surface-raised), var(--surface));
+                min-height: 260px; }
+      .detail-empty { color: var(--ink-muted); display: flex; flex-direction: column; gap: 12px;
+                      align-items: flex-start; padding-top: 12px; }
+      .detail-empty p { margin: 0; font-size: 13.5px; max-width: 22rem; }
+      .detail h4 { font-family: var(--font-display); font-size: 1.1rem; margin: 0 0 4px; }
+      .kv { display: grid; grid-template-columns: auto 1fr; gap: 5px 14px; margin-top: 14px;
+            font-size: 13px; }
+      .kv dt { font-family: var(--font-data); font-size: 10.5px; letter-spacing: 0.09em;
+               text-transform: uppercase; color: var(--ink-muted); align-self: center; }
+      .kv dd { margin: 0; font-variant-numeric: tabular-nums; }
+      .pill { display: inline-block; font-family: var(--font-data); font-size: 10px; letter-spacing: 0.1em;
+              text-transform: uppercase; padding: 3px 8px; border-radius: 999px; margin: 0 5px 5px 0;
+              border: 1px solid currentColor; }
+
+      /* ── methodology ──────────────────────────────────────────────── */
+      .gates { display: grid; gap: 12px; }
+      .gate { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: start;
+              padding: 14px 16px; border: 1px solid var(--hairline); border-radius: 9px;
+              background: color-mix(in srgb, var(--ground) 40%, transparent); }
+      .gate .id { font-family: var(--font-data); font-size: 12px; color: var(--accent); font-weight: 600; }
+      .gate p { margin: 4px 0 0; font-size: 13px; color: var(--ink-muted); }
+      .badge { font-family: var(--font-data); font-size: 10.5px; letter-spacing: 0.12em;
+               text-transform: uppercase; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+      .badge.pass { background: var(--accent-ink); color: var(--accent);
+                    border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); }
+      .badge.fail { background: color-mix(in srgb, var(--loss) 20%, transparent); color: var(--loss);
+                    border: 1px solid var(--loss); }
+      .badge.pending { background: transparent; color: var(--ink-muted); border: 1px dashed var(--hairline); }
+      .method-steps { margin: 0; padding-left: 1.15rem; color: var(--ink-muted); font-size: 14px; }
+      .method-steps li { margin-bottom: 9px; }
+      .method-steps b { color: var(--ink); }
+      .lic { display: grid; gap: 8px; }
+      .lic-row { display: grid; grid-template-columns: 15rem auto 1fr; gap: 12px; align-items: baseline;
+                 font-size: 12.5px; padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, var(--hairline) 60%, transparent); }
+      .lic-row code { font-size: 11.5px; }
+      .lic-row .lc { font-family: var(--font-data); font-size: 10.5px; letter-spacing: 0.08em;
+                     color: var(--accent); white-space: nowrap; }
+      .lic-row .cite { color: var(--ink-muted); }
+      .rejected { margin-top: 16px; display: grid; gap: 6px; font-size: 12.5px; color: var(--ink-muted); }
+      .rejected b { color: var(--loss); font-family: var(--font-data); font-size: 11.5px; }
+      .foot { max-width: var(--content-width); margin: 0 auto; padding: 40px clamp(20px, 5vw, 40px) 70px;
+              border-top: 1px solid var(--hairline); color: var(--ink-muted); font-size: 12.5px; }
+      .foot p { margin: 0 0 14px; max-width: 90ch; }
+
+      .tip { position: fixed; z-index: 90; pointer-events: none; max-width: 20rem;
+             background: color-mix(in srgb, var(--surface-raised) 96%, transparent);
+             border: 1px solid var(--hairline); border-radius: 8px; padding: 9px 12px;
+             font-size: 12.5px; box-shadow: 0 14px 34px -16px #000; backdrop-filter: blur(6px); }
+      .tip b { font-family: var(--font-display); display: block; margin-bottom: 3px; font-size: 13px; }
+      .tip .r { display: flex; justify-content: space-between; gap: 18px; font-variant-numeric: tabular-nums; }
+      .tip .r span:first-child { color: var(--ink-muted); }
+
+      .reveal { opacity: 0; transform: translateY(16px);
+                transition: opacity .7s cubic-bezier(.2,.7,.3,1), transform .7s cubic-bezier(.2,.7,.3,1); }
+      .reveal.in { opacity: 1; transform: none; }
+
+      .pending-box { border: 1px dashed var(--hairline); border-radius: 9px; padding: 26px 20px;
+                     text-align: center; color: var(--ink-muted); font-size: 13px; }
+      .pending-box b { display: block; color: var(--ink); font-family: var(--font-display);
+                       margin-bottom: 5px; }
+
+      @media (max-width: 900px) {
+        .explorer { grid-template-columns: 1fr; grid-template-areas: "ctl" "map" "det"; }
+        .millwrap { grid-template-columns: 1fr; }
+        .hud { grid-template-columns: 1fr; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
+        .reveal { opacity: 1; transform: none; transition: none; }
+        .scroll-cue i { animation: none; }
+        .sm:hover, .cc:hover { transform: none; }
+      }
+      .maplibregl-ctrl-attrib { background: color-mix(in srgb, var(--ground) 70%, transparent) !important;
+                                color: var(--ink-muted); font-size: 10px; }
+      .maplibregl-ctrl-attrib a { color: var(--ink-muted); }
+    </style>
+
+    <script>
+      import maplibregl from "maplibre-gl";
+      import "maplibre-gl/dist/maplibre-gl.css";
+      import * as d3 from "d3";
+
+      /* visible failure beats silent emptiness (the trade/nightlights pattern) */
+      const failBanner = (msg) => {
+        let b = document.getElementById("err-banner");
+        if (!b) {
+          b = document.createElement("div"); b.id = "err-banner";
+          b.style.cssText = "position:fixed;bottom:0;left:0;right:0;z-index:99;background:#3A1E1A;color:#F26D5B;font:12px ui-monospace,monospace;padding:10px 16px;border-top:1px solid #F26D5B;";
+          document.body.appendChild(b);
+        }
+        b.textContent = "⚠ " + msg;
+      };
+      addEventListener("error", (e) => failBanner("Script error: " + (e.message ?? e.type)));
+      addEventListener("unhandledrejection", (e) => failBanner("Load error: " + (e.reason?.message ?? e.reason)));
+      const sect = (name, fn) => { try { return fn(); } catch (err) { console.error(name, err); failBanner(`${name} failed: ${err.message ?? err}`); return null; } };
+
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const CLS = {
+        "PALM-INTERNAL": { c: "#B4552A", label: "Palm — internal",
+          note: "At least half the event sits inside mapped oil-palm plantation: replanting or in-estate expansion, not a new frontier." },
+        "PALM-EDGE": { c: "#CE7A38", label: "Palm — edge",
+          note: "Touches mapped plantation without being inside it — the expanding margin of an existing estate." },
+        "MILL-CATCHMENT": { c: "#E0A63F", label: "Mill catchment",
+          note: "Outside mapped palm but inside the 50 km fresh-fruit-bunch radius of at least one mill." },
+        "UNLINKED": { c: "#7A8A7C", label: "Unlinked",
+          note: "No mapped estate and no mill within 50 km. Frontier clearing the palm system does not explain." },
+      };
+      const CLS_ORDER = ["PALM-INTERNAL", "PALM-EDGE", "MILL-CATCHMENT", "UNLINKED"];
+      const BOX = [94.5, -11.5, 141.5, 6.5];
+      const fmt = (n, d = 0) => (n == null || !isFinite(n)) ? "—" : d3.format(`,.${d}f`)(n);
+      const pct = (n, d = 0) => (n == null || !isFinite(n)) ? "—" : d3.format(`.${d}%`)(n);
+      const css = (v) => getComputedStyle(document.body).getPropertyValue(v).trim();
+
+      /* ── shared tooltip ─────────────────────────────────────────── */
+      const tipEl = document.getElementById("tip");
+      function showTip(ev, html) {
+        tipEl.innerHTML = html; tipEl.hidden = false;
+        const r = tipEl.getBoundingClientRect();
+        let x = ev.clientX + 14, y = ev.clientY + 14;
+        if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - 14;
+        if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - 14;
+        tipEl.style.left = `${Math.max(8, x)}px`; tipEl.style.top = `${Math.max(8, y)}px`;
+      }
+      const hideTip = () => { tipEl.hidden = true; };
+      const rows = (arr) => arr.map(([k, v]) => `<div class="r"><span>${k}</span><span>${v}</span></div>`).join("");
+
+      /* ── entrance reveals ───────────────────────────────────────── */
+      sect("reveals", () => {
+        const io = new IntersectionObserver((es) => es.forEach((e) => {
+          if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+        }), { rootMargin: "0px 0px -8% 0px", threshold: 0.05 });
+        document.querySelectorAll(".reveal").forEach((el, i) => {
+          el.style.transitionDelay = `${Math.min(i % 4, 3) * 70}ms`; io.observe(el);
+        });
+      });
+
+      const pendingBox = (el, title, why) => {
+        el.innerHTML = `<div class="pending-box"><b>${title}</b>${why}</div>`;
+      };
+
+      const grab = async (name) => {
+        const r = await fetch(`${base}/data/${name}`, { cache: "no-cache" });
+        if (!r.ok) throw new Error(`${name}: HTTP ${r.status}`);
+        return r.json();
+      };
+
+      /* ══ boot ═════════════════════════════════════════════════════ */
+      boot();
+      async function boot() {
+        const [stats, adm1, ign, clusters, ledger, linkage, mills] = await Promise.all([
+          grab("stats.json").catch((e) => (console.warn(e), null)),
+          grab("adm1.json").catch((e) => (console.warn(e), null)),
+          grab("ignition.json").catch((e) => (console.warn(e), null)),
+          grab("clusters.json").catch((e) => (console.warn(e), null)),
+          grab("ledger.json").catch((e) => (console.warn(e), null)),
+          grab("linkage.json").catch((e) => (console.warn(e), null)),
+          grab("mills.json").catch((e) => (console.warn(e), null)),
+        ]);
+        if (!stats && !adm1) {
+          failBanner("View-models not published yet — run `make export` on the pipeline host.");
+        }
+        sect("hero", () => hero(adm1, ign, stats));
+        sect("chapter 1", () => chapter1(stats, adm1));
+        sect("chapter 2", () => chapter2(stats, ledger));
+        sect("chapter 3", () => chapter3(stats, linkage));
+        sect("chapter 4", () => chapter4(mills, adm1));
+        sect("explorer", () => explorer(clusters, adm1, mills));
+        sect("methodology", () => methodology(stats));
+      }
+
+      /* ══ geometry helpers (shared by every canvas) ════════════════ */
+      function makeProj(w, h, box = BOX) {
+        const [x0, y0, x1, y1] = box;
+        const s = Math.min(w / (x1 - x0), h / (y1 - y0));
+        const ox = (w - (x1 - x0) * s) / 2, oy = (h - (y1 - y0) * s) / 2;
+        return {
+          s, x: (lon) => (lon - x0) * s + ox, y: (lat) => (y1 - lat) * s + oy,
+          inv: (px, py) => [(px - ox) / s + x0, y1 - (py - oy) / s],
+        };
+      }
+      function landPath(geo, proj) {
+        const p = new Path2D();
+        for (const f of geo.features) {
+          const polys = f.geometry.type === "Polygon" ? [f.geometry.coordinates] : f.geometry.coordinates;
+          for (const poly of polys) for (const ring of poly) {
+            ring.forEach(([lo, la], i) => (i ? p.lineTo(proj.x(lo), proj.y(la)) : p.moveTo(proj.x(lo), proj.y(la))));
+            p.closePath();
+          }
+        }
+        return p;
+      }
+      function fitCanvas(cv) {
+        const dpr = Math.min(devicePixelRatio || 1, 2);
+        const r = cv.getBoundingClientRect();
+        cv.width = Math.max(1, Math.round(r.width * dpr));
+        cv.height = Math.max(1, Math.round(r.height * dpr));
+        const ctx = cv.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { ctx, w: r.width, h: r.height, dpr };
+      }
+
+      /* ══ HERO — the ignition ══════════════════════════════════════ */
+      function hero(adm1, ign, stats) {
+        const cv = document.getElementById("ignition");
+        const dateEl = document.getElementById("hud-date"), wkEl = document.getElementById("hud-weekno");
+        const haEl = document.getElementById("hud-ha"), lkEl = document.getElementById("hud-linked");
+        const range = document.getElementById("hud-range"), play = document.getElementById("hud-play");
+        document.getElementById("hud-vintage").textContent =
+          stats?.vintages?.radd ? stats.vintages.radd.replace("wur_radd_alerts ", "RADD ") : "RADD —";
+
+        if (!adm1) { dateEl.textContent = "no data"; return; }
+        // bucket the ignition cells by week once
+        const nW = ign ? ign.n_weeks : 0;
+        const byWeek = Array.from({ length: nW }, () => []);
+        if (ign) for (let i = 0; i < ign.w.length; i++)
+          byWeek[ign.w[i]].push([ign.x[i], ign.y[i], ign.ha[i], ign.lk[i]]);
+        const week0 = ign ? new Date(ign.week0 + "T00:00:00Z") : null;
+        const cumHa = new Array(nW).fill(0), cumLk = new Array(nW).fill(0);
+        let a = 0, b = 0;
+        for (let i = 0; i < nW; i++) {
+          for (const c of byWeek[i]) { a += c[2]; b += c[2] * c[3]; }
+          cumHa[i] = a; cumLk[i] = b;
+        }
+        range.max = String(Math.max(0, nW - 1));
+
+        let geom = null, proj = null, W = 0, H = 0, ctx = null;
+        const embers = [];                       // {px,py,ha,lk,age}
+        function layout() {
+          const f = fitCanvas(cv); ctx = f.ctx; W = f.w; H = f.h;
+          proj = makeProj(W, H);
+          geom = landPath(adm1, proj);
+        }
+        layout();
+        addEventListener("resize", () => { layout(); paint(cur); }, { passive: true });
+
+        const DECAY = 16;                      // weeks an ember stays visible
+        const sprite = (r, g, b) => {
+          const c = document.createElement("canvas"); c.width = c.height = 64;
+          const k = c.getContext("2d");
+          const rg = k.createRadialGradient(32, 32, 0, 32, 32, 32);
+          rg.addColorStop(0, `rgba(${r},${g},${b},0.95)`);
+          rg.addColorStop(0.35, `rgba(${r},${g},${b},0.34)`);
+          rg.addColorStop(1, `rgba(${r},${g},${b},0)`);
+          k.fillStyle = rg; k.fillRect(0, 0, 64, 64);
+          return c;
+        };
+        const sprLk = sprite(214, 105, 52), sprUn = sprite(138, 156, 140);
+
+        function paint(wi) {
+          ctx.clearRect(0, 0, W, H);
+          // canopy silhouette with depth
+          const g = ctx.createLinearGradient(0, 0, 0, H);
+          g.addColorStop(0, "rgba(87,178,106,0.20)");
+          g.addColorStop(0.55, "rgba(87,178,106,0.11)");
+          g.addColorStop(1, "rgba(87,178,106,0.05)");
+          ctx.fillStyle = g; ctx.fill(geom);
+          ctx.lineWidth = 0.7; ctx.strokeStyle = "rgba(87,178,106,0.34)"; ctx.stroke(geom);
+
+          if (!ign) return;
+          // Pre-rendered glow sprites: one drawImage per ember instead of one gradient per
+          // ember, which is what lets tens of thousands of cells burn at 60 fps.
+          ctx.save(); ctx.globalCompositeOperation = "lighter";
+          const cell = Math.max(1.4, ign.grid * proj.s);
+          for (const e of embers) {
+            const alpha = 1 - e.age / DECAY;
+            if (alpha <= 0.02) continue;
+            const r = cell * (1.1 + Math.min(3.0, Math.sqrt(e.ha) / 4.5)) * (1 + (1 - alpha) * 0.6);
+            ctx.globalAlpha = alpha * 0.9;
+            const sp = e.lk > 0.5 ? sprLk : sprUn;
+            ctx.drawImage(sp, e.px - r, e.py - r, r * 2, r * 2);
+          }
+          ctx.globalAlpha = 1; ctx.restore();
+
+          const d = new Date(week0.getTime() + wi * 7 * 864e5);
+          dateEl.textContent = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+          wkEl.textContent = `week ${wi + 1} of ${nW}`;
+          haEl.textContent = fmt(cumHa[wi]);
+          lkEl.textContent = cumHa[wi] ? pct(cumLk[wi] / cumHa[wi], 0) : "—";
+          range.value = String(wi);
+          range.style.setProperty("--pct", `${(wi / Math.max(1, nW - 1)) * 100}%`);
+        }
+        const push = (i, age) => {
+          for (const [gx, gy, ha, lk] of byWeek[i] || [])
+            embers.push({ px: proj.x(BOX[0] + gx * ign.grid),
+                          py: proj.y(BOX[3] - gy * ign.grid), ha, lk, age });
+        };
+        function seed(wi) {
+          for (const e of embers) e.age += 1;
+          while (embers.length && embers[0].age > DECAY) embers.shift();   // oldest first
+          push(wi, 0);
+        }
+        function rebuild(to) {
+          embers.length = 0;
+          for (let i = Math.max(0, to - DECAY); i <= to; i++) push(i, to - i);
+        }
+
+        let cur = 0, timer = null, playing = false;
+        const step = () => { cur = (cur + 1) % Math.max(1, nW); if (cur === 0) embers.length = 0; seed(cur); paint(cur); };
+        function start() {
+          if (REDUCED || !nW) return;
+          playing = true; play.textContent = "❚❚"; play.setAttribute("aria-label", "Pause the timelapse");
+          clearInterval(timer); timer = setInterval(step, 110);
+        }
+        function stop() {
+          playing = false; play.textContent = "▶"; play.setAttribute("aria-label", "Play the timelapse");
+          clearInterval(timer);
+        }
+        play.onclick = () => (playing ? stop() : start());
+        range.oninput = () => { stop(); cur = +range.value; rebuild(cur); paint(cur); };
+
+        if (REDUCED || !nW) { cur = Math.max(0, nW - 1); rebuild(cur); paint(cur); }
+        else {
+          // only run the animation while the hero is on screen
+          const io = new IntersectionObserver((es) => es.forEach((e) => {
+            if (e.isIntersecting) { if (!playing) start(); } else stop();
+          }), { threshold: 0.15 });
+          io.observe(document.getElementById("hero"));
+          paint(0);
+        }
+      }
+
+      /* ══ 01 — divergence + small multiples ═══════════════════════ */
+      function chapter1(stats, adm1) {
+        const dv = stats?.divergence;
+        const our24 = dv?.gfw_tree_cover_loss_ha?.["2024"] ?? dv?.gfw_published_ha?.["2024"];
+        document.getElementById("s-loss24").textContent = fmt(our24);
+        if (dv?.gfw_tree_cover_loss_ha?.["2024"] != null)
+          document.getElementById("s-loss24-src").textContent =
+            `our count · ${stats?.vintages?.tcl30 ?? "Hansen / UMD"} · ≥30% canopy`;
+        document.getElementById("s-klhk24").textContent = fmt(dv?.klhk_ha?.["2024"]?.net ?? 175400);
+        document.getElementById("divergence-note").textContent = dv?.explanation ?? "";
+
+        const host = document.getElementById("divergence");
+        const gfw = dv?.gfw_published_ha ?? {}, klhk = dv?.klhk_ha ?? {};
+        const years = [2023, 2024];
+        const data = years.map((y) => ({
+          year: y,
+          gfw: dv?.gfw_tree_cover_loss_ha?.[y] ?? gfw[y] ?? null,
+          klhkGross: klhk[y]?.gross ?? null, klhkNet: klhk[y]?.net ?? null,
+        }));
+        if (!data.some((d) => d.gfw)) { pendingBox(host, "Divergence panel pending", "Loss totals are not exported yet."); return; }
+
+        const W = 760, H = 260, m = { t: 16, r: 20, b: 34, l: 92 };
+        const svg = d3.select(host).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
+        const series = [
+          { k: "gfw", label: "GFW tree-cover loss (gross)", c: css("--loss") },
+          { k: "klhkGross", label: "KLHK deforestation (gross)", c: css("--official") },
+          { k: "klhkNet", label: "KLHK deforestation (net)", c: "#7FA79B" },
+        ];
+        const y = d3.scaleBand().domain(data.flatMap((d) => series.map((s) => `${d.year}·${s.k}`)))
+          .range([m.t, H - m.b]).padding(0.32);
+        const x = d3.scaleLinear().domain([0, d3.max(data, (d) => d.gfw) * 1.06]).range([m.l, W - m.r]);
+        svg.append("g").attr("transform", `translate(0,${H - m.b})`)
+          .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format("~s")))
+          .call((g) => g.select(".domain").attr("stroke", css("--hairline")))
+          .call((g) => g.selectAll("text").attr("fill", css("--ink-muted")).style("font-size", "12px"))
+          .call((g) => g.selectAll("line").attr("stroke", css("--hairline")));
+        for (const d of data) for (const s of series) {
+          const key = `${d.year}·${s.k}`, v = d[s.k];
+          const g = svg.append("g");
+          g.append("rect").attr("x", m.l).attr("y", y(key)).attr("height", y.bandwidth())
+            .attr("rx", 2).attr("fill", s.c).attr("opacity", 0.9).attr("width", 0)
+            .transition().duration(REDUCED ? 0 : 750).delay(REDUCED ? 0 : 120)
+            .attr("width", v ? Math.max(2, x(v) - m.l) : 0);
+          g.append("text").attr("x", m.l - 10).attr("y", y(key) + y.bandwidth() / 2)
+            .attr("dy", "0.35em").attr("text-anchor", "end").attr("fill", css("--ink-muted"))
+            .style("font-size", "12px").style("font-family", "var(--font-data)")
+            .text(s.k === "gfw" ? `${d.year} GFW` : (s.k === "klhkGross" ? "KLHK gross" : "KLHK net"));
+          if (v) g.append("text").attr("x", x(v) + 8).attr("y", y(key) + y.bandwidth() / 2)
+            .attr("dy", "0.35em").attr("fill", css("--ink")).style("font-size", "12px")
+            .style("font-variant-numeric", "tabular-nums").style("opacity", 0)
+            .text(`${fmt(v)} ha`)
+            .transition().duration(REDUCED ? 0 : 500).delay(REDUCED ? 0 : 700).style("opacity", 1);
+          g.on("pointermove", (ev) => showTip(ev, `<b>${s.label}</b>` + rows([[String(d.year), v ? fmt(v) + " ha" : "not published"]])))
+            .on("pointerleave", hideTip);
+        }
+
+        // small multiples
+        const sm = document.getElementById("smallmults");
+        const feats = (adm1?.features ?? []).filter((f) => Object.keys(f.properties.loss ?? {}).length > 3);
+        if (!feats.length) { pendingBox(sm, "Province series pending", "The Hansen loss table has not been built yet."); return; }
+        feats.sort((a, b) => d3.sum(Object.values(b.properties.loss)) - d3.sum(Object.values(a.properties.loss)));
+        const maxAll = d3.max(feats, (f) => d3.max(Object.values(f.properties.loss)));
+        for (const f of feats.slice(0, 12)) {
+          const loss = f.properties.loss;
+          const ys = Object.keys(loss).map(Number).sort((a, b) => a - b);
+          const pts = ys.map((yy) => ({ y: yy, v: loss[yy] }));
+          const card = document.createElement("div"); card.className = "sm";
+          const peak = pts.reduce((p, c) => (c.v > p.v ? c : p), pts[0]);
+          card.innerHTML = `<h4>${f.properties.province}</h4><span class="peak">peak ${peak.y} · ${fmt(peak.v)} ha</span>`;
+          sm.appendChild(card);
+          const w = 178, h = 58, mm = { t: 6, r: 4, b: 4, l: 4 };
+          const s2 = d3.select(card).append("svg").attr("viewBox", `0 0 ${w} ${h}`);
+          const xx = d3.scaleLinear().domain(d3.extent(ys)).range([mm.l, w - mm.r]);
+          const yy2 = d3.scaleLinear().domain([0, maxAll]).range([h - mm.b, mm.t]);
+          const area = d3.area().x((d) => xx(d.y)).y0(h - mm.b).y1((d) => yy2(d.v)).curve(d3.curveMonotoneX);
+          const gid = `g${f.properties.province.replace(/\W/g, "")}`;
+          const def = s2.append("defs").append("linearGradient").attr("id", gid)
+            .attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 1);
+          def.append("stop").attr("offset", "0%").attr("stop-color", css("--loss")).attr("stop-opacity", 0.75);
+          def.append("stop").attr("offset", "100%").attr("stop-color", css("--loss")).attr("stop-opacity", 0.05);
+          s2.append("path").datum(pts).attr("fill", `url(#${gid})`).attr("d", area);
+          s2.append("path").datum(pts).attr("fill", "none").attr("stroke", css("--loss"))
+            .attr("stroke-width", 1.2)
+            .attr("d", d3.line().x((d) => xx(d.y)).y((d) => yy2(d.v)).curve(d3.curveMonotoneX));
+          const mark = s2.append("circle").attr("r", 2.6).attr("fill", css("--ink")).style("opacity", 0);
+          s2.append("rect").attr("x", 0).attr("y", 0).attr("width", w).attr("height", h)
+            .attr("fill", "transparent").style("cursor", "crosshair")
+            .on("pointermove", function (ev) {
+              const px = d3.pointer(ev, this)[0];
+              const yr = Math.round(xx.invert(px));
+              const p = pts.find((d) => d.y === yr) ?? pts[pts.length - 1];
+              mark.attr("cx", xx(p.y)).attr("cy", yy2(p.v)).style("opacity", 1);
+              showTip(ev, `<b>${f.properties.province}</b>` + rows([[String(p.y), fmt(p.v) + " ha"]]));
+            })
+            .on("pointerleave", () => { mark.style("opacity", 0); hideTip(); });
+        }
+      }
+
+      /* ══ 02 — alert stats + weekly ledger ════════════════════════ */
+      function chapter2(stats, ledger) {
+        const host = document.getElementById("alertstats");
+        const c = stats?.clusters;
+        const tiles = [
+          ["events detected", c ? fmt(c.n) : "—", c ? `≥ ${c.min_cluster_ha} ha, ${c.first_date} → ${c.last_date}` : "pipeline pending"],
+          ["hectares alerted", c ? fmt(c.ha) : "—", "geodetic pixel area, cos-latitude weighted"],
+          ["linked to palm or a mill", stats?.linkage ? pct(stats.linkage.linked_share, 1) : "—", "of alerted hectares"],
+          ["on peat", stats?.linkage ? pct(stats.linkage.peat_share, 1) : "—", "Miettinen et al. via gfw_peatlands"],
+        ];
+        host.innerHTML = tiles.map(([lab, v, sub]) =>
+          `<div class="tile"><b>${v}</b><span>${lab}<br><em style="opacity:.7">${sub}</em></span></div>`).join("");
+
+        const chart = document.getElementById("ledger"), tabs = document.getElementById("ledger-tabs");
+        if (!ledger?.rows?.length) { pendingBox(chart, "Weekly ledger pending", "Run the alerts and export stages."); return; }
+        const provs = Array.from(new Set(ledger.rows.map((r) => r.province)))
+          .filter((p) => p !== "Offshore / unattributed");
+        const totals = new Map();
+        for (const r of ledger.rows) totals.set(r.province, (totals.get(r.province) ?? 0) + r.ha);
+        provs.sort((a, b) => totals.get(b) - totals.get(a));
+        const opts = ["All Indonesia", ...provs.slice(0, 7)];
+        let sel = opts[0];
+        tabs.innerHTML = opts.map((p) => `<button role="tab" data-p="${p}" aria-selected="${p === sel}">${p}</button>`).join("");
+        tabs.onclick = (e) => {
+          const b = e.target.closest("button"); if (!b) return;
+          sel = b.dataset.p;
+          tabs.querySelectorAll("button").forEach((x) => x.setAttribute("aria-selected", String(x.dataset.p === sel)));
+          draw();
+        };
+
+        const W = 900, H = 300, m = { t: 16, r: 18, b: 32, l: 62 };
+        const svg = d3.select(chart).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
+        const gAx = svg.append("g"), gAreas = svg.append("g"), gHover = svg.append("g");
+        function draw() {
+          const src = sel === "All Indonesia" ? ledger.rows : ledger.rows.filter((r) => r.province === sel);
+          const agg = d3.rollups(src, (v) => ({ ha: d3.sum(v, (d) => d.ha), lha: d3.sum(v, (d) => d.lha) }), (d) => d.week)
+            .map(([week, o]) => ({ week: new Date(week + "T00:00:00Z"), ...o }))
+            .sort((a, b) => a.week - b.week);
+          const x = d3.scaleTime().domain(d3.extent(agg, (d) => d.week)).range([m.l, W - m.r]);
+          const y = d3.scaleLinear().domain([0, d3.max(agg, (d) => d.ha) * 1.08 || 1]).nice().range([H - m.b, m.t]);
+          gAx.selectAll("*").remove();
+          gAx.append("g").attr("transform", `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(7))
+            .call((g) => g.select(".domain").attr("stroke", css("--hairline")))
+            .call((g) => g.selectAll("text").attr("fill", css("--ink-muted")).style("font-size", "12px"))
+            .call((g) => g.selectAll("line").attr("stroke", css("--hairline")));
+          gAx.append("g").attr("transform", `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickFormat(d3.format("~s")))
+            .call((g) => g.select(".domain").remove())
+            .call((g) => g.selectAll("text").attr("fill", css("--ink-muted")).style("font-size", "12px"))
+            .call((g) => g.selectAll("line").attr("stroke", css("--hairline")).attr("x2", W - m.r - m.l));
+          gAx.append("text").attr("x", m.l).attr("y", m.t - 4).attr("fill", css("--ink-muted"))
+            .style("font-size", "11px").style("font-family", "var(--font-data)").text("HECTARES PER WEEK");
+
+          const stack = [
+            { k: "lha", c: css("--loss"), label: "linked to palm / a mill" },
+            { k: "una", c: "#7A8A7C", label: "unlinked" },
+          ];
+          for (const d of agg) d.una = Math.max(0, d.ha - d.lha);
+          const areaG = d3.area().x((d) => x(d.week)).curve(d3.curveMonotoneX);
+          const paths = gAreas.selectAll("path").data([
+            { s: stack[0], y0: () => y(0), y1: (d) => y(d.lha) },
+            { s: stack[1], y0: (d) => y(d.lha), y1: (d) => y(d.ha) },
+          ]);
+          paths.join("path")
+            .attr("fill", (d) => d.s.c).attr("opacity", 0.62)
+            .transition().duration(REDUCED ? 0 : 700)
+            .attr("d", (d) => areaG.y0(d.y0).y1(d.y1)(agg));
+
+          gHover.selectAll("*").remove();
+          const line = gHover.append("line").attr("y1", m.t).attr("y2", H - m.b)
+            .attr("stroke", css("--ink")).attr("stroke-dasharray", "2 3").style("opacity", 0);
+          gHover.append("rect").attr("x", m.l).attr("y", m.t).attr("width", W - m.r - m.l)
+            .attr("height", H - m.b - m.t).attr("fill", "transparent")
+            .on("pointermove", function (ev) {
+              const px = d3.pointer(ev, this)[0];
+              const t = x.invert(px);
+              const i = d3.bisector((d) => d.week).center(agg, t);
+              const d = agg[i]; if (!d) return;
+              line.attr("x1", x(d.week)).attr("x2", x(d.week)).style("opacity", 0.5);
+              showTip(ev, `<b>${d3.utcFormat("%d %b %Y")(d.week)}</b>` + rows([
+                ["total", fmt(d.ha, 1) + " ha"],
+                ["linked", fmt(d.lha, 1) + " ha"],
+                ["unlinked", fmt(d.una, 1) + " ha"],
+                ["linked share", d.ha ? pct(d.lha / d.ha, 0) : "—"],
+              ]));
+            })
+            .on("pointerleave", () => { line.style("opacity", 0); hideTip(); });
+        }
+        draw();
+      }
+
+      /* ══ 03 — class cards + quarterly composition ════════════════ */
+      function chapter3(stats, linkage) {
+        const cards = document.getElementById("classcards");
+        const share = stats?.linkage?.by_class_share ?? {};
+        const ha = stats?.linkage?.by_class_ha ?? {};
+        cards.innerHTML = CLS_ORDER.map((k) => `
+          <div class="cc" style="--c:${CLS[k].c}">
+            <h4>${CLS[k].label}</h4>
+            <b>${share[k] != null ? pct(share[k], 1) : "—"}</b>
+            <p>${ha[k] != null ? fmt(ha[k]) + " ha · " : ""}${CLS[k].note}</p>
+          </div>`).join("");
+
+        const fl = document.getElementById("flags");
+        const dom = stats?.radd_domain;
+        const primaryNote = dom?.structural
+          ? `<b style="font-size:1rem;color:var(--loss);display:inline">Structural, not a finding.</b>
+             We measured it: RADD only issues alerts inside the 2001 primary humid tropical
+             forest mask, which covers 6–28&thinsp;% of the land in these tiles. Every alert is in
+             primary forest by construction, and Java and Nusa Tenggara — which have almost none
+             left — return no alerts at all. <b style="display:inline">This also makes the
+             palm-linked share above a floor:</b> an estate that was already plantation in 2001 is
+             outside RADD's domain and can never raise an alert, so replanting is largely
+             invisible to this sensor.`
+          : "Inside primary forest as mapped in 2001 (Turubanova / Margono) — irreplaceable rather than merely forested.";
+        fl.innerHTML = [
+          ["on peat", stats?.linkage?.peat_share,
+           "Clearing on peat soil. Under the EU Deforestation Regulation and Indonesia's own moratorium this is the highest-consequence flag on the page."],
+          ["in primary forest", stats?.linkage?.primary_share, primaryNote],
+        ].map(([lab, v, note]) =>
+          `<div class="flag"><b>${v != null ? pct(v, 1) : "—"}</b><span>of alerted hectares ${lab}<br><em style="opacity:.85">${note}</em></span></div>`).join("");
+
+        const chart = document.getElementById("linkchart"), tabs = document.getElementById("link-tabs");
+        if (!linkage?.rows?.length) { pendingBox(chart, "Linkage composition pending", "Run the link and export stages."); return; }
+        const tot = d3.rollup(linkage.rows, (v) => d3.sum(v, (r) => d3.sum(CLS_ORDER, (k) => r[k] ?? 0)), (r) => r.province);
+        const provs = Array.from(tot.keys()).filter((p) => p !== "Offshore / unattributed")
+          .sort((a, b) => tot.get(b) - tot.get(a));
+        const opts = ["All Indonesia", ...provs.slice(0, 7)];
+        let sel = opts[0];
+        tabs.innerHTML = opts.map((p) => `<button role="tab" data-p="${p}" aria-selected="${p === sel}">${p}</button>`).join("");
+        tabs.onclick = (e) => {
+          const b = e.target.closest("button"); if (!b) return;
+          sel = b.dataset.p;
+          tabs.querySelectorAll("button").forEach((x) => x.setAttribute("aria-selected", String(x.dataset.p === sel)));
+          draw();
+        };
+        const W = 900, H = 300, m = { t: 16, r: 128, b: 32, l: 50 };
+        const svg = d3.select(chart).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
+        const gAx = svg.append("g"), gA = svg.append("g"), gL = svg.append("g"), gH = svg.append("g");
+        function draw() {
+          const src = sel === "All Indonesia" ? linkage.rows : linkage.rows.filter((r) => r.province === sel);
+          const byQ = d3.rollups(src, (v) => {
+            const o = { q: v[0].quarter };
+            for (const k of CLS_ORDER) o[k] = d3.sum(v, (r) => r[k] ?? 0);
+            o.total = d3.sum(CLS_ORDER, (k) => o[k]);
+            return o;
+          }, (r) => r.quarter).map(([, o]) => o).sort((a, b) => a.q.localeCompare(b.q))
+            .filter((o) => o.total > 0);
+          const norm = byQ.map((o) => {
+            const n = { q: o.q, total: o.total };
+            for (const k of CLS_ORDER) n[k] = o[k] / o.total;
+            return n;
+          });
+          const x = d3.scalePoint().domain(norm.map((d) => d.q)).range([m.l, W - m.r]);
+          const y = d3.scaleLinear().domain([0, 1]).range([H - m.b, m.t]);
+          const st = d3.stack().keys(CLS_ORDER)(norm);
+          gAx.selectAll("*").remove();
+          gAx.append("g").attr("transform", `translate(0,${H - m.b})`)
+            .call(d3.axisBottom(x).tickValues(x.domain().filter((_, i) => i % Math.ceil(x.domain().length / 8) === 0)))
+            .call((g) => g.select(".domain").attr("stroke", css("--hairline")))
+            .call((g) => g.selectAll("text").attr("fill", css("--ink-muted")).style("font-size", "12px"))
+            .call((g) => g.selectAll("line").attr("stroke", css("--hairline")));
+          gAx.append("g").attr("transform", `translate(${m.l},0)`)
+            .call(d3.axisLeft(y).ticks(4).tickFormat(d3.format(".0%")))
+            .call((g) => g.select(".domain").remove())
+            .call((g) => g.selectAll("text").attr("fill", css("--ink-muted")).style("font-size", "12px"))
+            .call((g) => g.selectAll("line").attr("stroke", css("--hairline")).attr("x2", W - m.r - m.l));
+          const area = d3.area().x((d) => x(d.data.q)).y0((d) => y(d[0])).y1((d) => y(d[1])).curve(d3.curveMonotoneX);
+          gA.selectAll("path").data(st, (d) => d.key).join(
+            (e) => e.append("path").attr("fill", (d) => CLS[d.key].c).attr("opacity", 0.8).attr("d", area),
+            (u) => u.call((s) => s.transition().duration(REDUCED ? 0 : 700).attr("d", area)));
+          // label de-collision at the line ends
+          gL.selectAll("*").remove();
+          const ends = st.map((s) => ({ key: s.key, y: y((s[s.length - 1][0] + s[s.length - 1][1]) / 2),
+                                        v: norm.at(-1)?.[s.key] ?? 0 }))
+            .sort((a, b) => a.y - b.y);
+          for (let i = 1; i < ends.length; i++)
+            if (ends[i].y - ends[i - 1].y < 16) ends[i].y = ends[i - 1].y + 16;
+          for (const e of ends) {
+            if (e.v < 0.012) continue;
+            gL.append("text").attr("x", W - m.r + 10).attr("y", e.y).attr("dy", "0.34em")
+              .attr("fill", CLS[e.key].c).style("font-size", "12px")
+              .style("font-family", "var(--font-data)")
+              .text(`${CLS[e.key].label} ${pct(e.v, 0)}`);
+          }
+          gH.selectAll("*").remove();
+          const line = gH.append("line").attr("y1", m.t).attr("y2", H - m.b).attr("stroke", css("--ink"))
+            .attr("stroke-dasharray", "2 3").style("opacity", 0);
+          gH.append("rect").attr("x", m.l).attr("y", m.t).attr("width", W - m.r - m.l)
+            .attr("height", H - m.b - m.t).attr("fill", "transparent")
+            .on("pointermove", function (ev) {
+              const px = d3.pointer(ev, this)[0];
+              const i = d3.leastIndex(norm, (d) => Math.abs(x(d.q) - px));
+              const d = norm[i], raw = byQ[i]; if (!d) return;
+              line.attr("x1", x(d.q)).attr("x2", x(d.q)).style("opacity", 0.5);
+              showTip(ev, `<b>${d.q} · ${sel}</b>` +
+                rows(CLS_ORDER.map((k) => [CLS[k].label, `${pct(d[k], 0)} · ${fmt(raw[k])} ha`])
+                  .concat([["total", fmt(raw.total) + " ha"]])));
+            })
+            .on("pointerleave", () => { line.style("opacity", 0); hideTip(); });
+        }
+        draw();
+      }
+
+      /* ══ 04 — mills ══════════════════════════════════════════════ */
+      function chapter4(mills, adm1) {
+        const cv = document.getElementById("millmap"), tbl = document.getElementById("milltable");
+        if (!mills?.rows?.length) {
+          pendingBox(tbl, "Mill pressure pending", "Run the link and export stages.");
+          return;
+        }
+        const rowsD = mills.rows.filter((m) => m.latitude != null && m.longitude != null);
+        const maxHa = d3.max(rowsD, (m) => m.alert_ha_12m ?? 0) || 1;
+        const rad = d3.scaleSqrt().domain([0, maxHa]).range([1.6, 15]);
+        let proj = null, land = null, ctx = null, W = 0, H = 0, hover = -1;
+        function layout() {
+          const f = fitCanvas(cv); ctx = f.ctx; W = f.w; H = f.h;
+          proj = makeProj(W, H);
+          land = adm1 ? landPath(adm1, proj) : null;
+        }
+        function paint() {
+          layout();
+          ctx.clearRect(0, 0, W, H);
+          if (land) {
+            ctx.fillStyle = "rgba(87,178,106,0.10)"; ctx.fill(land);
+            ctx.strokeStyle = "rgba(87,178,106,0.26)"; ctx.lineWidth = 0.6; ctx.stroke(land);
+          }
+          rowsD.slice().sort((a, b) => (a.alert_ha_12m ?? 0) - (b.alert_ha_12m ?? 0))
+            .forEach((m) => {
+              const px = proj.x(m.longitude), py = proj.y(m.latitude);
+              const r = rad(m.alert_ha_12m ?? 0);
+              const hot = (m.alert_ha_12m ?? 0) > 0;
+              ctx.beginPath(); ctx.arc(px, py, r, 0, 6.2832);
+              ctx.fillStyle = hot ? "rgba(180,85,42,0.55)" : "rgba(122,138,124,0.35)";
+              ctx.fill();
+              ctx.lineWidth = 1; ctx.strokeStyle = hot ? "rgba(224,166,63,0.85)" : "rgba(122,138,124,0.6)";
+              ctx.stroke();
+              if (String(m.rspo_statu ?? "").toLowerCase().includes("certified")) {
+                ctx.beginPath(); ctx.arc(px, py, r + 2.6, 0, 6.2832);
+                ctx.strokeStyle = "rgba(75,184,169,0.75)"; ctx.setLineDash([2, 2]); ctx.stroke();
+                ctx.setLineDash([]);
+              }
+            });
+          if (hover >= 0) {
+            const m = rowsD[hover];
+            ctx.beginPath(); ctx.arc(proj.x(m.longitude), proj.y(m.latitude), rad(m.alert_ha_12m ?? 0) + 4, 0, 6.2832);
+            ctx.strokeStyle = css("--ink"); ctx.lineWidth = 1.4; ctx.stroke();
+          }
+        }
+        paint();
+        addEventListener("resize", paint, { passive: true });
+        cv.addEventListener("pointermove", (ev) => {
+          const r = cv.getBoundingClientRect();
+          const px = ev.clientX - r.left, py = ev.clientY - r.top;
+          let best = -1, bd = 14 * 14;
+          rowsD.forEach((m, i) => {
+            const dx = proj.x(m.longitude) - px, dy = proj.y(m.latitude) - py;
+            const d2 = dx * dx + dy * dy;
+            if (d2 < bd) { bd = d2; best = i; }
+          });
+          if (best !== hover) { hover = best; paint(); }
+          if (best >= 0) {
+            const m = rowsD[best];
+            showTip(ev, `<b>${m.mill_name ?? "Unnamed mill"}</b>` + rows([
+              ["group", m.parent_com ?? "—"],
+              ["province", m.province ?? "—"],
+              ["alert pressure", fmt(m.alert_ha_12m, 1) + " ha / 12 m"],
+              ["events", fmt(m.alert_clusters_12m)],
+              ["on peat", fmt(m.peat_alert_ha_12m, 1) + " ha"],
+              ["RSPO", m.rspo_statu ?? "—"],
+            ]));
+          } else hideTip();
+        });
+        cv.addEventListener("pointerleave", () => { hover = -1; paint(); hideTip(); });
+
+        const top = rowsD.slice().sort((a, b) => (b.alert_ha_12m ?? 0) - (a.alert_ha_12m ?? 0)).slice(0, 40);
+        tbl.innerHTML = `<table><thead><tr><th>Mill</th><th>Group</th><th>Province</th>
+          <th style="text-align:right">Alert ha</th></tr></thead><tbody>${top.map((m, i) =>
+          `<tr class="${i < 5 ? "hot" : ""}"><td>${m.mill_name ?? "—"}</td><td>${m.parent_com ?? "—"}</td>
+           <td>${m.province ?? "—"}</td><td class="n">${fmt(m.alert_ha_12m, 0)}</td></tr>`).join("")}</tbody></table>`;
+      }
+
+      /* ══ 05 — explorer ═══════════════════════════════════════════ */
+      function explorer(clusters, adm1, mills) {
+        const wrap = document.getElementById("mapwrap") ?? document.querySelector(".mapwrap");
+        const cv = document.getElementById("mapcanvas"), mapDiv = document.getElementById("map");
+        const detEmpty = document.getElementById("detail-empty"), detBody = document.getElementById("detail-body");
+        const key = document.getElementById("mapkey");
+        key.innerHTML = CLS_ORDER.map((k) =>
+          `<span><i class="dot" style="background:${CLS[k].c}"></i>${CLS[k].label}</span>`).join("");
+        if (!clusters?.rows?.length) {
+          mapDiv.innerHTML = "";
+          pendingBox(document.querySelector(".mapwrap"), "Event explorer pending",
+            "Cluster view-models are not published yet.");
+          return;
+        }
+        const all = clusters.rows;
+        const provSel = document.getElementById("f-prov");
+        const provs = Array.from(new Set(all.map((r) => r.province))).sort();
+        provSel.innerHTML = `<option value="">All Indonesia</option>` +
+          provs.map((p) => `<option>${p}</option>`).join("");
+        const minR = document.getElementById("f-min"), minV = document.getElementById("f-min-val");
+        const maxHa = d3.quantile(all.map((r) => r.ha).sort(d3.ascending), 0.995) ?? 100;
+        minR.max = String(Math.round(maxHa));
+
+        const params = new URLSearchParams(location.search);
+        const state = {
+          prov: params.get("prov") ?? "", cls: params.get("cls") ?? "",
+          min: +(params.get("min") ?? 0), peat: params.get("peat") === "1",
+          primary: params.get("primary") === "1", sel: params.get("id") ?? null,
+        };
+        provSel.value = state.prov; document.getElementById("f-class").value = state.cls;
+        minR.value = String(state.min);
+        document.getElementById("f-peat").checked = state.peat;
+        document.getElementById("f-primary").checked = state.primary;
+
+        let shown = [];
+        function applyFilters() {
+          shown = all.filter((r) =>
+            (!state.prov || r.province === state.prov) &&
+            (!state.cls || r.link_class === state.cls) &&
+            r.ha >= state.min && (!state.peat || r.on_peat) && (!state.primary || r.in_primary));
+          document.getElementById("f-count").textContent =
+            `${fmt(shown.length)} shown · ${fmt(clusters.n_shown)} largest of ` +
+            `${fmt(clusters.n_total)} events mapped (cut-off ${fmt(clusters.min_ha_shown, 1)} ha)`;
+          minV.textContent = `${fmt(state.min)} ha`;
+          minR.style.setProperty("--pct", `${(state.min / (+minR.max || 1)) * 100}%`);
+          const url = new URLSearchParams();
+          if (state.prov) url.set("prov", state.prov);
+          if (state.cls) url.set("cls", state.cls);
+          if (state.min) url.set("min", String(state.min));
+          if (state.peat) url.set("peat", "1");
+          if (state.primary) url.set("primary", "1");
+          if (state.sel) url.set("id", state.sel);
+          history.replaceState(null, "", url.toString() ? `?${url}` : location.pathname);
+          const blob = new Blob([JSON.stringify(shown)], { type: "application/json" });
+          const a = document.getElementById("dl-json");
+          if (a.dataset.url) URL.revokeObjectURL(a.dataset.url);
+          a.href = a.dataset.url = URL.createObjectURL(blob);
+          render();
+        }
+        provSel.onchange = () => { state.prov = provSel.value; applyFilters(); };
+        document.getElementById("f-class").onchange = (e) => { state.cls = e.target.value; applyFilters(); };
+        minR.oninput = () => { state.min = +minR.value; applyFilters(); };
+        document.getElementById("f-peat").onchange = (e) => { state.peat = e.target.checked; applyFilters(); };
+        document.getElementById("f-primary").onchange = (e) => { state.primary = e.target.checked; applyFilters(); };
+
+        function detail(r) {
+          state.sel = r ? r.cluster_id : null;
+          detEmpty.hidden = !!r; detBody.hidden = !r;
+          if (!r) return;
+          const flags = [];
+          if (r.on_peat) flags.push(`<span class="pill" style="color:${css("--loss")}">on peat</span>`);
+          if (r.in_primary) flags.push(`<span class="pill" style="color:${css("--loss")}">primary forest</span>`);
+          if (r.glad_agree) flags.push(`<span class="pill" style="color:${css("--official")}">GLAD-L confirms</span>`);
+          detBody.innerHTML = `
+            <h4>${fmt(r.ha, 1)} ha cleared</h4>
+            <span class="pill" style="color:${CLS[r.link_class]?.c ?? css("--ink-muted")}">${CLS[r.link_class]?.label ?? r.link_class}</span>
+            ${flags.join("")}
+            <dl class="kv">
+              <dt>first alert</dt><dd>${r.first_date}</dd>
+              <dt>last alert</dt><dd>${r.last_date}</dd>
+              <dt>province</dt><dd>${r.province}</dd>
+              <dt>high conf.</dt><dd>${pct(r.hi_share, 0)} of pixels</dd>
+              <dt>inside palm</dt><dd>${pct(r.palm_share, 0)} of pixels</dd>
+              <dt>nearest mill</dt><dd>${r.nearest_mill ?? "—"}</dd>
+              <dt>mill group</dt><dd>${r.nearest_mill_group ?? "—"}</dd>
+              <dt>distance</dt><dd>${fmt(r.mill_dist_km, 1)} km</dd>
+              <dt>RSPO status</dt><dd>${r.nearest_mill_rspo ?? "—"}</dd>
+              <dt>centroid</dt><dd>${r.lat.toFixed(3)}, ${r.lon.toFixed(3)}</dd>
+            </dl>
+            <p class="note" style="margin-top:14px">A mill inside the catchment radius is a sourcing
+            hypothesis, not a chain of custody. ${CLS[r.link_class]?.note ?? ""}</p>`;
+        }
+
+        /* --- 2-D canvas renderer: the product, not a degraded stub --- */
+        let proj = null, land = null, ctx = null, W = 0, H = 0, hover = -1;
+        let view = { k: 1, tx: 0, ty: 0 };
+        function layout() {
+          const f = fitCanvas(cv); ctx = f.ctx; W = f.w; H = f.h;
+          proj = makeProj(W, H);
+          land = adm1 ? landPath(adm1, proj) : null;
+        }
+        const px = (r) => view.tx + proj.x(r.lon) * view.k;
+        const py = (r) => view.ty + proj.y(r.lat) * view.k;
+        function render() {
+          if (!ctx) layout();
+          ctx.save();
+          ctx.clearRect(0, 0, W, H);
+          ctx.save(); ctx.translate(view.tx, view.ty); ctx.scale(view.k, view.k);
+          if (land) {
+            ctx.fillStyle = "rgba(87,178,106,0.09)"; ctx.fill(land);
+            ctx.strokeStyle = "rgba(87,178,106,0.28)"; ctx.lineWidth = 0.6 / view.k; ctx.stroke(land);
+          }
+          ctx.restore();
+          const rr = d3.scaleSqrt().domain([0, d3.max(shown, (d) => d.ha) || 1]).range([1.5, 11]);
+          for (let i = shown.length - 1; i >= 0; i--) {
+            const r = shown[i], x = px(r), y = py(r);
+            if (x < -20 || y < -20 || x > W + 20 || y > H + 20) continue;
+            const rad = rr(r.ha);
+            ctx.beginPath(); ctx.arc(x, y, rad, 0, 6.2832);
+            ctx.fillStyle = (CLS[r.link_class]?.c ?? "#7A8A7C") + "cc"; ctx.fill();
+            if (r.on_peat || r.in_primary) {
+              ctx.beginPath(); ctx.arc(x, y, rad + 2, 0, 6.2832);
+              ctx.strokeStyle = "rgba(231,236,230,0.55)"; ctx.lineWidth = 0.8;
+              ctx.setLineDash([1.5, 1.5]); ctx.stroke(); ctx.setLineDash([]);
+            }
+          }
+          if (hover >= 0 && shown[hover]) {
+            const r = shown[hover];
+            ctx.beginPath(); ctx.arc(px(r), py(r), rr(r.ha) + 4.5, 0, 6.2832);
+            ctx.strokeStyle = css("--ink"); ctx.lineWidth = 1.5; ctx.stroke();
+          }
+          if (state.sel) {
+            const r = shown.find((d) => d.cluster_id === state.sel);
+            if (r) {
+              ctx.beginPath(); ctx.arc(px(r), py(r), rr(r.ha) + 8, 0, 6.2832);
+              ctx.strokeStyle = css("--accent"); ctx.lineWidth = 1.6; ctx.stroke();
+            }
+          }
+          ctx.restore();
+        }
+        function pick(mx, my) {
+          let best = -1, bd = 13 * 13;
+          for (let i = 0; i < shown.length; i++) {
+            const dx = px(shown[i]) - mx, dy = py(shown[i]) - my, d2 = dx * dx + dy * dy;
+            if (d2 < bd) { bd = d2; best = i; }
+          }
+          return best;
+        }
+        /* --- WebGL path; the canvas above takes over verbatim if it throws --- */
+        function webglMap() {
+          const map = new maplibregl.Map({
+            container: "map",
+            style: { version: 8, sources: {}, layers: [
+              { id: "bg", type: "background", paint: { "background-color": "#080D09" } }] },
+            bounds: [[BOX[0], BOX[1]], [BOX[2], BOX[3]]],
+            fitBoundsOptions: { padding: 18 }, attributionControl: false, dragRotate: false,
+          });
+          map.addControl(new maplibregl.AttributionControl({
+            customAttribution: "RADD/WUR · UMD/GLAD · SDPT · UML — via Global Nature Watch · COD-AB",
+            compact: true }));
+          map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
+          const fc = () => ({ type: "FeatureCollection", features: shown.map((r) => ({
+            type: "Feature", properties: { i: r.cluster_id, c: CLS[r.link_class]?.c ?? "#7A8A7C",
+              ha: r.ha, flag: r.on_peat || r.in_primary ? 1 : 0 },
+            geometry: { type: "Point", coordinates: [r.lon, r.lat] } })) });
+          let ready = false;
+          map.on("load", () => {
+            if (adm1) {
+              map.addSource("adm", { type: "geojson", data: adm1 });
+              map.addLayer({ id: "admf", type: "fill", source: "adm",
+                paint: { "fill-color": "#57B26A", "fill-opacity": 0.09 } });
+              map.addLayer({ id: "adml", type: "line", source: "adm",
+                paint: { "line-color": "#57B26A", "line-opacity": 0.3, "line-width": 0.6 } });
+            }
+            map.addSource("cl", { type: "geojson", data: fc() });
+            map.addLayer({ id: "ring", type: "circle", source: "cl",
+              filter: ["==", ["get", "flag"], 1],
+              paint: { "circle-radius": ["+", ["*", 0.55, ["sqrt", ["get", "ha"]]], 4],
+                "circle-color": "transparent", "circle-stroke-color": "#E7ECE6",
+                "circle-stroke-width": 0.7, "circle-stroke-opacity": 0.55 } });
+            map.addLayer({ id: "pts", type: "circle", source: "cl",
+              paint: { "circle-radius": ["+", ["*", 0.55, ["sqrt", ["get", "ha"]]], 2],
+                "circle-color": ["get", "c"], "circle-opacity": 0.82,
+                "circle-stroke-color": "#0C120D", "circle-stroke-width": 0.4 } });
+            ready = true;
+          });
+          map.on("mousemove", "pts", (e) => {
+            const r = all.find((d) => d.cluster_id === e.features[0].properties.i);
+            map.getCanvas().style.cursor = "pointer";
+            if (r) showTip(e.originalEvent, `<b>${fmt(r.ha, 1)} ha · ${r.province}</b>` + rows([
+              ["class", CLS[r.link_class]?.label ?? r.link_class],
+              ["first alert", r.first_date],
+              ["nearest mill", `${fmt(r.mill_dist_km, 1)} km`],
+              ["flags", [r.on_peat && "peat", r.in_primary && "primary"].filter(Boolean).join(", ") || "none"],
+            ]));
+          });
+          map.on("mouseleave", "pts", () => { map.getCanvas().style.cursor = ""; hideTip(); });
+          map.on("click", "pts", (e) => {
+            detail(all.find((d) => d.cluster_id === e.features[0].properties.i)); applyFilters();
+          });
+          return { repaint() { if (ready) map.getSource("cl")?.setData(fc()); } };
+        }
+
+        let gl = null;
+        try { gl = webglMap(); } catch (err) {
+          console.warn("WebGL map unavailable — 2-D canvas renderer:", err?.message ?? err);
+        }
+        if (gl) {
+          render = () => gl.repaint();
+          cv.style.display = "none"; mapDiv.style.display = "block";
+        } else {
+          cv.style.display = "block"; mapDiv.style.display = "none";
+          document.getElementById("maptag").hidden = false;
+          document.getElementById("maptag").textContent = "2-D canvas renderer · full function";
+        }
+        layout();
+        addEventListener("resize", () => { layout(); render(); }, { passive: true });
+        cv.addEventListener("pointermove", (ev) => {
+          const b = cv.getBoundingClientRect();
+          const i = pick(ev.clientX - b.left, ev.clientY - b.top);
+          if (i !== hover) { hover = i; render(); cv.style.cursor = i >= 0 ? "pointer" : "grab"; }
+          if (i >= 0) {
+            const r = shown[i];
+            showTip(ev, `<b>${fmt(r.ha, 1)} ha · ${r.province}</b>` + rows([
+              ["class", CLS[r.link_class]?.label ?? r.link_class],
+              ["first alert", r.first_date],
+              ["nearest mill", `${fmt(r.mill_dist_km, 1)} km`],
+              ["flags", [r.on_peat && "peat", r.in_primary && "primary"].filter(Boolean).join(", ") || "none"],
+            ]));
+          } else hideTip();
+        });
+        cv.addEventListener("pointerleave", () => { hover = -1; render(); hideTip(); });
+        cv.addEventListener("click", (ev) => {
+          const b = cv.getBoundingClientRect();
+          const i = pick(ev.clientX - b.left, ev.clientY - b.top);
+          detail(i >= 0 ? shown[i] : null); applyFilters();
+        });
+        cv.addEventListener("wheel", (ev) => {
+          ev.preventDefault();
+          const b = cv.getBoundingClientRect(), mx = ev.clientX - b.left, my = ev.clientY - b.top;
+          const f = Math.exp(-ev.deltaY * 0.0016);
+          const k2 = Math.max(1, Math.min(14, view.k * f));
+          view.tx = mx - (mx - view.tx) * (k2 / view.k);
+          view.ty = my - (my - view.ty) * (k2 / view.k);
+          view.k = k2;
+          if (view.k === 1) { view.tx = 0; view.ty = 0; }
+          render();
+        }, { passive: false });
+        let drag = null;
+        cv.addEventListener("pointerdown", (ev) => { drag = { x: ev.clientX, y: ev.clientY, tx: view.tx, ty: view.ty }; cv.setPointerCapture(ev.pointerId); });
+        cv.addEventListener("pointerup", () => (drag = null));
+        cv.addEventListener("pointermove", (ev) => {
+          if (!drag) return;
+          view.tx = drag.tx + (ev.clientX - drag.x); view.ty = drag.ty + (ev.clientY - drag.y);
+          render();
+        });
+
+        applyFilters();
+        if (state.sel) { const r = all.find((d) => d.cluster_id === state.sel); if (r) detail(r); }
+      }
+
+      /* ══ 06 — methodology ════════════════════════════════════════ */
+      function methodology(stats) {
+        const host = document.getElementById("gates");
+        const DESC = {
+          "G-H1": ["Hansen reconciliation", "Our tree-cover-loss hectares per province per year against GFW's own server-side aggregation of the same tiles over the same COD-AB geometry, ±5 %."],
+          "G-H2": ["Alert reconciliation", "Our RADD hectares for the trailing twelve months against GFW's aggregation over the same province geometry, ±10 %."],
+          "G-H3": ["Two-sensor agreement", "Share of high-confidence events ≥ 5 ha that carry a GLAD-L optical alert within ±60 days."],
+          "G-H4": ["Linkage sanity", "Palm and mill-linked share of alerted hectares in Riau against the ≥ 25 % literature floor."],
+        };
+        const g = stats?.gates ?? {};
+        host.innerHTML = ["G-H1", "G-H2", "G-H3", "G-H4"].map((id) => {
+          const r = g[id];
+          const st = r?.status ?? "pending";
+          let num = "";
+          if (id === "G-H1" && r?.max_abs_pct_diff != null)
+            num = `Worst deviation ${r.max_abs_pct_diff.toFixed(2)} % across ${fmt(r.n_comparisons)} province-years; median ${r.median_abs_pct_diff?.toFixed(2)} %.`;
+          if (id === "G-H2" && r?.max_abs_pct_diff != null)
+            num = `Worst deviation ${r.max_abs_pct_diff.toFixed(2)} % over ${r.window_start} → ${r.window_end}. ${r.note ?? ""}`;
+          if (id === "G-H3" && r?.agreement_share != null)
+            num = `${pct(r.agreement_share, 1)} of ${fmt(r.n_clusters)} high-confidence events ≥ 5 ha. ${r.note ?? ""}`;
+          if (id === "G-H4" && r?.riau_linked_share != null)
+            num = `Riau linked share ${pct(r.riau_linked_share, 1)} of ${fmt(r.riau_alert_ha)} alerted ha. ${r.note ?? ""}`;
+          if (!num) num = r?.reason ? `Not evaluated: ${r.reason}` : "Not evaluated yet.";
+          return `<div class="gate"><span class="id">${id}</span>
+            <div><b>${DESC[id][0]}</b><p>${DESC[id][1]}</p><p>${num}</p></div>
+            <span class="badge ${st}">${st}</span></div>`;
+        }).join("");
+
+        const lic = document.getElementById("licences");
+        const L = stats?.licences ?? {}, C = stats?.citations ?? {}, V = stats?.vintages ?? {};
+        const byDs = {};
+        for (const [k, v] of Object.entries(V)) byDs[String(v).split(" ")[0]] = { key: k, ver: String(v).split(" ")[1] ?? "" };
+        lic.innerHTML = Object.entries(L).map(([ds, l]) => {
+          const m = byDs[ds];
+          const cite = m ? (C[m.key] ?? "") : (ds.includes("mill") ? (C.mills ?? "") : "");
+          return `<div class="lic-row"><code>${ds}${m?.ver ? " " + m.ver : ""}</code>
+            <span class="lc">${l}</span><span class="cite">${cite}</span></div>`;
+        }).join("") || `<div class="pending-box">Licence ledger not exported yet.</div>`;
+
+        const rj = document.getElementById("rejected");
+        rj.innerHTML = Object.entries(stats?.rejected_sources ?? {})
+          .map(([k, v]) => `<div><b>${k}</b> — ${v}</div>`).join("");
+
+        document.getElementById("attrib").innerHTML = [
+          ...Object.values(C),
+          "Administrative boundaries: OCHA COD-AB / BPS (CC BY-IGO).",
+          "Concession outlines are not stored or redistributed; see the concession statement above.",
+        ].join(" · ");
+        const stamp = document.getElementById("footstamp");
+        stamp.textContent = `A DEMO-LAB CASE · PUBLIC DATA ONLY · ${Object.values(V).join(" · ")}` +
+          (stats?.generated ? ` · GENERATED ${stats.generated}` : "");
+      }
+    </script>
   </body>
 </html>

@@ -1,35 +1,266 @@
-"""Stage 5 · validate — gates G-H1..G-H4 (numbers in config.py; prose in spec §H4).
+"""Stage 5 - validate.  Gates G-H1..G-H4 -> data/stats.json.
 
-G-H1  Hansen reconciliation (hard): our tree-cover-loss hectares per province × year
-      (≥ 30 % canopy) vs the GFW Data API query on umd_tree_cover_loss for the same COD-AB
-      province geometry — within ±5 % for every year 2015-2024. Same source data, so this
-      tests our raster plumbing, not the world. National anchor: GFW's own country table
-      says Indonesia 2023 = 1,395,285 ha, 2024 = 1,120,264 ha (config.GFW_IDN_TCL_HA).
-G-H2  Alert reconciliation (hard): our RADD count and hectares per focus province for the
-      last complete 12 months vs the GFW API's own aggregation over the same geometry —
-      within ±10 %; differences from the forest mask and cluster minimum quantified.
-G-H3  Two-sensor agreement: ≥ 60 % of high-confidence RADD clusters ≥ 5 ha carry a GLAD-L
-      alert within ±60 days (independent radar vs optical detections agreeing).
-G-H4  Linkage sanity: the palm+mill-linked share of alert hectares in Riau ≥ 25 % —
-      literature floor (Gaveau 2022: ~32 % of 2001-19 loss went directly to oil palm;
-      Trase: palm-driven deforestation ~18 % of peak by 2018-20). If the share lands below,
-      the linkage radii are diagnosed before publish, not tuned to pass.
+The comparator is the GFW Data API's own on-demand raster analysis: POST a GeoJSON geometry
+plus SQL to /dataset/{ds}/{version}/query/json and GFW aggregates the same tiles server-side.
+Because we pass *our* COD-AB province geometry and *their* version string, the comparison
+isolates our raster plumbing (windowed reads, cos-latitude pixel area, province rasterising,
+seam stitching) from any difference in source data or boundaries.
 
-The methodology page also shows the KLHK divergence honestly: KLHK reports net deforestation
-175,400 ha for 2024 (different forest definition, different minimum mapping unit) against
-GFW's 1.12 Mha tree-cover loss — the page explains why both are true.
+  G-H1  tree-cover loss ha, per province x year 2015-2024, ours vs the API      +/- 5 %  hard
+  G-H2  RADD alerts, trailing 12 months, per focus province, ours vs the API    +/- 10 % hard
+  G-H3  >= 60 % of high-confidence RADD clusters >= 5 ha carry a GLAD-L alert within +/- 60 d
+  G-H4  palm+mill-linked share of alert hectares in Riau >= 25 % (literature floor)
 
-Writes data/stats.json; G-H1 and G-H2 are hard gates, G-H3 and G-H4 change copy.
+Lab rule: if the data contradicts the story the story is rewritten. Gates are diagnosed, never
+tuned. A gate that cannot be evaluated is recorded as "pending" with the reason, never as a
+pass.  Also assembles the KLHK-vs-GFW definitional divergence panel.
 """
 
 from __future__ import annotations
 
+import json
+import sys
+from datetime import date
+
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+import requests
+
 import config
+from alerts import log
+
+TOL_YEARS = range(2015, 2025)
 
 
-def main() -> None:
-    print("TODO validate →", config.STATS_JSON)
+def _nan_safe(o):
+    if isinstance(o, dict):
+        return {k: _nan_safe(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_nan_safe(v) for v in o]
+    if isinstance(o, (np.integer,)):
+        return int(o)
+    if isinstance(o, (np.floating, float)):
+        return None if not np.isfinite(o) else round(float(o), 6)
+    if isinstance(o, (np.bool_,)):
+        return bool(o)
+    if isinstance(o, (pd.Timestamp, date)):
+        return str(o)[:10]
+    return o
+
+
+def api_query(dataset: str, version: str, sql: str, geometry=None, timeout=300):
+    body = {"sql": sql}
+    if geometry is not None:
+        body["geometry"] = geometry
+    try:
+        r = requests.post(config.GFW_QUERY_URL.format(dataset=dataset, version=version),
+                          headers=config.GFW_HEADERS, json=body, timeout=timeout)
+    except requests.RequestException as exc:
+        return None, f"{type(exc).__name__}"
+    if r.status_code != 200:
+        return None, f"HTTP {r.status_code}: {r.text[:160]}"
+    return r.json().get("data", []), None
+
+
+def gate_h1(prov: gpd.GeoDataFrame, ours: pd.DataFrame) -> dict:
+    spec = config.RASTERS["tcl30"]
+    sql = ("SELECT umd_tree_cover_loss__year AS yr, SUM(area__ha) AS ha FROM data "
+           "WHERE umd_tree_cover_density_2000__threshold >= 30 "
+           "GROUP BY umd_tree_cover_loss__year")
+    rows, fails = [], {}
+    for _, p in prov.iterrows():
+        geom = p.geometry.simplify(0.002).buffer(0)
+        data, err = api_query(spec["dataset"], spec["version"], sql,
+                              json.loads(gpd.GeoSeries([geom], crs=4326).to_json())
+                              ["features"][0]["geometry"])
+        if err:
+            fails[p.province] = err
+            continue
+        ref = {int(d["umd_tree_cover_loss__year"]): float(d["area__ha"]) for d in data}
+        mine = dict(zip(ours.loc[ours.province == p.province, "year"],
+                        ours.loc[ours.province == p.province, "loss_ha"]))
+        for y in TOL_YEARS:
+            a, b = mine.get(y, 0.0), ref.get(y, 0.0)
+            if b <= 0:
+                continue
+            rows.append({"province": p.province, "year": y, "ours_ha": a, "gfw_ha": b,
+                         "pct_diff": 100 * (a - b) / b})
+        log(f"  G-H1 {p.province}: {len(ref)} reference years")
+    if not rows:
+        return {"status": "pending", "reason": "no reference years returned", "errors": fails}
+    df = pd.DataFrame(rows)
+    worst = df.loc[df.pct_diff.abs().idxmax()]
+    return {"status": "pass" if df.pct_diff.abs().max() <= config.GATE_LOSS_TOL_PCT else "fail",
+            "tolerance_pct": config.GATE_LOSS_TOL_PCT, "n_comparisons": len(df),
+            "max_abs_pct_diff": float(df.pct_diff.abs().max()),
+            "median_abs_pct_diff": float(df.pct_diff.abs().median()),
+            "within_tolerance_share": float((df.pct_diff.abs()
+                                             <= config.GATE_LOSS_TOL_PCT).mean()),
+            "worst": _nan_safe(worst.to_dict()),
+            "comparator": f"{spec['dataset']} {spec['version']} raster analysis over COD-AB "
+                          "province geometry",
+            "errors": fails,
+            "rows": _nan_safe(df.to_dict("records"))}
+
+
+def gate_h2(prov: gpd.GeoDataFrame, linked: pd.DataFrame) -> dict:
+    spec = config.RASTERS["radd"]
+    last = pd.to_datetime(linked.last_date).max()
+    start = (last - pd.Timedelta(days=365)).date().isoformat()
+    sql = ("SELECT count(*) AS n, SUM(area__ha) AS ha FROM data "
+           f"WHERE wur_radd_alerts__date >= '{start}'")
+    rows, fails = [], {}
+    for name in config.FOCUS_PROVINCES:
+        sel = prov.loc[prov.province == name]
+        if sel.empty:
+            fails[name] = "province not found in the boundary file"
+            continue
+        geom = sel.geometry.iloc[0].simplify(0.002).buffer(0)
+        data, err = api_query(spec["dataset"], spec["version"], sql,
+                              json.loads(gpd.GeoSeries([geom], crs=4326).to_json())
+                              ["features"][0]["geometry"])
+        if err:
+            fails[name] = err
+            continue
+        ref_ha = float(data[0].get("ha") or 0.0)
+        sub = linked.loc[(linked.province == name)
+                         & (pd.to_datetime(linked.first_date) >= last - pd.Timedelta(days=365))]
+        ours_ha = float(sub.ha.sum())
+        rows.append({"province": name, "ours_ha": ours_ha, "gfw_ha": ref_ha,
+                     "ours_clusters": int(len(sub)), "gfw_pixels": int(data[0].get("count") or 0),
+                     "pct_diff": 100 * (ours_ha - ref_ha) / ref_ha if ref_ha else float("nan")})
+        log(f"  G-H2 {name}: ours {ours_ha:,.0f} ha vs GFW {ref_ha:,.0f} ha")
+    if not rows:
+        return {"status": "pending", "reason": "no reference aggregation returned",
+                "errors": fails}
+    df = pd.DataFrame(rows)
+    return {"status": "pass" if df.pct_diff.abs().max() <= config.GATE_ALERT_TOL_PCT else "fail",
+            "tolerance_pct": config.GATE_ALERT_TOL_PCT, "window_start": start,
+            "window_end": str(last)[:10],
+            "max_abs_pct_diff": float(df.pct_diff.abs().max()),
+            "note": "our hectares are clustered (>= 0.5 ha) and seam-stitched; GFW's are raw "
+                    "alert-pixel hectares over the identical geometry, so a small negative "
+                    "residual from the cluster floor is expected and is not tuned away",
+            "comparator": f"{spec['dataset']} {spec['version']} raster analysis",
+            "errors": fails, "rows": _nan_safe(df.to_dict("records"))}
+
+
+def gate_h3(linked: pd.DataFrame) -> dict:
+    big = linked.loc[(linked.ha >= 5.0) & (linked.hi_share >= 0.5)]
+    if not len(big):
+        return {"status": "pending", "reason": "no high-confidence clusters >= 5 ha"}
+    share = float(big.glad_agree.mean())
+    return {"status": "pass" if share >= config.GATE_GLAD_AGREEMENT else "fail",
+            "threshold": config.GATE_GLAD_AGREEMENT, "agreement_share": share,
+            "n_clusters": int(len(big)), "window_days": config.GLAD_AGREEMENT_DAYS,
+            "note": "GLAD-L is optical and 30 m; under persistent cloud it legitimately misses "
+                    "what radar sees, so a shortfall is evidence about sensors, not a bug"}
+
+
+def gate_h4(linked: pd.DataFrame) -> dict:
+    riau = linked.loc[linked.province == "Riau"]
+    if not len(riau):
+        return {"status": "pending", "reason": "no Riau clusters"}
+    ha = riau.ha.sum()
+    linked_ha = riau.loc[riau.linked].ha.sum()
+    share = float(linked_ha / ha) if ha else float("nan")
+    return {"status": "pass" if share >= config.GATE_LINK_MIN_SHARE else "fail",
+            "floor": config.GATE_LINK_MIN_SHARE, "riau_linked_share": share,
+            "riau_alert_ha": float(ha),
+            "by_class": _nan_safe((riau.groupby("link_class").ha.sum() / ha).to_dict()),
+            "note": "literature floor: Gaveau et al. 2022 put ~32 % of 2001-19 Indonesian "
+                    "forest loss as direct conversion to oil palm"}
+
+
+def divergence(ours: pd.DataFrame) -> dict:
+    nat = ours.groupby("year").loss_ha.sum()
+    return {"gfw_tree_cover_loss_ha": {int(y): float(nat.get(y, np.nan)) for y in (2023, 2024)},
+            "gfw_published_ha": config.GFW_IDN_TCL_HA,
+            "klhk_ha": config.KLHK_DEFORESTATION_HA,
+            "auriga_2024_ha": config.AURIGA_2024_HA,
+            "explanation":
+                "These numbers disagree because they measure different things, and all of them "
+                "are correct. GFW's 'tree cover loss' is gross removal of >=5 m tree canopy at "
+                ">=30 % density, from satellite, and counts an oil-palm estate being replanted "
+                "and a pulpwood block being harvested exactly as it counts primary forest being "
+                "cleared. KLHK's 'deforestation' is a change in legal-and-biophysical forest "
+                "cover between two annual land-cover maps, excludes planted forest and harvest "
+                "inside production concessions, and is reported net of reforestation. Neither "
+                "is a corrected version of the other; a number is only meaningful with its "
+                "definition attached."}
+
+
+def main(argv: list[str]) -> None:
+    prov = gpd.read_parquet(config.BOUNDARIES)
+    linked = pd.read_parquet(config.LINKED)
+    ours = (pd.read_parquet(config.LOSS_TABLE) if config.LOSS_TABLE.exists()
+            else pd.DataFrame(columns=["province", "year", "loss_ha"]))
+    manifest = json.loads(config.MANIFEST.read_text()) if config.MANIFEST.exists() else {}
+
+    stats: dict = {
+        "generated": date.today().isoformat(),
+        "vintages": {k: f"{v['dataset']} {v['version']}" for k, v in config.RASTERS.items()}
+        | {"mills": f"{config.MILLS['dataset']} {config.MILLS['version']}"},
+        # boundary licence comes from the manifest: ingest falls back to geoBoundaries when the
+        # COD-AB geodatabase does not expose a readable ADM1 layer, and the page must say which.
+        "licences": {k: v for k, v in config.LICENCES.items() if k != "hdx_cod_ab_idn"}
+        | {(manifest.get("layers", {}).get("adm1", {}).get("source") or "administrative boundaries"):
+           manifest.get("layers", {}).get("adm1", {}).get("licence",
+                                                          config.LICENCES["hdx_cod_ab_idn"])},
+        "rejected_sources": config.REJECTED,
+        "citations": {k: v["cite"] for k, v in config.RASTERS.items()}
+        | {"mills": config.MILLS["cite"]},
+        "clusters": {
+            "n": int(len(linked)),
+            "ha": float(linked.ha.sum()),
+            "first_date": str(pd.to_datetime(linked.first_date).min())[:10],
+            "last_date": str(pd.to_datetime(linked.last_date).max())[:10],
+            "min_cluster_ha": config.MIN_CLUSTER_HA,
+        },
+        "linkage": {
+            "by_class_ha": _nan_safe(linked.groupby("link_class").ha.sum().to_dict()),
+            "by_class_share": _nan_safe(
+                (linked.groupby("link_class").ha.sum() / linked.ha.sum()).to_dict()),
+            "linked_share": float(linked.loc[linked.linked].ha.sum() / linked.ha.sum()),
+            "peat_share": float(linked.loc[linked.on_peat].ha.sum() / linked.ha.sum()),
+            "primary_share": float(linked.loc[linked.in_primary].ha.sum() / linked.ha.sum()),
+        },
+        # Measured, not assumed: RADD's detection domain in Indonesia IS the UMD 2001 primary
+        # humid-tropical-forest mask.  Across every tile, 100 % of alert pixels fall inside a
+        # mask that covers only 6-28 % of the land, and provinces with no primary forest left
+        # (Java, Nusa Tenggara) produce no alerts at all.  Two consequences the page states
+        # rather than hides: the in-primary flag carries no information, and the palm-internal
+        # share is structurally suppressed, because an estate that was already plantation in
+        # 2001 is outside the domain and can never raise a RADD alert.
+        "radd_domain": {
+            "primary_share_of_alert_ha": float(
+                linked.loc[linked.in_primary].ha.sum() / linked.ha.sum()),
+            "structural": bool(
+                linked.loc[linked.in_primary].ha.sum() / linked.ha.sum() > 0.99),
+            "note": "RADD alerts are only issued inside the 2001 primary humid tropical forest "
+                    "mask, so the in-primary flag is a property of the sensor's baseline, not a "
+                    "finding about this year's clearing. It also means PALM-INTERNAL under-counts "
+                    "replanting: an estate that was already plantation in 2001 lies outside RADD's "
+                    "domain entirely. The palm-linked share published here is therefore a floor.",
+        },
+        "divergence": divergence(ours),
+    }
+    log("G-H3 / G-H4 (local)")
+    stats["gates"] = {"G-H3": gate_h3(linked), "G-H4": gate_h4(linked)}
+    if "--local-only" not in argv:
+        log("G-H2 (GFW API)")
+        stats["gates"]["G-H2"] = gate_h2(prov, linked)
+        log("G-H1 (GFW API, this is the slow one)")
+        stats["gates"]["G-H1"] = (gate_h1(prov, ours) if len(ours) else
+                                  {"status": "pending", "reason": "loss table not built"})
+    stats["manifest"] = {k: {kk: vv for kk, vv in v.items() if kk != "tiles"}
+                         for k, v in manifest.get("layers", {}).items()}
+    config.STATS_JSON.write_text(json.dumps(_nan_safe(stats), indent=1))
+    for name, g in stats["gates"].items():
+        log(f"{name}: {g.get('status', '?').upper()}")
+    log("wrote", config.STATS_JSON)
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

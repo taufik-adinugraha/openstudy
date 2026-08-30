@@ -3,25 +3,31 @@
 
 PY := uv run python pipeline
 
-.PHONY: rebuild ingest alerts link chips validate export refresh brief web help
+.PHONY: rebuild ingest alerts loss link chips validate export refresh brief web help
 
 help:
-	@echo "rebuild    full DAG: ingest → alerts → link → chips → validate → export"
-	@echo "ingest     Hansen GFC v1.12 tiles (IDN), RADD + GLAD-L tiles for focus provinces (GFW Data API key), concessions, palm map, mills, boundaries"
-	@echo "alerts     decode date_conf → weekly alert rasters → connected-component clusters (≥ 0.5 ha) per province"
-	@echo "link       clusters × concessions × palm extent × mill catchments → linked/unlinked scoring"
-	@echo "chips      Sentinel-2 before/after chips for the top clusters (Earth Search STAC)"
+	@echo "rebuild    full DAG: ingest → alerts → loss → link → validate → export"
+	@echo "ingest     RADD, Hansen tcd30-masked loss, SDPT palm, peat, primary, GLAD-L tiles"
+	@echo "           (GFW Data API, 13 IDN 10-degree tiles ≈ 1.5 GB) + UML mills + COD-AB ADM1"
+	@echo "alerts     decode date_conf → 8-connected clusters ≥ 0.5 ha with seam stitching,"
+	@echo "           sampling palm/peat/primary/GLAD in the same pass"
+	@echo "loss       Hansen tree-cover loss hectares per province per year (2001–)"
+	@echo "link       clusters × palm extent × mill catchments × peat/primary → linkage classes"
+	@echo "chips      Sentinel-2 before/after chips for the top clusters (NOT BUILT — see README)"
 	@echo "validate   gates G-H1..G-H4 → data/stats.json"
-	@echo "export     web view-models (clusters GeoJSON, province ledgers, mill scores) into web/public/data"
-	@echo "refresh    weekly: pull the latest RADD version for the focus provinces and re-run alerts → link → export"
+	@echo "export     NaN-safe web view-models into web/public/data"
+	@echo "refresh    weekly: latest RADD version → alerts → link → validate → export"
 
-rebuild: ingest alerts link chips validate export
+rebuild: ingest alerts loss link validate export
 
-ingest:
+ingest:          ## data/raw/<layer>/<tile>.tif + data/manifest.json (resumable ledger)
 	$(PY)/ingest.py
 
-alerts:          ## data/alerts/{province}/clusters.parquet
+alerts:          ## data/alerts/<tile>.parquet
 	$(PY)/alerts.py
+
+loss:            ## data/loss_province_year.parquet
+	$(PY)/loss.py
 
 link:            ## data/linked.parquet, data/mills_scored.parquet
 	$(PY)/link.py
@@ -35,8 +41,9 @@ validate:        ## gates G-H1..G-H4
 export:
 	$(PY)/export_web.py
 
-refresh:         ## cron target (weekly)
-	$(PY)/ingest.py --alerts-only && $(PY)/alerts.py && $(PY)/link.py && $(PY)/export_web.py
+refresh:         ## cron target (weekly); idempotent by RADD version
+	$(PY)/ingest.py --alerts-only && $(PY)/alerts.py && $(PY)/link.py \
+	  && $(PY)/validate.py && $(PY)/export_web.py
 
 brief:           ## same mechanism as Flagship A (shared/pipeline/brief.py; PR merge = review)
 	uv run python -c "from pathlib import Path; import sys; sys.path.insert(0, '../../'); \
