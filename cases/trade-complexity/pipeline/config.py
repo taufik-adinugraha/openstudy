@@ -60,6 +60,12 @@ GATE_G_B5_TOLERANCE = 0.05            # ±5 %
 BPS_IDN_IMPORTS_2023 = 221.89e9       # BPS Jan–Dec 2023, CIF, USD
 GATE_G_B6_TOLERANCE = 0.10            # ±10 %, FOB-vs-CIF gap expected negative
 
+# Published BPS annual totals (USD), added AFTER G-B5 failed on 2023 so the
+# deviation could be shown as a multi-year pattern rather than one point.
+# These are benchmarks, not thresholds — the G-B5 tolerance above is unchanged.
+BPS_EXPORTS = {2022: 291.90e9, 2023: 258.82e9, 2024: 264.70e9}
+BPS_IMPORTS = {2023: 221.89e9}
+
 # G-B7 — the nickel capital-goods test. PRE-REGISTERED HYPOTHESIS:
 # if the ~15× rise in processed-nickel exports was built by domestic smelters,
 # the build-out must show up on the import side. Windows are fixed here:

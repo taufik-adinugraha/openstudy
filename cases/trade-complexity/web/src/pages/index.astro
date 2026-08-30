@@ -19,6 +19,12 @@ const chinaNow = pm?.chinaShare?.[String(pm.latest)] ?? null;
 const chinaThen = pm?.chinaShare?.["1995"] ?? null;
 const topImp1 = pm?.topImp?.[0] ?? null;
 const nickelVerdict = pm?.nickel?.verdict ?? null;
+const conc = pm?.concentration ?? null;
+const biggestFirst = conc?.biggestFirst ?? null;
+const chinaImpNow = pm?.chinaImpShare?.[String(pm.latest)] ?? null;
+const bigInput = pm?.nickel?.biggestInput ?? null;
+const growthPct = (v) => (v == null ? "—" : `${v >= 0 ? "+" : ""}${Math.round(v * 100)}%`);
+const timesX = (v) => (v == null ? "—" : `${(v + 1).toFixed(0)}×`);
 ---
 <html lang="en" data-case="trade" data-theme="dark">
   <head>
@@ -282,30 +288,52 @@ const nickelVerdict = pm?.nickel?.verdict ?? null;
 
     <section class="chapter wide needs-partners" id="ch-partners">
       <span class="eyebrow">07 · The customers</span>
-      <h2>Who buys Indonesia</h2>
+      <h2>Indonesia did not acquire a patron. It swapped one.</h2>
       <p class="big-stat">China took <b class="copper">{pct(chinaNow)}</b> of Indonesia’s goods
-      exports in {pm?.latest ?? latest} — up from <b class="copper">{pct(chinaThen)}</b> in 1995.
-      One customer now absorbs roughly a quarter of everything the country sells.</p>
-      <p>The export basket diversified; the customer list did not. Below, every band is a
-      partner’s share of Indonesia’s exports, stacked to 100%. The strip beneath it is the
-      concentration itself — the share taken by the top five buyers, with the
-      Herfindahl–Hirschman index behind it. Rising means fewer, larger customers.</p>
+      exports in {pm?.latest ?? latest}, against <b class="copper">{pct(chinaThen)}</b> in 1995.
+      But {biggestFirst?.name ?? "Japan"} took <b class="copper">{pct(biggestFirst?.share)}</b> in
+      1995 — more than China takes now.</p>
+      <p>We expected to find a customer base narrowing onto Beijing. The data says something
+      more interesting. Measured across the whole customer list, Indonesia is <em>less</em>
+      concentrated today than it was thirty years ago: the Herfindahl–Hirschman index of
+      export partners fell from <b>{conc ? Math.round(conc.hhiFirst) : "—"}</b> in
+      {conc?.firstYear ?? 1995} to <b>{conc ? Math.round(conc.hhiTrough) : "—"}</b> by
+      {conc?.troughYear ?? "—"} as Japan’s post-war dominance dissolved and India, Korea,
+      Vietnam and the Philippines each took a slice.</p>
+      <p>Then it reversed. Since {conc?.troughYear ?? "—"} the index has climbed back to
+      <b>{conc ? Math.round(conc.hhiLast) : "—"}</b>, and essentially all of that climb is one
+      country: China roughly doubled its share in a decade. So the honest reading is a U —
+      two decades of diversification, one decade of re-concentration, with the second half of
+      that curve still well short of where Indonesia started. Below, each band is a partner’s
+      share; the strip beneath is the concentration itself.</p>
       <div id="partner-mix" class="chart"></div>
       <p class="footnote">Bands are the partners that ever reach a year’s top twelve; the rest
       are pooled as “all other partners”. Hong Kong, Macao and Taiwan are separate BACI
-      reporting territories and are <b>not</b> folded into China — see the footer.</p>
+      reporting territories and are <b>not</b> folded into China — see the footer. The
+      concentration strip is deliberately <b>not zero-based</b>: the whole signal is a swing
+      between roughly {conc ? pct(conc.top5Trough) : "—"} and {conc ? pct(conc.top5First) : "—"},
+      which a zero baseline would flatten into a straight line. Read it for shape, not height.</p>
     </section>
 
     <section class="chapter wide needs-partners" id="ch-imports">
       <span class="eyebrow">08 · The bill</span>
-      <h2>What Indonesia must buy</h2>
+      <h2>The concentration is on the buying side</h2>
       <p class="big-stat">Indonesia imported <b class="copper">{bn(pm?.totalImp)}</b> of goods in
       {pm?.latest ?? latest}{topImp1 ? ` — ${pct(topImp1.share)} of it from ${topImp1.name} alone` : ""}.
-      This is an industrial shopping list, not a consumer one.</p>
-      <p>Machinery, chemicals, fuels and food: the inputs an industrialising economy cannot
-      yet make for itself. The area chart is the bill over thirty years, by what the goods are
-      <em>for</em>. Below it, each chapter Indonesia buys most of, split by who supplies it —
-      because import dependence is only politically live when it has an address.</p>
+      Its supplier concentration is now <b class="copper">{conc ? Math.round(conc.hhiImpLast) : "—"}</b>
+      against <b class="copper">{conc ? Math.round(conc.hhiLast) : "—"}</b> for its customers.</p>
+      <p>This is the finding chapter 07 sets up. Where Indonesia’s customer base diversified
+      over thirty years and only recently began to tighten, its supplier base did the
+      opposite and never stopped: import concentration rose from
+      <b>{conc ? Math.round(conc.hhiImpFirst) : "—"}</b> in {conc?.firstYear ?? 1995} to
+      <b>{conc ? Math.round(conc.hhiImpLast) : "—"}</b> today. Indonesia sells to a widening
+      world and buys from a narrowing one — and China’s share of what it buys
+      ({pct(chinaImpNow)}) runs well ahead of China’s share of what it sells ({pct(chinaNow)}).</p>
+      <p>The bill itself is an industrial shopping list, not a consumer one: machinery,
+      fuels, chemicals, food. Note the top line — the largest single chapter Indonesia
+      imports is mineral fuels, bought by one of the world’s largest energy exporters, which
+      is the refining gap in one number. Below the area chart, each chapter split by who
+      supplies it, because import dependence is only politically live when it has an address.</p>
       <div id="import-mix" class="chart"></div>
       <div class="sub-head"><span class="eyebrow">Dependence, by address</span>
         <span class="stamp dim" id="sup-year">{pm?.latest ?? latest}</span></div>
@@ -314,10 +342,13 @@ const nickelVerdict = pm?.nickel?.verdict ?? null;
 
     <section class="chapter wide needs-partners" id="ch-balance">
       <span class="eyebrow">09 · The ledger</span>
-      <h2>Surplus with the buyers, deficit with the suppliers</h2>
-      <p>Indonesia’s trade balance is not one number but a structure: a surplus with the
-      economies that consume its commodities, and a deficit with the economies that sell it
-      the machines. Scrub the years to watch that structure form.</p>
+      <h2>Its biggest customer is also its biggest deficit</h2>
+      <p>Indonesia’s trade balance is not one number but a structure: surpluses with the
+      economies that consume its commodities — India, the United States, the Philippines,
+      Japan — and deficits with the economies that sell it the machines. The sharpest case is
+      China, which buys more from Indonesia than anyone else and still sells it more than it
+      buys, leaving Indonesia in deficit with its single largest customer. In 1995 that
+      relationship was roughly balanced. Scrub the years to watch the structure form.</p>
       <div class="scrub"><span class="stamp dim">YEAR</span>
         <input type="range" id="bal-year" min="1995" max={latest} value={latest} />
         <span class="stamp" id="bal-label">{latest}</span></div>
@@ -334,27 +365,73 @@ const nickelVerdict = pm?.nickel?.verdict ?? null;
       cannot build dozens of smelters without buying the furnaces, the electrodes and the
       inputs to feed them. If the story is true, it should be visible in what Indonesia
       <em>bought</em>.</p>
-      <p>So we pre-registered the test before looking. Base window 2013–2015, peak window
+      <p>So we pre-registered the test before looking, and committed the thresholds to the
+      repository before computing a single import number. Base window 2013–2015, peak window
       2021–2024. <b>H1</b>: imports of machinery and electrical equipment (HS 84 + 85) rise at
       least 50%. <b>H2</b>: that rise beats total import growth by at least 10 points, so a
       general import boom cannot pass on its own. <b>H3</b>: at least one smelter input —
       coke, graphite electrodes, chrome ore, stainless scrap — at least doubles. All three is
       a pass; two is partial; fewer is a failure, and it publishes as one.</p>
       <div id="gate-b7" class="gate-card"></div>
+      <p class="big-stat">It failed. Capital-goods imports grew
+      <b class="copper">{growthPct(pm?.nickel?.capGrowth)}</b> while <em>all</em> imports grew
+      <b class="copper">{growthPct(pm?.nickel?.totalGrowth)}</b> — the smelter build-out is
+      essentially invisible in the machinery bill.</p>
+      <p>That is a real result and it stands. Indonesia’s furnace purchases are either too
+      small against a {bn(pm?.totalImp)} import bill to register, spread across too many years
+      to show up in a window comparison, or booked as investment flows the goods data never
+      sees. On the capital-goods hypothesis, the answer is no.</p>
+      <p>But look at what the test found on its way to failing. The feedstock did not grow —
+      it detonated. {bigInput ? `${bigInput.label} imports rose ` : ""}
+      <b class="copper">{bigInput ? timesX(bigInput.growth) : "—"}</b>
+      {bigInput ? "between the same two windows" : ""}, and imported coal — in the country
+      that exports more coal than any other on earth — rose fourteen-fold to roughly US$3.2B
+      a year. Coke, quicklime and limestone flux all more than tripled. Ferrous scrap, which
+      we expected to rise, fell.</p>
+      <p>So the smelters are visible in the import data after all; we simply pointed the
+      instrument at the wrong shelf. Downstreaming did not show up as a one-off equipment
+      purchase. It showed up as a <em>permanent new import dependency</em> — roughly US$3.7B
+      a year of coal, coke and chrome that Indonesia did not previously buy, set against the
+      US$28.5B a year of additional processed-nickel exports. Around an eighth of the headline
+      gain is spent buying the inputs that make it possible.</p>
       <div id="nickel-test" class="chart"></div>
       <div class="sub-head"><span class="eyebrow">The input basket</span>
         <span class="stamp dim">BASE 2013–15 → PEAK 2021–24 · THRESHOLD +100%</span></div>
       <div id="nickel-inputs" class="spark-grid"></div>
-      <p class="footnote">Coal and limestone are carried as controls: Indonesia has both
-      domestically, so they should <em>not</em> move if the mechanism is what we claim.</p>
+      <p class="footnote"><b>A prior we got wrong, on the record.</b> Coal and limestone were
+      entered as <em>controls</em> — Indonesia has both domestically, so we predicted they
+      would not move. They moved the most. The likely reason is geographic and metallurgical
+      rather than statistical: the smelters sit in Sulawesi, far from the Kalimantan and
+      Sumatra coal basins, and much Indonesian coal is thermal grade rather than the
+      metallurgical input a furnace wants. That explanation is an inference, not a
+      measurement, and is flagged as such.</p>
     </section>
 
     <section class="chapter needs-partners" id="ch-recon">
       <span class="eyebrow">Reconciliation</span>
-      <h2>Does BACI agree with Indonesia’s own books?</h2>
-      <p>Two independent totals, two published benchmarks, thresholds fixed before either was
-      computed. Where they disagree, the deviation is printed rather than buried.</p>
+      <h2>No, and that is worth saying out loud</h2>
+      <p>Two totals, two published benchmarks, tolerances fixed before either was computed.
+      The import side reconciles almost exactly. The export side does not: BACI puts
+      Indonesia’s goods exports roughly a sixth above what Indonesia itself reports, every
+      year we can check. <b>G-B5 fails</b>, and rather than quietly widening the tolerance we
+      are printing the gap.</p>
       <div id="recon" class="gate-card"></div>
+      <p>The gap is not an artefact of this extension. It is systematic across years, it is
+      spread across chapters rather than sitting in one product, and it is not caused by
+      aggregate or “nes” partner codes — every destination in the file is a real economy. The
+      leading explanation is that BACI is a <em>mirror-reconciled reconstruction</em>: it
+      harmonises what Indonesia says it shipped against what its 213 partners say they
+      received, and for Indonesia the partners consistently report receiving more. That gap
+      is a well-documented feature of Indonesian commodity trade, not a bug in this pipeline
+      — and our totals reproduce the case’s existing export figures to nine significant
+      figures, so the discrepancy is between BACI and Jakarta, not between us and BACI.</p>
+      <p class="footnote"><b>Does this undermine chapters 01–06?</b> Largely no, and for a
+      structural reason: economic complexity is computed from revealed comparative advantage,
+      which is a ratio of <em>shares</em>. A level difference that is roughly proportional
+      across products cancels in the numerator and denominator. It does matter for any
+      statement about levels — which is why the hero quotes UN Comtrade’s US$259.5B for 2023
+      and not BACI’s figure, and why every dollar total in chapters 07–10 is labelled as
+      BACI’s.</p>
     </section>
 
     <footer class="method">
@@ -1315,7 +1392,7 @@ const nickelVerdict = pm?.nickel?.verdict ?? null;
         if (!narrow) {
           const last = d3.stack().keys(keys)(rows).map((s) => ({
             key: s.key, y: yA((s.at(-1)[0] + s.at(-1)[1]) / 2),
-            h: s.at(-1)[1] - s.at(-1)[0] })).filter((d) => d.h > 0.022);
+            h: s.at(-1)[1] - s.at(-1)[0] })).filter((d) => d.h > 0.045);
           svg.selectAll("text.pend").data(spread(last, 13, M.t + 6, M.t + HA - 2))
             .join("text").attr("class", "annot pend").attr("x", W - M.r + 7)
             .attr("y", (d) => d.y + 4).attr("fill", (d) => pColor(d.key))
@@ -1323,9 +1400,16 @@ const nickelVerdict = pm?.nickel?.verdict ?? null;
         }
         // ---- concentration strip, sharing the x scale ----
         const yTop = M.t + HA + GAP;
-        const yB = d3.scaleLinear([0, d3.max(partners.top5Exp) * 1.12], [yTop + HB, yTop]);
-        const hMax = d3.max(partners.hhiExp) * 1.12;
-        const yH = d3.scaleLinear([0, hMax], [yTop + HB, yTop]);
+        // The whole point of this strip is the U — a zero-based axis would flatten
+        // a 48%->58% swing into a straight line. Both scales are framed on their
+        // own range, and the axis ticks say so.
+        const t5e = d3.extent(partners.top5Exp), hhe = d3.extent(partners.hhiExp);
+        const yB = d3.scaleLinear(
+          [t5e[0] - (t5e[1] - t5e[0]) * 0.35, t5e[1] + (t5e[1] - t5e[0]) * 0.22],
+          [yTop + HB, yTop]);
+        const yH = d3.scaleLinear(
+          [hhe[0] - (hhe[1] - hhe[0]) * 0.25, hhe[1] + (hhe[1] - hhe[0]) * 0.30],
+          [yTop + HB, yTop]);
         svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`)
           .call(d3.axisLeft(yB).ticks(3).tickFormat(d3.format(".0%")));
         if (!narrow) svg.append("g").attr("class", "axis axis-alt")
@@ -1411,10 +1495,14 @@ const nickelVerdict = pm?.nickel?.verdict ?? null;
           const ends = stacked.map((s) => ({
             key: s.key, y: y((s.at(-1)[0] + s.at(-1)[1]) / 2),
             h: s.at(-1)[1] - s.at(-1)[0] })).filter((d) => d.h > 0);
+          // the full group names do not fit the gutter; the legend and tooltip
+          // carry them in full, so the end label gets the short form
+          const shortGroup = (k) => k.replace(" & machinery", "").replace(" & plastics", "")
+            .replace(" & agriculture", " & agri").replace(" & minerals", "");
           svg.selectAll("text.iend").data(spread(ends, 14, M.t + 6, H - M.b - 2))
             .join("text").attr("class", "annot iend").attr("x", W - M.r + 6)
             .attr("y", (d) => d.y + 4).attr("fill", (d) => imports.groups.colors[d.key])
-            .text((d) => d.key);
+            .text((d) => shortGroup(d.key));
         }
         const guide = svg.append("line").attr("y1", M.t).attr("y2", H - M.b)
           .attr("stroke", "#E6E8EC").attr("stroke-opacity", 0.45).style("display", "none");
@@ -1474,6 +1562,18 @@ const nickelVerdict = pm?.nickel?.verdict ?? null;
           if (!narrow) d3.select(this).append("text").attr("class", "annot")
             .attr("x", x(d.v) + 7).attr("y", BAR / 2 + 1).text(k$(d.v));
         });
+        // colours are shared with chapter 07, but a reader arriving here needs
+        // the key in front of them — rank suppliers by what they actually ship
+        const tally = new Map();
+        for (const c of chapters)
+          for (const s of imports.suppliers[c.hs2] ?? [])
+            tally.set(s.c, (tally.get(s.c) ?? 0) + s.v);
+        const top = [...tally.entries()].sort((a, b) => b[1] - a[1])
+          .slice(0, narrow ? 7 : 11).map(([c]) => c);
+        const leg = d3.select(el).append("div").attr("class", "legend-row");
+        leg.selectAll("span").data(top.concat("other")).join("span").attr("class", "lg")
+          .html((c) => `<i style="background:${pColor(c)}"></i>` +
+            (c === "other" ? "all other suppliers" : nameOf(c)));
       });
 
       /* ---------- chapter 09: trade balance by partner ---------- */
@@ -1489,7 +1589,7 @@ const nickelVerdict = pm?.nickel?.verdict ?? null;
         const axisG = svg.append("g").attr("class", "axis")
           .attr("transform", `translate(0,${H - M.b})`);
         const zeroLine = svg.append("line").attr("y1", M.t - 6).attr("y2", H - M.b)
-          .attr("stroke", "var(--hairline)");
+          .attr("stroke", "#E6E8EC").attr("stroke-opacity", 0.28);
         const x = d3.scaleLinear().range([M.l, W - M.r]);
         svg.append("text").attr("class", "annot").attr("y", M.t - 10)
           .attr("id", "bal-lbl-def").attr("fill", VERDIGRIS).text("← deficit");
@@ -1587,18 +1687,19 @@ const nickelVerdict = pm?.nickel?.verdict ?? null;
         if (!ninputs) return;
         const el = document.getElementById("nickel-test");
         const W = el.clientWidth, narrow = W < 620;
-        const M = { t: 18, r: narrow ? 14 : 118, b: 28, l: narrow ? 42 : 52 };
+        const M = { t: 18, r: narrow ? 14 : 152, b: 28, l: narrow ? 42 : 52 };
         const H = M.t + (narrow ? 250 : 300) + M.b;
         const yrs = Object.keys(ninputs.totalImports).map(Number).sort((a, b) => a - b);
         const mean = (obj, ys) => d3.mean(ys, (y) => obj[String(y)] ?? 0) || 1;
         const idx = (obj) => yrs.map((y) => ({
           y, v: ((obj[String(y)] ?? 0) / mean(obj, ninputs.base)) * 100 }));
         const series = [
-          { k: "processed nickel exports", c: COPPER, w: 2.6,
+          { k: "processed nickel", full: "processed nickel exports", c: COPPER, w: 2.6,
             pts: idx(nickel.processed) },
-          { k: "machinery & electrical imports", c: "#5D8FBF", w: 2.2,
-            pts: idx(ninputs.capgoods) },
-          { k: "all imports", c: SILVER, w: 1.4, pts: idx(ninputs.totalImports) },
+          { k: "machinery imports", full: "machinery & electrical imports",
+            c: "#5D8FBF", w: 2.2, pts: idx(ninputs.capgoods) },
+          { k: "all imports", full: "all imports", c: SILVER, w: 1.4,
+            pts: idx(ninputs.totalImports) },
         ];
         const flat = series.flatMap((s) => s.pts).filter((d) => d.v > 0);
         const x = d3.scaleLinear(d3.extent(yrs), [M.l, W - M.r]);
@@ -1654,7 +1755,7 @@ const nickelVerdict = pm?.nickel?.verdict ?? null;
             dots.style("display", (s) => (s.pts[i].v > 0 ? null : "none"))
               .attr("cx", x(yr)).attr("cy", (s) => y(Math.max(s.pts[i].v, 1)));
             showTip(e, `<b>${yr}</b> · index, 2013–15 = 100<br>` + series
-              .map((s) => `<span style="color:${s.c}">●</span> ${s.k} ` +
+              .map((s) => `<span style="color:${s.c}">●</span> ${s.full} ` +
                 `<b>${d3.format(".0f")(s.pts[i].v)}</b>`).join("<br>"));
           })
           .on("mouseleave", () => {
@@ -1724,12 +1825,22 @@ const nickelVerdict = pm?.nickel?.verdict ?? null;
               <span class="dev">deviation <b>${d3.format("+.2%")(g.deviation)}</b>
                 <span class="dim">tolerance ±${d3.format(".0%")(g.tolerance)}</span></span>
             </div>${extra}</div>`;
+        // the multi-year strip is what turns "one year missed" into "systematic"
+        const strip = (g5.series ?? []).length ? `
+          <div class="recon-series">
+            ${g5.series.map((r) => `<div class="rs">
+              <span class="rs-y">${r.year}</span>
+              <span class="rs-bar"><i style="width:${Math.min(100, Math.abs(r.deviation) * 400)}%"></i></span>
+              <span class="rs-d">${d3.format("+.1%")(r.deviation)}</span>
+              <span class="rs-n">BACI ${b(r.baci)} · BPS ${b(r.bps)}</span>
+            </div>`).join("")}
+          </div>` : "";
         document.getElementById("recon").innerHTML =
-          row(g5, `<p class="recon-note">Against the BPS published total
+          row(g5, strip + `<p class="recon-note">Against the BPS published total
             (${b(g5.bps)}) the same figure deviates
-            ${d3.format("+.2%")(g5.deviationBps)}. BACI is a mirror-reconciled
-            reconstruction, not a copy of either source — a small gap is expected;
-            a large one would be the finding.</p>`) +
+            ${d3.format("+.2%")(g5.deviationBps)} — and the gap holds at a similar size in
+            every year BPS publishes, which is what makes it a methodology difference
+            rather than a one-year revision.</p>`) +
           row(g6, `<p class="recon-note">BPS values imports <b>CIF</b>; BACI harmonizes
             every flow to <b>FOB</b>, stripping freight and insurance out of importer
             declarations. A negative deviation of a few per cent is therefore the
@@ -1882,6 +1993,14 @@ const nickelVerdict = pm?.nickel?.verdict ?? null;
       .recon-nums b { color: var(--ink); font-variant-numeric: tabular-nums; }
       .recon-row.fail .dev b { color: #F6907F; }
       .recon-note { margin: 0; font-size: 0.85rem; line-height: 1.6; color: var(--ink-muted); }
+      .recon-series { display: flex; flex-direction: column; gap: 5px; margin: 2px 0 4px; }
+      .rs { display: grid; grid-template-columns: 42px minmax(60px, 130px) 52px 1fr; gap: 10px; align-items: center; font-family: var(--font-data); font-size: 12px; color: var(--ink-muted); }
+      .rs-y { color: var(--ink); font-variant-numeric: tabular-nums; }
+      .rs-bar { height: 7px; background: color-mix(in srgb, var(--hairline) 80%, transparent); border-radius: 4px; overflow: hidden; }
+      .rs-bar i { display: block; height: 100%; background: linear-gradient(90deg, #F26D5B, #F6907F); }
+      .rs-d { color: #F6907F; font-variant-numeric: tabular-nums; text-align: right; }
+      .rs-n { font-size: 12px; opacity: 0.8; }
+      @media (max-width: 560px) { .rs { grid-template-columns: 40px 1fr 50px; } .rs-n { display: none; } }
 
       /* input-basket sparkline cards */
       .spark-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }

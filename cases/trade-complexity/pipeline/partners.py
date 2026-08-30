@@ -96,8 +96,9 @@ def slice_years(release: str) -> None:
                 n = con.execute(f"SELECT count(*) FROM '{out}'").fetchone()[0]
                 (SLICE / f"world_{year}.json").write_text(
                     json.dumps({"year": year, "world_kusd": world}))
+                # v is kUSD, so /1e6 lands in billions of USD
                 print(f"[partners]   {year}: {n:,} IDN rows kept "
-                      f"(world ${world/1e6:,.0f}M)", flush=True)
+                      f"(world trade ${world/1e6:,.0f}B)", flush=True)
             finally:
                 csv.unlink(missing_ok=True)
     con.close()
@@ -331,12 +332,21 @@ def build_facts() -> None:
     g5 = abs(dev_exp) <= config.GATE_G_B5_TOLERANCE
     g6 = abs(dev_imp) <= config.GATE_G_B6_TOLERANCE
 
+    # G-B5 failed on 2023; show whether that is a one-year artefact or a stable
+    # methodology gap by repeating the comparison on every year BPS publishes.
+    series = []
+    for y, bps in sorted(config.BPS_EXPORTS.items()):
+        baci = tot_exp.get(y, 0) * 1e3
+        series.append({"year": y, "baci": baci, "bps": bps,
+                       "deviation": round((baci - bps) / bps, 5)})
+
     gates = {
         "G-B5": {"name": "Export reconciliation vs UN Comtrade 2023",
                  "baci": baci_exp_2023, "benchmark": config.BENCH_IDN_EXPORTS_2023,
                  "bps": config.BPS_IDN_EXPORTS_2023,
                  "deviation": round(dev_exp, 5), "deviationBps": round(dev_bps, 5),
-                 "tolerance": config.GATE_G_B5_TOLERANCE, "pass": g5},
+                 "tolerance": config.GATE_G_B5_TOLERANCE, "pass": g5,
+                 "series": series},
         "G-B6": {"name": "Import coverage vs BPS 2023 (CIF)",
                  "baci": baci_imp_2023, "benchmark": config.BPS_IDN_IMPORTS_2023,
                  "deviation": round(dev_imp, 5),
@@ -366,11 +376,37 @@ def build_facts() -> None:
         "chinaShare": {
             str(y): round(exp_by.get(y, {}).get(156, 0) / tot_exp[y], 5)
             for y in years if tot_exp.get(y)},
+        "chinaImpShare": {
+            str(y): round(imp_by.get(y, {}).get(156, 0) / tot_imp[y], 5)
+            for y in years if tot_imp.get(y)},
         "china2023": round(e23.get(156, 0) / tot_exp[2023], 5) if tot_exp.get(2023) else None,
         "hhiFirst": partners["hhiExp"][0], "hhiLast": partners["hhiExp"][-1],
         "gates": gates, "nickel": {"verdict": verdict, "capGrowth": round(cap_g, 4),
                                    "totalGrowth": round(tot_g, 4)},
     }
+    # Narrative statistics. The concentration story turned out to be U-shaped
+    # rather than monotonic, so the trough is a first-class number, not prose.
+    hx, t5 = partners["hhiExp"], partners["top5Exp"]
+    imin = min(range(len(hx)), key=lambda i: hx[i])
+    e_first = exp_by.get(years[0], {})
+    top_first = max(e_first, key=e_first.get) if e_first else None
+    stats["concentration"] = {
+        "firstYear": years[0], "hhiFirst": hx[0], "top5First": t5[0],
+        "troughYear": years[imin], "hhiTrough": hx[imin], "top5Trough": t5[imin],
+        "lastYear": years[-1], "hhiLast": hx[-1], "top5Last": t5[-1],
+        "hhiImpFirst": partners["hhiImp"][0], "hhiImpLast": partners["hhiImp"][-1],
+        "top5ImpLast": partners["top5Imp"][-1],
+        "biggestFirst": ({**nm(top_first),
+                          "share": round(e_first[top_first] / tot_exp[years[0]], 4)}
+                         if top_first else None),
+    }
+    biggest_input = max(input_g, key=lambda c: input_g[c] if input_g[c] == input_g[c] else -9)
+    stats["nickel"].update({
+        "biggestInput": {"code": biggest_input,
+                         "label": config.G_B7_INPUTS[biggest_input],
+                         "growth": round(input_g[biggest_input], 4)},
+        "h1": h1, "h2": h2, "h3": h3, "h3hits": h3_hits,
+    })
     config.PARTNER_STATS.write_text(json.dumps(stats, indent=1))
     (config.CASE_DIR / "web" / "src" / "data" / "partner_summary.json").write_text(
         json.dumps(stats, indent=1))
@@ -382,6 +418,9 @@ def build_facts() -> None:
           f"({_fmt_pct(dev_exp)}), vs BPS ${config.BPS_IDN_EXPORTS_2023/1e9:.2f}B "
           f"({_fmt_pct(dev_bps)}) -> {'PASS' if g5 else 'FAIL'} "
           f"(tol ±{config.GATE_G_B5_TOLERANCE:.0%})")
+    for row in series:
+        print(f"     {row['year']}: BACI ${row['baci']/1e9:.2f}B vs BPS "
+              f"${row['bps']/1e9:.2f}B ({_fmt_pct(row['deviation'])})")
     print(f"G-B6 import coverage       : BACI 2023 ${baci_imp_2023/1e9:.2f}B vs "
           f"BPS ${config.BPS_IDN_IMPORTS_2023/1e9:.2f}B CIF "
           f"({_fmt_pct(dev_imp)}) -> {'PASS' if g6 else 'FAIL'} "
