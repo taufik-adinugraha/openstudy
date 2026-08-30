@@ -128,6 +128,7 @@ const DEMOS = {
           </svg>
         </div>
         <div class="case-body">
+          <span class="badge">LIVE DEMO</span>
           <h2>Jakarta Is Sinking</h2>
           <p>Sentinel-1 InSAR 2017–2023 fused with elevation, population and
           observed floods: 442,000 people live on ground sinking faster than
@@ -141,6 +142,7 @@ const DEMOS = {
           <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
         </div>
         <div class="case-body">
+          <span class="badge">LIVE DEMO</span>
           <h2>Indonesia in the Global Narrative</h2>
           <p>Every 15 minutes, the world’s news mentions Indonesia somewhere. GDELT
           watches all of it — 65 languages, a decade back. This case turns that
@@ -174,6 +176,7 @@ const DEMOS = {
           </svg>
         </div>
         <div class="case-body">
+          <span class="badge">LIVE DEMO</span>
           <h2>Transit Access &amp; Urban Equity</h2>
           <p>Four transit systems collapsed into one routing graph. An hour of
           public transport buys Jakarta’s median resident 4.29% of the region’s
@@ -185,31 +188,48 @@ const DEMOS = {
 
       <a class="case live" data-case="forest" href={DEMOS.forest} target="_blank" rel="noopener">
         <div class="case-visual forest-visual" aria-hidden="true">
-          <svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid meet">
+          <svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
             <defs>
-              <radialGradient id="burn" cx="70%" cy="50%" r="52%">
-                <stop offset="0%" stop-color="#B4552A" stop-opacity="0.42"/>
+              <linearGradient id="fw-ground" x1="0" y1="0" x2="1" y2="0.4">
+                <stop offset="0%" stop-color="#0E1A10"/><stop offset="52%" stop-color="#14210F"/>
+                <stop offset="100%" stop-color="#2A1A10"/>
+              </linearGradient>
+              <radialGradient id="fw-heat" cx="72%" cy="52%" r="42%">
+                <stop offset="0%" stop-color="#B4552A" stop-opacity="0.5"/>
                 <stop offset="100%" stop-color="#B4552A" stop-opacity="0"/>
               </radialGradient>
+              <pattern id="fw-canopy" width="17" height="17" patternUnits="userSpaceOnUse">
+                <circle cx="5" cy="5" r="4.4" fill="#57B26A" opacity="0.85"/>
+                <circle cx="13" cy="12" r="3.4" fill="#3E8C55" opacity="0.75"/>
+              </pattern>
             </defs>
-            <rect x="0" y="0" width="400" height="240" fill="url(#burn)"/>
-            <!-- canopy giving way to alert clusters inside a mill catchment -->
-            <g fill="#57B26A" opacity="0.92">
-              <circle cx="26" cy="42" r="13"/><circle cx="62" cy="72" r="16"/><circle cx="32" cy="108" r="14"/>
-              <circle cx="76" cy="140" r="13"/><circle cx="112" cy="52" r="15"/><circle cx="106" cy="110" r="16"/>
-              <circle cx="46" cy="176" r="12"/><circle cx="140" cy="158" r="13"/><circle cx="150" cy="88" r="11"/>
-            </g>
-            <circle cx="286" cy="120" r="74" fill="none" stroke="#D9A441" stroke-width="1.6" stroke-dasharray="6 5" opacity="0.75"/>
+            <rect width="400" height="240" fill="url(#fw-ground)"/>
+            <rect width="400" height="240" fill="url(#fw-heat)"/>
+            <!-- intact canopy, eaten away by a ragged clearing front -->
+            <path d="M0 0 H236 C214 34 226 66 200 96 C176 124 196 158 168 186 C146 208 158 226 138 240 H0 Z" fill="url(#fw-canopy)"/>
+            <path d="M236 0 C214 34 226 66 200 96 C176 124 196 158 168 186 C146 208 158 226 138 240"
+                  fill="none" stroke="#B4552A" stroke-width="1.6" opacity="0.85" stroke-dasharray="7 5"/>
+            <!-- mill and its sourcing catchment -->
+            <circle cx="300" cy="120" r="82" fill="none" stroke="#D9A441" stroke-width="1.3" opacity="0.5"/>
+            <circle cx="300" cy="120" r="54" fill="none" stroke="#D9A441" stroke-width="1.3" opacity="0.75"/>
             <g fill="#B4552A">
-              <circle cx="246" cy="70" r="8"/><circle cx="300" cy="96" r="6.5"/><circle cx="264" cy="136" r="7"/>
-              <circle cx="330" cy="60" r="5.5"/><circle cx="322" cy="158" r="7"/><circle cx="286" cy="184" r="5"/>
-              <circle cx="352" cy="112" r="6"/>
+              <rect x="252" y="58"  width="9" height="9" rx="1.5"/>
+              <rect x="330" y="82"  width="7" height="7" rx="1.5"/>
+              <rect x="268" y="146" width="8" height="8" rx="1.5"/>
+              <rect x="344" y="150" width="6" height="6" rx="1.5"/>
+              <rect x="300" y="188" width="7" height="7" rx="1.5"/>
+              <rect x="238" y="104" width="6" height="6" rx="1.5"/>
+              <rect x="356" y="112" width="5" height="5" rx="1.5"/>
             </g>
-            <circle cx="286" cy="120" r="5.5" fill="#D9A441"/>
-            <text x="18" y="226" fill="#57B26A" opacity="0.9" font-size="12" letter-spacing="1.6" font-family="ui-monospace,monospace">75% INSIDE A MILL CATCHMENT</text>
+            <g transform="translate(300 120)">
+              <path d="M-7 6 L-7 -5 L0 -10 L7 -5 L7 6 Z" fill="#D9A441"/>
+              <rect x="-1.6" y="-19" width="3.2" height="10" fill="#D9A441"/>
+            </g>
+            <text x="18" y="226" fill="#57B26A" opacity="0.92" font-size="12" letter-spacing="1.5" font-family="ui-monospace,monospace">75% INSIDE A MILL CATCHMENT</text>
           </svg>
         </div>
         <div class="case-body">
+          <span class="badge">LIVE DEMO</span>
           <h2>Forest &amp; Commodity Watch</h2>
           <p>404,287 radar alerts since 2020, clustered into events and linked to
           palm estates, mill sourcing areas and peat. Three-quarters of alerted
@@ -224,6 +244,7 @@ const DEMOS = {
           <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
         </div>
         <div class="case-body">
+          <span class="badge">LIVE DEMO</span>
           <h2>Poverty Mapping from Space</h2>
           <p>Rooftops, lights and land cover as welfare signals across 7,069
           kecamatan. Its headline gate <b>fails</b> — and that is the finding:
@@ -235,11 +256,49 @@ const DEMOS = {
 
       <a class="case live" data-case="airquality" href={DEMOS.airquality} target="_blank" rel="noopener">
         <div class="case-visual aq-visual" aria-hidden="true">
-          <span class="aq-sun"></span>
-          <span class="aq-haze z1"></span><span class="aq-haze z2"></span><span class="aq-haze z3"></span>
-          <span class="aq-reading">PM2.5 · JAKARTA · T+48H</span>
+          <svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
+            <defs>
+              <linearGradient id="aq-sky" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#18202B"/><stop offset="46%" stop-color="#33333A"/>
+                <stop offset="100%" stop-color="#5A4A3C"/>
+              </linearGradient>
+              <linearGradient id="aq-band" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#6FC7D6"/><stop offset="46%" stop-color="#E0A63F"/>
+                <stop offset="100%" stop-color="#F26D5B"/>
+              </linearGradient>
+              <linearGradient id="aq-cone" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#6FC7D6" stop-opacity="0.32"/>
+                <stop offset="100%" stop-color="#F26D5B" stop-opacity="0.26"/>
+              </linearGradient>
+            </defs>
+            <rect width="400" height="240" fill="url(#aq-sky)"/>
+            <circle cx="104" cy="70" r="30" fill="#FBE2AE" opacity="0.5"/>
+            <circle cx="104" cy="70" r="17" fill="#FBE2AE" opacity="0.75"/>
+            <!-- haze strata -->
+            <ellipse cx="200" cy="96"  rx="260" ry="26" fill="#AAB2BA" opacity="0.16"/>
+            <ellipse cx="200" cy="132" rx="260" ry="30" fill="#8C9298" opacity="0.24"/>
+            <ellipse cx="200" cy="168" rx="260" ry="26" fill="#6FC7D6" opacity="0.12"/>
+            <!-- skyline, hazed out with distance -->
+            <g fill="#1A2029" opacity="0.92">
+              <rect x="16"  y="176" width="30" height="64"/><rect x="52" y="158" width="22" height="82"/>
+              <rect x="82"  y="186" width="34" height="54"/><rect x="124" y="150" width="26" height="90"/>
+              <rect x="158" y="172" width="20" height="68"/><rect x="186" y="140" width="30" height="100"/>
+              <rect x="224" y="180" width="26" height="60"/><rect x="258" y="162" width="22" height="78"/>
+              <rect x="288" y="190" width="34" height="50"/><rect x="330" y="166" width="24" height="74"/>
+              <rect x="362" y="184" width="26" height="56"/>
+            </g>
+            <!-- the product: a 72-hour forecast with a widening uncertainty cone -->
+            <path d="M24 128 C96 118 132 104 176 100 C232 95 276 84 340 62 L340 96 C276 116 232 126 176 128 C132 130 96 138 24 142 Z"
+                  fill="url(#aq-cone)"/>
+            <path d="M24 135 C96 128 132 116 176 114 C232 111 276 104 340 79"
+                  fill="none" stroke="url(#aq-band)" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="24" cy="135" r="4.5" fill="#6FC7D6"/>
+            <circle cx="340" cy="79" r="4.5" fill="#F26D5B"/>
+            <text x="18" y="226" fill="#6FC7D6" opacity="0.92" font-size="12" letter-spacing="1.5" font-family="ui-monospace,monospace">PM2.5 · NOW → +72H</text>
+          </svg>
         </div>
         <div class="case-body">
+          <span class="badge">LIVE DEMO</span>
           <h2>Jabodetabek Air Quality Nowcast</h2>
           <p>Ground sensors, ERA5 weather and fire hotspots fused into a 24–72
           hour PM2.5 forecast that beats persistence by 18%. It also found the
@@ -352,6 +411,7 @@ const DEMOS = {
       .sub { margin: 0; font-size: 1.1rem; line-height: 1.65; color: var(--ink-muted); max-width: 38rem; }
 
       .cases { max-width: 62rem; margin: 0 auto; padding: 0 24px 10vh; display: flex; flex-direction: column; gap: 28px; }
+      *, *::before, *::after { box-sizing: border-box; }
       .case { display: grid; grid-template-columns: 1.1fr 1fr; border: 1px solid var(--hairline); border-radius: 8px;
         overflow: hidden; background: linear-gradient(160deg, var(--surface-raised), var(--surface) 70%); text-decoration: none; color: var(--ink);
         transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease; }
@@ -417,17 +477,8 @@ const DEMOS = {
       .narrative-visual span:nth-child(12) { height: 48px; animation-delay: 1.1s; }
       @keyframes pulse-bar { 50% { transform: scaleY(0.55); } }
       /* air-quality visual: haze layers drifting across a hidden sun */
-      .aq-visual { position: relative; overflow: hidden;
-        background: linear-gradient(180deg, #1B2330 0%, #2A323C 45%, #4A4C4B 100%) !important; }
-      .aq-sun { position: absolute; left: 26%; top: 22%; width: 96px; height: 96px; border-radius: 50%;
-        background: radial-gradient(circle, #FBE2AE 0%, rgba(251,226,174,0.45) 45%, transparent 72%); }
-      .aq-haze { position: absolute; left: -30%; width: 160%; height: 40%; border-radius: 50%;
-        filter: blur(16px); animation: haze-drift 14s ease-in-out infinite alternate; }
-      .aq-haze.z1 { top: 4%; background: rgba(170,178,186,0.22); }
-      .aq-haze.z2 { top: 34%; background: rgba(140,146,152,0.42); animation-duration: 18s; }
-      .aq-haze.z3 { top: 62%; background: rgba(111,199,214,0.20); animation-duration: 23s; }
-      .aq-visual::after { content: ""; position: absolute; left: 22px; right: 22px; bottom: 36px; height: 1px;
-        background: linear-gradient(90deg, #57B26A 0 35%, #E0A63F 35% 70%, #F26D5B 70% 100%); opacity: 0.8; }
+      .aq-visual, .forest-visual, .transit-visual { padding: 0; overflow: hidden; }
+      .aq-visual svg, .forest-visual svg, .transit-visual svg, .sinking-visual svg { width: 100%; height: 100%; display: block; }
       @keyframes haze-drift { to { transform: translateX(9%); } }
       .aq-reading { position: absolute; left: 22px; bottom: 16px; font-family: var(--font-data);
         font-size: 0.75rem; letter-spacing: 0.12em; color: var(--accent); }
