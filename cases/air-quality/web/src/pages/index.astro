@@ -272,6 +272,8 @@ const pending = !S;
         letter-spacing: -.03em; font-variant-numeric: tabular-nums; display: block; line-height: 1.05; }
       .kpi .k-l { font-family: var(--font-data); font-size: 10.5px; letter-spacing: .12em;
         text-transform: uppercase; color: var(--ink-muted); display: block; margin-top: 5px; }
+      /* uppercase turns µg/m³ into MG/M³ — units opt out */
+      .unit { text-transform: none !important; }
 
       /* ── empty / pending state ────────────────────────────────────── */
       .pending {
@@ -349,10 +351,11 @@ const pending = !S;
       <b>{pct(obs?.hours_above_who_daily_15, 1)}</b> sat above the WHO 24-hour guideline of
       15&nbsp;µg/m³, at a mean of <b>{n1(obs?.mean_pm25)}&nbsp;µg/m³</b>. The 95th percentile
       hour reaches <b>{n1(obs?.p95_pm25)}</b>.</p>
-      <p>The last three weeks of measurement, hour by hour, with the AQI bands behind it.
-      The daily rhythm is the story: a pre-dawn peak as the night's boundary layer traps the
-      previous evening's traffic, then collapse through the late morning as the sun mixes
-      the column out to a kilometre or more.</p>
+      <p>Below, everything the most recently reporting sensor has actually sent in the last
+      three weeks — not a smoothed line, the raw hours, gaps and all. It is a thin record,
+      and that thinness is the operating condition this whole case is built around. Under it,
+      the shape of the problem across the <em>full</em> archive: the daily and seasonal cycles
+      that a forecast has to get right before it earns any attention at all.</p>
       <div class="panel">
         <div class="panel-head">
           <h3>Observed PM2.5 · last 21 days · <span id="live-station" class="stamp dim">station</span></h3>
@@ -362,6 +365,17 @@ const pending = !S;
           aria-label="Hourly PM2.5 for the last 21 days at the live station"></canvas></div>
         <p class="footnote" style="margin-top:12px">Hover for the hour. Gaps are real: the
         sensor's own uptime, not smoothing.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h3 id="cycle-title">The daily rhythm · every observed hour, all stations</h3>
+          <div class="toggle" role="group" aria-label="cycle" id="cycle-toggle">
+            <button data-m="diurnal" class="on">BY HOUR</button><button data-m="monthly">BY MONTH</button>
+          </div>
+        </div>
+        <div class="cv-wrap"><svg id="s-cycle" class="chart" height="240" role="img"
+          aria-label="Mean PM2.5 by hour of day and by month of year across the whole record"></svg></div>
+        <p class="footnote" style="margin-top:12px" id="cycle-note"></p>
       </div>
       <div class="kpis" id="kpi-row"></div>
       <p class="sowhat"><b>So what:</b> a dial showing the current number is worthless to
@@ -1021,7 +1035,7 @@ const pending = !S;
           const o = S.observed ?? {}, n = S.network ?? {}, ev = (S.model?.eval ?? []).find((r) => r.horizon_h === 24);
           const pc = (v) => (v == null || Number.isNaN(v) ? "—" : (v * 100).toFixed(0) + "%");
           const kpis = [
-            [f1(o.mean_pm25), "MEAN PM2.5 µg/m³"],
+            [f1(o.mean_pm25), 'MEAN PM2.5 <span class="unit">µg/m³</span>'],
             [pc(o.hours_above_who_daily_15), "HOURS ABOVE WHO 15"],
             [n.n_modelled ? f0(n.n_modelled) : "—", "STATIONS MODELLED"],
             [pc(ev?.skill_mae_vs_persistence), "24 H SKILL VS PERSISTENCE"],
@@ -1029,6 +1043,87 @@ const pending = !S;
           document.getElementById("kpi-row").innerHTML = kpis
             .map(([v, l]) => `<div class="kpi"><span class="k-v">${v}</span><span class="k-l">${l}</span></div>`).join("");
         }).catch((e) => console.warn(e));
+      });
+
+      /* ── 01b · the daily and seasonal cycles, whole archive ─────── */
+      sect("cycles", () => {
+        const svg = d3.select("#s-cycle");
+        const anim = once();
+        const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        let diurnal = [], monthly = [], mode = "diurnal";
+        const draw = () => {
+          const node = svg.node(); if (!node) return;
+          const w = node.clientWidth || 800, h = 240;
+          svg.attr("viewBox", `0 0 ${w} ${h}`).selectAll("*").remove();
+          const rows = mode === "diurnal" ? diurnal : monthly;
+          if (!rows.length) { emptySvg(svg, w, h, "AWAITING GROUND DATA", "make ground"); return; }
+          const m = { l: 46, r: 14, t: 30, b: 34 };
+          const iw = w - m.l - m.r, ih = h - m.t - m.b;
+          const g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
+          const key = mode === "diurnal" ? "hour" : "month";
+          const label = (d) => mode === "diurnal"
+            ? String(d[key]).padStart(2, "0") : MONTHS[d[key] - 1];
+          const x = d3.scaleBand().domain(rows.map((d) => d[key])).range([0, iw]).padding(0.22);
+          const y = d3.scaleLinear().domain([0, d3.max(rows, (d) => d.pm25) * 1.15]).range([ih, 0]);
+          g.selectAll("line.gridline").data(y.ticks(4)).join("line").attr("class", "gridline")
+            .attr("x1", 0).attr("x2", iw).attr("y1", (d) => y(d)).attr("y2", (d) => y(d));
+          // WHO 24-hour guideline, the line every bar should be under and is not
+          if (15 <= y.domain()[1]) {
+            g.append("line").attr("x1", 0).attr("x2", iw).attr("y1", y(15)).attr("y2", y(15))
+              .attr("stroke", OFFICIAL).attr("stroke-dasharray", "4 4").attr("stroke-opacity", 0.85);
+            // label it in the header strip, not over the bars
+            g.append("line").attr("x1", 62).attr("x2", 80).attr("y1", -14).attr("y2", -14)
+              .attr("stroke", OFFICIAL).attr("stroke-dasharray", "4 4");
+            g.append("text").attr("class", "lbl").attr("x", 86).attr("y", -10)
+              .attr("fill", OFFICIAL).text("WHO 24-h guideline · 15");
+          }
+          rows.forEach((d) => {
+            const bar = g.append("rect").attr("x", x(d[key])).attr("width", x.bandwidth())
+              .attr("y", ih).attr("height", 0).attr("rx", 2)
+              .attr("fill", d3.color(aqiColor(d.pm25)).copy({ opacity: 0.85 }) + "")
+              .style("cursor", "pointer");
+            bar.on("pointermove", (ev) => showTip(ev.clientX, ev.clientY,
+                mode === "diurnal" ? `${label(d)}:00 Jakarta time` : `${label(d)}, all years`,
+                [["Mean PM2.5", `${f1(d.pm25)} µg/m³`],
+                 ["Category", aqiBand(d.pm25).n],
+                 ["vs WHO 15", `${(d.pm25 / 15).toFixed(1)}×`]]))
+              .on("pointerleave", hideTip);
+            anim.t(bar, 650, x(d[key]) * 0.4).attr("y", y(d.pm25)).attr("height", ih - y(d.pm25));
+          });
+          anim.seal();
+          g.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(4)).select(".domain").remove();
+          g.append("g").attr("class", "axis").attr("transform", `translate(0,${ih})`)
+            .call(d3.axisBottom(x).tickFormat((v) => mode === "diurnal"
+              ? (v % 3 === 0 ? String(v).padStart(2, "0") : "")
+              : MONTHS[v - 1])).select(".domain").remove();
+          g.append("text").attr("class", "lbl").attr("x", -m.l + 4).attr("y", -10).text("µg/m³");
+        };
+        document.getElementById("cycle-toggle").addEventListener("click", (e) => {
+          const b = e.target.closest("button"); if (!b) return;
+          document.querySelectorAll("#cycle-toggle button").forEach((x) => x.classList.toggle("on", x === b));
+          mode = b.dataset.m; anim.arm();
+          document.getElementById("cycle-title").textContent = mode === "diurnal"
+            ? "The daily rhythm · every observed hour, all stations"
+            : "The seasonal shape · every observed hour, all stations";
+          draw();
+        });
+        addEventListener("resize", debounce(draw));
+        load("summary.json").then((S) => {
+          diurnal = S.observed?.diurnal ?? [];
+          monthly = S.observed?.monthly ?? [];
+          draw();
+          if (diurnal.length) {
+            const pk = diurnal.reduce((a, b) => (b.pm25 > a.pm25 ? b : a));
+            const lo = diurnal.reduce((a, b) => (b.pm25 < a.pm25 ? b : a));
+            document.getElementById("cycle-note").innerHTML =
+              `The worst hour of the average day is <b>${String(pk.hour).padStart(2, "0")}:00</b> ` +
+              `local (${f1(pk.pm25)} µg/m³) and the cleanest is ` +
+              `<b>${String(lo.hour).padStart(2, "0")}:00</b> (${f1(lo.pm25)}) — a ` +
+              `<b>${(pk.pm25 / Math.max(lo.pm25, 0.1)).toFixed(1)}×</b> swing driven by the ` +
+              `boundary layer collapsing overnight and lifting after sunrise. Persistence at a ` +
+              `24-hour lead gets this cycle for free, which is exactly why it is a hard baseline to beat.`;
+          }
+        }).catch((e) => { draw(); console.warn(e); });
       });
 
       /* ════════════════════════════════════════════════════════════
