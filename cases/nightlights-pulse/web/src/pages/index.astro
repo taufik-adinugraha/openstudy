@@ -69,8 +69,8 @@ const maxMean = summary.topMean[0].v;
       pipeline reports what it cannot see rather than guessing. Press play on the
       map below to watch every regency move.</p>
       <div id="pulse-chart" class="chart"></div>
-      <p class="footnote">Values are lights-implied activity, not GDP. Coverage-weighted
-      deseasonalization arrives with the calibration stage.</p>
+      <p class="footnote">Values are lights-implied activity, not GDP. The coverage-weighted,
+      seasonally adjusted version of this series meets BPS’s regional accounts in chapter 04.</p>
     </section>
 
     <section class="chapter">
@@ -100,13 +100,83 @@ const maxMean = summary.topMean[0].v;
       </div>
       <p>Breadth and intensity tell different stories: industrial Bekasi and Bogor
       lead on total light, while Jakarta’s dense urban cores lead on brightness per
-      pixel. (Kutai Kartanegara’s total is inflated by gas flaring — a mask for
-      flare sites is on the pipeline’s roadmap and disclosed here until it lands.)</p>
+      pixel. (Kutai Kartanegara’s total is inflated by gas flaring — chapter 04
+      shows the flare mask that corrects for it.)</p>
+    </section>
+
+    <section class="chapter wide calib" id="calibration">
+      <span class="eyebrow">04 · Calibration</span>
+      <h2>The instrument, calibrated</h2>
+      <p>Do the lights actually track the economy? Here the index meets BPS’s
+      regional accounts: real PDRB for all 514 regencies — annual and quarterly.
+      The verdict is two-sided, and both sides are printed. <b>Where</b> activity
+      is, lights explain about 70% of the cross-regency variation, every year
+      (gate G-A1). <b>When</b> it moves, the short-run link is weak — in 2020 GDP
+      fell while the lights barely blinked, because satellites don’t see
+      locked-down services. The uncertainty bands below are that sentence, drawn.</p>
+
+      <div class="tiles" id="calib-tiles" hidden>
+        <div class="tile"><span class="t-label">Where · levels fit (gate G-A1)</span>
+          <span class="t-value" id="t-gate-v">—</span>
+          <span class="t-sub" id="t-gate-s"></span></div>
+        <div class="tile"><span class="t-label">Elasticity (within regency)</span>
+          <span class="t-value" id="t-el-v">—</span>
+          <span class="t-sub" id="t-el-s"></span></div>
+        <div class="tile"><span class="t-label">When · short-run growth link</span>
+          <span class="t-value" id="t-gr-v">—</span>
+          <span class="t-sub" id="t-gr-s"></span></div>
+        <div class="tile"><span class="t-label">Nowcast · beyond BPS</span>
+          <span class="t-value amber" id="t-nc-v">—</span>
+          <span class="t-sub" id="t-nc-s"></span></div>
+      </div>
+
+      <div class="calib-block" id="calib-pulse-block" hidden>
+        <h3 class="stamp">LIGHTS-IMPLIED ACTIVITY VS OFFICIAL GROWTH · YEAR-ON-YEAR</h3>
+        <div class="chart-legend" aria-hidden="true">
+          <span class="key"><i class="k-line" style="border-color:#E8A33D"></i>LIGHTS-IMPLIED ACTIVITY (3-MO WINDOW)</span>
+          <span class="key"><i class="k-band" style="background:#E8A33D"></i>95% BAND</span>
+          <span class="key"><i class="k-line" style="border-color:#4BB8A9"></i>BPS REAL PDRB · ANNUAL</span>
+          <span class="key"><i class="k-dot" style="background:#4BB8A9"></i>BPS QUARTERLY (YOY)</span>
+        </div>
+        <div id="calib-pulse" class="chart"></div>
+        <p class="footnote" id="calib-pulse-note">Lights-implied growth = the quarterly growth calibration
+        (a + β·Δlog lights) applied to the deseasonalised national series; the band is a 95% interval from the
+        calibration’s parameter and residual uncertainty. It is an <b>activity index, never GDP</b>. The shaded
+        zone is the nowcast — months where BPS has not yet published.</p>
+      </div>
+
+      <div class="calib-block" id="calib-scatter-block" hidden>
+        <h3 class="stamp">GATE G-A1 · LOG REAL PDRB ~ LOG LIGHTS, ONE DOT PER REGENCY <span class="gate-chip" id="sc-gate"></span></h3>
+        <div class="controls" style="flex-wrap:wrap; justify-content:flex-start; gap:10px;">
+          <div class="toggle sc-years" id="sc-years" role="group" aria-label="calibration year"></div>
+          <span class="stamp dim" id="sc-r2"></span>
+        </div>
+        <div class="scatter-row">
+          <div id="calib-scatter" class="chart"></div>
+          <div class="weak-list">
+            <h4 class="stamp dim" style="margin:0" id="wk-title">WHERE THE FIT IS WEAK</h4>
+            <ol id="calib-weak"></ol>
+            <p class="footnote">Largest standardised residuals in the latest BPS year — shown, not hidden.
+            Hollow dots on the scatter are flare-corrected oil &amp; gas regencies.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="calib-block" id="calib-flares-block" hidden>
+        <h3 class="stamp">FLARES REMOVED BEFORE ANY OF THIS</h3>
+        <p class="footnote" id="calib-flares-note"></p>
+        <ol class="ranked" id="calib-flares"></ol>
+        <p class="footnote" id="calib-flares-src"></p>
+      </div>
+
+      <p class="footnote" id="calib-pending">Calibration data hasn’t published yet — this chapter fills in
+      when the model stage lands on the server.</p>
+      <div id="calib-tip" hidden></div>
     </section>
 
     <section class="explore">
       <div class="explore-head">
-        <span class="eyebrow">04 · Explore</span>
+        <span class="eyebrow">05 · Explore</span>
         <h2>Every regency, every month</h2>
         <div class="controls">
           <label class="stamp dim">MONTH
@@ -149,8 +219,14 @@ const maxMean = summary.topMean[0].v;
       and VJ146A4 (NOAA-20, 2018→), every year rendered with the same fixed log stretch
       (ceiling 30 nW/cm²·sr, block-max downsampling) — the two sensors are
       cross-calibrated by NASA but not identical, so read the years, not the brightness.
-      <b>This index measures light, not GDP</b> — calibration against BPS regional
-      accounts, with its full fit statistics, publishes here when the model stage lands.</p>
+      <b>This index measures light, not GDP</b> — chapter 04 publishes the calibration against
+      BPS regional accounts (real PDRB ADHK per kabupaten/kota, BPS WebAPI: annual table 2194,
+      quarterly table 2534) with its full fit statistics, including where the fit is weak.
+      Seasonal adjustment is coverage-weighted (monsoon months carry little weight) with a
+      Ramadan-overlap regressor on the Hijri calendar. Gas flares are masked with 3&nbsp;km
+      buffers around persistent sites from the VIIRS Nightfire global flare survey 2012–2019
+      (Elvidge &amp; Zhizhin 2021, ORNL DAAC, doi:10.3334/ORNLDAAC/1874, openly shared without
+      restriction); the raw series is kept alongside.</p>
       <span class="stamp dim">A DEMO-LAB CASE · PIPELINE RERUNS MONTHLY · GENERATED {vintage}</span>
     </footer>
 
@@ -594,6 +670,264 @@ const maxMean = summary.topMean[0].v;
       renderHUD(state.month);
     </script>
 
+    <script>
+      /* ---------- 04 · Calibration — self-contained module (model stage) ---------- */
+      import * as d3 from "d3";
+
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const AMBER = "#E8A33D", TEAL = "#4BB8A9", SLATE = "#6B7CA6", INKMUT = "#9C9A8D";
+      const failBanner = (msg) => {
+        let b = document.getElementById("err-banner");
+        if (!b) {
+          b = document.createElement("div"); b.id = "err-banner";
+          b.style.cssText = "position:fixed;bottom:0;left:0;right:0;z-index:99;background:#3A1E1A;color:#F26D5B;font:12px ui-monospace,monospace;padding:10px 16px;border-top:1px solid #F26D5B;";
+          document.body.appendChild(b);
+        }
+        b.textContent = "⚠ " + msg;
+      };
+      const sect = (name, fn) => { try { return fn(); } catch (err) { console.error(name, err); failBanner(`${name} failed: ${err.message ?? err}`); return null; } };
+      const $ = (id) => document.getElementById(id);
+      const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+      const ctip = $("calib-tip");
+      const showTip = (e, html) => { ctip.hidden = false; ctip.innerHTML = html; ctip.style.left = e.pageX + 14 + "px"; ctip.style.top = e.pageY + 14 + "px"; };
+      const hideTip = () => { ctip.hidden = true; };
+      const pct1 = d3.format("+.1%"), pct0 = d3.format("+.0%"), pctu = d3.format(".1%"), fmtN = d3.format(",.0f");
+      const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const pretty = (m) => `${MONTHS_EN[+m.slice(5) - 1]} ${m.slice(0, 4)}`;
+
+      let cal = null;
+      try {
+        const res = await fetch(`${base}/data/calibration.json`);
+        if (res.ok) cal = await res.json();
+      } catch { /* pending note stays */ }
+
+      if (cal) {
+        $("calib-pending").hidden = true;
+        for (const id of ["calib-tiles", "calib-pulse-block", "calib-scatter-block", "calib-flares-block"]) $(id).hidden = false;
+        sect("calibration tiles", tiles);
+        sect("growth chart", growthChart);
+        sect("calibration scatter", scatterChart);
+        sect("flare note", flareNote);
+      }
+
+      function tiles() {
+        const r2s = cal.levels.map((d) => d.r2);
+        const gate = cal.gates["G-A1"];
+        const fe = cal.panel.annual_fe_regency, feW = cal.panel.annual_fe_regency_wellobs;
+        const g = cal.growth.quarterly_yoy, h = cal.nowcast.headline;
+        $("t-gate-v").innerHTML = `R² ${d3.min(r2s).toFixed(2)}–${d3.max(r2s).toFixed(2)} <span class="${gate.pass ? "pass" : "fail"}">${gate.pass ? "PASS" : "FAIL"}</span>`;
+        $("t-gate-s").textContent = `log PDRB ~ log lights, ${cal.bps.n_regencies} regencies, every year ${cal.levels[0].year}–${cal.levels.at(-1).year} · gate ≥ ${gate.threshold}`;
+        $("t-el-v").textContent = fe.beta.toFixed(2);
+        $("t-el-s").textContent = `± ${(1.96 * fe.se).toFixed(2)} (95%, clustered) · doubling lights ↔ ${pct0(2 ** fe.beta - 1)} PDRB · rises to ${feW.beta.toFixed(2)} on well-observed years`;
+        $("t-gr-v").textContent = `β ${g.beta.toFixed(3)}`;
+        $("t-gr-s").textContent = `quarterly YoY growth on growth, R² ${g.r2.toFixed(2)} — lights say where, hardly when; the bands stay honest`;
+        $("t-nc-v").textContent = pct1(h.g);
+        const [w0, w1] = h.window.split("..");
+        $("t-nc-s").textContent = `${pretty(w0)}–${pretty(w1)} vs a year earlier · band ${pct1(h.lo)} … ${pct1(h.hi)} · lights-implied activity, not GDP` +
+          (h.bps_last_quarter ? ` · last BPS print ${h.bps_last_quarter.q} ${pct1(h.bps_last_quarter.g)}` : "");
+      }
+
+      function growthChart() {
+        const el = $("calib-pulse");
+        const S = cal.nowcast.series;
+        const W = el.clientWidth, H = 320, M = { t: 18, r: 20, b: 30, l: 56 };
+        const months = S.map((d) => d.m);
+        const x = d3.scalePoint(months, [M.l, W - M.r]);
+        const years = [...new Set(months.map((m) => m.slice(0, 4)))];
+        const annual = cal.nowcast.bps_annual.filter((a) => years.includes(String(a.year)));
+        const quarterly = cal.nowcast.bps_quarterly
+          .map((q) => ({ ...q, m: `${q.year}-${String(q.quarter * 3).padStart(2, "0")}` }))
+          .filter((q) => months.includes(q.m));
+        const lo = Math.min(d3.min(S, (d) => d.lo), d3.min(annual, (d) => d.g) ?? 0, 0) - 0.005;
+        const hi = Math.max(d3.max(S, (d) => d.hi), d3.max(annual, (d) => d.g) ?? 0) + 0.016;
+        const y = d3.scaleLinear([lo, hi], [H - M.b, M.t]);
+        const svg = d3.select(el).append("svg").attr("width", W).attr("height", H);
+
+        // nowcast zone — months beyond the last BPS quarter
+        const firstNow = S.find((d) => d.nowcast);
+        if (firstNow) {
+          svg.append("rect").attr("x", x(firstNow.m) - x.step() / 2).attr("y", M.t)
+            .attr("width", W - M.r - x(firstNow.m) + x.step() / 2).attr("height", H - M.t - M.b)
+            .attr("fill", "#E9E4D6").attr("opacity", 0.045);
+          svg.append("text").attr("x", W - M.r - 4).attr("y", M.t + 12).attr("text-anchor", "end")
+            .attr("class", "annot").text("NOWCAST — BPS NOT YET PUBLISHED");
+        }
+        svg.append("g").attr("transform", `translate(${M.l},0)`).attr("class", "axis")
+          .call(d3.axisLeft(y).ticks(6).tickFormat(pct0));
+        svg.append("g").attr("transform", `translate(0,${H - M.b})`).attr("class", "axis")
+          .call(d3.axisBottom(x).tickValues(months.filter((m) => m.endsWith("-01"))).tickFormat((m) => m.slice(0, 4)));
+        if (lo < 0) svg.append("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", y(0)).attr("y2", y(0))
+          .attr("stroke", "#E9E4D6").attr("stroke-opacity", 0.25);
+
+        // COVID annotation
+        if (months.includes("2020-06")) {
+          svg.append("line").attr("x1", x("2020-06")).attr("x2", x("2020-06")).attr("y1", M.t).attr("y2", H - M.b)
+            .attr("stroke", "#3A4452").attr("stroke-dasharray", "3 4");
+          svg.append("text").attr("x", x("2020-06") + 5).attr("y", M.t + 12).attr("class", "annot")
+            .text("2020 · COVID — GDP fell; the lights barely blinked");
+        }
+
+        svg.append("path").datum(S)
+          .attr("d", d3.area().x((d) => x(d.m)).y0((d) => y(d.lo)).y1((d) => y(d.hi)))
+          .attr("fill", AMBER).attr("opacity", 0.14);
+        svg.append("path").datum(S)
+          .attr("d", d3.line().x((d) => x(d.m)).y((d) => y(d.g)))
+          .attr("fill", "none").attr("stroke", AMBER).attr("stroke-width", 2).attr("stroke-linejoin", "round");
+        for (const a of annual) {
+          const ms = months.filter((m) => m.startsWith(String(a.year)));
+          if (!ms.length) continue;
+          svg.append("line").attr("x1", x(ms[0])).attr("x2", x(ms.at(-1))).attr("y1", y(a.g)).attr("y2", y(a.g))
+            .attr("stroke", TEAL).attr("stroke-width", 2);
+        }
+        svg.selectAll("circle.q").data(quarterly).join("circle").attr("class", "q")
+          .attr("cx", (d) => x(d.m)).attr("cy", (d) => y(d.g)).attr("r", 4.5)
+          .attr("fill", TEAL).attr("stroke", "#0A0E1A").attr("stroke-width", 2);
+
+        // end label on the lights-implied line
+        const last = S.at(-1);
+        svg.append("text").attr("x", x(last.m) - 6).attr("y", y(last.lo) + 16).attr("text-anchor", "end")
+          .attr("class", "annot").attr("fill", "#E9E4D6").text(`lights-implied ${pct1(last.g)}`);
+
+        // hover: crosshair + one tooltip, every series
+        const guide = svg.append("line").attr("y1", M.t).attr("y2", H - M.b)
+          .attr("stroke", "#E9E4D6").attr("stroke-opacity", 0.4).style("display", "none");
+        const dot = svg.append("circle").attr("r", 4.5).attr("fill", AMBER).attr("stroke", "#0A0E1A")
+          .attr("stroke-width", 2).style("display", "none");
+        svg.append("rect").attr("x", M.l).attr("y", M.t).attr("width", W - M.l - M.r).attr("height", H - M.t - M.b)
+          .attr("fill", "transparent")
+          .on("mousemove", (e) => {
+            const px = d3.pointer(e)[0];
+            const d = S.reduce((b, s) => (Math.abs(x(s.m) - px) < Math.abs(x(b.m) - px) ? s : b), S[0]);
+            guide.style("display", null).attr("x1", x(d.m)).attr("x2", x(d.m));
+            dot.style("display", null).attr("cx", x(d.m)).attr("cy", y(d.g));
+            const a = annual.find((v) => String(v.year) === d.m.slice(0, 4));
+            const q = quarterly.find((v) => v.year === +d.m.slice(0, 4) && v.quarter === Math.ceil(+d.m.slice(5) / 3));
+            showTip(e, `<b>${pretty(d.m)}</b>${d.nowcast ? " · <span style='color:#E8A33D'>NOWCAST</span>" : ""}<br>` +
+              `<span style="color:${AMBER}">—</span> lights-implied <b>${pct1(d.g)}</b> <span style="color:${INKMUT}">[${pct1(d.lo)} … ${pct1(d.hi)}]</span><br>` +
+              `<span style="color:${INKMUT}">deseasonalised lights YoY ${pct0(d.gl)} · coverage ${pctu(d.cov)}</span><br>` +
+              `<span style="color:${TEAL}">—</span> BPS ${d.m.slice(0, 4)} annual ${a ? `<b>${pct1(a.g)}</b>` : "not yet published"}` +
+              (q ? `<br><span style="color:${TEAL}">●</span> BPS ${q.q} <b>${pct1(q.g)}</b>` : ""));
+          })
+          .on("mouseleave", () => { guide.style("display", "none"); dot.style("display", "none"); hideTip(); });
+      }
+
+      function scatterChart() {
+        const el = $("calib-scatter");
+        const years = cal.scatter.years, pts = cal.scatter.points;
+        const lv = Object.fromEntries(cal.levels.map((d) => [d.year, d]));
+        const gate = cal.gates["G-A1"];
+        $("sc-gate").textContent = `G-A1 ${gate.pass ? "PASS" : "FAIL"} · min R² ${gate.min_r2.toFixed(2)}`;
+        $("sc-gate").classList.add(gate.pass ? "pass" : "fail");
+        let yi = years.length - 1;
+        const W = Math.max(el.clientWidth, 320), H = 360, M = { t: 14, r: 16, b: 40, l: 58 };
+        const finite = (a) => a.filter((v) => v != null && isFinite(v));
+        const xd = d3.extent(pts.flatMap((p) => finite(p.x))), yd = d3.extent(pts.flatMap((p) => finite(p.y)));
+        const X = d3.scaleLinear(xd, [M.l, W - M.r]).nice();
+        const Y = d3.scaleLinear(yd, [H - M.b, M.t]).nice();
+        const lnTicks = (sc) => {
+          const [a, b] = sc.domain(), out = [];
+          for (let k = Math.ceil(a / Math.LN10); k * Math.LN10 <= b; k++) out.push(k * Math.LN10);
+          return out;
+        };
+        const svg = d3.select(el).append("svg").attr("width", W).attr("height", H);
+        svg.append("g").attr("transform", `translate(0,${H - M.b})`).attr("class", "axis")
+          .call(d3.axisBottom(X).tickValues(lnTicks(X)).tickFormat((v) => d3.format("~s")(Math.round(Math.exp(v)))));
+        svg.append("g").attr("transform", `translate(${M.l},0)`).attr("class", "axis")
+          .call(d3.axisLeft(Y).tickValues(lnTicks(Y)).tickFormat((v) => d3.format("~s")(Math.round(Math.exp(v)))));
+        svg.append("text").attr("class", "annot").attr("x", (M.l + W - M.r) / 2).attr("y", H - 6)
+          .attr("text-anchor", "middle").text("SUM OF LIGHTS, SEASONALLY ADJUSTED (LOG SCALE)");
+        svg.append("text").attr("class", "annot").attr("transform", `translate(12,${(M.t + H - M.b) / 2}) rotate(-90)`)
+          .attr("text-anchor", "middle").text("REAL PDRB, BN RP (LOG SCALE)");
+
+        const fit = svg.append("line").attr("stroke", TEAL).attr("stroke-width", 2);
+        const dots = svg.selectAll("circle.p").data(pts).join("circle").attr("class", "p")
+          .attr("r", 3)
+          .attr("fill", (p) => (p.flare ? "transparent" : AMBER))
+          .attr("stroke", AMBER).attr("stroke-width", (p) => (p.flare ? 1.2 : 0))
+          .attr("opacity", 0.55);
+        const hover = svg.append("circle").attr("r", 6).attr("fill", "none")
+          .attr("stroke", "#E9E4D6").attr("stroke-width", 1.5).style("display", "none");
+
+        let del = null;
+        function draw(animate) {
+          const l = lv[years[yi]];
+          $("sc-r2").textContent = `R² ${l.r2.toFixed(3)} · slope ${l.slope.toFixed(2)} · n ${l.n}`;
+          d3.select("#sc-years").selectAll("button").attr("class", (d, i) => (i === yi ? "on" : null));
+          const sel = animate ? dots.transition().duration(500).ease(d3.easeCubicOut) : dots;
+          sel.attr("cx", (p) => X(p.x[yi] ?? xd[0]))
+             .attr("cy", (p) => Y(p.y[yi] ?? yd[0]))
+             .attr("display", (p) => (p.x[yi] == null || p.y[yi] == null ? "none" : null));
+          const [a, b] = X.domain();
+          const fy = (v) => Y(l.intercept + l.slope * v);
+          const ft = animate ? fit.transition().duration(500) : fit;
+          ft.attr("x1", X(a)).attr("y1", fy(a)).attr("x2", X(b)).attr("y2", fy(b));
+          del = d3.Delaunay.from(pts, (p) => (p.x[yi] == null ? -1e4 : X(p.x[yi])), (p) => (p.y[yi] == null ? -1e4 : Y(p.y[yi])));
+        }
+        for (const [i, yr] of years.entries()) {
+          const b = document.createElement("button");
+          b.textContent = yr;
+          b.onclick = () => { yi = i; draw(true); };
+          $("sc-years").appendChild(b);
+        }
+        draw(false);
+
+        svg.append("rect").attr("x", M.l).attr("y", M.t).attr("width", W - M.l - M.r).attr("height", H - M.t - M.b)
+          .attr("fill", "transparent")
+          .on("mousemove", (e) => {
+            const [mx, my] = d3.pointer(e);
+            const i = del.find(mx, my);
+            const p = pts[i];
+            if (!p || p.x[yi] == null || Math.hypot(X(p.x[yi]) - mx, Y(p.y[yi]) - my) > 28) { hover.style("display", "none"); hideTip(); return; }
+            hover.style("display", null).attr("cx", X(p.x[yi])).attr("cy", Y(p.y[yi]));
+            showTip(e, `<b>${esc(p.name)}</b><br>real PDRB <b>Rp ${fmtN(Math.exp(p.y[yi]))} bn</b> · lights ${fmtN(Math.exp(p.x[yi]))}<br>` +
+              `<span style="color:${INKMUT}">residual ${p.sr[yi] != null ? `${p.sr[yi] > 0 ? "+" : ""}${p.sr[yi].toFixed(1)}σ` : "—"}` +
+              `${p.flare ? " · flare-corrected" : ""} · ${years[yi]}</span>`);
+          })
+          .on("mouseleave", () => { hover.style("display", "none"); hideTip(); });
+
+        // weak-fit list
+        $("wk-title").textContent = `WHERE THE FIT IS WEAK · ${cal.weakFit.year}`;
+        const ol = $("calib-weak");
+        for (const w of cal.weakFit.list.slice(0, 8)) {
+          const li = document.createElement("li");
+          const name = document.createElement("span");
+          name.textContent = w.name;
+          if (w.tags?.length) {
+            const t = document.createElement("span"); t.className = "tags"; t.textContent = w.tags.join(" · ");
+            name.appendChild(t);
+          }
+          const sig = document.createElement("span"); sig.className = "sig";
+          sig.textContent = `${w.std_resid > 0 ? "+" : ""}${w.std_resid.toFixed(1)}σ`;
+          li.append(name, sig);
+          ol.appendChild(li);
+        }
+      }
+
+      function flareNote() {
+        const f = cal.flares;
+        if (!f) { $("calib-flares-block").hidden = true; return; }
+        $("calib-flares-note").innerHTML =
+          `Gas flares are light without economy underneath. <b>${f.n_sites} persistent flare sites</b> ` +
+          `(seen in ≥${f.min_survey_years} of 8 annual surveys) are buffered at <b>${f.buffer_km}&nbsp;km</b> — the measured glow radius; ` +
+          `the spec’s 5&nbsp;km would swallow whole towns — and each regency’s series is corrected by its share of light inside the buffers, ` +
+          `year by year, before deseasonalisation. Nationally that removes <b>${pctu(f.national_share)}</b> of all light in ${f.year} ` +
+          `(5&nbsp;km: ${pctu(f.national_share_5km)}; 1.5&nbsp;km: ${pctu(f.national_share_15km)}). The raw series is kept. ` +
+          `Sites first lit after 2019 are not in the survey — a known limit, stated here.`;
+        const max = f.regencies[0]?.share ?? 1;
+        const ol = $("calib-flares");
+        for (const r of f.regencies.slice(0, 8)) {
+          const li = document.createElement("li");
+          li.innerHTML = `<span class="rname">${esc(r.name)}</span>` +
+            `<span class="rbar"><i style="width:${(r.share / max) * 100}%;background:${SLATE}"></i></span>` +
+            `<span class="rval">−${pctu(r.share)}</span>`;
+          li.title = `${r.sites} flare sites · 5 km buffer would take ${pctu(r.share_wide)}, 1.5 km ${pctu(r.share_tight)}`;
+          ol.appendChild(li);
+        }
+        $("calib-flares-src").textContent =
+          `Share of the regency's sum-of-lights removed, ${f.year} composite. Source: ${f.source}, doi:${f.doi} — ${f.licence}.`;
+      }
+    </script>
+
     <style is:global>
       html { scroll-behavior: smooth; }
       body { margin: 0; }
@@ -696,6 +1030,39 @@ const maxMean = summary.topMean[0].v;
       .panel-stats { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; }
       .panel-stats dt { font-family: var(--font-data); font-size: 0.62rem; letter-spacing: 0.1em; color: var(--ink-muted); align-self: center; }
       .panel-stats dd { margin: 0; font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+
+      /* ---- 04 · Calibration (model stage) ---- */
+      .chapter.wide { max-width: 60rem; }
+      .calib .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+      @media (max-width: 880px) { .calib .tiles { grid-template-columns: 1fr 1fr; } }
+      .tile { background: var(--surface); border: 1px solid var(--hairline); border-radius: 6px; padding: 14px 16px; display: flex; flex-direction: column; gap: 7px; }
+      .tile .t-label { font-family: var(--font-data); font-size: 0.62rem; letter-spacing: 0.1em; color: var(--ink-muted); text-transform: uppercase; }
+      .tile .t-value { font-family: var(--font-data); font-size: 1.45rem; font-weight: 600; color: var(--ink); line-height: 1.1; }
+      .tile .t-sub { font-size: 0.72rem; color: var(--ink-muted); line-height: 1.55; }
+      .tile .pass, .gate-chip.pass { color: var(--official); }
+      .tile .fail, .gate-chip.fail { color: var(--alert); }
+      .tile .t-value .pass, .tile .t-value .fail { font-size: 0.7rem; letter-spacing: 0.1em; vertical-align: 3px; }
+      .gate-chip { font-family: var(--font-data); font-size: 0.62rem; letter-spacing: 0.1em; padding: 2px 8px; margin-left: 10px; border-radius: 3px; border: 1px solid var(--hairline); }
+      .calib-block { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+      .calib-block h3 { margin: 0; }
+      .calib-block[hidden] { display: none; }
+      .chart-legend { display: flex; flex-wrap: wrap; gap: 6px 20px; font-family: var(--font-data); font-size: 0.66rem; letter-spacing: 0.06em; color: var(--ink-muted); }
+      .chart-legend .key { display: inline-flex; align-items: center; gap: 7px; }
+      .chart-legend .k-line { width: 18px; height: 0; border-top: 2px solid; display: inline-block; }
+      .chart-legend .k-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+      .chart-legend .k-band { width: 18px; height: 10px; display: inline-block; opacity: 0.3; }
+      .scatter-row { display: grid; grid-template-columns: 1fr 15rem; gap: 28px; align-items: start; }
+      @media (max-width: 800px) { .scatter-row { grid-template-columns: 1fr; } }
+      .weak-list { display: flex; flex-direction: column; gap: 8px; }
+      .weak-list ol { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 0.78rem; }
+      .weak-list li { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; border-bottom: 1px solid var(--hairline); padding-bottom: 5px; }
+      .weak-list .tags { display: block; font-size: 0.64rem; color: var(--ink-muted); margin-top: 1px; }
+      .weak-list .sig { font-family: var(--font-data); color: var(--ink-muted); white-space: nowrap; }
+      .sc-years button + button { border-left: 0; }
+      .sc-years button { padding: 6px 9px; }
+      .annot { font-family: var(--font-data); font-size: 11px; fill: var(--ink-muted); letter-spacing: 0.06em; }
+      #calib-tip { position: absolute; z-index: 30; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px; font-family: var(--font-data); font-size: 0.72rem; line-height: 1.6; color: var(--ink); max-width: 21rem; }
+      #calib-flares { max-width: 34rem; }
 
       .method { max-width: 44rem; margin: 0 auto; padding: 12vh 24px 12vh; display: flex; flex-direction: column; gap: 14px; }
       .method p { margin: 0; font-size: 0.9rem; line-height: 1.7; color: var(--ink-muted); }
