@@ -57,12 +57,14 @@ THEME_QUERIES = {
     "economy":    'Indonesia (rupiah OR inflation OR "central bank" OR GDP)',
     "china":      'Indonesia China',
 }
+# Battery order matters: themes go before the foreign/domestic split — the
+# negation query is the one the API refuses most, and it must not block the rest.
 QUERIES: dict[str, tuple[str, list[str]]] = {
     "indonesia":          ("Indonesia", ["TimelineVol", "TimelineVolRaw", "TimelineTone",
                                          "TimelineSourceCountry", "TimelineLang"]),
+    **{f"theme_{k}": (q, ["TimelineVol"]) for k, q in THEME_QUERIES.items()},
     "indonesia_foreign":  ("Indonesia -sourcecountry:ID", ["TimelineVol", "TimelineTone"]),
     "indonesia_domestic": ("Indonesia sourcecountry:ID", ["TimelineVol", "TimelineTone"]),
-    **{f"theme_{k}": (q, ["TimelineVol"]) for k, q in THEME_QUERIES.items()},
 }
 # themes that also get a tone curve (the stories where tone is the story)
 TONE_THEMES = ("nickel", "palm_oil", "election", "protest", "football", "g20")

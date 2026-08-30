@@ -51,9 +51,9 @@ def _cache_path(label: str, params: dict) -> Path:
     return config.DOCAPI_CACHE / f"{label}__{key}.json"
 
 
-def fetch(label: str, params: dict) -> dict | None:
-    """One DOC-API call, cache-first. Returns the parsed JSON (None if the API
-    answered with a non-JSON message, e.g. 'no results' for an empty query)."""
+def fetch(label: str, params: dict, retries: int = config.DOCAPI_MAX_RETRIES) -> dict | None:
+    """One DOC-API call, cache-first. Returns the parsed JSON, {'_error': …} for a
+    cached empty/invalid verdict, or None when the API refused this pass."""
     global _last_call, _live_calls
     config.DOCAPI_CACHE.mkdir(parents=True, exist_ok=True)
     path = _cache_path(label, params)
@@ -63,7 +63,7 @@ def fetch(label: str, params: dict) -> dict | None:
         except json.JSONDecodeError:
             path.unlink()
     params = {**params, "format": "json"}
-    for attempt in range(config.DOCAPI_MAX_RETRIES):
+    for attempt in range(retries):
         wait = config.DOCAPI_MIN_SPACING_S - (time.monotonic() - _last_call)
         if wait > 0:
             time.sleep(wait)
@@ -107,30 +107,41 @@ def fetch(label: str, params: dict) -> dict | None:
         print(f"[doc_api] {label}: HTTP {r.status_code}: {r.text[:200]}", flush=True)
         return None
     # skip for this pass — the battery reports it missing and the unit re-runs later
-    print(f"[doc_api] {label}: still refused after {config.DOCAPI_MAX_RETRIES} attempts — skipping for now", flush=True)
+    print(f"[doc_api] {label}: still refused after {retries} attempts — skipping for now", flush=True)
     return None
 
 
 def fetch_timeline(qid: str, query: str, mode: str) -> dict | None:
-    """Full-window timeline; if the API downgrades resolution for a long span,
-    fall back to one request per calendar year and stitch the series."""
+    """Full-window timeline. Falls back to one request per calendar year when the
+    API either downgrades resolution for the long span or keeps refusing the
+    full-range request (heavy queries — the sourcecountry negation — reset)."""
     params = {"query": query, "mode": mode, "startdatetime": config.WINDOW_START,
               "enddatetime": window_end()}
     js = fetch(f"{qid}__{mode}", params)
-    if js is None or js.get("query_details", {}).get("date_resolution", "day") == "day":
+    if js is not None and js.get("query_details", {}).get("date_resolution", "day") == "day":
         return js
-    print(f"[doc_api] {qid}/{mode}: resolution {js['query_details']['date_resolution']} — refetching per year")
+    why = "refused" if js is None else f"resolution {js['query_details']['date_resolution']}"
+    if js is not None and "_error" in js:
+        return js
+    print(f"[doc_api] {qid}/{mode}: full range {why} — trying per year", flush=True)
     stitched: dict[str, dict] = {}
+    incomplete = False
     for year in range(config.EVENTS_START_YEAR, _today_utc().year + 1):
         end = min(f"{year + 1}0101000000", window_end())
         p = {**params, "startdatetime": f"{year}0101000000", "enddatetime": end}
-        part = fetch(f"{qid}__{mode}__{year}", p)
-        if not part:
+        part = fetch(f"{qid}__{mode}__{year}", p, retries=2)
+        if part is None:
+            incomplete = True
             continue
         for s in part.get("timeline", []):
             tgt = stitched.setdefault(s["series"], {"series": s["series"], "data": []})
             tgt["data"].extend(s.get("data", []))
-    return {"query_details": js.get("query_details", {}), "timeline": list(stitched.values())}
+    if incomplete and not stitched:
+        return None
+    if incomplete:
+        print(f"[doc_api] {qid}/{mode}: stitched with gaps — the next pass fills the missing years", flush=True)
+        return None   # partial: report missing so the unit re-runs; cached years are free
+    return {"query_details": (js or {}).get("query_details", {}), "timeline": list(stitched.values())}
 
 
 def fetch_anchor_articles(day: str, window: int) -> dict | None:
@@ -185,26 +196,22 @@ def parse_timeline(qid: str, mode: str, js: dict) -> list[dict]:
 
 
 def curves() -> None:
-    """Cache -> long parquet. Uses whatever the battery has fetched so far."""
+    """Cache -> long parquet. Parses every cached window (full-range and per-year)
+    for each query; overlaps deduplicate. Uses whatever the battery has so far."""
     rows: list[dict] = []
-    for qid, (query, modes) in config.QUERIES.items():
+    for qid, (_query, modes) in config.QUERIES.items():
         for mode in modes:
-            params = {"query": query, "mode": mode, "startdatetime": config.WINDOW_START,
-                      "enddatetime": window_end()}
-            path = _cache_path(f"{qid}__{mode}", params)
-            if not path.exists():
-                # fall back to the newest cached window for this qid/mode (refresh not yet run today)
-                cands = sorted(config.DOCAPI_CACHE.glob(f"{qid}__{mode}__*.json"), key=lambda p: p.stat().st_mtime)
-                if not cands:
+            for path in sorted(config.DOCAPI_CACHE.glob(f"{qid}__{mode}__*.json"),
+                               key=lambda p: p.stat().st_mtime):
+                try:
+                    js = json.loads(path.read_text())
+                except json.JSONDecodeError:
                     continue
-                path = cands[-1]
-            js = json.loads(path.read_text())
-            if "_error" in js:
-                continue
-            if js.get("query_details", {}).get("date_resolution", "day") != "day":
-                stitched = fetch_timeline(qid, query, mode)  # cache-only if per-year files exist
-                js = stitched or js
-            rows.extend(parse_timeline(qid, mode, js))
+                if "_error" in js:
+                    continue
+                if js.get("query_details", {}).get("date_resolution", "day") != "day":
+                    continue          # non-daily windows are never mixed in
+                rows.extend(parse_timeline(qid, mode, js))
     if not rows:
         print("[doc_api] no cached timelines yet — run `battery` first")
         return
