@@ -700,10 +700,14 @@ const CHAPTERS = [
              uncorrected projection is fine, but the AOI runs to 9S and the distortion
              shows in trajectory angles, which is exactly what this page is about.
          ══════════════════════════════════════════════════════════════════════════════ */
-      function CanvasMap(container, bbox) {
+      function CanvasMap(container, bbox, label) {
         container.querySelectorAll("canvas").forEach((c) => c.remove());
         const canvas = document.createElement("canvas");
         canvas.style.cssText = "width:100%;height:100%;display:block;";
+        // a canvas is opaque to assistive technology, so it carries the description and the
+        // numbers it shows are all repeated in the panel or table beside it
+        canvas.setAttribute("role", "img");
+        canvas.setAttribute("aria-label", label ?? "Map of the Indonesian fire and haze domain");
         container.insertBefore(canvas, container.firstChild);
         const ctx = canvas.getContext("2d");
         const hit = document.createElement("canvas").getContext("2d");
@@ -865,7 +869,10 @@ const CHAPTERS = [
               '<div class="empty" style="margin:24px">No trajectory episodes exported yet — the transport stage has not run.</div>');
             return;
           }
-          const map = CanvasMap(el, bbox);
+          const map = CanvasMap(el, bbox,
+            "Back-trajectory fan from the selected receptor over Sumatra, Kalimantan and the "
+            + "Java Sea, with the fire detections burning beneath it. Every number it shows is "
+            + "repeated in the attribution panel beside it.");
           const land = geo ? map.add(polyLayer(geo, { fill: C.surface, stroke: C.hair })) : null;
 
           const recs = [...new Set(eps.map((e) => e.receptor))];
@@ -1083,7 +1090,10 @@ const CHAPTERS = [
         function maskMap(mask, geo, bbox) {
           const el = document.getElementById("mask-map");
           if (!mask) { el.insertAdjacentHTML("afterbegin", '<div class="empty" style="margin:24px">No mask exported.</div>'); return; }
-          const map = CanvasMap(el, bbox);
+          const map = CanvasMap(el, bbox,
+            `The static exclusion mask: ${mask.n_core.toLocaleString()} persistent-source cells, `
+            + "tracing Indonesia's volcanic arc plus the gas flares and landfills the hotspot "
+            + "record otherwise reports as fires every day of the year.");
           if (geo) map.add(polyLayer(geo, { fill: C.surface, stroke: C.hair }));
           map.add({
             draw(ctx, X, Y) {
@@ -1176,7 +1186,10 @@ const CHAPTERS = [
             el.insertAdjacentHTML("afterbegin", '<div class="empty" style="margin:24px">No risk surfaces exported.</div>');
             return;
           }
-          const map = CanvasMap(el, bbox);
+          const map = CanvasMap(el, bbox,
+            "Ignition probability per 0.25 degree cell for the selected day and lead, with that "
+            + "day's detections drawn on top. Hover any cell for its probability, province and "
+            + "peat depth.");
           if (geo) map.add(polyLayer(geo, { fill: C.surface, stroke: C.hair }));
           let vals = null, fires = [], lead = "1", hoverIdx = -1;
           const half = grid.deg / 2;

@@ -360,16 +360,17 @@ def _pending() -> list[tuple[str, tuple[int, ...]]]:
         for g in groups(kind):
             if not all(_part(kind, y).exists() for y in g):
                 out.append((kind, g))
-    # Kind order is a priority too, and it reflects what each product unlocks:
-    #   sl  everything — no panel exists without it
-    #   pl  the trajectory engine, the hero, and gates G-J3/G-J4
-    #   tp  daily rainfall, which sharpens the dryness features but does not gate anything:
-    #       SPI-1/3/6 already comes from 46 years of CHIRPS and covers the drought signal at
-    #       monthly scale, so a partial tp drain degrades the model rather than blocking it.
+    # ORDER BY YEAR FIRST, THEN KIND — so each year lands COMPLETE.
+    # `sl` and `tp` share one dataset queue, so draining all the sl years first would mean the
+    # model had no daily rainfall until the very end.  Rainfall is the strongest single predictor
+    # in a fire model; a shorter record with rain beats a longer record without it, and the fold
+    # count is published beside every metric either way.  Pressure levels sit on their own
+    # dataset queue and therefore cost nothing here.
+    # Within a year: sl (no panel exists without it), then tp (the dryness family), then pl.
     def rank(item):
         kind, g = item
         anchor = 0 if any(y in config.ANCHOR_YEARS for y in g) else 1
-        return ({"sl": 0, "pl": 1, "tp": 2}[kind], anchor, -max(g))
+        return (anchor, -max(g), {"sl": 0, "tp": 1, "pl": 2}[kind])
     return sorted(out, key=rank)
 
 

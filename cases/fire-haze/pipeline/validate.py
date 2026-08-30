@@ -128,19 +128,20 @@ def gate_j2() -> dict:
             m = entry.get(path, {})
             auc = m.get("auc")
             bss_c = m.get("bss_vs_climatology")
-            ok_auc = auc is not None and auc >= config.GATE_AUC
-            ok_bss = bss_c is not None and bss_c > config.GATE_BSS
+            ok_auc = isinstance(auc, (int, float)) and auc >= config.GATE_AUC
+            ok_bss = isinstance(bss_c, (int, float)) and bss_c > config.GATE_BSS
             row[path] = {"auc": auc, "bss_vs_climatology": bss_c,
                          "bss_vs_persistence": m.get("bss_vs_persistence"),
                          "brier": m.get("brier"), "base_rate": m.get("base_rate"),
                          "auc_pass": ok_auc, "bss_climatology_pass": ok_bss}
             if not ok_auc:
                 fails.append(f"lead {lead}d {path}: AUC {auc:.3f} < {config.GATE_AUC}"
-                             if auc is not None else f"lead {lead}d {path}: no AUC")
+                             if isinstance(auc, (int, float))
+                             else f"lead {lead}d {path}: no AUC")
             if not ok_bss:
-                fails.append(f"lead {lead}d {path}: BSS vs climatology "
-                             f"{bss_c:+.3f} <= 0" if bss_c is not None else
-                             f"lead {lead}d {path}: no BSS")
+                fails.append(f"lead {lead}d {path}: BSS vs climatology {bss_c:+.3f} <= 0"
+                             if isinstance(bss_c, (int, float))
+                             else f"lead {lead}d {path}: no BSS")
         row["foresight_gap_auc"] = entry.get("foresight_gap_auc")
         per_lead[str(lead)] = row
 
@@ -167,8 +168,11 @@ def gate_j2() -> dict:
         "status": "PENDING (FWI half)" if half_pending else None,
         "threshold": {"auc": config.GATE_AUC, "bss": "> 0 vs climatology AND vs the CEMS FWI"},
         "per_lead": per_lead, "vs_fwi": fwi_block,
+        "folds": meta.get("n_folds"), "fold_caveat": meta.get("fold_caveat"),
+        "era5_years": meta.get("era5_years"),
         "climatology_half_pass": all(
-            per_lead[str(L)][p][k] for L in config.LEAD_DAYS
+            per_lead.get(str(L), {}).get(p, {}).get(k) is True
+            for L in config.LEAD_DAYS
             for p in ("forecast", "reanalysis")
             for k in ("auc_pass", "bss_climatology_pass")),
         "note": ("the forecast path is compared against the FWI at ANALYSIS time, because no open "
