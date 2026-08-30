@@ -1,28 +1,2356 @@
 ---
-// Case F — Poverty Mapping from Space. Skeleton until the pipeline lands.
-// Spec: docs/spec-poverty-map.html (F5 dashboard anatomy).
+// Case F — Poverty Mapping from Space.
+// Spec: docs/spec-poverty-map.html (F5 dashboard anatomy, F6 design brief).
+//
+// Every view-model is optional. web/public/data/manifest.json says what the pipeline has
+// produced; anything not yet produced renders a designed PENDING plate rather than an empty
+// chart, so the page can be built and reviewed while ingest is still streaming. No number
+// on this page is invented in the browser — all of them come from the pipeline's JSON.
 import "../styles/tokens.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 ---
+
 <html lang="en" data-case="poverty" data-theme="dark">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Poverty Mapping from Space</title>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+    <title>Poverty Mapping from Space — Demo Lab Case F</title>
+    <meta name="description" content="Rooftops, night lights, land cover and population as welfare signals: a gradient-boosted small-area model trained on BPS's official regency poverty rates, spatially cross-validated, and carried down to the kecamatan." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
   </head>
+
   <body>
-    <main style="min-height:100vh;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:16px;padding:0 6vw;">
-      <span style="font-family:var(--font-data);font-size:0.72rem;letter-spacing:0.14em;color:var(--accent);">CASE F · SCAFFOLDED · PIPELINE PENDING</span>
-      <h1 style="font-size:clamp(2rem,5vw,3.2rem);margin:0;line-height:1.1;">Poverty Mapping from Space</h1>
-      <p style="color:var(--ink-muted);max-width:36rem;margin:0;">Rooftops, lights, land cover and roads as welfare
-      signals — trained against BPS's official regency poverty rates (2016–2025), spatially cross-validated,
-      then carried down to the kecamatan. This page lights up when the first model run passes its gates.</p>
-      <!-- TODO per spec F5: hero "rooftops → poverty" morph (canvas 2-D fallback: static
-           choropleth with hover) → chapters (what the satellite sees · how well it predicts,
-           Java vs off-Java · where the gaps are · the kecamatan map) → explore (choropleth,
-           regency panel with feature contributions, model-vs-BPS scatter) → methodology.
-           Map rule (user's browser has WebGL off): try MapLibre, catch → 2-D canvas choropleth
-           with Path2D + isPointInPath hit-testing, as in cases/nightlights-pulse/web. -->
+    <a class="skip" href="#main">Skip to the content</a>
+
+    <header class="topbar">
+      <a class="wordmark" href="/"><span class="dot" aria-hidden="true"></span>DEMO&nbsp;LAB</a>
+      <nav aria-label="Chapters">
+        <a href="#ch1">01 Official</a>
+        <a href="#ch2">02 Skill</a>
+        <a href="#ch3">03 Signals</a>
+        <a href="#ch4">04 Below the line</a>
+        <a href="#explore">Explore</a>
+        <a href="#method">Method</a>
+      </nav>
+      <span class="stamp" id="top-stamp">LOADING</span>
+    </header>
+
+    <main id="main">
+      <!-- ═══════════════════════════ HERO — the reveal ═══════════════════════════ -->
+      <section id="hero" aria-labelledby="hero-title">
+        <div class="hero-canvas-wrap">
+          <div id="hero-map"></div>
+          <div class="hero-veil" aria-hidden="true"></div>
+          <div id="hero-wipe" class="wipe" hidden>
+            <button id="wipe-handle" class="wipe-handle" aria-label="Drag to wipe between the satellite view and the inferred poverty rate" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" role="slider" tabindex="0">
+              <span aria-hidden="true">◂ ▸</span>
+            </button>
+          </div>
+          <div class="hero-labels" id="hero-labels" hidden>
+            <span class="hl left" id="hero-left-label">WHAT THE SATELLITE SEES</span>
+            <span class="hl right" id="hero-right-label">WHAT IT IMPLIES</span>
+          </div>
+        </div>
+
+        <div class="hero-copy">
+          <span class="eyebrow">Phase 3 · Case F · Small-area estimation</span>
+          <h1 id="hero-title">Poverty mapping<br />from space</h1>
+          <p class="lede">BPS publishes a poverty rate for 514 kabupaten and kota, once a year.
+          Below that line nothing official exists. But the signal is overhead: how many roofs,
+          how big they are, how bright the night, how much of the ground is built.
+          This case learns the relationship against every official rate from 2016 to 2025,
+          tests it on provinces the model has never seen, publishes the result whichever way
+          it falls, and then carries it down to the kecamatan — <em>distributing</em> the
+          official number, never replacing it.</p>
+          <div class="hero-ctl" id="hero-ctl" hidden>
+            <div class="segmented" role="group" aria-label="Left-hand layer">
+              <button data-sees="bld_per_km2" class="on">Roofs</button>
+              <button data-sees="lights_per_capita">Lights</button>
+              <button data-sees="pop_density">People</button>
+              <button data-sees="lc_built">Built land</button>
+            </div>
+            <button id="hero-replay" class="ghost">↻ Replay the reveal</button>
+          </div>
+          <p class="hero-note stamp" id="hero-note">PREPARING THE REVEAL…</p>
+        </div>
+
+        <div class="scroll-cue" aria-hidden="true"><span></span>SCROLL</div>
+      </section>
+
+      <!-- ═══════════════════════════ big stats ═══════════════════════════ -->
+      <section id="stats" class="band reveal">
+        <p class="verdict" id="verdict" hidden></p>
+        <div class="stat-row" id="stat-row"></div>
+      </section>
+
+      <!-- ═══════════════════════════ CH 1 ═══════════════════════════ -->
+      <section class="chapter" id="ch1" aria-labelledby="ch1-h">
+        <div class="ch-head reveal">
+          <span class="chno">01</span>
+          <div>
+            <h2 id="ch1-h">The official map, and its resolution</h2>
+            <p class="lede">Every number this case is judged against comes from one place: the
+            March Susenas, published by BPS as a poverty headcount for each of 514 regencies and
+            cities. It is authoritative, it is annual, and it is the coarsest unit at which
+            Indonesian poverty is publicly measured — a single rate for territories that run
+            from 4 km² to 44,000 km².</p>
+          </div>
+        </div>
+
+        <div class="grid-2 reveal">
+          <figure class="card">
+            <figcaption>
+              <h3>The national headcount, 2016–2025</h3>
+              <p class="cap">Population-weighted mean of the 514 published regency rates, and
+              the band between the 10th and 90th percentile regency.</p>
+            </figcaption>
+            <div class="chart" id="trend-chart"></div>
+          </figure>
+          <figure class="card">
+            <figcaption>
+              <h3>514 regencies, one year</h3>
+              <p class="cap">Every regency in the latest release, sorted. Hover for the name and
+              rate; the spread is the reason a national average tells a client almost nothing.</p>
+            </figcaption>
+            <div class="chart" id="dist-chart"></div>
+          </figure>
+        </div>
+
+        <p class="sowhat reveal"><b>So what.</b> <span id="ch1-sowhat">—</span></p>
+      </section>
+
+      <!-- ═══════════════════════════ CH 2 ═══════════════════════════ -->
+      <section class="chapter" id="ch2" aria-labelledby="ch2-h">
+        <div class="ch-head reveal">
+          <span class="chno">02</span>
+          <div>
+            <h2 id="ch2-h">How well it predicts — before anything else</h2>
+            <p class="lede">A poverty map that has not been validated out of sample is a
+            picture, not an estimate. So the trust chapter comes first. The model never sees
+            the province it is scored on: 38 folds, one per province, every year of a held-out
+            province removed from training. The random k-fold on the same rows is computed too
+            — not as a result, but to show how much a non-spatial fold flatters a model whose
+            neighbours look alike.</p>
+          </div>
+        </div>
+
+        <div class="gate-grid reveal" id="gate-grid"></div>
+
+        <div class="grid-2 reveal">
+          <figure class="card">
+            <figcaption>
+              <h3>Model against official, held-out</h3>
+              <p class="cap">One dot per regency in the latest release. The diagonal is
+              perfect agreement.</p>
+              <div class="ctl-row">
+                <div class="segmented" role="group" aria-label="Cross-validation scheme" id="cv-seg">
+                  <button data-cv="lopo" class="on">Leave-one-province-out</button>
+                  <button data-cv="block">200 km blocks</button>
+                  <button data-cv="random">Random k-fold</button>
+                  <button data-cv="lopo_ridge">Ridge baseline</button>
+                </div>
+                <div class="segmented" role="group" aria-label="Region filter" id="reg-seg">
+                  <button data-reg="all" class="on">All</button>
+                  <button data-reg="java">Java</button>
+                  <button data-reg="off">Off-Java</button>
+                </div>
+              </div>
+            </figcaption>
+            <div class="chart tall" id="scatter-chart"></div>
+          </figure>
+          <div class="stack">
+            <figure class="card">
+              <figcaption>
+                <h3>What a random fold buys you</h3>
+                <p class="cap">The same model and the same rows, scored under four fold
+                designs. The gap between the top bar and the bottom one is the cost of
+                honesty — and the size of the error a client would inherit.</p>
+              </figcaption>
+              <div class="chart short" id="scheme-chart"></div>
+            </figure>
+            <figure class="card">
+              <figcaption>
+                <h3>Sees forward, not just sideways</h3>
+                <p class="cap">Trained on 2016–2023, then asked for releases it has never
+                seen. Plotted against the strict version, where the regency's whole province
+                is held out too — otherwise the model can simply remember the level it
+                learned from that regency's earlier years.</p>
+              </figcaption>
+              <div class="chart short" id="temporal-chart"></div>
+            </figure>
+          </div>
+        </div>
+
+        <p class="sowhat reveal"><b>So what.</b> <span id="ch2-sowhat">—</span></p>
+      </section>
+
+      <!-- ═══════════════════════════ CH 3 ═══════════════════════════ -->
+      <section class="chapter" id="ch3" aria-labelledby="ch3-h">
+        <div class="ch-head reveal">
+          <span class="chno">03</span>
+          <div>
+            <h2 id="ch3-h">What the model actually looks at</h2>
+            <p class="lede">Gradient boosting is not a black box if you open it. These are the
+            feature families ranked by how much they move a prediction, and below them any
+            regency you pick, read back in plain words.</p>
+          </div>
+        </div>
+
+        <div class="grid-2 reveal">
+          <figure class="card">
+            <figcaption>
+              <h3>Feature families</h3>
+              <p class="cap" id="shap-unit">Mean absolute contribution to a regency's predicted
+              poverty rate.</p>
+            </figcaption>
+            <div class="chart" id="family-chart"></div>
+          </figure>
+          <figure class="card">
+            <figcaption>
+              <h3>Read one regency back</h3>
+              <p class="cap">The five signals that moved this regency furthest from the
+              national average, and which way.</p>
+              <label class="sr-only" for="shap-pick">Choose a regency</label>
+              <select id="shap-pick" class="picker"></select>
+            </figcaption>
+            <div class="chart" id="drill-chart"></div>
+            <p class="plainread" id="drill-read"></p>
+          </figure>
+        </div>
+
+        <p class="sowhat reveal"><b>So what.</b> <span id="ch3-sowhat">—</span></p>
+      </section>
+
+      <!-- ═══════════════════════════ CH 4 ═══════════════════════════ -->
+      <section class="chapter" id="ch4" aria-labelledby="ch4-h">
+        <div class="ch-head reveal">
+          <span class="chno">04</span>
+          <div>
+            <h2 id="ch4-h">Below the survey line</h2>
+            <p class="lede">The payoff, and the part that needs the most care. The regency model
+            is applied to kecamatan features built by the same code, then every kecamatan in a
+            regency is rescaled by one factor so the population-weighted mean reproduces the
+            official rate exactly. The model decides only how the official number is
+            distributed inside its regency.</p>
+          </div>
+        </div>
+
+        <div class="grid-2 reveal">
+          <figure class="card">
+            <figcaption>
+              <h3>Inside one regency</h3>
+              <p class="cap">Each kecamatan with its interval; the teal line is the official
+              regency rate the estimates are benchmarked to.</p>
+              <label class="sr-only" for="reg-pick">Choose a regency</label>
+              <select id="reg-pick" class="picker"></select>
+            </figcaption>
+            <div class="chart tall" id="interval-chart"></div>
+          </figure>
+          <figure class="card">
+            <figcaption>
+              <h3>The contrasts we can defend</h3>
+              <p class="cap">Pairs of kecamatan inside a single regency whose intervals do not
+              overlap — the sharpest statement this model is entitled to make.</p>
+            </figcaption>
+            <div class="chart" id="contrast-list"></div>
+          </figure>
+        </div>
+
+        <p class="sowhat reveal"><b>So what.</b> <span id="ch4-sowhat">—</span></p>
+      </section>
+
+      <!-- ═══════════════════════════ EXPLORE ═══════════════════════════ -->
+      <section class="chapter wide" id="explore" aria-labelledby="ex-h">
+        <div class="ch-head reveal">
+          <span class="chno">05</span>
+          <div>
+            <h2 id="ex-h">Explore</h2>
+            <p class="lede">Official rates at the regency, model estimates at the kecamatan.
+            Click any unit for its panel. The URL carries the view, so a link reopens it.</p>
+          </div>
+        </div>
+
+        <div class="explore-ctl reveal">
+          <div class="segmented" role="group" aria-label="Administrative level" id="lvl-seg">
+            <button data-lvl="adm2" class="on">Regency · official</button>
+            <button data-lvl="adm3">Kecamatan · model estimate</button>
+          </div>
+          <div class="segmented" role="group" aria-label="Measure" id="metric-seg">
+            <button data-metric="p0" class="on">P0 headcount %</button>
+            <button data-metric="p1">P1 depth</button>
+            <button data-metric="p2">P2 severity</button>
+            <button data-metric="line">Poverty line</button>
+          </div>
+          <div class="yearbox">
+            <label for="year-range">Year</label>
+            <input type="range" id="year-range" min="0" max="9" value="9" step="1" />
+            <output id="year-out" class="data">2025</output>
+          </div>
+          <div class="segmented" role="group" aria-label="View" id="view-seg">
+            <button data-view="map" class="on">Map</button>
+            <button data-view="table">Table</button>
+          </div>
+          <button class="ghost" id="dl-csv">↓ CSV</button>
+        </div>
+
+        <div class="map-shell reveal">
+          <div id="map" role="application" aria-label="Choropleth map of Indonesia"></div>
+          <div class="legend" id="legend"></div>
+          <aside class="panel" id="panel" hidden>
+            <button class="panel-close" id="panel-close" aria-label="Close panel">×</button>
+            <span class="stamp" id="panel-kind">REGENCY</span>
+            <h3 id="panel-name">—</h3>
+            <span class="stamp dim" id="panel-sub">—</span>
+            <div class="panel-nums" id="panel-nums"></div>
+            <div id="panel-spark"></div>
+            <div id="panel-shap"></div>
+          </aside>
+        </div>
+
+        <div class="table-wrap" id="table-wrap" hidden>
+          <table id="data-table"><thead></thead><tbody></tbody></table>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════ METHOD ═══════════════════════════ -->
+      <section class="chapter" id="method" aria-labelledby="me-h">
+        <div class="ch-head reveal">
+          <span class="chno">06</span>
+          <div>
+            <h2 id="me-h">Method, limits and provenance</h2>
+            <p class="lede">Everything a reviewer needs to disagree with us.</p>
+          </div>
+        </div>
+
+        <div class="method-grid reveal">
+          <article class="card prose">
+            <h3>What is measured, and what is estimated</h3>
+            <p>The target is the BPS <b>poverty headcount P0</b> — the share of people below
+            the official provincial poverty line — never "wealth", never consumption. Susenas
+            and DHS microdata are restricted, so the model is trained at the level BPS
+            publishes and carried down from there.</p>
+            <p>A regency number on this page is <b>official</b>. A kecamatan number is a
+            <b>model estimate</b> with an interval, and the words and the colour differ
+            wherever they appear: official series in teal, model estimates in ochre.</p>
+            <h3>Benchmarking</h3>
+            <p>For every regency and year, kecamatan predictions are multiplied by one factor
+            so that the population-weighted mean equals the published rate. Units pinned at 0
+            or 100 % hand their residual back to the units still free, so the identity holds
+            exactly. Gate G-F4 recomputes it from the shipped file.</p>
+            <h3>Cross-validation</h3>
+            <p>Leave-one-province-out, 38 folds. A held-out province leaves the training set
+            in <em>every</em> year, so no temporal copy of a test regency can leak back in.
+            A 200 km block scheme is reported as a spatial sensitivity, and a random k-fold
+            purely to quantify its optimism.</p>
+            <h3>Known limits</h3>
+            <ul id="caveat-list"></ul>
+          </article>
+
+          <article class="card prose">
+            <h3>Administrative-code reconciliation</h3>
+            <p id="recon-summary" class="cap">—</p>
+            <div class="table-scroll capped"><table id="recon-table"><thead></thead><tbody></tbody></table></div>
+          </article>
+        </div>
+
+        <div class="method-grid reveal">
+          <article class="card prose">
+            <h3>Sources and vintages</h3>
+            <div class="table-scroll">
+              <table class="src">
+                <thead><tr><th>Layer</th><th>Vintage</th><th>Licence</th></tr></thead>
+                <tbody>
+                  <tr><td>BPS WebAPI — P0/P1/P2 and the poverty line, per kabupaten/kota</td><td>2016–2025, March Susenas</td><td>Free key · cite BPS</td></tr>
+                  <tr><td>Google Open Buildings v3 — footprints, confidence ≥ 0.70</td><td>files dated 2023-06</td><td>CC BY 4.0 (dual-licensed; CC BY elected)</td></tr>
+                  <tr><td>NASA Black Marble VNP46A4 / VJ146A4 annual radiance</td><td>2012–2025, reused from Case A</td><td>Open (NASA) · Román et al. 2018</td></tr>
+                  <tr><td>WorldPop R2025A constrained 100 m population</td><td>2016–2025</td><td>CC BY 4.0</td></tr>
+                  <tr><td>ESA WorldCover v200 land cover, 10 m</td><td>2021 (no later vintage exists)</td><td>CC BY 4.0</td></tr>
+                  <tr><td>HDX COD-AB administrative boundaries (BPS-derived)</td><td>2020-04</td><td>CC BY-IGO</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="cap">© ESA WorldCover project 2021 / Contains modified Copernicus Sentinel
+            data (2021) processed by the ESA WorldCover consortium.</p>
+            <h3>Scouted and rejected</h3>
+            <p class="cap">Meta Relative Wealth Index and the SMERU 2015 poverty map are
+            <b>CC BY-NC</b> and are not used, which removed the planned independent wealth
+            cross-check; the temporal hold-out replaces it. BPS Podes microdata is behind
+            registration and a fee. Satellite embedding sets (Tessera, Major TOM) and Open
+            Buildings 2.5D Temporal are deferred on licence or size grounds.</p>
+            <h3>Not in this build</h3>
+            <p class="cap" id="not-in-build">GHSL built-up surface, OSM road density and
+            Sentinel-2 spectral indices are specified but not ingested in this pass; each is
+            additive and none of them blocks the roof / lights / population / land-cover
+            families the model runs on.</p>
+          </article>
+          <article class="card prose">
+            <h3>Reproduce it</h3>
+            <pre class="code">cd cases/poverty-map
+uv sync
+make rebuild        # ingest → features → train → downscale → validate → export
+make validate       # gates G-F1..G-F4 → data/stats.json
+SCOPE=java make rebuild   # the ~11 GB fast path</pre>
+            <p class="cap">Every raw input is deleted as soon as it has been reduced to
+            per-kecamatan aggregates, so about 16 GB flows through a 48 GB disk that never
+            holds more than a couple of gigabytes of it. The run is resumable: each completed
+            unit is appended to a ledger and a rerun skips it.</p>
+            <h3>Files this case publishes</h3>
+            <ul class="cap" id="manifest-list"></ul>
+          </article>
+        </div>
+      </section>
     </main>
+
+    <footer class="foot">
+      <span class="stamp dim" id="foot-stamp">A DEMO-LAB CASE · STATIC SNAPSHOT</span>
+      <span class="stamp dim">SOURCE DATA: BPS · GOOGLE OPEN BUILDINGS · NASA BLACK MARBLE · WORLDPOP · ESA WORLDCOVER · HDX COD-AB</span>
+    </footer>
+
+    <div id="tooltip" class="tooltip" hidden role="status"></div>
+
+    <script>
+      import * as d3 from "d3";
+
+      /* ── visible failure beats silent emptiness (the pattern the other cases use) ── */
+      const failBanner = (msg) => {
+        let b = document.getElementById("err-banner");
+        if (!b) {
+          b = document.createElement("div");
+          b.id = "err-banner";
+          b.style.cssText =
+            "position:fixed;bottom:0;left:0;right:0;z-index:99;background:#3A1E1A;color:#F26D5B;" +
+            "font:13px ui-monospace,monospace;padding:10px 16px;border-top:1px solid #F26D5B;";
+          document.body.appendChild(b);
+        }
+        b.textContent = "⚠ " + msg;
+      };
+      addEventListener("error", (e) => failBanner("Script error: " + (e.message ?? e.type)));
+      addEventListener("unhandledrejection", (e) =>
+        failBanner("Load error: " + (e.reason?.message ?? e.reason)));
+      const sect = (name, fn) => {
+        try { return fn(); }
+        catch (err) { console.error(name, err); failBanner(`${name} failed: ${err.message ?? err}`); return null; }
+      };
+
+      const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const DUR = reduced ? 0 : 700;
+
+      /* ── ramps ─────────────────────────────────────────────────────────────────────
+         The poverty ramp is earth-toned on purpose: it must never be mistaken for the
+         radiance ramp of the night-lights case, because lights are an INPUT here, not the
+         message. Official BPS series are teal everywhere on the site; model estimates ochre;
+         the raw satellite layers are a neutral steel so they read as instrument, not result. */
+      const RAMP_POV = ["#1F1710", "#4A3218", "#8A5A22", "#C58B3C", "#EBD9B8"];
+      const RAMP_OFF = ["#101F1D", "#173F39", "#22685E", "#39958A", "#8FD8CE"];
+      const RAMP_SEE = ["#242830", "#3B434F", "#5D6774", "#8994A3", "#D6DDE6"];
+      const povScale = d3.piecewise(d3.interpolateRgb, RAMP_POV);
+      const offScale = d3.piecewise(d3.interpolateRgb, RAMP_OFF);
+      const seeScale = d3.piecewise(d3.interpolateRgb, RAMP_SEE);
+      const OCHRE = "#D99A4E", TEAL = "#4BB8A9", MUTED = "#A99C8B", HAIR = "#332921";
+
+      const fmt1 = d3.format(".1f"), fmt2 = d3.format(".2f"), fmtI = d3.format(",.0f");
+      const fmtSI = d3.format(".3~s");
+      const pp = (v) => (v == null || !isFinite(v) ? "—" : `${fmt1(v)} %`);
+
+      /* ── shared tooltip ─────────────────────────────────────────────────────────── */
+      const tip = document.getElementById("tooltip");
+      const showTip = (html, ev) => {
+        tip.hidden = false;
+        tip.innerHTML = html;
+        const pad = 16, w = tip.offsetWidth, h = tip.offsetHeight;
+        let x = ev.clientX + pad, y = ev.clientY + pad;
+        if (x + w > innerWidth - 8) x = ev.clientX - w - pad;
+        if (y + h > innerHeight - 8) y = ev.clientY - h - pad;
+        tip.style.left = Math.max(8, x) + "px";
+        tip.style.top = Math.max(8, y) + "px";
+      };
+      const hideTip = () => { tip.hidden = true; };
+
+      /* ── designed pending / error plates ───────────────────────────────────────── */
+      function plate(el, kind, title, body) {
+        if (!el) return;
+        el.innerHTML =
+          `<div class="plate ${kind}"><span class="plate-tag">${kind === "pending" ? "PENDING" : "UNAVAILABLE"}</span>` +
+          `<b>${title}</b><p>${body}</p></div>`;
+      }
+      const PENDING_BODY =
+        "The acquisition job is still streaming this layer onto the dev server. This panel " +
+        "fills in on the next pipeline run — nothing here is estimated from partial data, " +
+        "because the partitions arrive in geographic order and a model fitted on half of " +
+        "them would be biased, not merely noisy.";
+
+      /* ── geometry codec (mirror of pipeline/export_web.py::_polyline) ──────────── */
+      function decodePolyline(str) {
+        const out = [];
+        let i = 0;
+        while (i < str.length) {
+          let result = 0, shift = 0, b;
+          do {
+            b = str.charCodeAt(i++) - 63;
+            result |= (b & 0x1f) << shift;
+            shift += 5;
+          } while (b >= 0x20);
+          out.push(result & 1 ? ~(result >> 1) : result >> 1);
+        }
+        return out;
+      }
+      function buildLayer(payload) {
+        const [w, s] = payload.bbox, step = payload.step;
+        const units = payload.ids.map((id, i) => {
+          const rings = [];
+          let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+          for (const enc of payload.shapes[i]) {
+            const d = decodePolyline(enc);
+            const n = d.length >> 1;
+            const ring = new Float64Array(n * 2);
+            let cx = 0, cy = 0;
+            for (let k = 0; k < n; k++) {
+              cx += d[k * 2]; cy += d[k * 2 + 1];
+              const lon = w + cx * step, lat = s + cy * step;
+              ring[k * 2] = lon; ring[k * 2 + 1] = lat;
+              if (lon < x0) x0 = lon; if (lon > x1) x1 = lon;
+              if (lat < y0) y0 = lat; if (lat > y1) y1 = lat;
+            }
+            if (n >= 3) rings.push(ring);
+          }
+          return { id, name: payload.names[i], parent: payload.parents[i], rings,
+                   bbox: [x0, y0, x1, y1] };
+        });
+        return { units, bbox: payload.bbox, res_m: payload.res_m, index: new Map(units.map((u, i) => [u.id, i])) };
+      }
+      // Each encoded ring becomes its own polygon: the codec flattens exteriors and holes
+      // together, and treating an island as a hole would punch visible gaps in the map,
+      // which is the worse of the two errors. Interior holes are rare at this scale.
+      function toGeoJSON(layer) {
+        return { type: "FeatureCollection", features: layer.units.map((u) => ({
+          type: "Feature",
+          properties: { id: u.id, name: u.name, parent: u.parent, col: "#1A1610" },
+          geometry: { type: "MultiPolygon", coordinates: u.rings.map((r) => {
+            const c = [];
+            for (let k = 0; k < r.length; k += 2) c.push([r[k], r[k + 1]]);
+            c.push([r[0], r[1]]);
+            return [c];
+          }) },
+        })) };
+      }
+
+      /* ══════════════════════════════════════════════════════════════════════════════
+         CanvasMap — the renderer that actually ships. The user's browser runs with WebGL
+         off, so this is not a degraded path: it does hover, click, pan, zoom, hit-testing
+         with Path2D + isPointInPath, and the hero's wipe compositing, which MapLibre could
+         not do without two GPU layers anyway.
+         ══════════════════════════════════════════════════════════════════════════════ */
+      function CanvasMap(container, opts = {}) {
+        container.innerHTML = "";
+        // only claim the containing block if nothing else has: the hero's map div is already
+        // absolutely positioned, and overriding that collapses its height to the bitmap's.
+        if (getComputedStyle(container).position === "static") container.style.position = "relative";
+        const canvas = document.createElement("canvas");
+        canvas.style.cssText = "width:100%;height:100%;display:block;";
+        canvas.tabIndex = opts.interactive === false ? -1 : 0;
+        container.appendChild(canvas);
+        const ctx = canvas.getContext("2d");
+        const hit = document.createElement("canvas").getContext("2d");
+        const dpr = Math.min(devicePixelRatio || 1, 2);
+
+        let layer = null, paths = [], boxes = [];
+        let W = 0, H = 0, k = 1, ox = 0, oy = 0;          // projection
+        let zoom = 1, panX = 0, panY = 0;                  // user transform
+        let colours = [], coloursB = null, wipe = 1;
+        let ground = opts.ground || "#12100C";
+        let hoverIdx = -1, selected = null;
+
+        const project = (lon, lat) => [ox + (lon - layer.bbox[0]) * k, oy - (lat - layer.bbox[1]) * k];
+
+        function fit() {
+          W = container.clientWidth; H = container.clientHeight;
+          if (!W || !H || !layer) return;
+          canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+          hit.canvas.width = Math.round(W); hit.canvas.height = Math.round(H);
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          const [bw, bs, be, bn] = layer.bbox;
+          const pad = opts.pad ?? 8;
+          const base = Math.min((W - 2 * pad) / (be - bw), (H - 2 * pad) / (bn - bs));
+          k = base * zoom;
+          ox = (W - k * (be - bw)) / 2 + panX;
+          oy = (H + k * (bn - bs)) / 2 + panY;
+          buildPaths();
+          bufA = bufB = null;                 // geometry moved: the cached bitmaps are stale
+        }
+        function buildPaths() {
+          paths = []; boxes = [];
+          for (const u of layer.units) {
+            const p = new Path2D();
+            for (const r of u.rings) {
+              for (let i = 0; i < r.length; i += 2) {
+                const x = ox + (r[i] - layer.bbox[0]) * k;
+                const y = oy - (r[i + 1] - layer.bbox[1]) * k;
+                i ? p.lineTo(x, y) : p.moveTo(x, y);
+              }
+              p.closePath();
+            }
+            paths.push(p);
+            const [x0, y0] = project(u.bbox[0], u.bbox[3]);
+            const [x1, y1] = project(u.bbox[2], u.bbox[1]);
+            boxes.push([x0, y0, x1, y1]);
+          }
+        }
+        // Each colour set is rendered once into an offscreen bitmap; the wipe and every
+        // hover then composite bitmaps instead of re-stroking 400,000 points, which is what
+        // keeps a 7,069-polygon map at 60 fps with no GPU.
+        let bufA = null, bufB = null;
+        function paintSet(g, cols) {
+          for (let i = 0; i < paths.length; i++) {
+            g.fillStyle = cols[i] || "#1A1610";
+            g.fill(paths[i]);
+          }
+          if (opts.stroke !== false) {
+            g.strokeStyle = HAIR; g.lineWidth = layer.units.length > 2000 ? 0.28 : 0.5;
+            for (let i = 0; i < paths.length; i++) g.stroke(paths[i]);
+          }
+        }
+        function buffer(cols) {
+          if (!cols) return null;
+          const c = document.createElement("canvas");
+          c.width = canvas.width; c.height = canvas.height;
+          const g = c.getContext("2d");
+          g.setTransform(dpr, 0, 0, dpr, 0, 0);
+          g.fillStyle = ground; g.fillRect(0, 0, W, H);
+          paintSet(g, cols);
+          return c;
+        }
+        function rebuild() { bufA = buffer(colours); bufB = buffer(coloursB); }
+        function paint() {
+          if (!layer || !W) return;
+          if (!bufA) rebuild();
+          ctx.save();
+          ctx.fillStyle = ground; ctx.fillRect(0, 0, W, H);
+          if (bufB && wipe < 1) {
+            const x = Math.round(wipe * W);
+            ctx.save(); ctx.beginPath(); ctx.rect(0, 0, x, H); ctx.clip();
+            ctx.drawImage(bufA, 0, 0, W, H); ctx.restore();
+            ctx.save(); ctx.beginPath(); ctx.rect(x, 0, W - x, H); ctx.clip();
+            ctx.drawImage(bufB, 0, 0, W, H); ctx.restore();
+            ctx.save();
+            const g = ctx.createLinearGradient(x - 26, 0, x + 26, 0);
+            g.addColorStop(0, "rgba(217,154,78,0)");
+            g.addColorStop(0.5, "rgba(217,154,78,0.5)");
+            g.addColorStop(1, "rgba(217,154,78,0)");
+            ctx.fillStyle = g; ctx.fillRect(x - 26, 0, 52, H);
+            ctx.strokeStyle = "rgba(240,234,225,0.85)"; ctx.lineWidth = 1.25;
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+            ctx.restore();
+          } else {
+            ctx.drawImage(bufA, 0, 0, W, H);
+          }
+          if (hoverIdx >= 0 && paths[hoverIdx]) {
+            ctx.strokeStyle = "#F0EAE1"; ctx.lineWidth = 1.6; ctx.stroke(paths[hoverIdx]);
+          }
+          if (selected != null) {
+            const i = layer.index.get(selected);
+            if (i != null && paths[i]) { ctx.strokeStyle = OCHRE; ctx.lineWidth = 2.2; ctx.stroke(paths[i]); }
+          }
+          ctx.restore();
+        }
+        function featureAt(ev) {
+          const r = canvas.getBoundingClientRect();
+          const px = ev.clientX - r.left, py = ev.clientY - r.top;
+          for (let i = paths.length - 1; i >= 0; i--) {
+            const b = boxes[i];
+            if (px < b[0] - 1 || px > b[2] + 1 || py < b[1] - 1 || py > b[3] + 1) continue;
+            if (hit.isPointInPath(paths[i], px, py)) return i;
+          }
+          return -1;
+        }
+
+        if (opts.interactive !== false) {
+          let dragging = false, dragged = false, lx = 0, ly = 0;
+          canvas.addEventListener("pointerdown", (e) => {
+            if (!opts.pannable) return;
+            dragging = true; dragged = false; lx = e.clientX; ly = e.clientY;
+            canvas.setPointerCapture(e.pointerId);
+          });
+          canvas.addEventListener("pointerup", (e) => {
+            if (dragging) { dragging = false; try { canvas.releasePointerCapture(e.pointerId); } catch {} }
+          });
+          canvas.addEventListener("pointermove", (e) => {
+            if (dragging) {
+              const dx = e.clientX - lx, dy = e.clientY - ly;
+              if (Math.abs(dx) + Math.abs(dy) > 2) dragged = true;
+              panX += dx; panY += dy; lx = e.clientX; ly = e.clientY;
+              fit(); paint();
+              return;
+            }
+            const i = featureAt(e);
+            if (i !== hoverIdx) { hoverIdx = i; paint(); }
+            canvas.style.cursor = i >= 0 ? "pointer" : opts.pannable ? "grab" : "default";
+            if (i >= 0 && opts.tip) showTip(opts.tip(layer.units[i], i), e);
+            else hideTip();
+          });
+          canvas.addEventListener("mouseleave", () => { hoverIdx = -1; hideTip(); paint(); });
+          canvas.addEventListener("click", (e) => {
+            if (dragged) return;
+            const i = featureAt(e);
+            if (i >= 0 && opts.onPick) opts.onPick(layer.units[i], i);
+          });
+          canvas.addEventListener("keydown", (e) => {
+            if (!opts.pannable) return;
+            const stepPx = 40;
+            if (e.key === "ArrowLeft") panX += stepPx;
+            else if (e.key === "ArrowRight") panX -= stepPx;
+            else if (e.key === "ArrowUp") panY += stepPx;
+            else if (e.key === "ArrowDown") panY -= stepPx;
+            else if (e.key === "+" || e.key === "=") zoom = Math.min(zoom * 1.3, 24);
+            else if (e.key === "-") zoom = Math.max(zoom / 1.3, 1);
+            else if (e.key === "0") { zoom = 1; panX = panY = 0; }
+            else return;
+            e.preventDefault(); fit(); paint();
+          });
+          if (opts.pannable) {
+            canvas.addEventListener("wheel", (e) => {
+              e.preventDefault();
+              const r = canvas.getBoundingClientRect();
+              const mx = e.clientX - r.left, my = e.clientY - r.top;
+              const f = e.deltaY < 0 ? 1.16 : 1 / 1.16;
+              const nz = Math.min(Math.max(zoom * f, 1), 24);
+              const ratio = nz / zoom;
+              panX = mx - ratio * (mx - panX); panY = my - ratio * (my - panY);
+              zoom = nz;
+              if (zoom === 1) { panX = 0; panY = 0; }
+              fit(); paint();
+            }, { passive: false });
+          }
+        }
+
+        const ro = new ResizeObserver(() => { fit(); paint(); });
+        ro.observe(container);
+
+        return {
+          canvas,
+          // deliberately does NOT paint: every caller follows with setColours, and rendering
+          // 7,069 polygons twice is the difference between a 2 s and a 5 s level switch
+          setLayer(l) { layer = l; colours = new Array(l.units.length).fill(ground); coloursB = null;
+            hoverIdx = -1; selected = null; bufA = bufB = null; fit(); },
+          setColours(a, b = null, wipeAt = 1) { colours = a; coloursB = b; wipe = wipeAt; rebuild(); paint(); },
+          setWipe(x) { wipe = x; paint(); },
+          setSelected(id) { selected = id; paint(); },
+          resetView() { zoom = 1; panX = 0; panY = 0; fit(); paint(); },
+          zoomTo(bbox, factor = 0.82) {
+            if (!layer || !W) return;
+            const [bw, bs, be, bn] = layer.bbox;
+            const wSpan = Math.max(bbox[2] - bbox[0], 1e-4), hSpan = Math.max(bbox[3] - bbox[1], 1e-4);
+            const baseK = Math.min((W - 16) / (be - bw), (H - 16) / (bn - bs));
+            zoom = Math.min(Math.max(Math.min((W * factor) / (wSpan * baseK), (H * factor) / (hSpan * baseK)), 1), 40);
+            panX = 0; panY = 0; fit();
+            const cx = (bbox[0] + bbox[2]) / 2, cy = (bbox[1] + bbox[3]) / 2;
+            const [sx, sy] = project(cx, cy);
+            panX += W / 2 - sx; panY += H / 2 - sy;
+            fit(); paint();
+          },
+          get layer() { return layer; },
+          repaint: paint,
+        };
+      }
+
+      /* ══════════════════════════════════════════════ boot ══════════════════════════ */
+      const j = (name) => fetch(`${base}/data/${name}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+
+      const manifest = (await j("manifest.json")) || {};
+      const ready = (k) => manifest[k]?.status === "ready";
+      const [ledger, adm2raw, statsJson] = await Promise.all([
+        j("ledger.json"), j("adm2.geo.json"), ready("stats") ? j("stats.json") : Promise.resolve(null),
+      ]);
+      const recon = ready("reconciliation") ? await j("reconciliation.json") : null;
+      const estimates = ready("estimates") ? await j("estimates.json") : null;
+      const contrasts = ready("contrasts") ? await j("contrasts.json") : null;
+      const estIdx = estimates ? new Map(estimates.pcodes.map((p, i) => [p, i])) : null;
+
+      if (!ledger || !adm2raw) {
+        failBanner("Core view-models missing — run `make export` in cases/poverty-map.");
+        throw new Error("no data");
+      }
+      const ADM2 = buildLayer(adm2raw);
+      let ADM3 = null;
+      const loadAdm3 = (() => {
+        let p = null;
+        return () => (p ||= j("adm3.geo.json").then((raw) => (ADM3 = raw ? buildLayer(raw) : null)));
+      })();
+      // kecamatan geometry is the hero's subject once estimates exist, so it is fetched in
+      // parallel with everything else and awaited only just before the hero is composed
+      if (ready("adm3_geo")) await loadAdm3();
+
+      const YEARS = ledger.years;
+      const LATEST = YEARS[YEARS.length - 1];
+      const REG = ledger.regencies;
+      const PROV = ledger.provinces || {};
+      const codes = Object.keys(REG).sort();
+      const nameOf = (c) => REG[c]?.n ?? c;
+      const provOf = (c) => PROV[String(c).slice(0, 2)] ?? "";
+      const yIdx = (y) => YEARS.indexOf(y);
+      const val = (c, metric, y) => REG[c]?.[metric]?.[yIdx(y)] ?? null;
+
+      document.getElementById("top-stamp").textContent =
+        `BPS ${YEARS[0]}–${LATEST} · GENERATED ${ledger.vintage ?? "—"}`;
+      document.getElementById("foot-stamp").textContent =
+        `A DEMO-LAB CASE · STATIC SNAPSHOT · BPS RELEASE ${LATEST} · OPEN BUILDINGS v3 2023-06 · WORLDCOVER 2021 · BLACK MARBLE ANNUAL · GENERATED ${ledger.vintage ?? "—"}`;
+
+      /* ── entrance reveals ──────────────────────────────────────────────────────── */
+      sect("reveals", () => {
+        const io = new IntersectionObserver((es) => {
+          for (const e of es) if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+        }, { rootMargin: "0px 0px -12% 0px", threshold: 0.06 });
+        document.querySelectorAll(".reveal").forEach((el) => (reduced ? el.classList.add("in") : io.observe(el)));
+      });
+
+      /* ══════════════════ national aggregates (from the published series only) ════ */
+      const national = YEARS.map((y) => {
+        let num = 0, den = 0;
+        const vals = [];
+        for (const c of codes) {
+          const v = val(c, "p0", y);
+          if (v == null) continue;
+          vals.push(v);
+          const w = REG[c].pop;
+          if (w) { num += v * w; den += w; }
+        }
+        vals.sort(d3.ascending);
+        return { year: y, mean: den ? num / den : d3.mean(vals), p10: d3.quantile(vals, 0.1),
+                 p90: d3.quantile(vals, 0.9), min: vals[0], max: vals[vals.length - 1], n: vals.length,
+                 unweighted: d3.mean(vals) };
+      });
+      const latestVals = codes.map((c) => ({ c, v: val(c, "p0", LATEST) })).filter((d) => d.v != null);
+      latestVals.sort((a, b) => d3.ascending(a.v, b.v));
+
+      /* ══════════════════════════════ big stats ═══════════════════════════════════ */
+      sect("verdict", () => {
+        const el = document.getElementById("verdict");
+        if (!statsJson) {
+          el.hidden = false;
+          el.className = "verdict pending";
+          el.innerHTML = "<b>Result pending.</b> The dashboard is built; the model has not been " +
+            "fitted, because the last data partitions are still landing and they land in " +
+            "geographic order. No number on this page is estimated from a partial pull.";
+          return;
+        }
+        const dec = statsJson.decomposition || {};
+        const s = statsJson.skill;
+        el.hidden = false;
+        el.className = "verdict " + (statsJson.ships ? "ok" : "fail");
+        el.innerHTML = statsJson.ships
+          ? `<b>All hard gates pass.</b> Held out province by province, the model reaches ` +
+            `R² ${fmt2(s.lopo.r2)} and Spearman ρ ${fmt2(s.lopo.spearman)} against the official ` +
+            `${statsJson.latest_year} rates, and kecamatan estimates reproduce every regency total exactly.`
+          : `<b>The headline gate fails, and it is published failing.</b> Held out province by ` +
+            `province the model reaches R² ${fmt2(s.lopo.r2)}, ρ ${fmt2(s.lopo.spearman)} and ` +
+            `RMSE ${fmt1(s.lopo.rmse)} pp, against thresholds of 0.50, 0.70 and 4.0 pp. The ` +
+            `diagnosis is specific rather than general: ` +
+            `${dec.offset_share_of_sse == null ? "most" : d3.format(".0%")(dec.offset_share_of_sse)} ` +
+            `of the squared error is a single constant offset for an entire province. A satellite ` +
+            `can measure roofs and light; it cannot see the <em>nominal poverty line</em> those ` +
+            `roofs are judged against, and that line is what sets a province's level. Remove the ` +
+            `offsets and the ordering inside a province is ρ ` +
+            `${dec.within_province_spearman == null ? "—" : fmt2(dec.within_province_spearman)} ` +
+            `across ${dec.provinces_scored ?? "—"} provinces: real signal, still short of what ` +
+            `household targeting would need. What this case ships is therefore a benchmarked ` +
+            `<em>disaggregator</em> for exploration and prioritisation — not a substitute for the survey.`;
+      });
+
+      sect("stat row", () => {
+        const row = document.getElementById("stat-row");
+        const last = national[national.length - 1];
+        const first = national[0];
+        const lo = latestVals[0], hi = latestVals[latestVals.length - 1];
+        const items = [
+          { k: "official", big: pp(last.unweighted), lab: `Mean regency poverty rate, ${LATEST}`,
+            sub: `${last.n} kabupaten/kota · BPS · was ${pp(first.unweighted)} in ${YEARS[0]}` },
+          { k: "official", big: `${fmt1(hi.v)} %<span class="vs">vs</span>${fmt1(lo.v)} %`,
+            lab: "Widest gap between two regencies",
+            sub: `${nameOf(hi.c)} against ${nameOf(lo.c)} — a ${fmt1(hi.v - lo.v)} pp span the national figure hides` },
+          estimates
+            ? { k: "model", big: fmtI(estimates.pcodes.length), lab: "Kecamatan carrying an estimate",
+                sub: `benchmarked to ${fmtI(codes.length)} official regency rates · ${LATEST}` }
+            : { k: "pending", big: "—", lab: "Kecamatan carrying an estimate", sub: "waiting on the model run" },
+          statsJson
+            ? (() => {
+                const g1 = statsJson.gates.find((g) => g.id === "G-F1");
+                const dec = statsJson.decomposition || {};
+                const r2 = g1.checks[0].value, rho = g1.checks[1].value;
+                return { k: g1.status === "pass" ? "model" : "fail",
+                  big: `R²&nbsp;${fmt2(r2)}`,
+                  lab: `Held-out skill, leave-one-province-out — gate G-F1 ${g1.status}`,
+                  sub: `ρ ${fmt2(rho)} · RMSE ${fmt1(g1.checks[2].value)} pp` +
+                    (dec.within_province_spearman != null
+                      ? ` · but ρ ${fmt2(dec.within_province_spearman)} once the province's own level is set by BPS`
+                      : "") };
+              })()
+            : { k: "pending", big: "—", lab: "Held-out skill, leave-one-province-out",
+                sub: "gate G-F1 runs when every partition has landed" },
+        ];
+        row.innerHTML = items.map((it) => `
+          <div class="stat ${it.k}">
+            <span class="stat-big">${it.big}</span>
+            <span class="stat-lab">${it.lab}</span>
+            <span class="stat-sub stamp">${it.sub}</span>
+          </div>`).join("");
+      });
+
+      /* ══════════════════════════════ HERO ════════════════════════════════════════ */
+      sect("hero", () => {
+        const wrap = document.querySelector(".hero-canvas-wrap");
+        const note = document.getElementById("hero-note");
+        const heroLevel = estimates && ADM3 ? "adm3" : "adm2";
+        const layer = ADM2;                        // ADM2 first paint; upgraded below if ready
+        const map = CanvasMap(document.getElementById("hero-map"), {
+          ground: "#0F0C09", pad: 6, stroke: false,
+          tip: (u) => heroTip(u),
+          onPick: (u) => { location.hash = `#c=${u.parent || u.id}`; document.getElementById("explore").scrollIntoView({ behavior: reduced ? "auto" : "smooth" }); },
+        });
+        // CanvasMap replaced the canvas element; keep the aria label on the new one
+        map.canvas.setAttribute("aria-label", "Map of Indonesia comparing what the satellite measures with the poverty rate the model infers");
+        map.setLayer(layer);
+
+        let current = layer, sees = null, povVals = null, offVals = null;
+        function heroTip(u) {
+          const code = current === ADM2 ? u.id : u.parent;
+          const off = val(code, "p0", LATEST);
+          const est = sees && povVals ? povVals.get(u.id) : null;
+          return `<b>${u.name}</b>` +
+            (current === ADM3 ? `<span class="t-sub">kecamatan of ${nameOf(code)}</span>` : `<span class="t-sub">${provOf(code)}</span>`) +
+            `<div class="t-row"><span>Official BPS ${LATEST}</span><b class="teal">${pp(off)}</b></div>` +
+            (est != null ? `<div class="t-row"><span>Model estimate</span><b class="ochre">${pp(est)}</b></div>` : "") +
+            (sees ? `<div class="t-row"><span>${sees.label}</span><b>${sees.fmt(sees.get(u.id))}</b></div>` : "");
+        }
+
+        const norm = (vals) => {
+          const finite = vals.filter((v) => v != null && isFinite(v));
+          const lo = d3.quantile(finite.slice().sort(d3.ascending), 0.02) ?? 0;
+          const hi = d3.quantile(finite.slice().sort(d3.ascending), 0.98) ?? 1;
+          return (v) => (v == null || !isFinite(v) ? null : Math.max(0, Math.min(1, (v - lo) / (hi - lo || 1))));
+        };
+
+        function officialColours(lay) {
+          const vals = lay.units.map((u) => val(lay === ADM2 ? u.id : u.parent, "p0", LATEST));
+          const n = norm(vals);
+          return vals.map((v) => (v == null ? "#1A1610" : offScale(n(v))));
+        }
+        function poverty(lay) {
+          if (!estimates) return null;
+          const key = String(LATEST);
+          const idx = new Map(estimates.pcodes.map((p, i) => [p, i]));
+          const arr = estimates.est[key] || [];
+          const m = new Map();
+          for (const u of lay.units) {
+            const i = idx.get(u.id);
+            m.set(u.id, i == null ? null : arr[i]);
+          }
+          return m;
+        }
+        const SEE_DEFS = {
+          bld_per_km2: { label: "Building density", unit: "roofs/km²", fmt: (v) => (v == null ? "—" : `${fmtI(v)} roofs/km²`),
+                         log: true, headline: "ROOFS · GOOGLE OPEN BUILDINGS v3 · 2023" },
+          lights_per_capita: { label: "Lights per person", unit: "nW·cm⁻²·sr⁻¹ per person",
+                         fmt: (v) => (v == null ? "—" : `${d3.format(".3~f")(v)} radiance/person`), log: true,
+                         headline: "LIGHTS · NASA BLACK MARBLE ANNUAL · 2025" },
+          pop_density: { label: "Population density", unit: "people/km²", fmt: (v) => (v == null ? "—" : `${fmtI(v)} people/km²`),
+                         log: true, headline: "PEOPLE · WORLDPOP R2025A · 100 m CONSTRAINED" },
+          lc_built: { label: "Built-up share", unit: "of land", fmt: (v) => (v == null ? "—" : d3.format(".1%")(v)),
+                         log: false, headline: "LAND · ESA WORLDCOVER v200 · 2021" },
+        };
+        // The satellite layers are shaded by RANK, not by value. Built-up share and roof
+        // density are so skewed that a linear or even log ramp collapses 90 % of the country
+        // into one tone — which would be a picture of the distribution, not of the country.
+        // Ranking makes each instrument legible; the tooltip always carries the real value
+        // and its unit, so nothing is being hidden by the choice.
+        function seeLayer(lay, keyName) {
+          if (!estimates?.sees?.[keyName]) return null;
+          const arr = estimates.sees[keyName];
+          const raw = lay.units.map((u) => {
+            const i = estIdx?.get(u.id);
+            return i == null ? null : arr[i];
+          });
+          const order = raw.map((v, i) => [v, i]).filter(([v]) => v != null && isFinite(v))
+            .sort((a, b) => a[0] - b[0]);
+          const rank = new Array(raw.length).fill(null);
+          order.forEach(([, i], k) => { rank[i] = order.length > 1 ? k / (order.length - 1) : 0.5; });
+          const byId = new Map(lay.units.map((u, i) => [u.id, raw[i]]));
+          return { ...SEE_DEFS[keyName], get: (id) => byId.get(id),
+                   colours: rank.map((t) => (t == null ? "#16181C" : seeScale(Math.pow(t, 0.9)))) };
+        }
+
+        /* ---- pending state: BPS official only, plate on the model half ---- */
+        if (!estimates) {
+          current = ADM2;
+          offVals = officialColours(ADM2);
+          map.setColours(offVals);
+          note.textContent = `OFFICIAL BPS ${LATEST} · 514 REGENCIES · MODEL SURFACE PENDING`;
+          const el = document.createElement("div");
+          el.className = "hero-pending";
+          // appended to the section, not the canvas frame, so it can drop below the map
+          // on a narrow screen instead of covering it
+          document.getElementById("hero").insertBefore(el, wrap.nextSibling);
+          el.innerHTML =
+            `<span class="plate-tag">PENDING</span><b>The reveal turns on when the last partition lands.</b>` +
+            `<p>The satellite layers and the inferred poverty surface are computed from ` +
+            `Open Buildings, Black Marble, WorldPop and WorldCover, which are still streaming ` +
+            `onto the dev server. Until then this map shows the official BPS regency rate only — ` +
+            `the ground truth the model will be judged against.</p>`;
+          return;
+        }
+
+        /* ---- full reveal ---- */
+        const useLay = ADM3 || ADM2;
+        current = useLay;
+        map.setLayer(useLay);
+        povVals = poverty(useLay);
+        const povNorm = norm([...povVals.values()]);
+        const povColours = useLay.units.map((u) => {
+          const v = povVals.get(u.id);
+          return v == null ? "#1A1610" : povScale(povNorm(v));
+        });
+        offVals = officialColours(useLay);
+
+        let seeKey = "bld_per_km2";
+        sees = seeLayer(useLay, seeKey);
+        let rightState = "model";
+
+        document.getElementById("hero-ctl").hidden = false;
+        document.getElementById("hero-labels").hidden = false;
+        document.getElementById("hero-wipe").hidden = false;
+
+        const wipeEl = document.getElementById("hero-wipe");
+        const handle = document.getElementById("wipe-handle");
+        let wipeAt = 0.46;
+        const applyWipe = () => {
+          map.setColours(sees ? sees.colours : offVals,
+                         rightState === "model" ? povColours : offVals, wipeAt);
+          handle.style.left = `${wipeAt * 100}%`;
+          handle.setAttribute("aria-valuenow", Math.round(wipeAt * 100));
+        };
+        const setSee = (keyName) => {
+          seeKey = keyName;
+          sees = seeLayer(useLay, keyName);
+          document.getElementById("hero-left-label").textContent = sees ? sees.headline : "WHAT THE SATELLITE SEES";
+          note.textContent = `${useLay.units.length.toLocaleString()} KECAMATAN · ${sees ? sees.headline : ""} · MODEL ESTIMATE BENCHMARKED TO BPS ${LATEST}`;
+          applyWipe();
+        };
+        document.querySelectorAll("#hero-ctl [data-sees]").forEach((b) =>
+          b.addEventListener("click", () => {
+            document.querySelectorAll("#hero-ctl [data-sees]").forEach((x) => x.classList.toggle("on", x === b));
+            setSee(b.dataset.sees);
+          }));
+
+        const setWipeFromClientX = (cx) => {
+          const r = wipeEl.getBoundingClientRect();
+          wipeAt = Math.max(0.02, Math.min(0.98, (cx - r.left) / r.width));
+          applyWipe();
+        };
+        let dragging = false;
+        handle.addEventListener("pointerdown", (e) => { dragging = true; handle.setPointerCapture(e.pointerId); e.preventDefault(); });
+        handle.addEventListener("pointermove", (e) => { if (dragging) setWipeFromClientX(e.clientX); });
+        handle.addEventListener("pointerup", (e) => { dragging = false; try { handle.releasePointerCapture(e.pointerId); } catch {} });
+        wipeEl.addEventListener("pointerdown", (e) => { if (e.target === wipeEl) setWipeFromClientX(e.clientX); });
+        handle.addEventListener("keydown", (e) => {
+          const d = e.key === "ArrowLeft" ? -0.04 : e.key === "ArrowRight" ? 0.04 : 0;
+          if (!d) return;
+          e.preventDefault();
+          wipeAt = Math.max(0.02, Math.min(0.98, wipeAt + d));
+          applyWipe();
+        });
+
+        /* the orchestrated moment: layers arrive one at a time, then collapse into the
+           inferred surface. Pre-composited colour arrays, crossfaded — no per-frame
+           geometry work, so it stays smooth on 7,069 polygons without a GPU. */
+        function crossfade(fromCols, toCols, ms, onDone) {
+          if (reduced || ms === 0) { map.setColours(toCols); onDone?.(); return; }
+          const t0 = performance.now();
+          const mix = new Array(toCols.length);
+          // interpolators built once, not once per element per frame
+          const interp = toCols.map((c, i) => d3.interpolateRgb(fromCols[i] ?? "#0F0C09", c));
+          const step = (now) => {
+            const t = Math.min(1, (now - t0) / ms);
+            const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+            for (let i = 0; i < toCols.length; i++) mix[i] = interp[i](e);
+            map.setColours(mix);
+            if (t < 1) requestAnimationFrame(step); else onDone?.();
+          };
+          requestAnimationFrame(step);
+        }
+        const order = ["bld_per_km2", "lights_per_capita", "pop_density", "lc_built"];
+        let introTimer = null;
+        function runIntro() {
+          clearTimeout(introTimer);
+          document.getElementById("hero-wipe").hidden = true;
+          const frames = order.map((keyName) => seeLayer(useLay, keyName)).filter(Boolean);
+          if (!frames.length) { setSee(seeKey); document.getElementById("hero-wipe").hidden = false; return; }
+          let i = 0;
+          let prev = new Array(useLay.units.length).fill("#0F0C09");
+          const next = () => {
+            if (i >= frames.length) {
+              note.textContent = "COLLAPSING THE LAYERS INTO ONE INFERRED SURFACE…";
+              crossfade(prev, povColours, reduced ? 0 : 1100, () => {
+                document.getElementById("hero-wipe").hidden = false;
+                setSee(order[0]);
+                document.querySelectorAll("#hero-ctl [data-sees]").forEach((x) =>
+                  x.classList.toggle("on", x.dataset.sees === order[0]));
+              });
+              return;
+            }
+            const f = frames[i];
+            note.textContent = f.headline;
+            document.getElementById("hero-left-label").textContent = f.headline;
+            crossfade(prev, f.colours, reduced ? 0 : 620, () => {
+              prev = f.colours; i++;
+              introTimer = setTimeout(next, reduced ? 0 : 620);
+            });
+          };
+          next();
+        }
+        document.getElementById("hero-replay").addEventListener("click", runIntro);
+
+        if (reduced) { setSee(seeKey); }
+        else {
+          const io = new IntersectionObserver((es) => {
+            if (es.some((e) => e.isIntersecting)) { io.disconnect(); runIntro(); }
+          }, { threshold: 0.25 });
+          io.observe(wrap);
+        }
+      });
+
+      /* ══════════════════════════ CH1 charts ═════════════════════════════════════ */
+      const axisStyle = (g) => g.selectAll("text").attr("font-size", 12).attr("fill", MUTED)
+        .attr("font-family", "IBM Plex Mono, monospace");
+
+      sect("trend chart", () => {
+        const el = document.getElementById("trend-chart");
+        const W = Math.max(el.clientWidth, 280), H = 250, M = { t: 14, r: 16, b: 30, l: 44 };
+        const svg = d3.select(el).append("svg").attr("width", "100%").attr("height", H)
+          .attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img")
+          .attr("aria-label", "National poverty headcount 2016 to 2025 with the 10th to 90th percentile band");
+        const x = d3.scaleLinear([YEARS[0], LATEST], [M.l, W - M.r]);
+        const y = d3.scaleLinear([0, d3.max(national, (d) => d.p90) * 1.12], [H - M.b, M.t]);
+        const defs = svg.append("defs");
+        const grad = defs.append("linearGradient").attr("id", "bandg").attr("x1", 0).attr("y1", 0).attr("x2", 0).attr("y2", 1);
+        grad.append("stop").attr("offset", "0%").attr("stop-color", TEAL).attr("stop-opacity", 0.26);
+        grad.append("stop").attr("offset", "100%").attr("stop-color", TEAL).attr("stop-opacity", 0.03);
+        svg.append("g").attr("transform", `translate(0,${H - M.b})`)
+          .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format("d")).tickSizeOuter(0)).call(axisStyle);
+        svg.append("g").attr("transform", `translate(${M.l},0)`)
+          .call(d3.axisLeft(y).ticks(5).tickFormat((v) => `${v}%`).tickSize(-(W - M.l - M.r)))
+          .call((g) => g.selectAll("line").attr("stroke", HAIR))
+          .call((g) => g.select(".domain").remove()).call(axisStyle);
+        svg.append("path").datum(national)
+          .attr("fill", "url(#bandg)")
+          .attr("d", d3.area().x((d) => x(d.year)).y0((d) => y(d.p10)).y1((d) => y(d.p90)).curve(d3.curveMonotoneX));
+        const line = d3.line().x((d) => x(d.year)).y((d) => y(d.unweighted)).curve(d3.curveMonotoneX);
+        const path = svg.append("path").datum(national).attr("fill", "none")
+          .attr("stroke", TEAL).attr("stroke-width", 2.2).attr("d", line);
+        const len = path.node().getTotalLength();
+        if (!reduced) path.attr("stroke-dasharray", `${len} ${len}`).attr("stroke-dashoffset", len)
+          .transition().duration(DUR * 1.4).ease(d3.easeCubicOut).attr("stroke-dashoffset", 0);
+        svg.selectAll("circle.pt").data(national).join("circle").attr("class", "pt")
+          .attr("cx", (d) => x(d.year)).attr("cy", (d) => y(d.unweighted)).attr("r", 3.4)
+          .attr("fill", "#14100C").attr("stroke", TEAL).attr("stroke-width", 1.6);
+        const guide = svg.append("line").attr("y1", M.t).attr("y2", H - M.b)
+          .attr("stroke", "#F0EAE1").attr("stroke-opacity", 0.35).style("display", "none");
+        svg.append("rect").attr("x", M.l).attr("y", M.t).attr("width", W - M.l - M.r)
+          .attr("height", H - M.t - M.b).attr("fill", "transparent")
+          .on("mousemove", (e) => {
+            const [px] = d3.pointer(e);
+            const d = national.reduce((b, s) => (Math.abs(x(s.year) - px) < Math.abs(x(b.year) - px) ? s : b), national[0]);
+            guide.style("display", null).attr("x1", x(d.year)).attr("x2", x(d.year));
+            showTip(`<b>${d.year}</b><div class="t-row"><span>Mean regency rate</span><b class="teal">${pp(d.unweighted)}</b></div>` +
+              `<div class="t-row"><span>Population-weighted</span><b class="teal">${pp(d.mean)}</b></div>` +
+              `<div class="t-row"><span>10th–90th percentile</span><b>${pp(d.p10)} – ${pp(d.p90)}</b></div>` +
+              `<div class="t-row"><span>Regencies reporting</span><b>${d.n}</b></div>`, e);
+          })
+          .on("mouseleave", () => { guide.style("display", "none"); hideTip(); });
+      });
+
+      sect("distribution chart", () => {
+        const el = document.getElementById("dist-chart");
+        const W = Math.max(el.clientWidth, 280), H = 250, M = { t: 14, r: 16, b: 30, l: 44 };
+        const svg = d3.select(el).append("svg").attr("width", "100%").attr("height", H)
+          .attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img")
+          .attr("aria-label", `All ${latestVals.length} regency poverty rates for ${LATEST}, sorted`);
+        const x = d3.scaleLinear([0, latestVals.length - 1], [M.l, W - M.r]);
+        const y = d3.scaleLinear([0, d3.max(latestVals, (d) => d.v) * 1.08], [H - M.b, M.t]);
+        svg.append("g").attr("transform", `translate(0,${H - M.b})`)
+          .call(d3.axisBottom(x).ticks(4).tickFormat((v) => `#${Math.round(v) + 1}`).tickSizeOuter(0)).call(axisStyle);
+        svg.append("g").attr("transform", `translate(${M.l},0)`)
+          .call(d3.axisLeft(y).ticks(5).tickFormat((v) => `${v}%`).tickSize(-(W - M.l - M.r)))
+          .call((g) => g.selectAll("line").attr("stroke", HAIR))
+          .call((g) => g.select(".domain").remove()).call(axisStyle);
+        const bw = Math.max(1, (W - M.l - M.r) / latestVals.length - 0.6);
+        const bars = svg.selectAll("rect.b").data(latestVals).join("rect").attr("class", "b")
+          .attr("x", (d, i) => x(i)).attr("width", bw)
+          .attr("y", H - M.b).attr("height", 0)
+          .attr("fill", (d) => offScale(0.25 + 0.7 * (d.v / latestVals[latestVals.length - 1].v)));
+        bars.transition().duration(DUR).delay((d, i) => (reduced ? 0 : i * 0.7))
+          .attr("y", (d) => y(d.v)).attr("height", (d) => H - M.b - y(d.v));
+        const meanY = y(national[national.length - 1].unweighted);
+        svg.append("line").attr("x1", M.l).attr("x2", W - M.r).attr("y1", meanY).attr("y2", meanY)
+          .attr("stroke", "#F0EAE1").attr("stroke-dasharray", "3 3").attr("stroke-opacity", 0.5);
+        svg.append("text").attr("x", M.l + 8).attr("y", meanY - 7)
+          .attr("font-size", 12).attr("fill", MUTED).attr("font-family", "IBM Plex Mono, monospace")
+          .text(`mean of the 514 ${pp(national[national.length - 1].unweighted)}`);
+        svg.append("rect").attr("x", M.l).attr("y", M.t).attr("width", W - M.l - M.r)
+          .attr("height", H - M.t - M.b).attr("fill", "transparent")
+          .on("mousemove", (e) => {
+            const [px] = d3.pointer(e);
+            const i = Math.max(0, Math.min(latestVals.length - 1, Math.round(x.invert(px))));
+            const d = latestVals[i];
+            bars.attr("opacity", (_, k) => (k === i ? 1 : 0.55));
+            showTip(`<b>${nameOf(d.c)}</b><span class="t-sub">${provOf(d.c)} · rank ${i + 1} of ${latestVals.length}</span>` +
+              `<div class="t-row"><span>P0 headcount ${LATEST}</span><b class="teal">${pp(d.v)}</b></div>` +
+              `<div class="t-row"><span>${YEARS[0]}</span><b>${pp(val(d.c, "p0", YEARS[0]))}</b></div>`, e);
+          })
+          .on("mouseleave", () => { bars.attr("opacity", 1); hideTip(); });
+      });
+
+      sect("ch1 so-what", () => {
+        const spread = latestVals[latestVals.length - 1].v - latestVals[0].v;
+        const inner = contrasts?.spread_median;
+        document.getElementById("ch1-sowhat").innerHTML =
+          `A single national figure of ${pp(national[national.length - 1].unweighted)} covers a ` +
+          `${fmt1(spread)} pp range across ${latestVals.length} regencies. ` +
+          (inner != null
+            ? `And inside those regencies the model finds a further ${fmt1(inner)} pp of typical spread between kecamatan — variation no published statistic reaches.`
+            : `Whatever variation exists <em>inside</em> a regency is invisible in the official series, which is the gap this case is built to fill.`);
+      });
+
+      /* ══════════════════════════ CH2 — gates + skill ═════════════════════════════ */
+      sect("gates", () => {
+        const el = document.getElementById("gate-grid");
+        if (!statsJson) {
+          const specs = [
+            ["G-F1", "Out-of-sample skill", "R² ≥ 0.50 · Spearman ρ ≥ 0.70 · RMSE ≤ 4.0 pp", true],
+            ["G-F2", "Java / off-Java disclosure", "both R² published; off-Java < 0.35 ⇒ labelled indicative", false],
+            ["G-F3", "Temporal hold-out", "train ≤ 2023 → Spearman ρ ≥ 0.65 on 2024 and 2025", false],
+            ["G-F4", "Benchmark integrity", "regency totals reproduced within 0.1 pp", true],
+          ];
+          const why = document.createElement("p");
+          why.className = "sowhat pending-note";
+          why.innerHTML =
+            "<b>No numbers yet, on purpose.</b> The gates below carry their published " +
+            "thresholds; their values arrive with the last data partition. Open Buildings " +
+            "streams in geographic order, so a model fitted on a partial pull would be " +
+            "<em>spatially biased</em>, not merely noisy — a half-loaded Indonesia is mostly " +
+            "one half of Indonesia. Whatever the numbers turn out to be, they will be published " +
+            "as measured: a failing gate goes up red.";
+          el.parentElement.insertBefore(why, el);
+          el.innerHTML = specs.map(([id, t, thr, hard]) => `
+            <div class="gate pending">
+              <div class="gate-top"><span class="gate-id">${id}</span>
+                <span class="gate-status pending">PENDING</span></div>
+              <h4>${t}${hard ? ' <span class="hard">hard</span>' : ""}</h4>
+              <p class="cap">${thr}</p>
+            </div>`).join("");
+          return;
+        }
+        el.innerHTML = statsJson.gates.map((g) => `
+          <div class="gate ${g.status}">
+            <div class="gate-top"><span class="gate-id">${g.id}</span>
+              <span class="gate-status ${g.status}">${g.status.toUpperCase()}</span></div>
+            <h4>${g.title}${g.hard ? ' <span class="hard">hard</span>' : ""}</h4>
+            <ul class="checks">${g.checks.map((c) => `
+              <li class="${c.ok === null ? "unk" : c.ok ? "ok" : "bad"}">
+                <span>${c.label}</span>
+                <b>${c.value == null ? "—" : fmt2(c.value) + (c.unit ? " " + c.unit : "")}</b>
+                <i>${c.cmp} ${c.threshold}${c.unit ? " " + c.unit : ""}</i>
+              </li>`).join("")}</ul>
+            <p class="cap">${g.detail}</p>
+          </div>`).join("");
+      });
+
+      const scatterState = { cv: "lopo", reg: "all" };
+      sect("scatter", () => {
+        const el = document.getElementById("scatter-chart");
+        if (!ledger.scatter) {
+          plate(el, "pending", "The validation scatter needs the fitted model.",
+            PENDING_BODY);
+          document.getElementById("cv-seg").classList.add("disabled");
+          document.getElementById("reg-seg").classList.add("disabled");
+          return;
+        }
+        const rows = ledger.scatter.rows.map(([code, y, lopo, rand, block, ridge, java, kota]) =>
+          ({ code, y, lopo, random: rand, block, lopo_ridge: ridge, java, kota }));
+        const W = Math.max(el.clientWidth, 280), H = 470, M = { t: 16, r: 16, b: 44, l: 48 };
+        const svg = d3.select(el).append("svg").attr("width", "100%").attr("height", H)
+          .attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img")
+          .attr("aria-label", "Scatter of model predictions against official BPS regency rates");
+        const lim = Math.max(d3.max(rows, (d) => d.y), d3.max(rows, (d) => d.lopo ?? 0)) * 1.06;
+        const x = d3.scaleLinear([0, lim], [M.l, W - M.r]);
+        const y = d3.scaleLinear([0, lim], [H - M.b, M.t]);
+        svg.append("g").attr("transform", `translate(0,${H - M.b})`)
+          .call(d3.axisBottom(x).ticks(6).tickFormat((v) => `${v}%`).tickSizeOuter(0)).call(axisStyle);
+        svg.append("g").attr("transform", `translate(${M.l},0)`)
+          .call(d3.axisLeft(y).ticks(6).tickFormat((v) => `${v}%`).tickSize(-(W - M.l - M.r)))
+          .call((g) => g.selectAll("line").attr("stroke", HAIR))
+          .call((g) => g.select(".domain").remove()).call(axisStyle);
+        svg.append("text").attr("x", (M.l + W - M.r) / 2).attr("y", H - 6).attr("text-anchor", "middle")
+          .attr("font-size", 12).attr("fill", MUTED).attr("font-family", "IBM Plex Mono, monospace")
+          .text(`OFFICIAL BPS P0 · ${ledger.scatter.year}`);
+        svg.append("text").attr("transform", `rotate(-90)`).attr("x", -(M.t + H - M.b) / 2).attr("y", 13)
+          .attr("text-anchor", "middle").attr("font-size", 12).attr("fill", MUTED)
+          .attr("font-family", "IBM Plex Mono, monospace").text("MODEL, HELD OUT");
+        svg.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(lim)).attr("y2", y(lim))
+          .attr("stroke", "#F0EAE1").attr("stroke-opacity", 0.28).attr("stroke-dasharray", "4 4");
+        const dots = svg.selectAll("circle.d").data(rows).join("circle").attr("class", "d")
+          .attr("cx", (d) => x(d.y)).attr("cy", (d) => y(d.lopo ?? 0)).attr("r", 3.6)
+          .attr("fill", OCHRE).attr("fill-opacity", 0.62)
+          .attr("stroke", "#14100C").attr("stroke-width", 0.6);
+        function redraw() {
+          const active = (d) => scatterState.reg === "all" || (scatterState.reg === "java" ? d.java === 1 : d.java === 0);
+          dots.transition().duration(DUR).ease(d3.easeCubicOut)
+            .attr("cy", (d) => y(d[scatterState.cv] ?? 0))
+            .attr("fill-opacity", (d) => (active(d) ? 0.68 : 0.06))
+            .attr("r", (d) => (active(d) ? 3.6 : 2.2));
+        }
+        dots.on("mousemove", (e, d) => {
+          const p = d[scatterState.cv];
+          showTip(`<b>${nameOf(d.code)}</b><span class="t-sub">${provOf(d.code)} · ${d.kota ? "kota" : "kabupaten"} · ${d.java ? "Java" : "off-Java"}</span>` +
+            `<div class="t-row"><span>Official BPS ${ledger.scatter.year}</span><b class="teal">${pp(d.y)}</b></div>` +
+            `<div class="t-row"><span>Model, held out</span><b class="ochre">${pp(p)}</b></div>` +
+            `<div class="t-row"><span>Error</span><b>${p == null ? "—" : `${p - d.y > 0 ? "+" : ""}${fmt1(p - d.y)} pp`}</b></div>`, e);
+        }).on("mouseleave", hideTip);
+        document.querySelectorAll("#cv-seg button").forEach((b) => b.addEventListener("click", () => {
+          document.querySelectorAll("#cv-seg button").forEach((x) => x.classList.toggle("on", x === b));
+          scatterState.cv = b.dataset.cv; redraw();
+        }));
+        document.querySelectorAll("#reg-seg button").forEach((b) => b.addEventListener("click", () => {
+          document.querySelectorAll("#reg-seg button").forEach((x) => x.classList.toggle("on", x === b));
+          scatterState.reg = b.dataset.reg; redraw();
+        }));
+      });
+
+      sect("scheme chart", () => {
+        const el = document.getElementById("scheme-chart");
+        if (!statsJson) { plate(el, "pending", "Fold comparison pending.", PENDING_BODY); return; }
+        const s = statsJson.skill;
+        const rows = [
+          { k: "Random k-fold", v: s.random?.r2, note: "leaks neighbours — shown for contrast only", bad: true },
+          { k: "200 km blocks", v: s.block?.r2, note: "spatial sensitivity" },
+          { k: "Leave-one-province-out", v: s.lopo?.r2, note: "the headline number", head: true },
+          { k: "Ridge baseline (LOPO)", v: s.lopo_ridge?.r2, note: "linear, same folds" },
+        ].filter((r) => r.v != null);
+        const W = Math.max(el.clientWidth, 280), H = 176, M = { t: 8, r: 60, b: 22, l: 176 };
+        const svg = d3.select(el).append("svg").attr("width", "100%").attr("height", H)
+          .attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img").attr("aria-label", "R squared by cross-validation scheme");
+        const x = d3.scaleLinear([0, Math.max(0.9, d3.max(rows, (r) => r.v))], [M.l, W - M.r]);
+        const yb = d3.scaleBand(rows.map((r) => r.k), [M.t, H - M.b]).padding(0.28);
+        svg.append("g").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(yb).tickSize(0))
+          .call((g) => g.select(".domain").remove())
+          .call((g) => g.selectAll("text").attr("font-size", 12).attr("fill", (d) => (d.startsWith("Leave") ? "#F0EAE1" : MUTED))
+            .attr("font-family", "IBM Plex Mono, monospace"));
+        svg.append("line").attr("x1", x(0.5)).attr("x2", x(0.5)).attr("y1", M.t).attr("y2", H - M.b)
+          .attr("stroke", OCHRE).attr("stroke-opacity", 0.5).attr("stroke-dasharray", "3 3");
+        svg.append("text").attr("x", x(0.5)).attr("y", H - 7).attr("text-anchor", "middle")
+          .attr("font-size", 12).attr("fill", OCHRE).attr("font-family", "IBM Plex Mono, monospace")
+          .text("gate 0.50");
+        const g = svg.selectAll("g.r").data(rows).join("g").attr("class", "r");
+        g.append("rect").attr("x", x(0)).attr("y", (d) => yb(d.k)).attr("height", yb.bandwidth())
+          .attr("rx", 2).attr("fill", (d) => (d.head ? OCHRE : d.bad ? "#6B7CA6" : "#8A5A22"))
+          .attr("width", 0).transition().duration(DUR).ease(d3.easeCubicOut)
+          .attr("width", (d) => Math.max(1, x(d.v) - x(0)));
+        g.append("text").attr("x", (d) => x(d.v) + 8).attr("y", (d) => yb(d.k) + yb.bandwidth() / 2 + 4)
+          .attr("font-size", 12).attr("fill", "#F0EAE1").attr("font-family", "IBM Plex Mono, monospace")
+          .text((d) => fmt2(d.v));
+        g.on("mousemove", (e, d) => showTip(`<b>${d.k}</b><div class="t-row"><span>R²</span><b>${fmt2(d.v)}</b></div>` +
+          `<span class="t-sub">${d.note}</span>`, e)).on("mouseleave", hideTip);
+      });
+
+      sect("temporal chart", () => {
+        const el = document.getElementById("temporal-chart");
+        if (!ledger.scatter?.temporal?.length || !statsJson) {
+          plate(el, "pending", "Temporal hold-out pending.", PENDING_BODY); return;
+        }
+        // plotted against the STRICT hold-out (province held out as well as the year); the
+        // same-province variant is in the tooltip, because on its own it mostly measures
+        // how little a regency's rate moves from one release to the next.
+        const rows = ledger.scatter.temporal
+          .map(([yr, obs, loose, strict, code]) => ({ yr, obs, pred: strict ?? loose, loose, strict, code }))
+          .filter((d) => d.pred != null);
+        const W = Math.max(el.clientWidth, 280), H = 176, M = { t: 12, r: 12, b: 30, l: 42 };
+        const svg = d3.select(el).append("svg").attr("width", "100%").attr("height", H)
+          .attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img")
+          .attr("aria-label", "Temporal hold-out: predictions for 2024 and 2025 against the official rates");
+        const lim = d3.max(rows, (d) => Math.max(d.obs, d.pred)) * 1.05;
+        const x = d3.scaleLinear([0, lim], [M.l, W - M.r]);
+        const y = d3.scaleLinear([0, lim], [H - M.b, M.t]);
+        svg.append("g").attr("transform", `translate(0,${H - M.b})`)
+          .call(d3.axisBottom(x).ticks(5).tickFormat((v) => `${v}%`).tickSizeOuter(0)).call(axisStyle);
+        svg.append("g").attr("transform", `translate(${M.l},0)`)
+          .call(d3.axisLeft(y).ticks(4).tickFormat((v) => `${v}%`).tickSize(-(W - M.l - M.r)))
+          .call((g) => g.selectAll("line").attr("stroke", HAIR))
+          .call((g) => g.select(".domain").remove()).call(axisStyle);
+        svg.append("line").attr("x1", x(0)).attr("y1", y(0)).attr("x2", x(lim)).attr("y2", y(lim))
+          .attr("stroke", "#F0EAE1").attr("stroke-opacity", 0.25).attr("stroke-dasharray", "4 4");
+        const cols = { 2024: "#8A5A22", 2025: OCHRE };
+        svg.selectAll("circle").data(rows).join("circle")
+          .attr("cx", (d) => x(d.obs)).attr("cy", (d) => y(d.pred)).attr("r", 2.6)
+          .attr("fill", (d) => cols[d.yr] ?? OCHRE).attr("fill-opacity", 0.55)
+          .on("mousemove", (e, d) => showTip(`<b>${nameOf(d.code)} · ${d.yr} release</b>` +
+            `<div class="t-row"><span>Official</span><b class="teal">${pp(d.obs)}</b></div>` +
+            `<div class="t-row"><span>Year <i>and</i> province unseen</span><b class="ochre">${pp(d.strict)}</b></div>` +
+            `<div class="t-row"><span>Year unseen only</span><b>${pp(d.loose)}</b></div>`, e))
+          .on("mouseleave", hideTip);
+        const leg = svg.append("g").attr("transform", `translate(${M.l + 6},${M.t + 4})`);
+        Object.entries(cols).forEach(([yr, c], i) => {
+          const st = statsJson.skill[`temporal_strict_${yr}`]?.spearman;
+          const lo = statsJson.skill[`temporal_${yr}`]?.spearman;
+          const gg = leg.append("g").attr("transform", `translate(0,${i * 16})`);
+          gg.append("circle").attr("r", 3.4).attr("fill", c);
+          gg.append("text").attr("x", 10).attr("y", 4).attr("font-size", 12).attr("fill", MUTED)
+            .attr("font-family", "IBM Plex Mono, monospace")
+            .text(`${yr} · ρ ${st != null ? fmt2(st) : "—"} strict · ${lo != null ? fmt2(lo) : "—"} same-province`);
+        });
+      });
+
+      sect("ch2 so-what", () => {
+        const el = document.getElementById("ch2-sowhat");
+        if (!statsJson) {
+          el.innerHTML = "The gates above carry their thresholds now and their numbers as soon " +
+            "as the last data partition lands. A failing gate will be published red, with its " +
+            "value — the lab does not tune the data to the story.";
+          return;
+        }
+        const s = statsJson.skill;
+        const g1 = statsJson.gates[0];
+        const dec = statsJson.decomposition || {};
+        const inflate = s.random?.r2 != null && s.lopo?.r2 != null ? s.random.r2 - s.lopo.r2 : null;
+        el.innerHTML =
+          (g1.status === "pass"
+            ? `The model reproduces the official ranking of ${s.lopo.n} regencies it was never trained on (Spearman ρ ${fmt2(s.lopo.spearman)}, RMSE ${fmt1(s.lopo.rmse)} pp). `
+            : `<b class="bad-inline">G-F1 fails on this run and goes up red</b> — R² ${fmt2(s.lopo.r2)}, ρ ${fmt2(s.lopo.spearman)}, RMSE ${fmt1(s.lopo.rmse)} pp against thresholds of 0.50, 0.70 and 4.0 pp. Those thresholds were set from an asset-wealth literature; the target here is a headcount against a <em>nominal, region-specific poverty line</em>, and no satellite can see a price level. `) +
+          (inflate != null
+            ? `A random k-fold on the same rows would have reported R² ${fmt2(s.random.r2)} instead of ${fmt2(s.lopo.r2)} — ${fmt2(inflate)} of pure fold design, and the reason the honest number is the published one. `
+            : "") +
+          (dec.offset_share_of_sse != null
+            ? `<b>${d3.format(".0%")(dec.offset_share_of_sse)} of the squared error is a single constant offset for a whole province</b> — the model cannot guess a price level from orbit. Strip the offsets and regencies are ordered inside their province at ρ ${fmt2(dec.within_province_spearman)} across ${dec.provinces_scored} provinces: the weaker half of the job, but the half chapter 4 actually needs, because benchmarking takes the level from BPS. `
+            : "") +
+          (s.temporal_strict_2025?.spearman != null
+            ? `The temporal test tells the same story twice: ρ ${fmt2(s.temporal_2025.spearman)} when the model has seen the regency in earlier years, ρ ${fmt2(s.temporal_strict_2025.spearman)} when the province is held out too. `
+            : "") +
+          `Off-Java R² is ${s.lopo_offjava?.r2 == null ? "—" : fmt2(s.lopo_offjava.r2)} against ${s.lopo_java?.r2 == null ? "—" : fmt2(s.lopo_java.r2)} on Java, and urban kota ${s.lopo_kota?.r2 == null ? "—" : fmt2(s.lopo_kota.r2)}` +
+          (statsJson.kota_indicative || statsJson.offjava_indicative
+            ? " — below zero for cities, so every kota estimate here is labelled indicative."
+            : ".");
+      });
+
+      /* ══════════════════════════ CH3 — signals ═══════════════════════════════════ */
+      sect("family chart", () => {
+        const el = document.getElementById("family-chart");
+        if (!ledger.families) { plate(el, "pending", "Feature attribution pending.", PENDING_BODY); return; }
+        document.getElementById("shap-unit").textContent = ledger.families.unit;
+        const rows = ledger.families.rows.map(([k, v, share]) => ({ k, v, share }));
+        const W = Math.max(el.clientWidth, 280), H = 250, M = { t: 8, r: 66, b: 20, l: 150 };
+        const svg = d3.select(el).append("svg").attr("width", "100%").attr("height", H)
+          .attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img").attr("aria-label", "Feature families ranked by contribution");
+        const x = d3.scaleLinear([0, d3.max(rows, (r) => r.v) * 1.02], [M.l, W - M.r]);
+        const yb = d3.scaleBand(rows.map((r) => r.k), [M.t, H - M.b]).padding(0.3);
+        svg.append("g").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(yb).tickSize(0))
+          .call((g) => g.select(".domain").remove())
+          .call((g) => g.selectAll("text").attr("font-size", 12).attr("fill", "#F0EAE1"));
+        const defs = svg.append("defs");
+        const lg = defs.append("linearGradient").attr("id", "famg").attr("x1", 0).attr("x2", 1);
+        lg.append("stop").attr("offset", "0%").attr("stop-color", "#7A4F1E");
+        lg.append("stop").attr("offset", "100%").attr("stop-color", OCHRE);
+        const g = svg.selectAll("g.f").data(rows).join("g").attr("class", "f");
+        g.append("rect").attr("x", x(0)).attr("y", (d) => yb(d.k)).attr("height", yb.bandwidth())
+          .attr("rx", 2).attr("fill", "url(#famg)").attr("width", 0)
+          .transition().duration(DUR).ease(d3.easeCubicOut).delay((d, i) => (reduced ? 0 : i * 60))
+          .attr("width", (d) => Math.max(1, x(d.v) - x(0)));
+        g.append("text").attr("x", (d) => x(d.v) + 8).attr("y", (d) => yb(d.k) + yb.bandwidth() / 2 + 4)
+          .attr("font-size", 12).attr("fill", MUTED).attr("font-family", "IBM Plex Mono, monospace")
+          .text((d) => d3.format(".0%")(d.share));
+        g.on("mousemove", (e, d) => showTip(`<b>${d.k}</b>` +
+          `<div class="t-row"><span>${ledger.families.unit}</span><b>${fmt2(d.v)}</b></div>` +
+          `<div class="t-row"><span>Share of all attribution</span><b>${d3.format(".1%")(d.share)}</b></div>`, e))
+          .on("mouseleave", hideTip);
+      });
+
+      sect("drilldown", () => {
+        const el = document.getElementById("drill-chart");
+        const read = document.getElementById("drill-read");
+        const pick = document.getElementById("shap-pick");
+        const withShap = codes.filter((c) => REG[c]?.shap?.length);
+        if (!withShap.length) {
+          plate(el, "pending", "Per-regency attribution pending.", PENDING_BODY);
+          pick.disabled = true;
+          pick.innerHTML = "<option>—</option>";
+          return;
+        }
+        withShap.sort((a, b) => d3.ascending(nameOf(a), nameOf(b)));
+        pick.innerHTML = withShap.map((c) => `<option value="${c}">${nameOf(c)} · ${provOf(c)}</option>`).join("");
+        const W = Math.max(el.clientWidth, 280), H = 250, M = { t: 8, r: 16, b: 24, l: 8 };
+        const svg = d3.select(el).append("svg").attr("width", "100%").attr("height", H)
+          .attr("viewBox", `0 0 ${W} ${H}`).attr("role", "img").attr("aria-label", "Top five signals for the selected regency");
+        const gAx = svg.append("g"), gBar = svg.append("g");
+        function draw(code) {
+          const rows = (REG[code].shap || []).map(([f, v, phrase]) => ({ f, v, phrase }));
+          const lim = d3.max(rows, (r) => Math.abs(r.v)) * 1.25 || 1;
+          const x = d3.scaleLinear([-lim, lim], [M.l + 4, W - M.r]);
+          const yb = d3.scaleBand(rows.map((r) => r.phrase), [M.t, H - M.b]).padding(0.34);
+          gAx.selectAll("*").remove();
+          gAx.append("line").attr("x1", x(0)).attr("x2", x(0)).attr("y1", M.t).attr("y2", H - M.b)
+            .attr("stroke", HAIR);
+          gAx.append("text").attr("x", x(0) - 6).attr("y", H - 8).attr("text-anchor", "end")
+            .attr("font-size", 12).attr("fill", MUTED).attr("font-family", "IBM Plex Mono, monospace")
+            .text("← lowers the estimate");
+          gAx.append("text").attr("x", x(0) + 6).attr("y", H - 8)
+            .attr("font-size", 12).attr("fill", MUTED).attr("font-family", "IBM Plex Mono, monospace")
+            .text("raises it →");
+          const sel = gBar.selectAll("g.s").data(rows, (d) => d.f);
+          sel.exit().remove();
+          const ent = sel.enter().append("g").attr("class", "s");
+          ent.append("rect").attr("rx", 2);
+          ent.append("text").attr("class", "lab");
+          const all = ent.merge(sel);
+          all.select("rect")
+            .attr("y", (d) => yb(d.phrase)).attr("height", yb.bandwidth())
+            .attr("fill", (d) => (d.v >= 0 ? OCHRE : "#6B7CA6"))
+            .transition().duration(DUR).ease(d3.easeCubicOut)
+            .attr("x", (d) => (d.v >= 0 ? x(0) : x(d.v)))
+            .attr("width", (d) => Math.max(1.5, Math.abs(x(d.v) - x(0))));
+          // label on the empty side of the axis, never on top of its own bar
+          all.select("text.lab")
+            .attr("y", (d) => yb(d.phrase) + yb.bandwidth() / 2 + 4)
+            .attr("font-size", 12).attr("fill", "#F0EAE1")
+            .attr("text-anchor", (d) => (d.v >= 0 ? "end" : "start"))
+            .attr("x", (d) => (d.v >= 0 ? x(0) - 10 : x(0) + 10))
+            .text((d) => `${d.phrase} (${d.v > 0 ? "+" : ""}${fmt2(d.v)} pp)`);
+          all.on("mousemove", (e, d) => showTip(`<b>${d.phrase}</b><span class="t-sub">${d.f}</span>` +
+            `<div class="t-row"><span>Contribution</span><b class="${d.v >= 0 ? "ochre" : ""}">${d.v > 0 ? "+" : ""}${fmt2(d.v)} pp</b></div>`, e))
+            .on("mouseleave", hideTip);
+          const up = rows.filter((r) => r.v > 0).slice(0, 2).map((r) => r.phrase);
+          const dn = rows.filter((r) => r.v < 0).slice(0, 2).map((r) => r.phrase);
+          const off = val(code, "p0", LATEST), pr = REG[code].pred;
+          read.innerHTML =
+            `<b>${nameOf(code)}</b> — official <b class="teal">${pp(off)}</b>, held-out prediction ` +
+            `<b class="ochre">${pp(pr)}</b>. ` +
+            (up.length ? `The model reads ${up.join(" and ")} and pushes the estimate up. ` : "") +
+            (dn.length ? `${up.length ? "Against that, " : "The model reads "}${dn.join(" and ")}, pulling it down.` : "");
+        }
+        pick.addEventListener("change", () => draw(pick.value));
+        draw(withShap[0]);
+      });
+
+      sect("ch3 so-what", () => {
+        const el = document.getElementById("ch3-sowhat");
+        if (!ledger.families) {
+          el.innerHTML = "The attribution chart names the signal families and, once fitted, " +
+            "ranks them — so a client can argue with the model rather than accept it.";
+          return;
+        }
+        const top = ledger.families.rows[0];
+        el.innerHTML = `${top[0]} alone accounts for ${d3.format(".0%")(top[2])} of the model's ` +
+          `attribution. That is a defensible finding and also a warning: the roof and land-cover ` +
+          `layers are single-vintage, so this model reads <em>where</em> poverty is far better ` +
+          `than <em>when</em> it changes.`;
+      });
+
+      /* ══════════════════════════ CH4 — below the line ════════════════════════════ */
+      sect("intervals", () => {
+        const el = document.getElementById("interval-chart");
+        const pick = document.getElementById("reg-pick");
+        if (!estimates) {
+          plate(el, "pending", "Kecamatan estimates pending.", PENDING_BODY);
+          pick.disabled = true; pick.innerHTML = "<option>—</option>";
+          return;
+        }
+        const byParent = new Map();
+        estimates.pcodes.forEach((p, i) => {
+          const par = estimates.parents[i];
+          if (!par) return;
+          if (!byParent.has(par)) byParent.set(par, []);
+          byParent.get(par).push(i);
+        });
+        const parents = [...byParent.keys()].filter((c) => byParent.get(c).length > 1)
+          .sort((a, b) => d3.ascending(nameOf(a), nameOf(b)));
+        pick.innerHTML = parents.map((c) => `<option value="${c}">${nameOf(c)} · ${provOf(c)}</option>`).join("");
+        const svgSel = d3.select(el).append("svg").attr("width", "100%").attr("role", "img");
+        function draw(code) {
+          const idxs = byParent.get(code) || [];
+          const yearKey = String(estimates.latest);
+          const rows = idxs.map((i) => ({
+            name: estimates.names[i], est: estimates.est[yearKey][i],
+            lo: estimates.lo[i], hi: estimates.hi[i], pop: estimates.pop[i],
+          })).filter((r) => r.est != null).sort((a, b) => d3.descending(a.est, b.est));
+          const rowH = 20, H = Math.max(160, rows.length * rowH + 62);
+          const W = Math.max(el.clientWidth, 280), M = { t: 26, r: 54, b: 30, l: 132 };
+          svgSel.attr("height", H).attr("viewBox", `0 0 ${W} ${H}`)
+            .attr("aria-label", `Kecamatan poverty estimates inside ${nameOf(code)} with intervals`);
+          svgSel.selectAll("*").remove();
+          const official = val(code, "p0", estimates.latest);
+          const lim = [0, Math.max(d3.max(rows, (r) => r.hi ?? r.est) ?? 10, official ?? 0) * 1.08];
+          const x = d3.scaleLinear(lim, [M.l, W - M.r]);
+          const yb = d3.scaleBand(rows.map((r) => r.name), [M.t, H - M.b]).padding(0.32);
+          svgSel.append("g").attr("transform", `translate(0,${H - M.b})`)
+            .call(d3.axisBottom(x).ticks(5).tickFormat((v) => `${v}%`).tickSizeOuter(0)).call(axisStyle);
+          svgSel.append("g").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(yb).tickSize(0))
+            .call((g) => g.select(".domain").remove())
+            .call((g) => g.selectAll("text").attr("font-size", 12).attr("fill", MUTED));
+          if (official != null) {
+            svgSel.append("rect").attr("x", x(official) - 1).attr("y", M.t)
+              .attr("width", 2).attr("height", H - M.b - M.t).attr("fill", TEAL).attr("opacity", 0.9);
+            svgSel.append("text").attr("x", x(official)).attr("y", M.t - 10)
+              .attr("text-anchor", x(official) > W - M.r - 90 ? "end" : "middle")
+              .attr("font-size", 12).attr("fill", TEAL).attr("font-family", "IBM Plex Mono, monospace")
+              .text(`OFFICIAL BPS ${fmt1(official)}%`);
+          }
+          const g = svgSel.selectAll("g.k").data(rows).join("g").attr("class", "k");
+          g.append("line").attr("y1", (d) => yb(d.name) + yb.bandwidth() / 2)
+            .attr("y2", (d) => yb(d.name) + yb.bandwidth() / 2)
+            .attr("stroke", "#8A5A22").attr("stroke-width", 3).attr("stroke-linecap", "round")
+            .attr("x1", (d) => x(d.est)).attr("x2", (d) => x(d.est))
+            .transition().duration(DUR).ease(d3.easeCubicOut)
+            .attr("x1", (d) => x(d.lo ?? d.est)).attr("x2", (d) => x(d.hi ?? d.est));
+          g.append("circle").attr("cy", (d) => yb(d.name) + yb.bandwidth() / 2)
+            .attr("cx", (d) => x(d.est)).attr("r", 4).attr("fill", OCHRE)
+            .attr("stroke", "#14100C").attr("stroke-width", 1);
+          g.on("mousemove", (e, d) => showTip(`<b>${d.name}</b><span class="t-sub">kecamatan of ${nameOf(code)}</span>` +
+            `<div class="t-row"><span>Model estimate ${estimates.latest}</span><b class="ochre">${pp(d.est)}</b></div>` +
+            `<div class="t-row"><span>Interval</span><b>${pp(d.lo)} – ${pp(d.hi)}</b></div>` +
+            `<div class="t-row"><span>Official regency rate</span><b class="teal">${pp(official)}</b></div>` +
+            `<div class="t-row"><span>Population</span><b>${d.pop == null ? "—" : fmtI(d.pop)}</b></div>`, e))
+            .on("mouseleave", hideTip);
+        }
+        pick.addEventListener("change", () => draw(pick.value));
+        draw(parents[0]);
+        addEventListener("resize", () => draw(pick.value));
+      });
+
+      sect("contrasts", () => {
+        const el = document.getElementById("contrast-list");
+        if (!contrasts) { plate(el, "pending", "Confident contrasts pending.", PENDING_BODY); return; }
+        el.innerHTML = `<ol class="contrasts">` + contrasts.pairs.map((p) => `
+          <li>
+            <div class="cpair">
+              <span class="cname">${p.high.name}</span>
+              <span class="cval ochre">${fmt1(p.high.est)}%</span>
+              <span class="cbar"><i style="width:${Math.min(100, (p.high.est / (contrasts.pairs[0].high.est || 1)) * 100)}%"></i></span>
+            </div>
+            <div class="cpair low">
+              <span class="cname">${p.low.name}</span>
+              <span class="cval">${fmt1(p.low.est)}%</span>
+              <span class="cbar"><i style="width:${Math.min(100, (p.low.est / (contrasts.pairs[0].high.est || 1)) * 100)}%"></i></span>
+            </div>
+            <span class="cmeta stamp">${nameOf(p.code)} · ${p.prov} · OFFICIAL ${fmt1(p.official)}% · GAP ${fmt1(p.gap)} pp · INTERVALS ${fmt1(p.high.lo)}–${fmt1(p.high.hi)} vs ${fmt1(p.low.lo)}–${fmt1(p.low.hi)}</span>
+          </li>`).join("") + "</ol>";
+      });
+
+      sect("ch4 so-what", () => {
+        const el = document.getElementById("ch4-sowhat");
+        if (!contrasts || !estimates) {
+          el.innerHTML = "Once the estimates land, this chapter reports how many kecamatan pairs " +
+            "inside a single regency are separable at the published interval — the honest measure " +
+            "of how much resolution the model really adds.";
+          return;
+        }
+        el.innerHTML =
+          `Inside a typical regency the model spreads the official rate over ` +
+          `${fmt1(contrasts.spread_median)} pp of range, reaching ${fmt1(contrasts.spread_max)} pp ` +
+          `at the extreme — variation the published series cannot show. But only ` +
+          `<b>${fmtI(contrasts.n_separable)} of ${fmtI(contrasts.n_regencies)}</b> regencies have a ` +
+          `poorest and a least-poor kecamatan whose intervals actually clear each other, because ` +
+          `those intervals carry the province's own out-of-sample error. Both numbers are the ` +
+          `product: a map fine enough to argue about, honest enough to say where the argument stops.`;
+      });
+
+      /* ══════════════════════════ EXPLORE ═════════════════════════════════════════ */
+      sect("explore", () => {
+        const state = { level: "adm2", metric: "p0", year: LATEST, code: null };
+        const mapEl = document.getElementById("map");
+        const legendEl = document.getElementById("legend");
+        const panel = document.getElementById("panel");
+        let cmap = null, useMaplibre = false, ml = null, currentLayer = ADM2;
+
+        const METRIC = {
+          p0: { label: "Poverty headcount P0", unit: "%", fmt: (v) => pp(v), ramp: offScale },
+          p1: { label: "Poverty gap P1", unit: "index", fmt: (v) => (v == null ? "—" : fmt2(v)), ramp: offScale },
+          p2: { label: "Poverty severity P2", unit: "index", fmt: (v) => (v == null ? "—" : fmt2(v)), ramp: offScale },
+          line: { label: "Poverty line", unit: "Rp/person/month",
+                  fmt: (v) => (v == null ? "—" : `Rp ${fmtI(v)}`), ramp: offScale },
+        };
+
+        function valuesFor() {
+          const m = new Map();
+          if (state.level === "adm2") {
+            for (const u of currentLayer.units) m.set(u.id, val(u.id, state.metric, state.year));
+          } else if (estimates) {
+            const key = String(state.year);
+            const arr = estimates.est[key];
+            const idx = new Map(estimates.pcodes.map((p, i) => [p, i]));
+            for (const u of currentLayer.units) {
+              const i = idx.get(u.id);
+              m.set(u.id, arr && i != null ? arr[i] : null);
+            }
+          }
+          return m;
+        }
+        function scaleFor(vals) {
+          const finite = [...vals.values()].filter((v) => v != null && isFinite(v)).sort(d3.ascending);
+          const lo = finite.length ? finite[0] : 0;
+          const hi = finite.length ? (d3.quantile(finite, 0.98) ?? finite[finite.length - 1]) : 1;
+          const ramp = state.level === "adm3" ? povScale : METRIC[state.metric].ramp;
+          return { lo, hi, colour: (v) => (v == null || !isFinite(v) ? "#1A1610" : ramp(Math.max(0, Math.min(1, (v - lo) / (hi - lo || 1))))) };
+        }
+        function legend(sc) {
+          const stops = d3.range(0, 1.001, 0.05).map((t) => sc.colour(sc.lo + t * (sc.hi - sc.lo)));
+          legendEl.innerHTML =
+            `<span class="lg-title stamp">${state.level === "adm2" ? "OFFICIAL BPS" : "MODEL ESTIMATE"} · ${METRIC[state.metric].label.toUpperCase()} · ${state.year}</span>` +
+            `<span class="lg-ramp" style="background:linear-gradient(90deg,${stops.join(",")})"></span>` +
+            `<span class="lg-ends stamp"><b>${METRIC[state.metric].fmt(sc.lo)}</b><b>${METRIC[state.metric].fmt(sc.hi)}</b></span>` +
+            (state.level === "adm3"
+              ? `<span class="lg-note stamp">MODEL ESTIMATE · BENCHMARKED TO THE OFFICIAL REGENCY RATE${statsJson?.offjava_indicative ? " · OFF-JAVA INDICATIVE" : ""}${statsJson?.kota_indicative ? " · KOTA INDICATIVE" : ""}</span>`
+              : `<span class="lg-note stamp">SOURCE: BPS MARCH SUSENAS · ${currentLayer.units.length} UNITS</span>`);
+        }
+        const tipFor = (u) => {
+          if (state.level === "adm2") {
+            const parts = ["p0", "p1", "p2", "line"].map((k) =>
+              `<div class="t-row"><span>${METRIC[k].label}</span><b class="${k === state.metric ? "teal" : ""}">${METRIC[k].fmt(val(u.id, k, state.year))}</b></div>`).join("");
+            return `<b>${u.name}</b><span class="t-sub">${provOf(u.id)} · BPS ${state.year} · official</span>${parts}`;
+          }
+          const key = String(state.year);
+          const i = estIdx?.get(u.id) ?? -1;
+          const est = i >= 0 ? estimates.est[key]?.[i] : null;
+          const off = val(u.parent, "p0", state.year);
+          return `<b>${u.name}</b><span class="t-sub">kecamatan of ${nameOf(u.parent)} · ${provOf(u.parent)}</span>` +
+            `<div class="t-row"><span>Model estimate ${state.year}</span><b class="ochre">${pp(est)}</b></div>` +
+            (i >= 0 && estimates.lo[i] != null && state.year === estimates.latest
+              ? `<div class="t-row"><span>Interval</span><b>${pp(estimates.lo[i])} – ${pp(estimates.hi[i])}</b></div>` : "") +
+            `<div class="t-row"><span>Official regency rate</span><b class="teal">${pp(off)}</b></div>`;
+        };
+
+        function openPanel(u) {
+          panel.hidden = false;
+          const isReg = state.level === "adm2";
+          const code = isReg ? u.id : u.parent;
+          state.code = u.id;
+          cmap?.setSelected(u.id);
+          document.getElementById("panel-kind").textContent = isReg ? "REGENCY · OFFICIAL" : "KECAMATAN · MODEL ESTIMATE";
+          document.getElementById("panel-name").textContent = u.name;
+          document.getElementById("panel-sub").textContent =
+            isReg ? `${provOf(code)} · BPS CODE ${code}` : `${nameOf(code)} · ${provOf(code)}`;
+          const nums = document.getElementById("panel-nums");
+          if (isReg) {
+            nums.innerHTML = ["p0", "p1", "p2", "line"].map((k) =>
+              `<div class="pn"><span>${METRIC[k].label}</span><b class="teal">${METRIC[k].fmt(val(code, k, state.year))}</b></div>`).join("") +
+              (REG[code]?.pred != null ? `<div class="pn"><span>Model, held out</span><b class="ochre">${pp(REG[code].pred)}</b></div>` : "") +
+              (REG[code]?.pop != null ? `<div class="pn"><span>Population ${LATEST}</span><b>${fmtI(REG[code].pop)}</b></div>` : "") +
+              (REG[code]?.adm3 ? `<div class="pn"><span>Kecamatan</span><b>${REG[code].adm3}</b></div>` : "");
+          } else {
+            const i = estIdx?.get(u.id) ?? -1;
+            const est = i >= 0 ? estimates.est[String(state.year)]?.[i] : null;
+            nums.innerHTML =
+              `<div class="pn"><span>Model estimate ${state.year}</span><b class="ochre">${pp(est)}</b></div>` +
+              (i >= 0 && state.year === estimates.latest
+                ? `<div class="pn"><span>Interval</span><b>${pp(estimates.lo[i])} – ${pp(estimates.hi[i])}</b></div>` +
+                  `<div class="pn"><span>Population</span><b>${estimates.pop[i] == null ? "—" : fmtI(estimates.pop[i])}</b></div>` +
+                  `<div class="pn"><span>Benchmark factor</span><b>${estimates.factor[i] == null ? "—" : fmt2(estimates.factor[i])}×</b></div>` : "") +
+              `<div class="pn"><span>Official regency rate</span><b class="teal">${pp(val(code, "p0", state.year))}</b></div>`;
+          }
+          // sparkline of the official regency series, always shown for context
+          const spark = d3.select("#panel-spark").html("");
+          const series = YEARS.map((y) => ({ y, v: val(code, "p0", y) })).filter((d) => d.v != null);
+          if (series.length > 1) {
+            const W = 250, H = 62;
+            const x = d3.scaleLinear(d3.extent(series, (d) => d.y), [6, W - 6]);
+            const y = d3.scaleLinear([d3.min(series, (d) => d.v) * 0.9, d3.max(series, (d) => d.v) * 1.05], [H - 12, 8]);
+            const svg = spark.append("svg").attr("width", "100%").attr("height", H).attr("viewBox", `0 0 ${W} ${H}`);
+            svg.append("path").datum(series).attr("fill", "none").attr("stroke", TEAL).attr("stroke-width", 1.8)
+              .attr("d", d3.line().x((d) => x(d.y)).y((d) => y(d.v)).curve(d3.curveMonotoneX));
+            svg.selectAll("circle").data(series).join("circle").attr("cx", (d) => x(d.y)).attr("cy", (d) => y(d.v))
+              .attr("r", (d) => (d.y === state.year ? 3.6 : 1.8)).attr("fill", (d) => (d.y === state.year ? "#F0EAE1" : TEAL));
+            svg.append("text").attr("x", 6).attr("y", H - 1).attr("font-size", 12).attr("fill", MUTED)
+              .attr("font-family", "IBM Plex Mono, monospace").text(`OFFICIAL P0 ${YEARS[0]}–${LATEST}`);
+          }
+          const sh = document.getElementById("panel-shap");
+          const rows = REG[code]?.shap;
+          // attribution is fitted at the regency level, so say whose it is when the panel
+          // is showing a kecamatan
+          sh.innerHTML = rows?.length
+            ? `<span class="stamp dim">WHY THE MODEL SAYS SO${isReg ? "" : ` — FOR ${String(nameOf(code)).toUpperCase()}, THE REGENCY`}</span><ul class="mini-shap">` +
+              rows.map(([f, v, phrase]) => `<li class="${v >= 0 ? "up" : "down"}"><span>${phrase}</span><b>${v > 0 ? "+" : ""}${fmt2(v)} pp</b></li>`).join("") + "</ul>"
+            : "";
+          syncHash();
+        }
+        document.getElementById("panel-close").addEventListener("click", () => {
+          panel.hidden = true; state.code = null; cmap?.setSelected(null); syncHash();
+        });
+
+        function syncHash() {
+          const p = new URLSearchParams();
+          p.set("l", state.level); p.set("m", state.metric); p.set("y", String(state.year));
+          if (state.code) p.set("c", state.code);
+          history.replaceState(null, "", `#${p.toString()}`);
+        }
+
+        function repaint() {
+          const vals = valuesFor();
+          const sc = scaleFor(vals);
+          legend(sc);
+          if (cmap) cmap.setColours(currentLayer.units.map((u) => sc.colour(vals.get(u.id))));
+          if (ml && useMaplibre) {
+            for (const f of ml.geo.features) f.properties.col = sc.colour(vals.get(f.properties.id));
+            ml.map.getSource("units")?.setData(ml.geo);
+          }
+          renderTable(vals);
+        }
+
+        function mountCanvas() {
+          cmap = CanvasMap(mapEl, { ground: "#100D0A", pannable: true, tip: tipFor, onPick: openPanel });
+          cmap.setLayer(currentLayer);
+          const tag = document.createElement("span");
+          tag.className = "map-tag stamp";
+          tag.textContent = "2-D MAP · NO GPU REQUIRED · DRAG TO PAN · SCROLL TO ZOOM · COD-AB CC BY-IGO";
+          mapEl.appendChild(tag);
+        }
+
+        // try MapLibre; on any failure (this browser runs with WebGL off) use the 2-D canvas,
+        // which is a full-function renderer, not a placeholder.
+        (async () => {
+          try {
+            const maplibregl = (await import("maplibre-gl")).default;
+            if (!maplibregl.supported?.({ failIfMajorPerformanceCaveat: false })) throw new Error("WebGL unavailable");
+            const geo = toGeoJSON(currentLayer);
+            const map = new maplibregl.Map({
+              container: mapEl, attributionControl: false, dragRotate: false,
+              style: { version: 8, sources: {}, layers: [{ id: "bg", type: "background", paint: { "background-color": "#100D0A" } }] },
+              bounds: [[currentLayer.bbox[0], currentLayer.bbox[1]], [currentLayer.bbox[2], currentLayer.bbox[3]]],
+              fitBoundsOptions: { padding: 16 },
+            });
+            map.addControl(new maplibregl.NavigationControl({ showCompass: false }));
+            map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: "BPS · HDX COD-AB CC BY-IGO" }));
+            await new Promise((ok, no) => { map.on("load", ok); map.on("error", (e) => no(e.error ?? new Error("map error"))); });
+            map.addSource("units", { type: "geojson", data: geo, promoteId: "id" });
+            map.addLayer({ id: "fill", type: "fill", source: "units", paint: { "fill-color": ["get", "col"], "fill-opacity": 0.94 } });
+            map.addLayer({ id: "line", type: "line", source: "units", paint: { "line-color": HAIR, "line-width": 0.4 } });
+            ml = { map, geo }; useMaplibre = true;
+            map.on("mousemove", "fill", (e) => showTip(tipFor(currentLayer.units[currentLayer.index.get(e.features[0].properties.id)]), e.originalEvent));
+            map.on("mouseleave", "fill", hideTip);
+            map.on("click", "fill", (e) => openPanel(currentLayer.units[currentLayer.index.get(e.features[0].properties.id)]));
+            repaint();
+          } catch (err) {
+            console.warn("WebGL map unavailable — 2-D canvas renderer:", err?.message ?? err);
+            useMaplibre = false; ml = null;
+            mountCanvas();
+            repaint();
+          }
+        })();
+
+        /* ---- controls ---- */
+        const yearRange = document.getElementById("year-range");
+        yearRange.max = String(YEARS.length - 1);
+        yearRange.value = String(YEARS.length - 1);
+        const yearOut = document.getElementById("year-out");
+        yearRange.addEventListener("input", () => {
+          state.year = YEARS[+yearRange.value];
+          yearOut.textContent = String(state.year);
+          repaint();
+          if (state.code) { const i = currentLayer.index.get(state.code); if (i != null) openPanel(currentLayer.units[i]); }
+        });
+
+        document.querySelectorAll("#metric-seg button").forEach((b) => b.addEventListener("click", () => {
+          if (state.level === "adm3") return;
+          document.querySelectorAll("#metric-seg button").forEach((x) => x.classList.toggle("on", x === b));
+          state.metric = b.dataset.metric; repaint(); syncHash();
+        }));
+
+        async function setLevel(lvl) {
+          if (lvl === "adm3") {
+            if (!estimates) { failBanner("Kecamatan estimates are not built yet — the regency view stays selected."); return; }
+            await loadAdm3();
+            if (!ADM3) { failBanner("Kecamatan geometry unavailable."); return; }
+            currentLayer = ADM3; state.metric = "p0";
+            document.querySelectorAll("#metric-seg button").forEach((x) => x.classList.toggle("on", x.dataset.metric === "p0"));
+            document.getElementById("metric-seg").classList.add("disabled");
+          } else {
+            currentLayer = ADM2;
+            document.getElementById("metric-seg").classList.remove("disabled");
+          }
+          state.level = lvl; state.code = null; panel.hidden = true;
+          if (useMaplibre && ml) { ml.geo = toGeoJSON(currentLayer); ml.map.getSource("units").setData(ml.geo); }
+          else if (cmap) cmap.setLayer(currentLayer);
+          repaint(); syncHash();
+        }
+        document.querySelectorAll("#lvl-seg button").forEach((b) => b.addEventListener("click", () => {
+          document.querySelectorAll("#lvl-seg button").forEach((x) => x.classList.toggle("on", x === b));
+          setLevel(b.dataset.lvl);
+        }));
+        if (!estimates) {
+          const b = document.querySelector('#lvl-seg [data-lvl="adm3"]');
+          b.disabled = true;
+          b.title = "Kecamatan estimates are produced by the model run, which is still pending";
+          b.textContent = "Kecamatan · pending";
+        }
+
+        /* ---- table view + CSV ---- */
+        const tableWrap = document.getElementById("table-wrap");
+        const table = document.getElementById("data-table");
+        let tableStale = true;
+        function buildRows(vals) {
+          const rows = currentLayer.units.map((u) => {
+            const v = vals.get(u.id);
+            return state.level === "adm2"
+              ? { code: u.id, name: u.name, province: provOf(u.id), value: v,
+                  official_p0: val(u.id, "p0", state.year), model_p0: REG[u.id]?.pred ?? null }
+              : { code: u.id, name: u.name, regency: nameOf(u.parent), province: provOf(u.parent),
+                  estimate_p0: v, official_regency_p0: val(u.parent, "p0", state.year) };
+          }).filter((r) => Object.values(r).some((x) => x != null));
+          rows.sort((a, b) => d3.descending(a.value ?? a.estimate_p0 ?? 0, b.value ?? b.estimate_p0 ?? 0));
+          return rows;
+        }
+        function renderTable(vals) {
+          // the table view is usually hidden; building 7,069 rows on every repaint would
+          // cost more than the map does
+          if (tableWrap.hidden) { tableStale = true; return; }
+          tableStale = false;
+          const rows = buildRows(vals);
+          const cols = Object.keys(rows[0] || { code: "", name: "" });
+          table.querySelector("thead").innerHTML =
+            `<tr>${cols.map((c) => `<th>${c.replace(/_/g, " ")}</th>`).join("")}</tr>`;
+          table.querySelector("tbody").innerHTML = rows.slice(0, 300).map((r) =>
+            `<tr>${cols.map((c) => `<td>${typeof r[c] === "number" ? fmt2(r[c]) : (r[c] ?? "—")}</td>`).join("")}</tr>`).join("");
+        }
+        document.querySelectorAll("#view-seg button").forEach((b) => b.addEventListener("click", () => {
+          document.querySelectorAll("#view-seg button").forEach((x) => x.classList.toggle("on", x === b));
+          const isTable = b.dataset.view === "table";
+          tableWrap.hidden = !isTable;
+          document.querySelector(".map-shell").hidden = isTable;
+          if (isTable && tableStale) renderTable(valuesFor());
+        }));
+        document.getElementById("dl-csv").addEventListener("click", () => {
+          const dlRows = buildRows(valuesFor());
+          if (!dlRows.length) return;
+          const cols = Object.keys(dlRows[0]);
+          const csv = [cols.join(",")].concat(dlRows.map((r) =>
+            cols.map((c) => {
+              const v = r[c];
+              return v == null ? "" : typeof v === "string" && /[",]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+            }).join(","))).join("\n");
+          const a = document.createElement("a");
+          a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+          a.download = `poverty-map_${state.level}_${state.metric}_${state.year}.csv`;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+        });
+
+        /* ---- URL state on load ---- */
+        const h = new URLSearchParams(location.hash.slice(1));
+        if (h.get("y") && YEARS.includes(+h.get("y"))) {
+          state.year = +h.get("y");
+          yearRange.value = String(YEARS.indexOf(state.year));
+          yearOut.textContent = String(state.year);
+        }
+        if (h.get("m") && METRIC[h.get("m")]) {
+          state.metric = h.get("m");
+          document.querySelectorAll("#metric-seg button").forEach((x) => x.classList.toggle("on", x.dataset.metric === state.metric));
+        }
+        if (h.get("l") === "adm3" && estimates) {
+          document.querySelectorAll("#lvl-seg button").forEach((x) => x.classList.toggle("on", x.dataset.lvl === "adm3"));
+          setLevel("adm3").then(() => { const c = h.get("c"); if (c) { const i = currentLayer.index.get(c); if (i != null) openPanel(currentLayer.units[i]); } });
+        } else if (h.get("c")) {
+          const i = ADM2.index.get(h.get("c"));
+          if (i != null) setTimeout(() => openPanel(ADM2.units[i]), 60);
+        }
+        addEventListener("hashchange", () => {
+          const q = new URLSearchParams(location.hash.slice(1));
+          const c = q.get("c");
+          if (c && c !== state.code) {
+            const i = currentLayer.index.get(c);
+            if (i != null) openPanel(currentLayer.units[i]);
+          }
+        });
+      });
+
+      /* ══════════════════════════ METHOD ══════════════════════════════════════════ */
+      sect("method", () => {
+        const cl = document.getElementById("caveat-list");
+        const caveats = statsJson?.caveats ?? [
+          "Kecamatan values are model estimates that distribute the official regency rate; they are not survey measurements.",
+          "Open Buildings is a single 2023 vintage and ESA WorldCover a single 2021 vintage — only night lights and population vary year to year.",
+          "Susenas and DHS microdata are restricted, so the target is the published regency poverty rate rather than household consumption.",
+        ];
+        cl.innerHTML = caveats.map((c) => `<li>${c}</li>`).join("");
+
+        if (recon) {
+          document.getElementById("recon-summary").innerHTML =
+            `COD-AB carries <b>${recon.codab_adm2}</b> ADM2 polygons on a 2020-04 vintage; BPS publishes ` +
+            `<b>${recon.matched}</b> kabupaten/kota to ${LATEST}. <b>${recon.by_pcode}</b> join directly on the ` +
+            `P-code digits. The remaining <b>${recon.by_name}</b> are the post-2020 <i>pemekaran</i> — the Papua ` +
+            `province splits, where the same regency was re-coded from 91xx/94xx to 92xx and 95xx–97xx — and are ` +
+            `resolved by name, one-to-one, against the unmatched set only. <b>${recon.non_census}</b> COD-AB ` +
+            `polygons are lakes, a reservoir and a forest block: they are not census units and get no estimate. ` +
+            `<b>${(recon.unresolved || []).length}</b> codes remain unresolved` +
+            ((recon.unresolved || []).length ? ", and they are listed below." : " — every published regency has geometry.");
+          const rows = (recon.rows || []).filter((r) => r.resolution !== "non-census polygon");
+          const t = document.getElementById("recon-table");
+          t.querySelector("thead").innerHTML =
+            "<tr><th>COD-AB 2020</th><th>Name</th><th>BPS current</th><th>Resolution</th></tr>";
+          t.querySelector("tbody").innerHTML = rows.map((r) => `
+            <tr class="${String(r.resolution).startsWith("UNMATCHED") || r.resolution === "ambiguous" ? "bad" : ""}">
+              <td>${r.codab_code || "—"}</td><td>${r.codab_name || r.bps_name || "—"}</td>
+              <td>${r.bps_code || "—"}</td><td>${r.resolution}</td></tr>`).join("");
+        }
+
+        const ml = document.getElementById("manifest-list");
+        ml.innerHTML = Object.entries(manifest).filter(([, v]) => v && typeof v === "object" && v.status)
+          .map(([k, v]) => `<li><code>${k}</code> — ${v.status}${v.bytes ? ` · ${(v.bytes / 1024).toFixed(0)} kB` : ""}${v.units ? ` · ${fmtI(v.units)} units` : ""}${v.res_m ? ` · ${v.res_m} m lattice` : ""}${v.waiting_on ? ` · waiting on ${v.waiting_on.join(", ")}` : ""}</li>`).join("");
+      });
+    </script>
+
+    <style is:global>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      [hidden] { display: none !important; }
+      /* nothing on this page renders below 12px — including d3's axis groups, which carry
+         font-size as a presentation attribute that CSS is allowed to win against. */
+      svg g, svg text, svg tspan { font-size: 12px; }
+      html { scroll-behavior: smooth; }
+      @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+      body { margin: 0; overflow-x: hidden; font-size: 16px; background: var(--ground); }
+      ::selection { background: var(--accent-ink); color: var(--ink); }
+
+      .skip { position: absolute; left: -999px; top: 0; z-index: 200; background: var(--accent);
+        color: #201607; padding: 10px 16px; font: 600 14px var(--font-body); }
+      .skip:focus { left: 8px; top: 8px; }
+      :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+      .stamp { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.1em;
+        text-transform: uppercase; color: var(--ink-muted); }
+      .stamp.dim { opacity: 0.72; }
+      .eyebrow { font-family: var(--font-data); font-size: 12px; font-weight: 600;
+        letter-spacing: 0.16em; text-transform: uppercase; color: var(--accent); }
+      .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+      .teal { color: var(--official); } .ochre { color: var(--accent); }
+      .bad-inline { color: #F26D5B; }
+
+      /* ── topbar ── */
+      .topbar { position: sticky; top: 0; z-index: 60; display: flex; align-items: center;
+        gap: 20px; padding: 10px 22px; background: color-mix(in srgb, var(--ground) 88%, transparent);
+        backdrop-filter: blur(12px); border-bottom: 1px solid var(--hairline); }
+      .wordmark { display: flex; align-items: center; gap: 8px; font-family: var(--font-data);
+        font-size: 13px; font-weight: 600; letter-spacing: 0.18em; color: var(--ink); text-decoration: none; }
+      .wordmark .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent);
+        box-shadow: 0 0 12px 2px color-mix(in srgb, var(--accent) 60%, transparent); }
+      .topbar nav { display: flex; gap: 16px; margin-left: auto; flex-wrap: wrap; }
+      .topbar nav a { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.08em;
+        text-transform: uppercase; color: var(--ink-muted); text-decoration: none; padding: 4px 2px;
+        border-bottom: 1px solid transparent; transition: color 200ms, border-color 200ms; }
+      .topbar nav a:hover { color: var(--ink); border-color: var(--accent); }
+      #top-stamp { margin-left: 8px; }
+      @media (max-width: 900px) { .topbar nav { display: none; } #top-stamp { margin-left: auto; } }
+
+      /* ── hero ── */
+      #hero { position: relative; display: grid; grid-template-columns: 1fr; }
+      /* the frame tracks Indonesia's own 2.7:1 aspect so the archipelago fills it edge to edge */
+      .hero-canvas-wrap { position: relative; height: clamp(230px, 40vw, 600px);
+        background: radial-gradient(120% 90% at 50% 20%, #1B140D 0%, #0C0906 70%); overflow: hidden; }
+      #hero-map { position: absolute; inset: 0; }
+      .hero-canvas-wrap canvas { width: 100%; height: 100%; display: block; }
+      .hero-veil { position: absolute; inset: 0; pointer-events: none;
+        background: linear-gradient(180deg, rgba(12,9,6,0.55) 0%, rgba(12,9,6,0) 26%, rgba(12,9,6,0) 62%, rgba(12,9,6,0.92) 100%); }
+      .wipe { position: absolute; inset: 0; pointer-events: none; }
+      .wipe-handle { pointer-events: auto; position: absolute; top: 50%; transform: translate(-50%, -50%);
+        width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(240,234,225,0.55);
+        background: color-mix(in srgb, var(--ground) 70%, transparent); backdrop-filter: blur(6px);
+        color: var(--ink); font-size: 13px; cursor: ew-resize; display: grid; place-items: center;
+        box-shadow: 0 6px 24px rgba(0,0,0,0.55), 0 0 0 6px rgba(217,154,78,0.10); touch-action: none; }
+      .wipe-handle:hover { border-color: var(--accent); }
+      .hero-labels { position: absolute; inset: auto 0 74px 0; display: flex;
+        justify-content: space-between; padding: 0 20px; pointer-events: none; }
+      .hl { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.12em;
+        text-transform: uppercase; padding: 5px 10px; border-radius: 3px;
+        background: color-mix(in srgb, var(--ground) 78%, transparent); }
+      .hl.left { color: #C8D0DA; border-left: 2px solid #7D8794; }
+      .hl.right { color: var(--accent); border-right: 2px solid var(--accent); }
+      /* the two labels collide on a phone; the note under the controls names the layer anyway */
+      @media (max-width: 620px) { .hero-labels { display: none; } }
+      .hero-pending { position: absolute; right: 20px; top: 68px; width: min(360px, calc(100% - 40px));
+        background: color-mix(in srgb, var(--surface) 94%, transparent); border: 1px solid var(--hairline);
+        border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 14px 16px;
+        box-shadow: 0 18px 50px rgba(0,0,0,0.6); z-index: 3; }
+      .hero-pending b { display: block; font-family: var(--font-display); font-size: 15px; margin: 8px 0 6px; }
+      .hero-pending p { margin: 0; font-size: 13px; color: var(--ink-muted); line-height: 1.55; }
+      @media (max-width: 780px) { .hero-pending { position: static; margin: 14px 20px 0; width: auto; } }
+
+      .hero-copy { max-width: var(--content-width); margin: 0 auto; padding: 32px 22px 8px;
+        display: flex; flex-direction: column; gap: 14px; }
+      #hero-title { font-size: clamp(2.4rem, 6.4vw, 4.6rem); line-height: 0.98; margin: 0;
+        letter-spacing: -0.03em; font-weight: 800;
+        background: linear-gradient(96deg, #F6EFE4 12%, var(--accent) 96%);
+        -webkit-background-clip: text; background-clip: text; color: transparent; }
+      .lede { margin: 0; max-width: var(--prose-width); color: var(--ink-muted); font-size: 17px; line-height: 1.65; }
+      .lede em { color: var(--ink); font-style: italic; }
+      .hero-ctl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+      .hero-note { margin: 0; }
+      .scroll-cue { position: absolute; left: 50%; bottom: -18px; transform: translateX(-50%);
+        display: none; font-family: var(--font-data); font-size: 12px; letter-spacing: 0.2em;
+        color: var(--ink-muted); align-items: center; gap: 8px; }
+
+      /* ── controls ── */
+      .segmented { display: inline-flex; border: 1px solid var(--hairline); border-radius: var(--radius);
+        overflow: hidden; background: var(--surface); }
+      .segmented button { appearance: none; border: 0; background: transparent; color: var(--ink-muted);
+        font-family: var(--font-data); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase;
+        padding: 8px 12px; cursor: pointer; transition: background 200ms, color 200ms;
+        border-right: 1px solid var(--hairline); min-height: 34px; }
+      .segmented button:last-child { border-right: 0; }
+      .segmented button:hover:not(:disabled) { color: var(--ink); background: var(--surface-raised); }
+      .segmented button.on { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 26%, transparent), color-mix(in srgb, var(--accent) 12%, transparent));
+        color: var(--ink); box-shadow: inset 0 -2px 0 var(--accent); }
+      .segmented button:disabled { opacity: 0.42; cursor: not-allowed; }
+      .segmented.disabled { opacity: 0.42; pointer-events: none; }
+      .ghost { appearance: none; background: transparent; border: 1px solid var(--hairline);
+        color: var(--ink-muted); border-radius: var(--radius); padding: 8px 12px; cursor: pointer;
+        font-family: var(--font-data); font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase;
+        min-height: 34px; transition: color 200ms, border-color 200ms; }
+      .ghost:hover { color: var(--ink); border-color: var(--accent); }
+      .picker { appearance: none; background: var(--surface); color: var(--ink);
+        border: 1px solid var(--hairline); border-radius: var(--radius); padding: 8px 10px;
+        font-family: var(--font-data); font-size: 13px; max-width: 100%; margin-top: 8px; }
+      .picker:disabled { display: none; }
+
+      /* ── layout ── */
+      .band { max-width: var(--content-width); margin: 0 auto; padding: 26px 22px; }
+      .chapter { max-width: var(--content-width); margin: 0 auto; padding: 58px 22px; }
+      .chapter.wide { max-width: 88rem; }
+      .ch-head { display: grid; grid-template-columns: 74px 1fr; gap: 18px; align-items: start;
+        margin-bottom: 26px; }
+      .chno { font-family: var(--font-data); font-size: 40px; font-weight: 600; line-height: 1;
+        color: transparent; -webkit-text-stroke: 1px color-mix(in srgb, var(--accent) 70%, transparent); }
+      .ch-head h2 { margin: 0 0 10px; font-size: clamp(1.5rem, 3vw, 2.1rem); letter-spacing: -0.015em; }
+      @media (max-width: 620px) { .ch-head { grid-template-columns: 1fr; gap: 6px; } .chno { font-size: 28px; } }
+
+      .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+      .method-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+      .stack { display: grid; gap: 18px; align-content: start; }
+      /* grid items default to min-width:auto, which lets a wide table push the page sideways */
+      .grid-2 > *, .method-grid > *, .stack > *, .gate-grid > *, .stat-row > * { min-width: 0; }
+      @media (max-width: 900px) { .grid-2, .method-grid { grid-template-columns: 1fr; } }
+
+      .card { margin: 0; background: linear-gradient(180deg, var(--surface-raised), var(--surface));
+        border: 1px solid var(--hairline); border-radius: var(--radius); padding: 18px;
+        box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 12px 34px rgba(0,0,0,0.32); }
+      .card figcaption { margin-bottom: 12px; }
+      .card h3 { margin: 0 0 6px; font-size: 16px; letter-spacing: -0.005em; }
+      .cap { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-muted); }
+      .cap.dim { opacity: 0.78; }
+      .ctl-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+      .chart { min-height: 120px; }
+      .chart.tall { min-height: 300px; }
+      .chart.short { min-height: 150px; }
+      .plainread { margin: 12px 0 0; font-size: 14px; line-height: 1.6; color: var(--ink-muted);
+        border-top: 1px solid var(--hairline); padding-top: 12px; }
+
+      .sowhat { max-width: var(--prose-width); margin: 26px 0 0; padding: 16px 20px;
+        border-left: 3px solid var(--accent); background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 9%, transparent), transparent 70%);
+        font-size: 16px; line-height: 1.65; }
+      .sowhat b { color: var(--accent); }
+      .sowhat em { color: var(--ink); }
+
+      /* ── stats ── */
+      .verdict { max-width: var(--prose-width); margin: 0 0 20px; padding: 15px 20px;
+        border-radius: var(--radius); font-size: 16px; line-height: 1.6;
+        border: 1px solid var(--hairline); border-left-width: 3px; background: var(--surface); }
+      .verdict b { font-family: var(--font-display); }
+      .verdict em { color: var(--ink); font-style: italic; }
+      .verdict.ok { border-left-color: var(--official); }
+      .verdict.ok b { color: var(--official); }
+      .verdict.fail { border-left-color: #F26D5B;
+        background: linear-gradient(90deg, rgba(242,109,91,0.10), var(--surface) 70%); }
+      .verdict.fail b { color: #F26D5B; }
+      .verdict.pending { border-left-color: var(--accent); }
+      .verdict.pending b { color: var(--accent); }
+      .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+      @media (max-width: 980px) { .stat-row { grid-template-columns: repeat(2, 1fr); } }
+      @media (max-width: 540px) { .stat-row { grid-template-columns: 1fr; } }
+      .stat { position: relative; padding: 18px 16px; border: 1px solid var(--hairline);
+        border-radius: var(--radius); background: linear-gradient(180deg, var(--surface-raised), var(--surface));
+        overflow: hidden; }
+      .stat::after { content: ""; position: absolute; inset: auto 0 0 0; height: 2px; background: var(--hairline); }
+      .stat.official::after { background: linear-gradient(90deg, var(--official), transparent); }
+      .stat.model::after { background: linear-gradient(90deg, var(--accent), transparent); }
+      .stat.fail::after { background: linear-gradient(90deg, #F26D5B, transparent); }
+      .stat.pending::after { background: repeating-linear-gradient(90deg, var(--hairline) 0 6px, transparent 6px 12px); }
+      .stat-big { display: block; font-family: var(--font-display); font-weight: 700;
+        font-size: clamp(1.7rem, 3.4vw, 2.5rem); line-height: 1.05; letter-spacing: -0.02em;
+        color: var(--ink); font-variant-numeric: tabular-nums; }
+      .stat.official .stat-big { color: var(--official); }
+      .stat.model .stat-big { color: var(--accent); }
+      .stat.pending .stat-big { color: var(--ink-muted); }
+      .stat-big .vs { font-family: var(--font-data); font-size: 13px; color: var(--ink-muted);
+        margin: 0 8px; letter-spacing: 0.1em; }
+      .stat-lab { display: block; margin-top: 8px; font-size: 14px; color: var(--ink); }
+      .stat-sub { display: block; margin-top: 6px; text-transform: none; letter-spacing: 0.02em; }
+
+      /* ── gates ── */
+      .gate-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 22px; }
+      @media (max-width: 1100px) { .gate-grid { grid-template-columns: repeat(2, 1fr); } }
+      @media (max-width: 620px) { .gate-grid { grid-template-columns: 1fr; } }
+      .gate { border: 1px solid var(--hairline); border-radius: var(--radius); padding: 14px 16px;
+        background: var(--surface); border-left: 3px solid var(--hairline); }
+      .gate.pass, .gate.disclosed { border-left-color: var(--official); }
+      .gate-status.disclosed { background: color-mix(in srgb, var(--official) 18%, transparent);
+        color: var(--official); }
+      .gate.fail { border-left-color: #F26D5B; background: linear-gradient(180deg, #2A1512, var(--surface)); }
+      .gate.pending { border-left-color: var(--ink-muted); }
+      .gate-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+      .gate-id { font-family: var(--font-data); font-size: 13px; font-weight: 600; letter-spacing: 0.1em; color: var(--accent); }
+      .gate-status { font-family: var(--font-data); font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
+        padding: 2px 7px; border-radius: 3px; }
+      .gate-status.pass { background: color-mix(in srgb, var(--official) 22%, transparent); color: var(--official); }
+      .gate-status.fail { background: rgba(242,109,91,0.18); color: #F26D5B; }
+      .gate-status.pending { background: var(--surface-raised); color: var(--ink-muted); }
+      .gate h4 { margin: 10px 0 8px; font-size: 14px; font-family: var(--font-display); line-height: 1.35; }
+      .gate .hard { font-family: var(--font-data); font-size: 12px; color: var(--ink-muted);
+        border: 1px solid var(--hairline); padding: 0 5px; border-radius: 3px; }
+      ul.checks { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 5px; }
+      ul.checks li { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; align-items: baseline;
+        font-size: 13px; padding: 4px 0; border-bottom: 1px dashed var(--hairline); }
+      ul.checks li span { color: var(--ink-muted); }
+      ul.checks li b { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+      ul.checks li i { grid-column: 1 / -1; font-family: var(--font-data); font-size: 12px;
+        font-style: normal; color: var(--ink-muted); opacity: 0.75; }
+      ul.checks li.ok b { color: var(--official); }
+      ul.checks li.bad b { color: #F26D5B; }
+      ul.checks li.unk b { color: var(--ink-muted); }
+
+      /* ── plates ── */
+      .plate { border: 1px dashed var(--hairline); border-radius: var(--radius); padding: 18px;
+        background: repeating-linear-gradient(135deg, rgba(255,255,255,0.012) 0 10px, transparent 10px 20px);
+        min-height: 120px; display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+      .plate-tag { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.14em;
+        color: var(--accent); align-self: flex-start; border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+        padding: 2px 7px; border-radius: 3px; }
+      .plate b { font-family: var(--font-display); font-size: 15px; }
+      .plate p { margin: 0; font-size: 13px; line-height: 1.6; color: var(--ink-muted); }
+
+      /* ── explore ── */
+      .explore-ctl { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+      .yearbox { display: flex; align-items: center; gap: 10px; border: 1px solid var(--hairline);
+        border-radius: var(--radius); padding: 4px 12px; background: var(--surface); min-height: 36px; }
+      .yearbox label { font-family: var(--font-data); font-size: 12px; letter-spacing: 0.08em;
+        text-transform: uppercase; color: var(--ink-muted); }
+      .yearbox output { font-family: var(--font-data); font-size: 14px; color: var(--accent); min-width: 42px; }
+      input[type="range"] { appearance: none; width: 150px; height: 3px; border-radius: 2px;
+        background: linear-gradient(90deg, var(--accent), var(--hairline)); }
+      input[type="range"]::-webkit-slider-thumb { appearance: none; width: 15px; height: 15px;
+        border-radius: 50%; background: var(--ink); border: 2px solid var(--accent); cursor: pointer; }
+      input[type="range"]::-moz-range-thumb { width: 15px; height: 15px; border-radius: 50%;
+        background: var(--ink); border: 2px solid var(--accent); cursor: pointer; }
+
+      .map-shell { position: relative; border: 1px solid var(--hairline); border-radius: var(--radius);
+        overflow: hidden; background: #100D0A; }
+      #map { width: 100%; height: min(66vh, 640px); min-height: 380px; position: relative; }
+      .map-tag { position: absolute; left: 12px; top: 10px; pointer-events: none;
+        background: color-mix(in srgb, var(--ground) 72%, transparent); padding: 4px 8px; border-radius: 3px; }
+      .legend { position: absolute; left: 12px; bottom: 12px; display: grid; gap: 5px; width: min(320px, 60%);
+        background: color-mix(in srgb, var(--ground) 82%, transparent); backdrop-filter: blur(8px);
+        border: 1px solid var(--hairline); border-radius: var(--radius); padding: 10px 12px; }
+      .lg-ramp { display: block; height: 9px; border-radius: 2px; }
+      .lg-ends { display: flex; justify-content: space-between; }
+      .lg-ends b { font-weight: 500; color: var(--ink); }
+      .lg-note { text-transform: uppercase; opacity: 0.8; line-height: 1.4; }
+      /* on a narrow screen the archipelago's 2.7:1 aspect leaves a tall box mostly empty and
+         a floating legend covers what is left — so shorten the frame and drop the legend out */
+      @media (max-width: 720px) {
+        #map { height: 260px; min-height: 0; }
+        .legend { position: static; width: auto; border: 0; border-top: 1px solid var(--hairline);
+          border-radius: 0; backdrop-filter: none; }
+      }
+
+      .panel { position: absolute; right: 12px; top: 12px; width: min(320px, calc(100% - 24px));
+        max-height: calc(100% - 24px); overflow: auto; background: color-mix(in srgb, var(--surface) 95%, transparent);
+        backdrop-filter: blur(10px); border: 1px solid var(--hairline); border-radius: var(--radius);
+        padding: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.6); }
+      .panel h3 { margin: 6px 0 4px; font-size: 18px; }
+      .panel-close { position: absolute; right: 8px; top: 6px; background: transparent; border: 0;
+        color: var(--ink-muted); font-size: 22px; line-height: 1; cursor: pointer; padding: 4px 8px; }
+      .panel-close:hover { color: var(--ink); }
+      .panel-nums { display: grid; gap: 6px; margin: 12px 0; }
+      .pn { display: flex; justify-content: space-between; gap: 12px; font-size: 13px;
+        border-bottom: 1px dashed var(--hairline); padding-bottom: 5px; }
+      .pn span { color: var(--ink-muted); }
+      .pn b { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+      ul.mini-shap { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+      ul.mini-shap li { display: flex; justify-content: space-between; gap: 10px; font-size: 13px;
+        padding: 3px 6px; border-radius: 3px; }
+      ul.mini-shap li.up { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+      ul.mini-shap li.down { background: rgba(107,124,166,0.14); }
+      ul.mini-shap li b { font-family: var(--font-data); }
+
+      .table-wrap { max-height: 560px; overflow: auto; border: 1px solid var(--hairline);
+        border-radius: var(--radius); }
+      table { border-collapse: collapse; width: 100%; font-family: var(--font-data); font-size: 13px; }
+      thead th { position: sticky; top: 0; background: var(--surface-raised); text-align: left;
+        font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted);
+        padding: 9px 12px; border-bottom: 1px solid var(--hairline); }
+      tbody td { padding: 8px 12px; border-bottom: 1px solid var(--hairline); color: var(--ink); }
+      tbody tr:hover td { background: var(--surface); }
+      tbody tr.bad td { color: #F26D5B; }
+      .table-scroll { overflow-x: auto; max-width: 100%; }
+      .table-scroll.capped { max-height: 420px; overflow-y: auto;
+        border: 1px solid var(--hairline); border-radius: var(--radius); }
+      table.src td { font-family: var(--font-body); font-size: 13px; }
+      .pending-note { margin: 0 0 20px; }
+
+      /* ── contrasts ── */
+      ol.contrasts { list-style: none; counter-reset: c; margin: 0; padding: 0; display: grid; gap: 14px;
+        max-height: 420px; overflow: auto; }
+      ol.contrasts li { border-bottom: 1px solid var(--hairline); padding-bottom: 12px; }
+      .cpair { display: grid; grid-template-columns: 1fr auto 90px; gap: 8px; align-items: center; font-size: 13px; }
+      .cname { color: var(--ink); }
+      .cpair.low .cname, .cpair.low .cval { color: var(--ink-muted); }
+      .cval { font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+      .cbar { display: block; height: 6px; background: var(--hairline); border-radius: 3px; overflow: hidden; }
+      .cbar i { display: block; height: 100%; background: linear-gradient(90deg, #7A4F1E, var(--accent)); }
+      .cpair.low .cbar i { background: #4A4034; }
+      .cmeta { display: block; margin-top: 6px; text-transform: uppercase; }
+
+      /* ── prose ── */
+      .prose h3 { margin: 18px 0 8px; font-size: 15px; }
+      .prose h3:first-child { margin-top: 0; }
+      .prose p { margin: 0 0 10px; font-size: 14px; line-height: 1.65; color: var(--ink-muted); }
+      .prose p b { color: var(--ink); }
+      .prose ul { margin: 0; padding-left: 18px; display: grid; gap: 7px; }
+      .prose li { font-size: 13px; line-height: 1.6; color: var(--ink-muted); }
+      .prose li::marker { color: var(--accent); }
+      pre.code { background: #0E0B08; border: 1px solid var(--hairline); border-radius: var(--radius);
+        padding: 12px 14px; overflow-x: auto; font-family: var(--font-data); font-size: 13px;
+        line-height: 1.65; color: var(--ink); margin: 0 0 10px; }
+      code { font-family: var(--font-data); font-size: 13px; background: var(--surface-raised);
+        padding: 1px 5px; border-radius: 3px; }
+
+      /* ── tooltip ── */
+      .tooltip { position: fixed; z-index: 120; pointer-events: none; max-width: 300px;
+        background: color-mix(in srgb, var(--surface-raised) 96%, transparent); backdrop-filter: blur(8px);
+        border: 1px solid var(--hairline); border-left: 2px solid var(--accent); border-radius: var(--radius);
+        padding: 10px 12px; font-size: 13px; line-height: 1.5; color: var(--ink);
+        box-shadow: 0 16px 40px rgba(0,0,0,0.6); }
+      .tooltip b { font-family: var(--font-display); font-size: 14px; }
+      .t-sub { display: block; font-family: var(--font-data); font-size: 12px; color: var(--ink-muted);
+        margin: 2px 0 6px; }
+      .t-row { display: flex; justify-content: space-between; gap: 14px; padding: 2px 0; }
+      .t-row span { color: var(--ink-muted); }
+      .t-row b { font-family: var(--font-data); font-size: 13px; font-variant-numeric: tabular-nums; }
+
+      /* ── reveals ── */
+      .reveal { opacity: 0; transform: translateY(16px); transition: opacity 700ms cubic-bezier(.2,.7,.3,1),
+        transform 700ms cubic-bezier(.2,.7,.3,1); }
+      .reveal.in { opacity: 1; transform: none; }
+      @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+
+      .foot { max-width: var(--content-width); margin: 40px auto 0; padding: 20px 22px 56px;
+        border-top: 1px solid var(--hairline); display: grid; gap: 8px; }
+
+      .maplibregl-ctrl-attrib { background: color-mix(in srgb, var(--ground) 72%, transparent) !important;
+        color: var(--ink-muted); font-size: 12px; }
+      .maplibregl-ctrl-attrib a { color: var(--ink-muted); }
+    </style>
   </body>
 </html>
