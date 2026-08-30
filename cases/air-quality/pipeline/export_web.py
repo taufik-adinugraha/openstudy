@@ -193,13 +193,24 @@ def _airshed(stats, feats, fire) -> None:
         for s in SECTORS:
             for r in RINGS:
                 fire_rose.append({"sector": s, "ring": r, "n_fire": int(tot.get((s, r), 0))})
-        monthly = (fd.assign(m=fd["acq_date"].dt.to_period("M").astype(str))
-                     .groupby("m")["n_fire"].sum())
+        fd["m"] = fd["acq_date"].dt.to_period("M").astype(str)
+        monthly = fd.groupby("m")["n_fire"].sum()
         fire_series = [{"m": k, "n": int(v)} for k, v in monthly.items()]
+        # Where the biggest month actually burned — the chart shows the spike,
+        # this says what it was.
+        pm = monthly.idxmax()
+        sub = fd[fd["m"] == pm]
+        peak = {
+            "month": pm, "n": int(monthly.max()),
+            "sector": str(sub.groupby("sector", observed=True)["n_fire"].sum().idxmax()),
+            "ring": str(sub.groupby("ring", observed=True)["n_fire"].sum().idxmax()),
+            "median_per_day": int(sub.groupby("acq_date")["n_fire"].sum().median()),
+            "times_median_month": round(float(monthly.max() / monthly.median()), 1),
+        }
     else:
-        fire_series = []
+        fire_series, peak = [], None
     write("airshed.json", {"wind_rose": rose, "fire_rose": fire_rose,
-                           "fire_monthly": fire_series,
+                           "fire_monthly": fire_series, "fire_peak": peak,
                            "jakarta": {"lat": config.JKT_LAT, "lon": config.JKT_LON},
                            "rings_km": [0, 100, 400, 1200]})
 

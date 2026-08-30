@@ -156,7 +156,9 @@ const pending = !S;
         margin: 0 auto; padding: clamp(40px, 9vh, 96px) clamp(16px, 4vw, 48px) 0;
         pointer-events: none;
       }
-      .hero-copy { max-width: 40rem; }
+      /* the forecast cone passes behind this copy — keep it readable without
+         dropping a panel on top of the artwork */
+      .hero-copy { max-width: 40rem; text-shadow: 0 1px 14px rgba(6, 9, 14, .92), 0 0 40px rgba(6, 9, 14, .7); }
       .hero-copy p { color: var(--ink-muted); font-size: 1.06rem; max-width: 34rem; }
       .hero-copy p b { color: var(--ink); }
       .hud {
@@ -442,6 +444,7 @@ const pending = !S;
           <span class="stamp dim">VIIRS S-NPP · 95–119°E · 9°S–6°N</span></div>
         <div class="cv-wrap"><svg id="s-fire" class="chart" height="220" role="img"
           aria-label="Monthly fire hotspot counts across the airshed"></svg></div>
+        <p class="footnote" style="margin-top:12px" id="fire-peak"></p>
       </div>
       <p class="sowhat"><b>So what:</b> the same fire is worth a lot or nothing depending on
       where the wind is. That is why the model sees <em>upwind</em> fire counts, not a
@@ -801,7 +804,9 @@ const pending = !S;
 
         /* ── the forecast curve, drawn across the upper canvas ── */
         if (!hours.length) return;
-        const m = { l: 46, r: 22, t: h * 0.2, b: h * 0.52 };
+        // The curve floats between the headline and the skyline: high enough to
+        // clear the copy, low enough to read as haze sitting over the city.
+        const m = { l: 46, r: 22, t: h * 0.46, b: h * 0.22 };
         const iw = w - m.l - m.r, ih = h - m.t - m.b;
         const maxV = Math.max(40, d3.max(hours, (d) => d.hi ?? d.v) * 1.15);
         const x = (i) => m.l + (i / 72) * iw;
@@ -845,11 +850,9 @@ const pending = !S;
         ctx.fillStyle = band.c; ctx.fill();
         ctx.strokeStyle = GROUND; ctx.lineWidth = 2; ctx.stroke();
 
-        // axis ticks
-        ctx.fillStyle = MUTED;
-        [0, 24, 48, 72].forEach((hh) => {
-          ctx.fillText(hh === 0 ? "NOW" : "+" + hh + "h", x(hh) - (hh === 0 ? 12 : 16), m.t + ih + 20);
-        });
+        // The hour axis is the slider below; labelling it twice is noise.
+        ctx.fillStyle = d3.color(MUTED).copy({ opacity: 0.8 }) + "";
+        ctx.fillText("PM2.5 µg/m³ · FORECAST", m.l, m.t - 12);
       }
 
       sect("hero", () => {
@@ -1135,7 +1138,8 @@ const pending = !S;
         rh: "Relative humidity", t2m_c: "Temperature", d2m_c: "Dewpoint", precip_mm: "Rain this hour",
         precip_24h: "Rain, 24 h", ssrd_wm2: "Solar radiation", fire_region_3d: "Fires region-wide, 3 d",
         hour_sin: "Hour of day", hour_cos: "Hour of day", doy_sin: "Season", doy_cos: "Season",
-        hour_local: "Hour of day", dow: "Day of week", doy: "Day of year", location_id: "Station",
+        hour_local: "Hour of day", dow: "Day of week", doy: "Day of year",
+        location_id: "Station", station_idx: "Which station",
       };
       const niceName = (f) => NICE[f] ?? f
         .replace(/^pm25_lag(\d+)$/, "PM2.5, $1 h ago")
@@ -1372,8 +1376,17 @@ const pending = !S;
             .select(".domain").remove();
         };
         addEventListener("resize", debounce(drawFire));
-        load("airshed.json").then((A) => { months = A.fire_monthly ?? []; drawFire(); })
-          .catch(() => drawFire());
+        const RINGTXT = { near: "within 100 km", mid: "100–400 km out", far: "400–1200 km out" };
+        load("airshed.json").then((A) => {
+          months = A.fire_monthly ?? [];
+          const p = A.fire_peak;
+          if (p) document.getElementById("fire-peak").innerHTML =
+            `The largest month in the record is <b>${p.month}</b>: ${f0(p.n)} hotspots, ` +
+            `<b>${p.times_median_month}×</b> the median month, a median of ${f0(p.median_per_day)} a day. ` +
+            `Most of it sits <b>${p.sector}</b> of Jakarta, ${RINGTXT[p.ring] ?? p.ring} — far enough that ` +
+            `whether the city breathes it is a question about the wind, not about the fire.`;
+          drawFire();
+        }).catch(() => drawFire());
       });
 
       /* ════════════════════════════════════════════════════════════

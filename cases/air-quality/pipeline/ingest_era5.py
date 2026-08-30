@@ -90,6 +90,21 @@ def to_frame(path) -> pd.DataFrame:
     return df.dropna(subset=["ts_utc"])
 
 
+KEYS = ["ts_utc", "latitude", "longitude"]
+
+
+def collapse(df: pd.DataFrame) -> pd.DataFrame:
+    """The new CDS splits a multi-variable request into separate NetCDFs by
+    stepType — instantaneous fields in one, accumulations (total precipitation,
+    surface solar radiation) in another. Stacking those gives every variable a
+    50% NaN column and silently loses the accumulations at the first
+    de-duplication. They have to be JOINED on the grid key, not concatenated.
+    """
+    if df.duplicated(KEYS).any():
+        df = df.groupby(KEYS, as_index=False).first()      # first() skips NaN
+    return df.sort_values(KEYS)
+
+
 def unpack(target):
     """CDS sometimes ignores download_format and ships a zip of .nc parts."""
     if zipfile.is_zipfile(target):
@@ -131,7 +146,7 @@ def fetch(month: str) -> bool:
     mins = (datetime.now(UTC) - t0).total_seconds() / 60
     parts = unpack(target)
     frames = [to_frame(p) for p in parts]
-    df = pd.concat(frames, ignore_index=True).sort_values(["ts_utc", "latitude", "longitude"])
+    df = collapse(pd.concat(frames, ignore_index=True))
     df.to_parquet(part, index=False)
     for p in parts:
         p.unlink(missing_ok=True)
@@ -140,16 +155,31 @@ def fetch(month: str) -> bool:
     return True
 
 
+def repair_parts() -> None:
+    """Rewrite any part written before the stepType split was handled."""
+    fixed = 0
+    for p in sorted(ERA5_PARTS.glob("*.parquet")):
+        df = pd.read_parquet(p)
+        if not df.duplicated(KEYS).any():
+            continue
+        collapse(df).to_parquet(p, index=False)
+        fixed += 1
+    log(f"repaired {fixed} part(s) that had instant/accum rows stacked instead of joined")
+
+
 def consolidate() -> None:
     parts = sorted(ERA5_PARTS.glob("*.parquet"))
     if not parts:
         log("nothing to consolidate yet")
         return
-    df = pd.concat([pd.read_parquet(p) for p in parts], ignore_index=True)
-    df = df.drop_duplicates(["ts_utc", "latitude", "longitude"]).sort_values("ts_utc")
+    repair_parts()
+    df = collapse(pd.concat([pd.read_parquet(p) for p in parts], ignore_index=True))
+    df = df.sort_values("ts_utc")
     df.to_parquet(OUT, index=False)
+    miss = df[[c for c in RENAME if c in df.columns]].isna().mean()
     log(f"wrote {OUT.name}: {len(df):,} cell-hours, {df['ts_utc'].min()} -> {df['ts_utc'].max()} "
         f"({df[['latitude', 'longitude']].drop_duplicates().shape[0]} grid cells)")
+    log("missing share per variable: " + ", ".join(f"{k} {v:.1%}" for k, v in miss.items()))
 
 
 def main() -> None:
