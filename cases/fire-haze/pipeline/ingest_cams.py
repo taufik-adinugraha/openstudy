@@ -288,11 +288,61 @@ def receptor_series(grid):
     return pd.concat(rows, ignore_index=True) if rows else pd.DataFrame()
 
 
-def main() -> None:
+def consolidate() -> dict:
+    """Fold whatever parts exist into the consolidated tables.
+
+    Separated from the queue loop and exposed as ``--consolidate-only`` because the ADS backfill
+    is 70-odd serial requests: the downstream stages must be able to use what has landed without
+    waiting for what has not.
+    """
     import pandas as pd
+    out = {}
+    for glob, dest, label in (("gfas_*.parquet", GFAS_OUT, "gfas"),
+                              ("eac4_*.parquet", EAC4_GRID_OUT, "eac4"),
+                              ("camsfc_*.parquet", FC_OUT, "cams_forecast")):
+        parts = sorted(PARTS.glob(glob))
+        if not parts:
+            log(f"  {label}: no parts yet")
+            out[label] = {"parts": 0}
+            continue
+        df = pd.concat([pd.read_parquet(p) for p in parts], ignore_index=True)
+        df.to_parquet(dest, index=False, compression="zstd")
+        info = {"parts": len(parts), "rows": int(len(df))}
+        if label == "gfas" and "injection_height_m" in df.columns:
+            nz = df[df["injection_height_m"].fillna(0) > 50]
+            info["cells_with_injection_height"] = int(len(nz))
+            info["injection_height_years"] = sorted(
+                int(y) for y in set(pd.to_datetime(nz["day"]).dt.year))
+            info["injection_height_median_m"] = (float(nz["injection_height_m"].median())
+                                                 if len(nz) else None)
+        out[label] = info
+        log(f"  {label}: {len(parts)} parts -> {len(df):,} rows ({dest.name}, "
+            f"{dest.stat().st_size/1e6:.1f} MB)")
+    if EAC4_GRID_OUT.exists():
+        rec = receptor_series(pd.read_parquet(EAC4_GRID_OUT))
+        if len(rec):
+            rec.to_parquet(EAC4_REC_OUT, index=False, compression="zstd")
+            out["receptors"] = {"rows": int(len(rec)),
+                                "receptors": sorted(rec["receptor"].unique().tolist()),
+                                "kind": "MODEL (CAMS EAC4 reanalysis), never an observation"}
+    return out
+
+
+def main() -> None:
+    import argparse
+    import pandas as pd
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--consolidate-only", action="store_true",
+                    help="fold the parts already on disk into the tables; touch no queue")
+    args = ap.parse_args()
     PARTS.mkdir(parents=True, exist_ok=True)
     util.require(bool(config.CDS_API_KEY), "CDS_API_KEY missing from repo-root .env")
     meta = {"store": "ADS", "policy_urls": config.POLICY_URLS["ads"]}
+    if args.consolidate_only:
+        meta["consolidated"] = consolidate()
+        prev = json.loads(META_OUT.read_text()) if META_OUT.exists() else {}
+        META_OUT.write_text(json.dumps({**prev, **meta}, indent=1))
+        return
 
     # ORDER MATTERS ON A SERIAL QUEUE.  EAC4 is 14 requests and it is the ONLY thing standing
     # between the three unmonitored receptors — Pekanbaru, Palangkaraya, Pontianak, the cities
@@ -307,25 +357,7 @@ def main() -> None:
     meta["gfas"] = util.run_store_jobs("ads", gfas_specs(), reduce_gfas, NC_DIR,
                                        max_inflight=2, max_minutes=240)
 
-    for glob, out, label in ((f"gfas_*.parquet", GFAS_OUT, "gfas"),
-                             (f"eac4_*.parquet", EAC4_GRID_OUT, "eac4"),
-                             (f"camsfc_*.parquet", FC_OUT, "cams_forecast")):
-        parts = sorted(PARTS.glob(glob))
-        if not parts:
-            log(f"  {label}: no parts yet")
-            continue
-        df = pd.concat([pd.read_parquet(p) for p in parts], ignore_index=True)
-        df.to_parquet(out, index=False, compression="zstd")
-        log(f"  {label}: {len(df):,} rows -> {out.name} ({out.stat().st_size/1e6:.1f} MB)")
-
-    if EAC4_GRID_OUT.exists():
-        rec = receptor_series(pd.read_parquet(EAC4_GRID_OUT))
-        if len(rec):
-            rec.to_parquet(EAC4_REC_OUT, index=False, compression="zstd")
-            meta["receptors"] = {"rows": int(len(rec)),
-                                 "receptors": sorted(rec["receptor"].unique().tolist()),
-                                 "kind": "MODEL (CAMS EAC4 reanalysis), never an observation"}
-
+    meta["consolidated"] = consolidate()
     meta["coverage_notes"] = {
         "gfas_ends": config.CAMS_GFAS_ENDS,
         "eac4_ends": "2025-12-31",
