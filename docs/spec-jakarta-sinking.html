@@ -69,6 +69,7 @@
       <span>REFRESH <b>Static snapshot (D3)</b></span>
       <span>IDENTITY <b>Bathymetric blue → cyan</b></span>
       <span>DATA PATH <b>Verified by reconnaissance 2026-08-30</b></span>
+      <span>GATES <b>G-C1 ✓ · G-C2 ✓ · G-C4 ✓ · G-C5 ✗ (diagnosed) · G-C3 pending</b></span>
     </div>
   </header>
 
@@ -95,7 +96,7 @@
           <tr><td>COMET-LiCS / LiCSAR</td><td>Frame <code>098A_09673_121312</code> (ascending, continuous 2017–2024, 1,223 interferograms) via CEDA; <code>047D_09652_111009</code> descending for 2017–2022 decomposition (gap 2023–24); GACOS tropospheric corrections per epoch; no account</td><td>OGL v3 / CC BY 4.0</td><td>Own InSAR run (gate G-C3)</td></tr>
           <tr><td>Susilo et al. 2023 (Sci. Data)</td><td>Continuous GNSS north Java 2010–2021 — Zenodo 10.5281/zenodo.7775016 (27 MB); Jakarta stations CJKT −6.4 mm/yr, CTGR −2.9, CBTU −0.5</td><td>CC BY 4.0</td><td>Ground truth (gate G-C2)</td></tr>
           <tr><td>Copernicus GLO-30</td><td>Tiles S07E106, S07E107 (COG, 87 MB total) from the public S3 bucket, no login</td><td>Copernicus DEM licence (free use, attribution)</td><td>Elevation (D19); DEMNAS 8 m as later upgrade</td></tr>
-          <tr><td>WorldPop / GHSL</td><td>WorldPop 2020 constrained 100 m Indonesia (103 MB); GHSL GHS-POP E2020 100 m tile R10_C29 (22 MB)</td><td>CC BY 4.0</td><td>Population exposure (two sources, cross-checked)</td></tr>
+          <tr><td>WorldPop / GHSL</td><td>WorldPop 2020 constrained 100 m Indonesia (103 MB); GHSL GHS-POP E2020 100 m tile R10_C29 (22 MB) + GHS-BUILT-S E2020 built-up surface, same tile (10 MB)</td><td>CC BY 4.0</td><td>Population exposure (two sources, cross-checked); built-up exposure</td></tr>
           <tr><td>Jakarta Satu (DKI GIS)</td><td>Kelurahan polygons (267) + BPBD flood history 2021–2024 (9,653 RT-level polygons with depth/date) via ArcGIS REST, GeoJSON</td><td><span class="pill">No licence text</span> — attribution + note</td><td>Admin units; observed floods</td></tr>
           <tr><td>UNOSAT / EOS-ARIA</td><td>Sentinel-1 flood extents 2 Jan 2020 (UNOSAT FL20200101IDN 6 MB; EOS FPM 1 MB)</td><td>CC BY-SA / attribution</td><td>The 2020 flood as a reality check</td></tr>
           <tr><td>HDX COD-AB (BPS)</td><td>Indonesia ADM0–4 boundaries (498 MB shp)</td><td>CC BY-IGO</td><td>Licensed fallback for kelurahan polygons</td></tr>
@@ -113,24 +114,25 @@
     <h2>Pipeline — static rebuild</h2>
     <div>
       <div class="stage"><span class="sname">ingest</span><p>Range-fetch the Jakarta slice of the Zenodo velocity CSV (lon 106.55–107.15, lat −6.55…−5.95), GNSS records, GLO-30 tiles, WorldPop + GHSL, kelurahan + BPBD flood polygons (paginated ArcGIS REST), 2020 flood extents. All small; ~300 MB total.</p></div>
-      <div class="stage"><span class="sname">grid</span><p>Average duplicate coordinates (overlapping frames), mask by reported standard deviation, grid to 100 m (EPSG:4326 → local UTM 48S for area math), write COG. Sign convention: negative = subsidence, stated everywhere.</p></div>
+      <div class="stage"><span class="sname">grid</span><p>Average duplicate coordinates (overlapping frames), mask points with reported sd &gt; 1 cm/yr, grid to 0.001° EPSG:4326 (~111 m — matches LiCSAR pixel spacing so G-C3 compares like with like; UTM 48S is used only for polygon area math downstream), write tiled GeoTIFF with overviews. Hotspots are characterised by the neighbourhood median <i>and</i> the fastest decile (p10) — the p10 reads a hotspot's core the way the literature's peak values do, while area medians under-read it; both are printed everywhere. Sign convention: negative = subsidence, stated everywhere.</p></div>
       <div class="stage"><span class="sname">insar</span><p>LiCSBAS on <code>098A</code> 2017–2024 clipped to 106.6/107.1/−6.45/−6.0: steps 01 (GeoTIFFs + GACOS) → 02 → 03op GACOS → 05op clip → 11–16 (network, inversion, velocity, filtering) → <code>LiCSBAS_cum2vel</code>; LOS → vertical using <code>geo.E/N/U</code>; referenced to a stable central pixel near CJKT. ~13 GB download, tens of minutes compute. Runs after the nightlights backfill releases bandwidth.</p></div>
-      <div class="stage"><span class="sname">fuse</span><p>Per kelurahan: median and p10 subsidence, population (WorldPop; GHSL as cross-check), share of area below +1 m / +2 m GLO-30 elevation, flood-history frequency and max depth (BPBD 2021–24), 2020 flood share. <b>The clock:</b> years until a kelurahan’s median ground falls below a threshold at its current rate — stated as a linear extrapolation with its assumptions, never as a prediction.</p></div>
-      <div class="stage"><span class="sname">validate</span><p>Gates G-C1…G-C4 (below); results to <code>stats.json</code> for the methodology page.</p></div>
-      <div class="stage"><span class="sname">export</span><p>Velocity COG → PMTiles; kelurahan exposure GeoJSON + table; GNSS stations with measured-vs-InSAR; flood layers simplified; hotspot time-series (from LiCSBAS cumulative displacement). Insight brief per D11.</p></div>
+      <div class="stage"><span class="sname">fuse</span><p>One common ~100 m analysis grid (WorldPop’s own cells, EPSG:4326); kelurahan burned by cell centre so city totals are conserved. Per kelurahan: median and p10 subsidence over covered cells, population (WorldPop; GHS-POP as cross-check), built-up surface (GHS-BUILT-S), share of ground below +1 m / +2 m — “ground” per cell is the <i>minimum</i> of its GLO-30 pixels, since GLO-30 is a surface model and the lowest 30 m pixel in an urban cell is a road or yard, not a roof — flood-history frequency, RT count and max depth (BPBD 2021–24, distinct event dates), and Jan 2020 flood share (UNOSAT ∪ EOS). <b>The clock:</b> years until a kelurahan’s low ground (p10 of the ground proxy) falls below +1 m / mean sea level at its median and fastest-decile rates, plus people/built-up below each threshold per year 2025→2050 — stated as a linear extrapolation with its assumptions (rates held, uncovered cells still, DSM epoch 2011–2015 taken as today), never as a prediction.</p></div>
+      <div class="stage"><span class="sname">validate</span><p>Gates G-C1…G-C5 (below); results to <code>stats.json</code> for the methodology page.</p></div>
+      <div class="stage"><span class="sname">export</span><p>NaN-safe JSON view-models: simplified kelurahan GeoJSON + exposure table with 2025→2050 series; the velocity field as a small value-encoded PNG coloured client-side (hero animation + map overlay — PMTiles dropped, the 600×600 grid doesn’t need tiles and static hosting stays gate 8), plus a coloured overlay for MapLibre; GNSS stations with measured-vs-InSAR; hero render. Hotspot time-series arrives with G-C3 (LiCSBAS cumulative displacement).</p></div>
     </div>
     <pre>cases/jakarta-sinking/
   pipeline/  config.py ingest.py grid.py insar.sh fuse.py validate.py export_web.py
-  data/      raw/ derived/ (git-ignored)   web/  Astro + MapLibre + deck.gl   spec/</pre>
+  data/      raw/ derived/ (git-ignored)   web/  Astro + MapLibre (2-D canvas fallback) + d3   spec/</pre>
   </section>
 
   <section>
     <span class="eyebrow">C4 · Validation gates</span>
     <h2>Validation gates</h2>
-    <div class="gate"><b>G-C1 — Literature agreement.</b> Deposited-field medians in the NW-coast hotspots (Muara Baru, Kamal Muara, Kosambi, PIK) fall in 2–6 cm/yr; central Jakarta (Monas, Ancol) within ±1 cm/yr of zero. Point-based PS studies report higher peaks (Penjaringan up to 10 cm/yr) — a scale difference stated on the page, not a discrepancy hidden.</div>
-    <div class="gate"><b>G-C2 — GNSS agreement.</b> InSAR vertical rate at each Jakarta GNSS station (CJKT, CTGR, CBTU) within ±5 mm/yr of the published GNSS rate, after frame differences (IGS14 vs local) are reconciled and documented.</div>
-    <div class="gate"><b>G-C3 — Our run vs the deposit (D17).</b> LiCSBAS vertical velocity vs the deposited field over Jakarta: pixelwise correlation ≥ 0.7 and hotspot medians within 1 cm/yr. Divergence is diagnosed (reference point, atmospheric correction, unwrapping errors) before publish.</div>
-    <div class="gate"><b>G-C4 — Exposure plausibility.</b> Kelurahan exposure ranking correlates with observed BPBD flood frequency 2021–24 (Spearman ≥ 0.5) and the 2020 extent overlaps the top-exposure kelurahan disproportionately. Floods have many causes; the gate tests plausibility, not causation.</div>
+    <div class="gate"><b>G-C1 — Literature agreement.</b> In the NW-coast hotspots (Muara Baru, Kamal Muara, Kosambi, PIK) the fastest decile (p10) subsides ≥ 2 cm/yr (and ≤ 12) with the neighbourhood median ≥ 1 cm/yr; central Jakarta (Monas, Ancol) stays within ±1 cm/yr of zero. Point-based PS studies report higher peaks (Penjaringan up to 10 cm/yr) — a scale difference stated on the page, not a discrepancy hidden. <b>Result 2026-08-30: PASS</b> (Muara Baru −4.15 | −4.92, Kosambi −4.36 | −5.18, Monas +0.16 | −0.21 cm/yr, median | p10).</div>
+    <div class="gate"><b>G-C2 — GNSS agreement.</b> InSAR vertical rate at each Jakarta GNSS station (CJKT, CTGR, CBTU) within ±5 mm/yr of the published GNSS rate, after frame differences (IGS14 vs local) are reconciled and documented. <b>Result: PASS</b> (CJKT −4.6 vs −6.4, CTGR −1.4 vs −2.9, CBTU +1.9 vs −0.5 mm/yr).</div>
+    <div class="gate"><b>G-C3 — Our run vs the deposit (D17).</b> LiCSBAS vertical velocity vs the deposited field over Jakarta: pixelwise correlation ≥ 0.7 and hotspot medians within 1 cm/yr. Divergence is diagnosed (reference point, atmospheric correction, unwrapping errors) before publish. <b>Result: <span class="pill">pending</span></b> — deferred until the 13 GB LiCSAR download has bandwidth.</div>
+    <div class="gate"><b>G-C4 — Exposure sanity.</b> Kelurahan count is 267; the WorldPop total over the kelurahan lands within ±15 % of the census (BPS SP2020: 10,562,088); GHS-POP within ±25 % of WorldPop; ≥ 90 % of mainland kelurahan carry ≥ 30 % InSAR coverage; no NaNs, no zero-population mainland kelurahan. <b>Result: PASS</b> (WorldPop 10,724,798, +1.5 %; GHSL −2.1 %; coverage 100 %).</div>
+    <div class="gate"><b>G-C5 — Flood plausibility</b> (v1’s G-C4, renumbered when G-C4 became the sanity gate). Kelurahan exposure ranking correlates with observed BPBD flood frequency 2021–24 (Spearman ≥ 0.5) and the 2020 extent overlaps the top-exposure kelurahan disproportionately. Floods have many causes; the gate tests plausibility, not causation. <b>Result: FAIL, published red with its diagnosis</b> — ρ = 0.16: the BPBD 2021–24 record is dominated by riverine floods along the Ciliwung in higher-ground East Jakarta (flood frequency is <i>inversely</i> related to low ground, ρ = −0.14), and RT-level reporting under-captures North-Jakarta tidal flooding. The disproportionality half holds: the Jan 2020 extent covers 12 % of the 20 most-exposed kelurahan vs 5 % city-wide.</div>
   </section>
 
   <section>
@@ -142,7 +144,7 @@
       <li><b>Chapter 2 — “Why.”</b> Groundwater extraction, sediment compaction, building load — cited narrative, no new data claims.</li>
       <li><b>Chapter 3 — “Who stands on it.”</b> Population exposure by kelurahan; the clock per kelurahan; the two population sources shown side by side.</li>
       <li><b>Chapter 4 — “The floods already came.”</b> January 2020 extent and 2021–24 flood history over the subsidence field; the plausibility gate shown as a chart.</li>
-      <li><b>Explore.</b> MapLibre + deck.gl: layers (velocity, elevation, exposure, floods, GNSS); kelurahan click → panel (rate, p10, population, low-lying share, flood count, clock); hotspot time series (from our InSAR run); URL state.</li>
+      <li><b>Explore.</b> MapLibre with a full 2-D canvas fallback (point-in-polygon hit testing) so a browser with WebGL disabled loses nothing: metrics (fastest decile, median, flood events, low ground) + the velocity-field overlay, GNSS/hotspot labels; kelurahan click → panel (rate, p10, population, built-up, low ground, flood count, the clock, 2025→2050 sparkline); the clock’s year slider recolours exposure; URL state. Hotspot time series arrives with G-C3. deck.gl not needed.</li>
       <li><b>Methodology.</b> Both velocity fields explained; LOS→vertical; frames and windows; gates’ results; every licence and attribution; the clock’s assumptions in plain words.</li>
     </ol>
   </section>
@@ -173,7 +175,7 @@
     <h2>Acceptance checklist</h2>
     <ul class="plain check">
       <li><code>make rebuild</code> reproduces the day-one map from the deposited field on a clean machine (gate 1); <code>make insar</code> reproduces our run.</li>
-      <li>G-C1…G-C4 evaluated and published on the methodology page (gates 2–3).</li>
+      <li>G-C1…G-C5 evaluated and published on the methodology page (gates 2–3).</li>
       <li>Explore interactive &lt; 3 s; 60 fps; Lighthouse ≥ 90 (gate 4).</li>
       <li>Measurement windows and “linear extrapolation” caveat visible wherever a rate or a clock appears (gate 5).</li>
       <li>Attributions: Ohenhen et al. 2026 (CC BY), COMET-LiCS/CEDA, Susilo et al. 2023, Copernicus DEM, WorldPop, GHSL, Jakarta Satu/BPBD, UNOSAT (gate 6).</li>
@@ -194,5 +196,5 @@
     </ul>
   </section>
 
-  <footer class="doc">CASE C SPEC v1 · 2026-08-30 · DECISIONS D17–D19 · DATA PATH VERIFIED · PARENT: BUILD PLAN</footer>
+  <footer class="doc">CASE C SPEC v1.1 · 2026-08-30 · DECISIONS D17–D19 · BUILT: GRID+FUSE+EXPORT+WEB LIVE, GATES RECORDED (G-C5 RENUMBERED, G-C3 PENDING) · PARENT: BUILD PLAN</footer>
 </div>
