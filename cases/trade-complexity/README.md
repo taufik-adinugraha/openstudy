@@ -23,7 +23,9 @@ uv sync
 make rebuild RELEASE=202601   # full rebuild from raw BACI
 make pulse                    # quarterly latest-year refresh
 make validate                 # gates G-B1..G-B4
-make partners                 # partner + import extension (G-B5..G-B7)
+make partners                 # partner + import extension
+make review                   # adversarial re-analysis (see "Review", below)
+make article                  # the review article's data layer
 ```
 
 `web/` is the case's Astro app (dark-first, `data-case="trade"` tokens).
@@ -93,6 +95,82 @@ raised coal imports fourteen-fold to ~US$3.2B/yr. So downstreaming shows up not
 as one-off equipment purchases but as a **permanent new import dependency** of
 roughly US$3.7B/yr against ~US$28.5B/yr of extra processed-nickel exports: about
 an eighth of the headline gain is spent on imported inputs.
+
+## Review — `/trade/article`
+
+An adversarial read of the case against the published literature, at
+`web/src/pages/article.astro` (13 sections, 10 figures). Its data layer is
+`pipeline/article.py` -> `web/src/data/article.json`; the new analysis behind it
+is `pipeline/review.py` -> `web/src/data/review.json`. No statistic in the
+article's prose or in the corrections below is typed by hand.
+
+**Benchmark.** The Growth Lab's *Growth Projections and Complexity Rankings*
+(Harvard Dataverse, doi:10.7910/DVN/XTAQMC) publish an ECI and rank computed on
+**HS92** — the same classification this case uses — for 145 economies,
+1995–2024. `review.py eci` reads it from `data/atlas_hs92.json` (columns
+`eci_hs92` / `eci_rank_hs92`, keyed by ISO3 and year); the file is not in the
+repo because it is a re-downloadable published dataset.
+
+### What the review found
+
+**The rank-correlation gate was registered and never computed.**
+`config.GATE_SPEARMAN = 0.90` ("vs Harvard Atlas, every overlap year") appears in
+no code path. Run, it **passes**: Spearman ρ = 0.946–0.987, mean 0.975, over all
+30 years and every economy both pipelines rank. The complexity machinery is
+sound, and that is now demonstrated rather than assumed.
+
+**But the rank the page leads with is not identified.** Ten places of rank around
+Indonesia span 0.095 of an index standardised to sd 1 — 11 economies sit inside
+that band in 2024, Qatar one place above and Russia one below. The published
+series moves a mean of 4.3 places a year (sd 5.7, max 14). The decade change the
+page reports (−2) is 1.9% of a standard deviation.
+
+**The Atlas benchmark in `config.py` is misdated and mis-sized.**
+`ATLAS_IDN_2023 = (69, 133)` is not the Atlas's 2023 HS92 figure; the Atlas has
+Indonesia at **#60 of 145** in 2023 and #69 of 145 in **2024**. Ranked over the
+Atlas's own country list we get #67 for 2023 — seven places away, not "within
+three" — and we sit a mean of **11.1 places** below the Atlas across all thirty
+years, in 30 of 30 years, on an identical roster. The offset is systematic, not
+noise, and is not explained by sample size.
+
+**The nickel headline is right in dollars and wrong in what it implies.** Value
+rose 14.65× base→peak; **tonnage rose 34.62×**, and the average price per tonne
+**fell 58%** (US$5,454 → US$2,307). The basket moved from 75% nickel mattes to
+43% ferro-nickel + 36% stainless — mostly iron by weight. Two robustness checks
+on the case's own code list *passed*: non-nickel ferro-alloys inside HS 7202 are
+0.17% of the peak basket, and a nickel-only definition still gives 10.03×.
+
+**Two artefacts we expected to find are not there.** Partner concentration
+recomputed on the 140 export partners present in all 30 years reproduces the same
+U with 101% of the fall intact — the roster growing from 151 to 216 is not the
+story. And removing the failed G-B5 export excess from the export matrix moves
+Indonesia's complexity rank by at most **2 places** under any attribution we could
+construct (proportional +1; all of it in mineral fuels −2). The page's "RCA is a
+ratio of shares, so it cancels" argument is correct, and is now tested.
+
+### Corrections applied to the case page
+
+1. **Chapter 04** — "Vietnam, the Philippines, and India each climbed twenty or
+   more places over the same decade" was **false on the case's own
+   `trajectory.json`**: +12, +3, +7. It is now the measured numbers, read from
+   `article.json`. (On the Atlas: +18, +9, +6 — also not twenty.)
+2. **Chapter 04 + footer** — the "within three places of the Atlas" claim is
+   withdrawn and replaced by the rank correlation (the registered test) plus the
+   like-for-like same-roster comparison.
+3. **Chapter 04** — the rank is relabelled as a band: its resolution and its
+   year-to-year noise are published next to it.
+4. **Chapter 03** — carries the tonnage decomposition and the composition shift.
+5. **Chapter 08** — "its supplier base did the opposite and never stopped" was
+   false: import HHI *fell* 846 → 594 by 1999 and stayed below its start for 19 of
+   30 years. Both sides are U-shaped; the import U turned earlier and went
+   further.
+6. **Chapter 10** — "US$28.5B a year of *additional* processed-nickel exports"
+   was the peak-window **level**. The increment is US$26.5B, so the input bill is
+   13.6% of the gain, not "around an eighth". Coal's "fourteen-fold to roughly
+   US$3.2B" is now computed, not typed.
+7. **Chapter 03 chart** — the two ore-ban annotations overprinted each other and
+   the second ran off the plot; and at 390px the year axis printed a label every
+   two years into an illegible smear. Both fixed.
 
 ## Decisions pending user verification
 

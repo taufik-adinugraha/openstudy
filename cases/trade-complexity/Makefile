@@ -34,3 +34,15 @@ partners:
 	pipeline/fetch_baci.sh
 	$(PY)/partners.py slice --release $(RELEASE)
 	$(PY)/partners.py facts
+
+# Adversarial review (/trade/article). `review` re-derives the case's own headline
+# claims under different specifications; `article` turns that plus the published
+# view-models into the article's data layer. The eci stage needs the BACI archive
+# and data/atlas_hs92.json (Harvard Dataverse doi:10.7910/DVN/XTAQMC, eci_hs92).
+review:
+	$(PY)/review.py nickel partners gap
+	$(PY)/review.py build --release $(RELEASE)
+	$(PY)/review.py eci
+
+article:
+	$(PY)/article.py

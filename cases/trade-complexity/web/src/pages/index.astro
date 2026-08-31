@@ -25,6 +25,22 @@ const chinaImpNow = pm?.chinaImpShare?.[String(pm.latest)] ?? null;
 const bigInput = pm?.nickel?.biggestInput ?? null;
 const growthPct = (v) => (v == null ? "—" : `${v >= 0 ? "+" : ""}${Math.round(v * 100)}%`);
 const timesX = (v) => (v == null ? "—" : `${(v + 1).toFixed(0)}×`);
+// Review layer (pipeline/review.py -> pipeline/article.py). Chapters 04, 08 and 10
+// were corrected against it; every number below is read from it, never typed.
+const rv = (await import("../data/article.json").catch(() => null))?.default ?? null;
+const peerLadder = rv?.peerLadder ?? [];
+const peerNamed = peerLadder.filter((p) => ["VNM", "PHL", "IND"].includes(p.iso3));
+const peerPhrase = peerNamed.length
+  ? peerNamed.map((p) => `${{ VNM: "Vietnam", PHL: "the Philippines", IND: "India" }[p.iso3]} ` +
+      `${p.gain >= 0 ? "+" : ""}${p.gain}`).join(", ")
+  : "—";
+const nk = rv?.nickel ?? null;
+const cImp = rv?.conc?.imp ?? null;
+const cExp = rv?.conc?.exp ?? null;
+const at = rv?.atlas ?? null;
+const gb1 = rv?.gateB1 ?? null;
+const dens = rv?.density ?? null;
+const x1 = (v) => (v == null ? "—" : `${v.toFixed(1)}×`);
 ---
 <html lang="en" data-case="trade" data-theme="dark">
   <head>
@@ -221,8 +237,26 @@ const timesX = (v) => (v == null ? "—" : `${(v + 1).toFixed(0)}×`);
       for good in 2020. Ore exports collapsed; processed nickel — ferroalloys, mattes,
       stainless — surged. That part of the story is true, and here it is in the data.</p>
       <div id="nickel" class="chart"></div>
+      <p class="big-stat">But the same file records tonnes. Between {nk ? nk.base[0] : "—"}–{nk ? nk.base[nk.base.length - 1] : "—"}
+      and {nk ? nk.peak[0] : "—"}–{nk ? nk.peak[nk.peak.length - 1] : "—"}, the dollars rose
+      <b class="copper">{x1(nk?.value)}</b> — and the tonnage rose <b class="copper">{x1(nk?.tonnes)}</b>.</p>
+      <p>The average price of a tonne of Indonesia's processed nickel
+      <b>fell {nk ? Math.round((1 - nk.unitValue) * 100) : "—"}%</b>, from
+      US${nk ? Math.round(nk.uvBase).toLocaleString() : "—"} to
+      US${nk ? Math.round(nk.uvPeak).toLocaleString() : "—"} a tonne. That is not a price
+      shock; it is a change in what is being shipped. The basket moved from
+      {nk ? Math.round(nk.composition["Nickel mattes & unwrought (HS 75)"].vBase / nk.compositionBaseTotal * 100) : "—"}%
+      concentrated nickel mattes to {nk ? Math.round(nk.composition["Ferro-nickel (720260)"].vPeak / nk.compositionPeakTotal * 100) : "—"}%
+      ferro-nickel and {nk ? Math.round(nk.composition["Stainless steel (7218/19/20)"].vPeak / nk.compositionPeakTotal * 100) : "—"}%
+      stainless steel — products that are mostly iron by weight. Downstreaming is real, and it
+      moved Indonesia into a much bulkier, much cheaper-per-tonne product. Every dollar earned
+      now carries {nk ? (nk.tonnes / nk.value).toFixed(1) : "—"} times the material, and therefore
+      that much more furnace, freight and fuel. Chapter 10 finds the fuel.</p>
       <p class="footnote">Values in current US$; HS92 codes 2604 (ore) vs 7202, 7501–7503,
-      7218–7220 (processed). Source: BACI.</p>
+      7218–7220 (processed); quantities in metric tonnes. The code list survives a check: at HS6,
+      ferro-alloys containing no nickel are {nk ? (nk.nonNickelPeakShare * 100).toFixed(2) : "—"}%
+      of the basket, and narrowing it to ferro-nickel plus HS 75 alone still gives
+      {x1(nk?.narrowValue)} in value. Source: BACI.</p>
     </section>
 
     <section class="chapter">
@@ -233,11 +267,30 @@ const timesX = (v) => (v == null ? "—" : `${(v + 1).toFixed(0)}×`);
       the processed-nickel exports; a rank that barely moved.</p>
       <p>Complexity rewards the diversity and sophistication of the whole export basket.
       Downstreaming multiplied the value of one chapter, but a single-commodity climb does
-      not diversify a basket — so Indonesia held its place in the mid-seventies while
-      Vietnam, the Philippines, and India each climbed twenty or more places over the same
-      decade. Every line here is computed from the same corpus; our 2023 rank (#71 of 158)
-      lands within three places of Harvard’s Atlas (#69 of 133) — the independent check the
-      methodology footer describes.</p>
+      not diversify a basket — so Indonesia held its place in the mid-seventies while its
+      neighbours moved up: over the same decade {peerPhrase} places. Every line here is
+      computed from the same corpus.</p>
+      <p class="footnote"><b>Read the rank as a band, not a seat.</b> An independent review
+      of this chapter found that the index is densely packed where Indonesia sits: in {latest},
+      <b>{dens?.neighbours?.length ?? "—"} economies</b> lie inside
+      {dens ? dens.eciTenPlaces.toFixed(3) : "—"} of the complexity score — about
+      {dens ? Math.round(dens.tenPlacesInSd * 100) : "—"}% of one standard deviation — so ten places
+      of rank separate almost nothing. This series moves a mean of
+      {rv ? rv.rank.meanAbsYoY.toFixed(1) : "—"} places a year with a largest single-year swing of
+      {rv?.rank?.maxAbsYoY ?? "—"}. The decade difference above is real in direction and
+      <b>not resolvable in size</b>. What survives is the shape: downstreaming did not
+      diversify the basket, and that is true on our numbers and on Harvard's.</p>
+      <p class="footnote"><b>Rank check, restated.</b> The like-for-like test is a rank
+      correlation across all economies, not a comparison of one country's seat. Re-running our
+      complexity ordering against the Harvard Atlas's published HS92 index gives Spearman ρ
+      between {gb1 ? gb1.min.toFixed(3) : "—"} and {gb1 ? gb1.max.toFixed(3) : "—"} in every
+      year from {rv?.firstYear ?? "—"} to {latest} — a check written into this repository before
+      any result was read and, until the review, never run. On Indonesia's own seat the two
+      pipelines differ by more: ranked over the Atlas's own country list we place Indonesia
+      #{at?.latest?.onAtlasSample ?? "—"} in {latest} against the Atlas's
+      #{at?.latest?.atlas ?? "—"}, and a mean of
+      {at ? at.meanGapOnSameSample.toFixed(1) : "—"} places lower across the thirty years. The
+      review section below has the full comparison.</p>
       <div id="trajectory" class="chart"></div>
     </section>
 
@@ -322,13 +375,19 @@ const timesX = (v) => (v == null ? "—" : `${(v + 1).toFixed(0)}×`);
       {pm?.latest ?? latest}{topImp1 ? ` — ${pct(topImp1.share)} of it from ${topImp1.name} alone` : ""}.
       Its supplier concentration is now <b class="copper">{conc ? Math.round(conc.hhiImpLast) : "—"}</b>
       against <b class="copper">{conc ? Math.round(conc.hhiLast) : "—"}</b> for its customers.</p>
-      <p>This is the finding chapter 07 sets up. Where Indonesia’s customer base diversified
-      over thirty years and only recently began to tighten, its supplier base did the
-      opposite and never stopped: import concentration rose from
-      <b>{conc ? Math.round(conc.hhiImpFirst) : "—"}</b> in {conc?.firstYear ?? 1995} to
-      <b>{conc ? Math.round(conc.hhiImpLast) : "—"}</b> today. Indonesia sells to a widening
-      world and buys from a narrowing one — and China’s share of what it buys
-      ({pct(chinaImpNow)}) runs well ahead of China’s share of what it sells ({pct(chinaNow)}).</p>
+      <p>This is the finding chapter 07 sets up, and the review corrected its shape. Both sides
+      of the network are U-shaped — the supplier side simply turned earlier and went further.
+      Import concentration <em>fell</em> from <b>{conc ? Math.round(conc.hhiImpFirst) : "—"}</b> in
+      {conc?.firstYear ?? 1995} to <b>{cImp ? Math.round(cImp.trough) : "—"}</b> in
+      {cImp?.troughYear ?? "—"}, stayed below its {conc?.firstYear ?? 1995} level for
+      <b>{cImp?.yearsBelowStart ?? "—"} of {rv?.nYears ?? 30} years</b>, crossed back above it in
+      {cImp?.crossedBackYear ?? "—"}, and has since climbed to
+      <b>{conc ? Math.round(conc.hhiImpLast) : "—"}</b> — now
+      {cImp ? Math.round((cImp.last / cImp.first - 1) * 100) : "—"}% above where it started, while
+      the customer side is still {cExp ? Math.round((1 - cExp.last / cExp.first) * 100) : "—"}%
+      below. Indonesia sells to a world it widened and has been re-narrowing for a decade; it buys
+      from one it is re-narrowing faster. China’s share of what it buys ({pct(chinaImpNow)}) runs
+      well ahead of China’s share of what it sells ({pct(chinaNow)}).</p>
       <p>The bill itself is an industrial shopping list, not a consumer one: machinery,
       fuels, chemicals, food. Note the top line — the largest single chapter Indonesia
       imports is mineral fuels, bought by one of the world’s largest energy exporters, which
@@ -385,15 +444,29 @@ const timesX = (v) => (v == null ? "—" : `${(v + 1).toFixed(0)}×`);
       it detonated. {bigInput ? `${bigInput.label} imports rose ` : ""}
       <b class="copper">{bigInput ? timesX(bigInput.growth) : "—"}</b>
       {bigInput ? "between the same two windows" : ""}, and imported coal — in the country
-      that exports more coal than any other on earth — rose fourteen-fold to roughly US$3.2B
-      a year. Coke, quicklime and limestone flux all more than tripled. Ferrous scrap, which
-      we expected to rise, fell.</p>
+      that exports more coal than any other on earth — rose
+      <b class="copper">{rv ? timesX(rv.inputs.rows.find((r) => r.code === "2701").growth) : "—"}</b>
+      to {rv ? bn(rv.inputs.rows.find((r) => r.code === "2701").peak) : "—"} a year. Coke,
+      quicklime and limestone flux all more than tripled. Ferrous scrap, which we expected to
+      rise, fell.</p>
       <p>So the smelters are visible in the import data after all; we simply pointed the
       instrument at the wrong shelf. Downstreaming did not show up as a one-off equipment
-      purchase. It showed up as a <em>permanent new import dependency</em> — roughly US$3.7B
-      a year of coal, coke and chrome that Indonesia did not previously buy, set against the
-      US$28.5B a year of additional processed-nickel exports. Around an eighth of the headline
-      gain is spent buying the inputs that make it possible.</p>
+      purchase. It showed up as a <em>permanent new import dependency</em> —
+      <b>{rv ? bn(rv.inputs.added) : "—"} a year</b> of coal, coke, chrome and flux that Indonesia
+      did not previously buy, set against <b>{rv ? bn(rv.nickel.gain) : "—"} a year</b> of
+      <em>additional</em> processed-nickel exports.
+      <b>{rv ? (rv.inputs.shareOfGain * 100).toFixed(1) : "—"}%</b> of the headline gain is spent
+      buying the inputs that make it possible — and this bill scales with the
+      {x1(nk?.tonnes)} rise in tonnage from chapter 03, not with the {x1(nk?.value)} rise in
+      receipts. Two things it does not count: the {rv ? bn(rv.nickel.oreForegone) : "—"} a year of
+      ore exports given up, and the domestic coal burned in the smelters' captive power plants,
+      which never appears in an import statistic. The figure is a floor.</p>
+      <p class="footnote"><b>Corrected after review.</b> This paragraph previously set the input
+      bill against "US$28.5B a year of additional processed-nickel exports" and called the ratio
+      "around an eighth". {rv ? bn(rv.nickel.vPeak) : "—"} is the peak-window <em>level</em>; the
+      increment over the base window is {rv ? bn(rv.nickel.gain) : "—"}, which makes the ratio
+      nearer a seventh. The direction of the argument is unchanged; the arithmetic was wrong and
+      is now computed rather than typed.</p>
       <div id="nickel-test" class="chart"></div>
       <div class="sub-head"><span class="eyebrow">The input basket</span>
         <span class="stamp dim">BASE 2013–15 → PEAK 2021–24 · THRESHOLD +100%</span></div>
@@ -434,6 +507,21 @@ const timesX = (v) => (v == null ? "—" : `${(v + 1).toFixed(0)}×`);
       BACI’s.</p>
     </section>
 
+    <section class="chapter review-cta">
+      <span class="eyebrow">Review</span>
+      <h2>We had this case reviewed, adversarially.</h2>
+      <p>An independent read of the same data against the published literature. It runs the rank
+      correlation against the Harvard Atlas that this repository registered and never computed —
+      it passes at ρ {gb1 ? gb1.mean.toFixed(3) : "—"} — and then shows why the rank this page
+      leads with still cannot bear the weight: {dens?.neighbours?.length ?? "—"} economies sit
+      inside {dens ? Math.round(dens.tenPlacesInSd * 100) : "—"}% of one standard deviation of
+      Indonesia. It reads the tonnes the case never opened, and finds {x1(nk?.tonnes)} the
+      material for {x1(nk?.value)} the money. And it corrects three claims this page used to
+      make — about the neighbours' decade, about the supplier side, and about the arithmetic of
+      the nickel gain.</p>
+      <a class="cta big" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/article`}>Read the review article →</a>
+    </section>
+
     <footer class="method">
       <span class="eyebrow">Methodology &amp; sources</span>
       <p>Flows: CEPII BACI release 202601 (HS92, 1995–{latest}, Etalab 2.0 licence), ~330M
@@ -451,8 +539,17 @@ const timesX = (v) => (v == null ? "—" : `${(v + 1).toFixed(0)}×`);
       30–100 MB first-visit download.) <b>Caveats stated plainly:</b> goods only; the
       log-supermodularity condition — Growth Lab’s structural-ranking check — holds for
       roughly a third of country-product pairs in early years, so ECI is a ranking, not a
-      cardinal measure. <b>Rank check:</b> Indonesia 2023 rank #71 of 158 here vs #69 of 133 in
-      the Atlas — within three places.</p>
+      cardinal measure — see chapter 04 for how little ten places of it separate.
+      <b>Rank check:</b> the registered test is a rank correlation against the Harvard Atlas's
+      published HS92 complexity index in every overlapping year, threshold ρ ≥
+      {gb1 ? gb1.threshold.toFixed(2) : "—"}. Computed during the review, it returns
+      {gb1 ? gb1.min.toFixed(3) : "—"}–{gb1 ? gb1.max.toFixed(3) : "—"} (mean
+      {gb1 ? gb1.mean.toFixed(3) : "—"}) over {rv?.nYears ?? 30} years and
+      <b>passes in every one</b>. On Indonesia's own seat the pipelines differ by more: ranked
+      over the Atlas's own country list, #{at?.latest?.onAtlasSample ?? "—"} here against
+      #{at?.latest?.atlas ?? "—"} there in {latest}. An earlier version of this page compared our
+      {rv?.rank?.validationYear ?? 2023} rank to an Atlas figure that is the Atlas's {latest} one,
+      and reported agreement "within three places"; that comparison was withdrawn.</p>
       <p><b>Why chapters 01–06 use exports only.</b> Not an omission: economic complexity is
       defined through revealed comparative advantage, which compares a country’s share of
       world exports of a product against that product’s share of world exports. Imports have
@@ -1195,6 +1292,7 @@ const timesX = (v) => (v == null ? "—" : `${(v + 1).toFixed(0)}×`);
       sect("nickel chart", () => {
         const el = document.getElementById("nickel");
         const W = el.clientWidth, H = 280, M = { t: 20, r: 20, b: 30, l: 60 };
+        const narrow = W < 620;
         const years = Object.keys(nickel.ore).map(Number).sort();
         const series = (obj) => years.map((yr) => ({ yr, v: (obj[String(yr)] ?? 0) * 1e3 }));
         const ore = series(nickel.ore), proc = series(nickel.processed);
@@ -1202,11 +1300,19 @@ const timesX = (v) => (v == null ? "—" : `${(v + 1).toFixed(0)}×`);
         const y = d3.scaleLinear([0, d3.max([...ore, ...proc], (d) => d.v) * 1.08], [H - M.b, M.t]);
         const svg = d3.select(el).append("svg").attr("width", W).attr("height", H);
         svg.append("g").attr("class", "axis").attr("transform", `translate(${M.l},0)`).call(d3.axisLeft(y).ticks(4).tickFormat((v) => "$" + d3.format("~s")(v)));
-        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`).call(d3.axisBottom(x).tickFormat(d3.format("d")));
-        for (const [yr, txt] of [[2014, "first ore ban"], [2020, "full ban"]]) {
+        // on a phone the default tick count prints a year every two years and the
+        // labels run into each other; thin them instead of shrinking the type
+        svg.append("g").attr("class", "axis").attr("transform", `translate(0,${H - M.b})`)
+          .call(d3.axisBottom(x).ticks(narrow ? 4 : 8).tickFormat(d3.format("d")));
+        // The two ban markers sit close together at the right of the span, next to
+        // the series end-labels. Both hang to the LEFT of their rule, into empty
+        // plot, and are staggered — otherwise they overprint each other, overprint
+        // the "processed nickel" label, and the second runs off the plot.
+        [[2014, "first ore ban", 0], [2020, "full ban", 32]].forEach(([yr, txt, dy]) => {
           svg.append("line").attr("x1", x(yr)).attr("x2", x(yr)).attr("y1", M.t).attr("y2", H - M.b).attr("stroke", "#3A4452").attr("stroke-dasharray", "3 4");
-          svg.append("text").attr("x", x(yr) + 5).attr("y", M.t + 10).attr("class", "annot").text(`${yr} · ${txt}`);
-        }
+          svg.append("text").attr("x", x(yr) - 5).attr("y", M.t + 10 + dy)
+            .attr("text-anchor", "end").attr("class", "annot").text(`${yr} · ${txt}`);
+        });
         const line = d3.line().x((d) => x(d.yr)).y((d) => y(d.v)).curve(d3.curveMonotoneX);
         svg.append("path").datum(ore).attr("d", line).attr("fill", "none").attr("stroke", SILVER).attr("stroke-width", 1.8);
         svg.append("path").datum(proc).attr("d", line).attr("fill", "none").attr("stroke", COPPER).attr("stroke-width", 2.2).style("filter", "url(#copper-glow-soft)");
@@ -1888,6 +1994,17 @@ const timesX = (v) => (v == null ? "—" : `${(v + 1).toFixed(0)}×`);
       .chapter p { margin: 0; line-height: 1.65; }
       .big-stat { font-family: var(--font-display); font-size: clamp(1.2rem, 2.8vw, 1.7rem); line-height: 1.3; }
       .footnote { font-size: 0.85rem; color: var(--ink-muted); }
+      .footnote b { color: var(--ink); }
+
+      /* Review hand-off — the article is a separate page, so it gets a real door. */
+      .review-cta { padding-top: 14vh; }
+      .review-cta p { color: var(--ink-muted); }
+      .cta.big { align-self: flex-start; margin-top: 8px; font-family: var(--font-data);
+        font-size: 0.82rem; letter-spacing: 0.08em; color: var(--accent);
+        border: 1px solid var(--accent); border-radius: 4px; padding: 13px 22px;
+        text-decoration: none; transition: background 0.18s ease, transform 0.18s ease; }
+      .cta.big:hover { background: var(--accent-ink); transform: translateY(-1px); }
+      @media (prefers-reduced-motion: reduce) { .cta.big { transition: none; } }
       .chart { width: 100%; } .chart.tall { min-height: 380px; }
       .axis { font-family: var(--font-data); font-size: 12px; color: var(--ink-muted); }
       .axis text { fill: var(--ink-muted); }

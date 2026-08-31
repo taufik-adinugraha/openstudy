@@ -1,0 +1,1054 @@
+---
+/* Review article — the case, stress-tested against the literature.
+ *
+ * Every figure is built in frontmatter from data/article.json, which is derived
+ * by pipeline/article.py from the case's own published output plus the extra
+ * analysis in pipeline/review.py. Nothing here is drawn by hand, so the prose
+ * cannot drift from the numbers. SVG only: no WebGL, no canvas.
+ */
+import "../styles/tokens.css";
+import A from "../data/article.json";
+
+const COPPER = "#D9722C", PEER = "#58A89B", SILVER = "#AEB6C2";
+const INK = "#E6E8EC", MUTED = "#99A2AE", GRID = "#242B36", ALERT = "#E08B54";
+
+const esc = (s: any) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const pct = (x: number, d = 1) => `${(x * 100).toFixed(d)}%`;
+const bn = (kusd: number) => `US$${(kusd / 1e6).toFixed(1)}B`;
+const bnUsd = (usd: number) => `US$${(usd / 1e9).toFixed(1)}B`;
+const sig = (x: number, d = 2) => x.toFixed(d);
+const signed = (x: number) => `${x > 0 ? "+" : ""}${x}`;
+
+const R = A.rank, G = A.gateB1, AT = A.atlas, D = A.density, N = A.nickel;
+const IN = A.inputs, GP = A.gap, CF = A.counterfactual, C = A.conc, CX = A.context;
+const latest = A.vintage;
+const decade = latest - 10;
+const named = A.peerLadder.filter((p: any) => A.peerClaim.named.includes(p.iso3));
+
+/* ── Figure 1 · the rank-correlation gate that was written and never run ──── */
+function fig1() {
+  const W = 720, H = 262, L = 58, Rr = 118, T = 26, B = 50;
+  const rows = G.rows;
+  const y0 = 0.884, y1 = 1.002;
+  const sx = (i: number) => L + (i / (rows.length - 1)) * (W - L - Rr);
+  const sy = (v: number) => H - B - ((v - y0) / (y1 - y0)) * (H - T - B);
+  const path = `<path fill="none" stroke="${COPPER}" stroke-width="2.3" d="${rows.map((r: any, i: number) =>
+    `${i ? "L" : "M"}${sx(i).toFixed(1)} ${sy(r.rho).toFixed(1)}`).join("")}"/>`;
+  const dots = rows.map((r: any, i: number) =>
+    `<circle class="hv" cx="${sx(i).toFixed(1)}" cy="${sy(r.rho).toFixed(1)}" r="3.4" fill="${COPPER}"` +
+    ` data-t="${r.year} · rank correlation ${r.rho.toFixed(3)} over ${r.n} economies"/>`).join("");
+  const gl = [0.9, 0.95, 1.0].map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - Rr}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.7"/>
+     <text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">${v.toFixed(2)}</text>`).join("");
+  const gate = `<line x1="${L}" y1="${sy(G.threshold).toFixed(1)}" x2="${W - Rr}" y2="${sy(G.threshold).toFixed(1)}"
+      stroke="${ALERT}" stroke-width="1.6" stroke-dasharray="5 4"/>
+    <text x="${W - Rr - 6}" y="${(sy(G.threshold) + 15).toFixed(1)}" fill="${ALERT}" font-size="10.5"
+      text-anchor="end" font-family="var(--font-data)">registered threshold ${G.threshold.toFixed(2)}</text>`;
+  const ticks = rows.map((r: any, i: number) => (r.year % 5 === 0)
+    ? `<text x="${sx(i).toFixed(1)}" y="${H - B + 19}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${r.year}</text>` : "").join("");
+  const lo = rows.reduce((a: any, b: any) => (b.rho < a.rho ? b : a));
+  const li = rows.indexOf(lo);
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Rank correlation between this pipeline's ECI and the Harvard Atlas is between 0.95 and 0.99 in every year from 1995 to ${latest}">
+    ${gl}${gate}${path}${dots}${ticks}
+    <line x1="${L}" y1="${H - B}" x2="${W - Rr}" y2="${H - B}" stroke="${GRID}"/>
+    <circle cx="${sx(li).toFixed(1)}" cy="${sy(lo.rho).toFixed(1)}" r="6" fill="none" stroke="${COPPER}" stroke-width="1.4"/>
+    <text x="${sx(li).toFixed(1)}" y="${(sy(lo.rho) + 22).toFixed(1)}" fill="${COPPER}" font-size="10.5"
+      text-anchor="middle" font-family="var(--font-data)">worst year ${lo.rho.toFixed(3)}</text>
+    <g><text x="${W - Rr + 14}" y="${T + 22}" fill="${INK}" font-size="12">Spearman ρ,</text>
+       <text x="${W - Rr + 14}" y="${T + 38}" fill="${INK}" font-size="12">this study vs</text>
+       <text x="${W - Rr + 14}" y="${T + 54}" fill="${INK}" font-size="12">Harvard Atlas</text>
+       <text x="${W - Rr + 14}" y="${T + 76}" fill="${MUTED}" font-size="11">mean ${G.mean.toFixed(3)}</text>
+       <text x="${W - Rr + 14}" y="${T + 92}" fill="${MUTED}" font-size="11">min ${G.min.toFixed(3)}</text>
+       <text x="${W - Rr + 14}" y="${T + 108}" fill="${MUTED}" font-size="11">${G.yearsBelow.length} of ${rows.length} below</text></g>
+    <text x="${((L + W - Rr) / 2).toFixed(1)}" y="${H - 12}" fill="${MUTED}" font-size="11.5" text-anchor="middle">every economy both pipelines rank, every year</text>
+  </svg>`;
+}
+
+/* ── Figure 2 · three readings of the same country, as percentiles ────────── */
+function fig2() {
+  const W = 720, H = 330, L = 58, Rr = 158, T = 26, B = 52;
+  const rows = AT.rows;
+  const vals = rows.flatMap((r: any) => [r.pct, r.atlasPct, r.published / r.publishedN,
+    r.onAtlasSample / r.onAtlasSampleN]);
+  const y0 = Math.min(...vals) - 0.03, y1 = Math.max(...vals) + 0.03;
+  const sx = (i: number) => L + (i / (rows.length - 1)) * (W - L - Rr);
+  const sy = (v: number) => T + ((v - y0) / (y1 - y0)) * (H - T - B);   // low pct = high up
+  const line = (f: (r: any) => number, col: string, dash = "") =>
+    `<path fill="none" stroke="${col}" stroke-width="2.2" ${dash ? `stroke-dasharray="${dash}"` : ""} d="${rows.map((r: any, i: number) =>
+      `${i ? "L" : "M"}${sx(i).toFixed(1)} ${sy(f(r)).toFixed(1)}`).join("")}"/>`;
+  const gl = [0.4, 0.5, 0.6, 0.7, 0.8].filter((v) => v > y0 && v < y1).map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - Rr}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.7"/>
+     <text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">${(v * 100).toFixed(0)}%</text>`).join("");
+  const ticks = rows.map((r: any, i: number) => (r.year % 5 === 0)
+    ? `<text x="${sx(i).toFixed(1)}" y="${H - B + 19}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${r.year}</text>` : "").join("");
+  const li = rows.length - 1;
+  const key = [
+    { k: ["what the page", "publishes"], c: COPPER, v: rows[li].published / rows[li].publishedN, d: "" },
+    { k: ["the same ECI, on", "the Atlas's roster"], c: SILVER, v: rows[li].onAtlasSample / rows[li].onAtlasSampleN, d: "5 4" },
+    { k: ["Harvard Atlas"], c: PEER, v: rows[li].atlasPct, d: "" },
+  ];
+  const legend = key.map((k, i) => {
+    const y = T + 16 + i * 58;
+    return `<line x1="${W - Rr + 10}" y1="${y}" x2="${W - Rr + 30}" y2="${y}"
+       stroke="${k.c}" stroke-width="2.4" ${k.d ? `stroke-dasharray="${k.d}"` : ""}/>` +
+      k.k.map((t, j) => `<text x="${W - Rr + 36}" y="${y + 4 + j * 14}" fill="${INK}" font-size="11">${esc(t)}</text>`).join("") +
+      `<text x="${W - Rr + 10}" y="${y + 20 + (k.k.length - 1) * 14}" fill="${k.c}" font-size="10.5" font-family="var(--font-data)">${latest}: ${(k.v * 100).toFixed(1)}%</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Indonesia sits lower in this pipeline's complexity ranking than in the Harvard Atlas in all thirty years, even on an identical country roster">
+    ${gl}
+    ${line((r: any) => r.published / r.publishedN, COPPER)}
+    ${line((r: any) => r.onAtlasSample / r.onAtlasSampleN, SILVER, "5 4")}
+    ${line((r: any) => r.atlasPct, PEER)}
+    <line x1="${L}" y1="${H - B}" x2="${W - Rr}" y2="${H - B}" stroke="${GRID}"/>
+    ${ticks}${legend}
+    <text x="14" y="${(T + (H - T - B) / 2).toFixed(1)}" fill="${MUTED}" font-size="11.5" text-anchor="middle"
+      transform="rotate(-90 14 ${(T + (H - T - B) / 2).toFixed(1)})">position from the top ↓ worse</text>
+  </svg>`;
+}
+
+/* ── Figure 3 · the neighbourhood: how far apart adjacent ranks really are ── */
+function fig3() {
+  const nb = D.neighbours;
+  const W = 720, rh = 23, T = 34, L = 128, Rr = 118;
+  const H = T + nb.length * rh + 60;
+  const e0 = Math.min(...nb.map((n: any) => n.eci));
+  const e1 = Math.max(...nb.map((n: any) => n.eci));
+  const padE = (e1 - e0) * 0.1;
+  const sx = (v: number) => L + ((v - (e0 - padE)) / ((e1 + padE) - (e0 - padE))) * (W - L - Rr);
+  const body = nb.map((n: any, i: number) => {
+    const y = T + i * rh + rh / 2;
+    const me = n.iso3 === "IDN";
+    const col = me ? COPPER : SILVER;
+    return `${me ? `<rect x="${L - 118}" y="${y - rh / 2 + 1}" width="${W - Rr - L + 214}" height="${rh - 2}" fill="${COPPER}" opacity="0.11" rx="3"/>` : ""}
+      <text x="${L - 96}" y="${y + 4}" fill="${MUTED}" font-size="11" text-anchor="end" font-family="var(--font-data)">#${n.rank}</text>
+      <text x="${L - 14}" y="${y + 4}" fill="${me ? COPPER : INK}" font-size="12" text-anchor="end"${me ? ' font-weight="600"' : ""}>${esc(n.iso3)}</text>
+      <line x1="${L}" y1="${y}" x2="${sx(n.eci).toFixed(1)}" y2="${y}" stroke="${GRID}" stroke-width="1"/>
+      <circle cx="${sx(n.eci).toFixed(1)}" cy="${y}" r="${me ? 5.5 : 3.6}" fill="${col}"/>
+      <text x="${(sx(n.eci) + 11).toFixed(1)}" y="${y + 4}" fill="${col}" font-size="10.5" font-family="var(--font-data)">${n.eci.toFixed(3)}</text>`;
+  }).join("");
+  const yB = T + nb.length * rh + 10;
+  const span = `<line x1="${sx(e1).toFixed(1)}" y1="${yB}" x2="${sx(e0).toFixed(1)}" y2="${yB}" stroke="${ALERT}" stroke-width="1.6"/>
+    <line x1="${sx(e1).toFixed(1)}" y1="${yB - 5}" x2="${sx(e1).toFixed(1)}" y2="${yB + 5}" stroke="${ALERT}" stroke-width="1.6"/>
+    <line x1="${sx(e0).toFixed(1)}" y1="${yB - 5}" x2="${sx(e0).toFixed(1)}" y2="${yB + 5}" stroke="${ALERT}" stroke-width="1.6"/>
+    <text x="${((sx(e0) + sx(e1)) / 2).toFixed(1)}" y="${yB + 22}" fill="${ALERT}" font-size="11" text-anchor="middle" font-family="var(--font-data)">${nb.length} economies · ${D.eciTenPlaces.toFixed(3)} of index</text>
+    <text x="${((sx(e0) + sx(e1)) / 2).toFixed(1)}" y="${yB + 38}" fill="${MUTED}" font-size="10.5" text-anchor="middle">= ${(D.tenPlacesInSd * 100).toFixed(1)}% of one standard deviation</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Eleven economies sit within a tenth of a standard deviation of Indonesia's complexity score in ${latest}">
+    <text x="${L - 96}" y="${T - 12}" fill="${MUTED}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">RANK</text>
+    <text x="${L + 4}" y="${T - 12}" fill="${MUTED}" font-size="10.5">complexity score, ${latest} →</text>
+    ${body}${span}
+  </svg>`;
+}
+
+/* ── Figure 4 · the decade the page describes, against two datasets ───────── */
+function fig4() {
+  const rows = A.peerLadder;
+  const W = 720, H = 326, T = 40, B = 66, L = 62, Rr = 30;
+  const lo = Math.min(-9, ...rows.map((r: any) => Math.min(r.gain, r.atlasGain ?? 0)));
+  const hi = Math.max(23, ...rows.map((r: any) => Math.max(r.gain, r.atlasGain ?? 0)));
+  const sy = (v: number) => H - B - ((v - lo) / (hi - lo)) * (H - T - B);
+  const gw = (W - L - Rr) / rows.length;
+  const zero = sy(0);
+  const bar = (v: number, x: number, col: string) => {
+    const y = Math.min(sy(v), zero), h = Math.max(1.5, Math.abs(sy(v) - zero));
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="21" height="${h.toFixed(1)}" fill="${col}" rx="2"/>
+      <text x="${(x + 10.5).toFixed(1)}" y="${(v >= 0 ? y - 6 : y + h + 13).toFixed(1)}" fill="${col}"
+        font-size="10.5" text-anchor="middle" font-family="var(--font-data)">${signed(v)}</text>`;
+  };
+  const body = rows.map((r: any, i: number) => {
+    const x = L + i * gw + gw / 2;
+    return `${bar(r.gain, x - 23, r.iso3 === "IDN" ? COPPER : SILVER)}
+      ${r.atlasGain === null ? "" : bar(r.atlasGain, x + 2, PEER)}
+      <text x="${x.toFixed(1)}" y="${H - B + 26}" fill="${r.iso3 === "IDN" ? COPPER : INK}" font-size="12.5"
+        text-anchor="middle"${r.iso3 === "IDN" ? ' font-weight="600"' : ""}>${esc(r.iso3)}</text>`;
+  }).join("");
+  const claim = sy(20);
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="No peer economy gained twenty or more complexity places over the decade in either dataset">
+    <line x1="${L - 8}" y1="${claim.toFixed(1)}" x2="${W - Rr}" y2="${claim.toFixed(1)}" stroke="${ALERT}" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <text x="${L - 8}" y="${(claim - 8).toFixed(1)}" fill="${ALERT}" font-size="10.5" font-family="var(--font-data)">+20 — what the case page claimed for Vietnam, the Philippines and India</text>
+    <line x1="${L - 8}" y1="${zero.toFixed(1)}" x2="${W - Rr}" y2="${zero.toFixed(1)}" stroke="${GRID}"/>
+    <text x="${L - 14}" y="${(zero + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">0</text>
+    ${body}
+    <g><rect x="${L}" y="10" width="11" height="11" fill="${SILVER}" rx="2"/>
+      <text x="${L + 18}" y="20" fill="${MUTED}" font-size="11.5">this case's own numbers</text>
+      <rect x="${L + 210}" y="10" width="11" height="11" fill="${PEER}" rx="2"/>
+      <text x="${L + 228}" y="20" fill="${MUTED}" font-size="11.5">Harvard Atlas, HS92</text></g>
+    <text x="${((L + W - Rr) / 2).toFixed(1)}" y="${H - 12}" fill="${MUTED}" font-size="11.5" text-anchor="middle">complexity places gained, ${decade} → ${latest}</text>
+  </svg>`;
+}
+
+/* ── Figure 5 · money, tonnage and price, indexed to the pre-ban window ───── */
+function fig5() {
+  const W = 720, H = 350, L = 58, Rr = 132, T = 26, B = 52;
+  const s = N.series.filter((r: any) => r.year >= 2010 && r.q > 0);
+  const iv = (r: any) => r.v / (N.vBase);
+  const iq = (r: any) => r.q / (N.qBase);
+  const iu = (r: any) => (r.uv / N.uvBase);
+  const lo = 0.2, hi = 55;
+  const sx = (i: number) => L + (i / (s.length - 1)) * (W - L - Rr);
+  const sy = (v: number) => H - B - ((Math.log(v) - Math.log(lo)) / (Math.log(hi) - Math.log(lo))) * (H - T - B);
+  const line = (f: any, col: string) =>
+    `<path fill="none" stroke="${col}" stroke-width="2.3" d="${s.map((r: any, i: number) =>
+      `${i ? "L" : "M"}${sx(i).toFixed(1)} ${sy(f(r)).toFixed(1)}`).join("")}"/>`;
+  const dots = (f: any, col: string, lab: string) => s.map((r: any, i: number) =>
+    `<circle class="hv" cx="${sx(i).toFixed(1)}" cy="${sy(f(r)).toFixed(1)}" r="3" fill="${col}"
+      data-t="${r.year} · ${lab} ${f(r).toFixed(2)}×"/>`).join("");
+  const gl = [0.25, 0.5, 1, 2, 5, 10, 20, 50].map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - Rr}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="${v === 1 ? 1 : 0.55}"/>
+     <text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">${v}×</text>`).join("");
+  const ticks = s.map((r: any, i: number) => (r.year % 2 === 0)
+    ? `<text x="${sx(i).toFixed(1)}" y="${H - B + 19}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${r.year}</text>` : "").join("");
+  const key = [
+    { k: "tonnes shipped", c: PEER, v: N.tonnes },
+    { k: "dollars earned", c: COPPER, v: N.value },
+    { k: "dollars per tonne", c: SILVER, v: N.unitValue },
+  ];
+  const legend = key.map((k, i) =>
+    `<line x1="${W - Rr + 12}" y1="${T + 20 + i * 36}" x2="${W - Rr + 34}" y2="${T + 20 + i * 36}" stroke="${k.c}" stroke-width="2.4"/>
+     <text x="${W - Rr + 40}" y="${T + 24 + i * 36}" fill="${INK}" font-size="11.5">${esc(k.k)}</text>
+     <text x="${W - Rr + 12}" y="${T + 40 + i * 36}" fill="${k.c}" font-size="11" font-family="var(--font-data)">peak window ${k.v.toFixed(2)}×</text>`).join("");
+  const bi = s.findIndex((r: any) => r.year === N.base[0]);
+  const pi = s.findIndex((r: any) => r.year === N.peak[0]);
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Processed nickel export tonnage grew ${N.tonnes.toFixed(1)} times while value grew ${N.value.toFixed(1)} times and price per tonne fell to ${N.unitValue.toFixed(2)} times">
+    <rect x="${sx(bi).toFixed(1)}" y="${T}" width="${(sx(bi + 2) - sx(bi)).toFixed(1)}" height="${H - T - B}" fill="${SILVER}" opacity="0.07"/>
+    <rect x="${sx(pi).toFixed(1)}" y="${T}" width="${(sx(s.length - 1) - sx(pi)).toFixed(1)}" height="${H - T - B}" fill="${COPPER}" opacity="0.07"/>
+    ${gl}
+    ${line(iq, PEER)}${line(iv, COPPER)}${line(iu, SILVER)}
+    ${dots(iq, PEER, "tonnes")}${dots(iv, COPPER, "dollars")}${dots(iu, SILVER, "dollars per tonne")}
+    <line x1="${L}" y1="${H - B}" x2="${W - Rr}" y2="${H - B}" stroke="${GRID}"/>
+    ${ticks}${legend}
+    <text x="${(sx(bi) + 4).toFixed(1)}" y="${T + 12}" fill="${MUTED}" font-size="9.5" font-family="var(--font-data)">base</text>
+    <text x="${(sx(pi) + 4).toFixed(1)}" y="${T + 12}" fill="${COPPER}" font-size="9.5" font-family="var(--font-data)">peak</text>
+    <text x="${((L + W - Rr) / 2).toFixed(1)}" y="${H - 12}" fill="${MUTED}" font-size="11.5" text-anchor="middle">indexed to the ${N.base[0]}–${N.base[N.base.length - 1]} average · log scale</text>
+  </svg>`;
+}
+
+/* ── Figure 6 · what "processed nickel" is made of, before and after ──────── */
+function fig6() {
+  const W = 720, H = 186, L = 176, Rr = 34, T = 22, bh = 46;
+  const keys = Object.keys(N.composition);
+  const cols = [COPPER, PEER, SILVER, ALERT];
+  const bar = (which: "vBase" | "vPeak", y: number, total: number, label: string, sub: string) => {
+    let x = L;
+    const seg = keys.map((k, i) => {
+      const v = (N.composition as any)[k][which];
+      const w = (v / total) * (W - L - Rr);
+      const s = `<rect x="${x.toFixed(1)}" y="${y}" width="${Math.max(0, w).toFixed(1)}" height="${bh}" fill="${cols[i]}" rx="1.5"/>` +
+        (w > 44 ? `<text x="${(x + w / 2).toFixed(1)}" y="${y + bh / 2 + 4}" fill="#0C0F14" font-size="11"
+           text-anchor="middle" font-weight="600" font-family="var(--font-data)">${(v / total * 100).toFixed(0)}%</text>` : "");
+      x += w;
+      return s;
+    }).join("");
+    return `<text x="${L - 14}" y="${y + bh / 2 - 3}" fill="${INK}" font-size="12.5" text-anchor="end">${esc(label)}</text>
+      <text x="${L - 14}" y="${y + bh / 2 + 13}" fill="${MUTED}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">${esc(sub)}</text>${seg}`;
+  };
+  const legend = keys.map((k, i) => {
+    const col = i % 2, row = Math.floor(i / 2);
+    return `<rect x="${L - 160 + col * 292}" y="${T + 118 + row * 20}" width="10" height="10" fill="${cols[i]}" rx="2"/>
+      <text x="${L - 145 + col * 292}" y="${T + 127 + row * 20}" fill="${MUTED}" font-size="11">${esc(k)}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="The processed nickel basket shifts from nickel mattes to ferro-nickel and stainless steel">
+    ${bar("vBase", T, N.compositionBaseTotal, `${N.base[0]}–${N.base[N.base.length - 1]}`, bn(N.compositionBaseTotal) + "/yr")}
+    ${bar("vPeak", T + bh + 14, N.compositionPeakTotal, `${N.peak[0]}–${N.peak[N.peak.length - 1]}`, bn(N.compositionPeakTotal) + "/yr")}
+    ${legend}
+  </svg>`;
+}
+
+/* ── Figure 7 · the imported input basket, on a signed log scale ──────────── */
+function fig7() {
+  const rows = IN.rows;
+  const W = 720, rh = 30, T = 40, L = 210, Rr = 76;
+  const H = T + rows.length * rh + 40;
+  const slog = (g: number) => Math.sign(g) * Math.log10(1 + Math.abs(g));
+  const lo = -0.35, hi = slog(Math.max(...rows.map((r: any) => r.growth))) * 1.03;
+  const sx = (v: number) => L + ((v - lo) / (hi - lo)) * (W - L - Rr);
+  const zero = sx(0);
+  const thrX = sx(slog(IN.threshold));
+  const controls = new Set(["2701", "2521", "2522"]);
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rh;
+    const x = slog(r.growth);
+    const isCtl = controls.has(r.code);
+    const col = r.growth < 0 ? "#6B7CA6" : (r.growth >= IN.threshold ? COPPER : SILVER);
+    const w = Math.abs(sx(x) - zero);
+    // keep the read-out clear of the threshold rule instead of sitting on it
+    let lx = Math.max(zero, sx(x)) + 8;
+    if (lx < thrX && lx + 44 > thrX) lx = thrX + 9;
+    return `<text x="${L - 14}" y="${y + 18}" fill="${INK}" font-size="12" text-anchor="end">${esc(r.label)}</text>
+      ${isCtl ? `<text x="${L - 14}" y="${y + 30}" fill="${MUTED}" font-size="9.5" text-anchor="end" font-family="var(--font-data)">entered as a control</text>` : ""}
+      <rect x="${Math.min(zero, sx(x)).toFixed(1)}" y="${y + 7}" width="${w.toFixed(1)}" height="14" fill="${col}" rx="2"/>
+      <text x="${lx.toFixed(1)}" y="${y + 18}" fill="${col}" font-size="11" font-family="var(--font-data)">${r.growth > 0 ? "+" : ""}${(r.growth * 100).toFixed(0)}%</text>`;
+  }).join("");
+  const ticks = [0, 1, 10, 100].map((v) =>
+    `<line x1="${sx(slog(v)).toFixed(1)}" y1="${T - 8}" x2="${sx(slog(v)).toFixed(1)}" y2="${H - 30}" stroke="${GRID}" opacity="0.6"/>
+     <text x="${sx(slog(v)).toFixed(1)}" y="${H - 14}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${v === 0 ? "0" : "+" + v * 100 + "%"}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Imported smelter inputs: coal rose thirteen-fold and chromium ore a hundred-fold, while ferrous scrap fell">
+    ${ticks}
+    <line x1="${thrX.toFixed(1)}" y1="${T - 20}" x2="${thrX.toFixed(1)}" y2="${H - 30}" stroke="${ALERT}" stroke-width="1.4" stroke-dasharray="4 4"/>
+    <text x="${(thrX + 6).toFixed(1)}" y="${T - 24}" fill="${ALERT}" font-size="10.5" font-family="var(--font-data)">registered threshold +${(IN.threshold * 100).toFixed(0)}%</text>
+    ${body}
+  </svg>`;
+}
+
+/* ── Figure 8 · the ledger the headline compresses into one ratio ─────────── */
+function fig8() {
+  const rows = A.ledger;
+  const W = 720, H = 268, L = 30, Rr = 30, T = 42, B = 66;
+  const max = rows[0].v;
+  const sy = (v: number) => H - B - (v / max) * (H - T - B);
+  const gw = (W - L - Rr) / rows.length;
+  const base = H - B;
+  const body = rows.map((r: any, i: number) => {
+    const x = L + i * gw + gw * 0.18;
+    const bw = gw * 0.64;
+    const col = r.sign > 0 ? COPPER : r.sign < 0 ? ALERT : PEER;
+    const h = Math.max(2, (Math.abs(r.v) / max) * (H - T - B));
+    const y = base - h;
+    const words = r.k.split(" ");
+    const l1 = words.slice(0, Math.ceil(words.length / 2)).join(" ");
+    const l2 = words.slice(Math.ceil(words.length / 2)).join(" ");
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${col}" rx="2" opacity="${r.sign === 0 ? 1 : 0.9}"/>
+      <text x="${(x + bw / 2).toFixed(1)}" y="${(y - 9).toFixed(1)}" fill="${col}" font-size="12.5" text-anchor="middle" font-family="var(--font-data)">${r.sign < 0 ? "−" : ""}${bn(Math.abs(r.v))}</text>
+      <text x="${(x + bw / 2).toFixed(1)}" y="${base + 20}" fill="${INK}" font-size="11.5" text-anchor="middle">${esc(l1)}</text>
+      <text x="${(x + bw / 2).toFixed(1)}" y="${base + 34}" fill="${INK}" font-size="11.5" text-anchor="middle">${esc(l2)}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="The nickel ledger: extra exports minus foregone ore minus imported inputs">
+    <line x1="${L}" y1="${base}" x2="${W - Rr}" y2="${base}" stroke="${GRID}"/>
+    ${body}
+    <text x="${L}" y="20" fill="${MUTED}" font-size="11.5">annual averages, ${N.peak[0]}–${N.peak[N.peak.length - 1]} against ${N.base[0]}–${N.base[N.base.length - 1]}</text>
+  </svg>`;
+}
+
+/* ── Figure 9 · the failed reconciliation, and what it costs complexity ───── */
+function fig9() {
+  const W = 720, H = 336, L = 62, Rr = 40, T = 34;
+  const rows = GP.byYear;
+  const bh = 116, base = T + bh;
+  const max = Math.max(...rows.flatMap((r: any) => [r.baci, r.bps])) * 1.08;
+  const gw = (W - L - Rr) / rows.length;
+  const bar = (v: number, x: number, col: string, lab: string) => {
+    const h = (v / max) * bh;
+    return `<rect x="${x.toFixed(1)}" y="${(base - h).toFixed(1)}" width="30" height="${h.toFixed(1)}" fill="${col}" rx="2"/>
+      <text x="${(x + 15).toFixed(1)}" y="${(base - h - 7).toFixed(1)}" fill="${col}" font-size="10" text-anchor="middle" font-family="var(--font-data)">${lab}</text>`;
+  };
+  const top = rows.map((r: any, i: number) => {
+    const x = L + i * gw + gw / 2;
+    return `${bar(r.bps, x - 34, PEER, `${(r.bps / 1e9).toFixed(0)}`)}${bar(r.baci, x + 4, COPPER, `${(r.baci / 1e9).toFixed(0)}`)}
+      <text x="${x.toFixed(1)}" y="${base + 18}" fill="${INK}" font-size="12" text-anchor="middle">${r.year}</text>
+      <text x="${x.toFixed(1)}" y="${base + 33}" fill="${ALERT}" font-size="11" text-anchor="middle" font-family="var(--font-data)">${(r.deviation * 100).toFixed(1)}% over</text>`;
+  }).join("");
+  // lower panel: the counterfactual rank ladder, on its own full-width band
+  const T2 = base + 96, rh = 27, LX = 356;
+  const cases = [{ label: "as published", rank: CF.baseRank, shift: 0 }, ...CF.cases];
+  const shifts = cases.map((c: any) => c.shift);
+  const s0 = Math.min(-4, ...shifts), s1 = Math.max(4, ...shifts);
+  const cx = (v: number) => (LX + 76) + ((v - s0) / (s1 - s0)) * 196;
+  const lower = cases.map((c: any, i: number) => {
+    const y = T2 + i * rh;
+    const col = c.shift === 0 ? SILVER : COPPER;
+    return `<text x="${LX}" y="${y + 4}" fill="${c.shift === 0 ? MUTED : INK}" font-size="11.5" text-anchor="end">${esc(c.label)}</text>
+      <line x1="${cx(0).toFixed(1)}" y1="${y}" x2="${cx(c.shift).toFixed(1)}" y2="${y}" stroke="${col}" stroke-width="1.6"/>
+      <circle cx="${cx(c.shift).toFixed(1)}" cy="${y}" r="4" fill="${col}"/>
+      <text x="${(cx(c.shift) + (c.shift < 0 ? -10 : 10)).toFixed(1)}" y="${y + 4}" fill="${col}" font-size="10.5"
+        text-anchor="${c.shift < 0 ? "end" : "start"}" font-family="var(--font-data)">#${c.rank}</text>`;
+  }).join("");
+  const maxShift = Math.max(...shifts.map((s: number) => Math.abs(s)));
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="BACI reports Indonesian exports about a sixth above Indonesia's own figure, and removing the excess moves the complexity rank by at most ${maxShift} places">
+    <text x="${L - 46}" y="${T - 12}" fill="${MUTED}" font-size="11.5">goods exports, US$ billion</text>
+    <g><rect x="${W - Rr - 220}" y="${T - 22}" width="10" height="10" fill="${PEER}" rx="2"/>
+      <text x="${W - Rr - 206}" y="${T - 13}" fill="${MUTED}" font-size="11">BPS, Indonesia's own</text>
+      <rect x="${W - Rr - 84}" y="${T - 22}" width="10" height="10" fill="${COPPER}" rx="2"/>
+      <text x="${W - Rr - 70}" y="${T - 13}" fill="${MUTED}" font-size="11">BACI</text></g>
+    <line x1="${L - 46}" y1="${base}" x2="${W - Rr}" y2="${base}" stroke="${GRID}"/>
+    ${top}
+    <line x1="${L - 46}" y1="${T2 - 52}" x2="${W - Rr}" y2="${T2 - 52}" stroke="${GRID}"/>
+    <text x="${L - 46}" y="${T2 - 32}" fill="${INK}" font-size="12.5">Remove the ${bnUsd(GP.excess)} of ${GP.year} excess, recompute the whole index,</text>
+    <text x="${L - 46}" y="${T2 - 16}" fill="${INK}" font-size="12.5">and Indonesia's rank moves by at most ${maxShift} places:</text>
+    <line x1="${cx(0).toFixed(1)}" y1="${T2 - 10}" x2="${cx(0).toFixed(1)}" y2="${T2 + cases.length * rh - 12}" stroke="${GRID}" stroke-dasharray="3 3"/>
+    ${lower}
+  </svg>`;
+}
+
+/* ── Figure 10 · both halves of the network, and a fixed partner roster ───── */
+function fig10() {
+  const W = 720, H = 322, L = 58, Rr = 168, T = 26, B = 52;
+  const rows = C.rows;
+  const vals = rows.flatMap((r: any) => [r.hhiExpAll, r.hhiImpAll, r.hhiExpPanel, r.hhiImpPanel]);
+  const y0 = 0, y1 = Math.max(...vals) * 1.06;
+  const sx = (i: number) => L + (i / (rows.length - 1)) * (W - L - Rr);
+  const sy = (v: number) => H - B - ((v - y0) / (y1 - y0)) * (H - T - B);
+  const line = (k: string, col: string, dash = "") =>
+    `<path fill="none" stroke="${col}" stroke-width="${dash ? 1.5 : 2.3}" ${dash ? `stroke-dasharray="${dash}"` : ""} d="${rows.map((r: any, i: number) =>
+      `${i ? "L" : "M"}${sx(i).toFixed(1)} ${sy(r[k]).toFixed(1)}`).join("")}"/>`;
+  const gl = [0, 400, 800, 1200].map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - Rr}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.65"/>
+     <text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">${v}</text>`).join("");
+  const ticks = rows.map((r: any, i: number) => (r.year % 5 === 0)
+    ? `<text x="${sx(i).toFixed(1)}" y="${H - B + 19}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${r.year}</text>` : "").join("");
+  const mark = (year: number, k: string, col: string, lab: string, dy: number) => {
+    const i = rows.findIndex((r: any) => r.year === year);
+    return `<circle cx="${sx(i).toFixed(1)}" cy="${sy(rows[i][k]).toFixed(1)}" r="5" fill="none" stroke="${col}" stroke-width="1.5"/>
+      <text x="${sx(i).toFixed(1)}" y="${(sy(rows[i][k]) + dy).toFixed(1)}" fill="${col}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">${esc(lab)}</text>`;
+  };
+  const key = [
+    { k: "suppliers (imports)", c: PEER, d: "" },
+    { k: "customers (exports)", c: COPPER, d: "" },
+    { k: "dashed: the same,", c: MUTED, d: "4 3" },
+  ];
+  const legend = key.map((k, i) =>
+    `<line x1="${W - Rr + 10}" y1="${T + 20 + i * 32}" x2="${W - Rr + 30}" y2="${T + 20 + i * 32}"
+       stroke="${k.c}" stroke-width="2.2" ${k.d ? `stroke-dasharray="${k.d}"` : ""}/>
+     <text x="${W - Rr + 36}" y="${T + 24 + i * 32}" fill="${INK}" font-size="11">${esc(k.k)}</text>` +
+    (i === 2 ? `<text x="${W - Rr + 36}" y="${T + 38 + i * 32}" fill="${MUTED}" font-size="10.5">on a frozen roster</text>` : "")).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Export and import partner concentration are both U-shaped; a fixed partner roster reproduces the same curve">
+    ${gl}
+    ${line("hhiExpPanel", COPPER, "4 3")}${line("hhiImpPanel", PEER, "4 3")}
+    ${line("hhiImpAll", PEER)}${line("hhiExpAll", COPPER)}
+    <line x1="${L}" y1="${H - B}" x2="${W - Rr}" y2="${H - B}" stroke="${GRID}"/>
+    ${ticks}${legend}
+    ${mark(C.exp.troughYear, "hhiExpAll", COPPER, String(C.exp.troughYear), 18)}
+    ${mark(C.imp.troughYear, "hhiImpAll", PEER, String(C.imp.troughYear), 18)}
+    <text x="14" y="${(T + (H - T - B) / 2).toFixed(1)}" fill="${MUTED}" font-size="11.5" text-anchor="middle"
+      transform="rotate(-90 14 ${(T + (H - T - B) / 2).toFixed(1)})">Herfindahl index over partner shares</text>
+  </svg>`;
+}
+
+const F1 = fig1(), F2 = fig2(), F3 = fig3(), F4 = fig4(), F5 = fig5();
+const F6 = fig6(), F7 = fig7(), F8 = fig8(), F9 = fig9(), F10 = fig10();
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+---
+<html lang="en" data-case="trade" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Can a Complexity Rank Carry Indonesia's Nickel Argument?</title>
+    <meta name="description" content="A replication and stress test of Indonesia's economic complexity trajectory and the nickel downstreaming paradox, on CEPII BACI 1995-2024, against the Harvard Atlas of Economic Complexity." />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="back" href={`${BASE}/`}>← The instrument</a>
+      <span class="stamp dim">REVIEW ARTICLE · BACI {A.release} · DATA THROUGH {A.vintage}</span>
+    </header>
+
+    <article>
+      <div class="masthead">
+        <span class="eyebrow">METHODS &amp; VALIDATION · INDONESIA IN THE GLOBAL TRADE NETWORK</span>
+        <h1>Can a complexity rank carry Indonesia's nickel argument?</h1>
+        <p class="standfirst">A replication and stress test on CEPII BACI, {A.firstYear}–{A.vintage}.
+        The pipeline reproduces the <a href="#ref-atlas">Harvard Atlas</a>'s ordering of the world
+        almost exactly — and that is precisely why the single number the case page leads with,
+        Indonesia's rank, cannot bear the weight put on it. Meanwhile the nickel story turns out to
+        be larger than the page says in tonnes, and smaller in what a tonne is worth.</p>
+        <div class="byline">
+          <span>Demo Lab · FMV</span><span>BACI release {A.release}</span>
+          <span>{A.nYears} years · goods only</span>
+        </div>
+      </div>
+
+      <section class="abstract">
+        <h2>Abstract</h2>
+        <p><b>Question.</b> The case makes two quantitative claims: that Indonesia's economic
+        complexity rank barely moved over a decade while its neighbours climbed, and that
+        processed-nickel exports grew roughly fifteen-fold. We ask whether either statement is
+        supported by the data the case itself publishes.</p>
+        <p><b>Method.</b> CEPII BACI {A.release} (HS92, {A.firstYear}–{A.vintage}), Balassa revealed
+        comparative advantage at HS4, ECI by the eigenvector method, benchmarked against the
+        Growth Lab's published HS92 complexity rankings. The nickel chain is re-derived in tonnes as
+        well as dollars; partner concentration is recomputed on a partner roster frozen for
+        thirty years; and the failed export-reconciliation check is propagated through to the
+        complexity result rather than argued away.</p>
+        <p><b>Findings.</b> The pre-registered rank-correlation check — written into the repository
+        and never computed — <b>passes</b>: our country ordering agrees with the Atlas at Spearman
+        ρ between {sig(G.min, 3)} and {sig(G.max, 3)} (mean {sig(G.mean, 3)}) in
+        all {G.rows.length} years, against a registered floor of {sig(G.threshold, 2)}. But the number
+        the page publishes is a <i>rank</i>, and in Indonesia's neighbourhood the index is so densely
+        packed that <b>{D.neighbours.length} economies sit inside {sig(D.eciTenPlaces, 3)} of the index —
+        {pct(D.tenPlacesInSd, 1)} of one standard deviation</b>. The decade change the page reports
+        ({signed(R.decadeChange)} places) is {pct(D.decadeMoveInSd, 1)} of a standard deviation, against a
+        year-to-year swing of up to {R.maxAbsYoY} places. The page's claim that Vietnam, the
+        Philippines and India "each climbed twenty or more places over the same decade" is
+        <b>false on the case's own data</b> — the largest is {A.peerClaim.maxGain} — and false on the Atlas's
+        too ({A.peerClaim.maxAtlasGain}). On nickel: exports grew <b>{sig(N.value)}× in dollars but
+        {sig(N.tonnes)}× in tonnes</b>, because the average dollar-per-tonne <b>fell
+        {pct(1 - N.unitValue, 0)}</b>, from US${Math.round(N.uvBase).toLocaleString()} to
+        US${Math.round(N.uvPeak).toLocaleString()} a tonne. Two checks we expected to break held:
+        the diversification of Indonesia's customer base survives a partner roster frozen for
+        thirty years intact ({pct(C.survivingShare, 0)} of the measured fall), and the failed export reconciliation
+        ({pct(GP.deviation, 1)} above Indonesia's own figure) moves the complexity rank by at most
+        {Math.max(...CF.cases.map((c: any) => Math.abs(c.shift)))} places under any assumption we could construct.</p>
+        <p><b>Conclusion.</b> The case's structure is sound and its instrument replicates. Its
+        headline is a rank, and a rank is the one statistic this instrument cannot resolve. The
+        finding worth publishing is not where Indonesia sits but what its downstreaming actually
+        bought: {sig(N.tonnes)} times the tonnage for {sig(N.value)} times the money.</p>
+      </section>
+
+      <nav class="toc">
+        <a href="#s1">1 · The claim under test</a><a href="#s2">2 · Prior art</a>
+        <a href="#s3">3 · Data and method</a><a href="#s4">4 · The gate that was never run</a>
+        <a href="#s5">5 · A rank is not a measurement</a><a href="#s6">6 · The peers did not climb</a>
+        <a href="#s7">7 · Tonnes, not dollars</a><a href="#s8">8 · What the gain was bought with</a>
+        <a href="#s9">9 · The reconciliation that fails harmlessly</a>
+        <a href="#s10">10 · Both halves are U-shaped</a>
+        <a href="#s11">11 · What follows for decisions</a><a href="#s12">12 · What remains open</a>
+        <a href="#refs">References</a>
+      </nav>
+
+      <section id="s1">
+        <h2><span class="num">1</span> The claim under test</h2>
+        <p>Economic complexity is the most policy-active idea in development economics of the last
+        twenty years. It is quoted in Indonesian industrial-policy documents, it underwrites the
+        argument for <i>hilirisasi</i> — downstreaming — and it arrives as a single, memorable
+        number: a country's position in a global ranking. The case page this article reviews leads
+        with exactly that number, and pairs it with the nickel story:
+        <b>#{R.now} in {latest}, against #{R.decadeAgo} a decade earlier; fifteen times the
+        processed-nickel exports; a rank that barely moved.</b></p>
+        <p>That sentence contains three separable assertions — a level, a change, and a comparison —
+        plus an implicit fourth, that the fifteen-fold figure measures what a reader will assume it
+        measures. We test each against the case's own published data, against an independently
+        published benchmark, and against the physical quantities the trade file also records and
+        the case never opened.</p>
+        <p class="pull">A pipeline can be correct and its headline still be unsupported. Those are
+        different claims and they need different evidence.</p>
+      </section>
+
+      <section id="s2">
+        <h2><span class="num">2</span> Prior art, and the benchmark we replicate</h2>
+        <p><a href="#ref-hh">Hidalgo &amp; Hausmann (2009)</a> defined the Economic Complexity Index
+        as the second eigenvector of a country-similarity matrix built from a binary
+        country-by-product matrix of revealed comparative advantage, following
+        <a href="#ref-balassa">Balassa (1965)</a>. <a href="#ref-hkbh">Hidalgo, Klinger, Barabási
+        &amp; Hausmann (2007)</a> supplied the product space and the proximity measure the case uses
+        for its map.</p>
+        <p><a href="#ref-mealy">Mealy, Farmer &amp; Teytelboym (2019)</a> proved what the index
+        actually is: ECI is equivalent to a <i>spectral clustering</i> of the country-product
+        network — a dimensionality reduction that partitions economies into two groups by what they
+        export. That result matters here, because a clustering coordinate is designed to separate
+        the ends of a distribution, not to order the middle. Indonesia is in the middle.</p>
+        <p>Our benchmark is the <a href="#ref-atlas">Growth Lab's published complexity rankings</a>,
+        which ship an HS92-based ECI and rank for every country and year — the same product
+        classification the case uses. That makes a direct, like-for-like replication possible, and
+        it is the comparison the case's own repository specified.</p>
+      </section>
+
+      <section id="s3">
+        <h2><span class="num">3</span> Data and method</h2>
+        <p><b>Flows.</b> CEPII BACI release {A.release}, HS92, {A.firstYear}–{A.vintage}, a
+        mirror-reconciled reconstruction of UN Comtrade in which each bilateral flow is a
+        reliability-weighted average of what the exporter and the importer declared
+        (<a href="#ref-baci">Gaulier &amp; Zignago 2010</a>). Values are FOB in both directions;
+        quantities are metric tonnes. Goods only — BACI carries no services.</p>
+        <p><b>Sample and index.</b> The case's own rule: economies with population ≥ 1 million and
+        total trade ≥ US$1 billion. Balassa RCA at HS4, M<sub>cp</sub> = 1 where RCA ≥ 1, then the
+        second eigenvector of the row- and column-normalised co-occurrence matrix, standardised and
+        signed so that diversified economies score high.</p>
+        <p><b>Independent re-implementation.</b> Everything in sections 4–6 is computed from a
+        separate implementation written for this review, not from the case's pipeline. It lands
+        within a mean of {sig(A.reproduction.meanAbsRankDiff, 1)} places of the case's published rank
+        across all {A.nYears} years. That agreement is what licenses the disagreements that follow.</p>
+        <p class="caveat"><b>Registered in advance, and what happened to it.</b> The repository fixed
+        four thresholds before any result was read. The rank-correlation floor of
+        {sig(G.threshold, 2)} against the Atlas was <b>never computed</b> — the constant sits in
+        <code>config.py</code> unused. The acceptance window for Indonesia's own rank,
+        #{R.gateWindow[0]}–#{R.gateWindow[1]}, was checked on {R.validationYear} (#{R.validationRank},
+        inside) and not on {latest} (#{R.now}, <b>outside</b>). We run the first here and report the
+        second. The export-reconciliation and nickel-import checks the case does publish are
+        re-derived unchanged in sections 8 and 9.</p>
+      </section>
+
+      <section id="s4">
+        <h2><span class="num">4</span> Finding one — the gate that was written and never run, run</h2>
+        <p>The case's configuration file registers a rank-correlation floor: our complexity ordering
+        must agree with the Harvard Atlas at Spearman ρ ≥ {sig(G.threshold, 2)} in every overlapping
+        year. No code ever evaluates it. Because the Growth Lab publishes an HS92 ECI for every
+        country and year, evaluating it is cheap, so we did.</p>
+        <figure>
+          <Fragment set:html={F1} />
+          <figcaption><b>Figure 1.</b> Spearman rank correlation between this study's ECI and the
+          Growth Lab's published HS92 ECI, over every economy both rank, in each year
+          {A.firstYear}–{A.vintage}. Hover any point.</figcaption>
+        </figure>
+        <p>It passes, and not narrowly. The correlation runs from {sig(G.min, 3)} to {sig(G.max, 3)},
+        mean {sig(G.mean, 3)}, and clears the registered floor in <b>{G.rows.length} of
+        {G.rows.length} years</b>. Two independently built pipelines, on the same classification but
+        different code, different sample rules and a different implementation of the eigenvector
+        step, order the world's economies the same way.</p>
+        <p>This is the strongest evidence available that the case's complexity machinery is correct,
+        and it should be said plainly before anything else. It is also the reason the next section
+        is a problem rather than a bug report.</p>
+      </section>
+
+      <section id="s5">
+        <h2><span class="num">5</span> Finding two — the ordering replicates; the rank does not</h2>
+        <p>If two pipelines agree at ρ = {sig(G.mean, 3)}, how far apart can they put one country? On
+        Indonesia, a long way. The case publishes #{AT.latest.published} of
+        {AT.latest.publishedN} for {latest}; the Atlas publishes #{AT.latest.atlas} of
+        {AT.latest.atlasN}. The obvious suspect is the sample: a bigger roster shifts every rank.
+        So we removed it — re-ranking our own ECI over <i>only</i> the economies the Atlas itself
+        ranks.</p>
+        <figure>
+          <Fragment set:html={F2} />
+          <figcaption><b>Figure 2.</b> Indonesia's position expressed as a percentage from the top,
+          so samples of different sizes are comparable. The dashed line is our ECI re-ranked over the
+          Atlas's own country roster — the sample difference removed.</figcaption>
+        </figure>
+        <p>The sample is not the explanation. On an identical roster we still place Indonesia a mean
+        of <b>{sig(AT.meanGapOnSameSample, 1)} places</b> below the Atlas, and we place it lower in
+        <b>{AT.yearsWorseThanAtlas} of {AT.rows.length} years</b> — never once higher. A one-directional
+        offset of that size, from pipelines that agree at ρ = {sig(G.mean, 3)}, is the signature of a
+        statistic that is well determined in aggregate and poorly determined for any individual
+        country in the crowded middle.</p>
+        <p>The reason is visible once you stop looking at ranks and look at the scores they are made
+        from.</p>
+        <figure>
+          <Fragment set:html={F3} />
+          <figcaption><b>Figure 3.</b> Indonesia's immediate neighbourhood in the {latest} complexity
+          distribution. The index is standardised to a standard deviation of {sig(D.sd, 1)}; the
+          {D.neighbours.length} economies shown span {sig(D.eciTenPlaces, 3)} of it.</figcaption>
+        </figure>
+        <p>{D.neighbours.length} economies — {D.neighbours.slice(0, 4).map((n: any) => n.iso3).join(", ")} and
+        Indonesia among them — occupy <b>{sig(D.eciTenPlaces, 3)} of an index whose standard deviation
+        is {sig(D.sd, 1)}</b>. Ten places of rank cost {pct(D.tenPlacesInSd, 1)} of a standard deviation.
+        Qatar sits one place above Indonesia and Russia one place below; nobody would claim those
+        three economies have measurably different productive capabilities, and the index does not
+        claim it either.</p>
+        <p class="pull">The decade change the page reports — {signed(R.decadeChange)} places — is
+        {pct(D.decadeMoveInSd, 1)} of one standard deviation of the underlying index. It is not a small
+        movement. It is not a movement.</p>
+        <p>The case's own series says the same thing louder. Indonesia's published rank moves a mean
+        of <b>{sig(R.meanAbsYoY, 1)} places every year</b> with a standard deviation of
+        {sig(R.sdYoY, 1)}, and the largest single-year jump in the sample is <b>{R.maxAbsYoY} places</b>
+        ({R.biggestSwingYears[0]}→{R.biggestSwingYears[1]}). Between {AT.rows[AT.rows.length - 2].year} and
+        {latest} alone it moved from #{AT.rows[AT.rows.length - 2].published} to #{R.now}. Against that
+        noise, a {Math.abs(R.decadeChange)}-place decade difference carries no information whatever.</p>
+        <p class="caveat"><b>The benchmark in the repository is misdated.</b> The case validates
+        against "the Atlas, #{AT.configBenchmark[0]} of {AT.configBenchmark[1]}" for
+        {R.validationYear} and reports agreement "within three places". On the Atlas's own HS92
+        series, #{AT.configBenchmark[0]} is the {latest} figure; the {R.validationYear} figure is
+        <b>#{AT.y2023.atlas} of {AT.y2023.atlasN}</b>. Re-ranked on the Atlas's roster for
+        {R.validationYear} we get #{AT.y2023.onAtlasSample}, which is
+        {Math.abs(AT.y2023.onAtlasSample - AT.y2023.atlas)} places from the Atlas, not three. The
+        agreement claim compares one year to another and two sample sizes to each other; on our
+        numbers the pipeline is closer to the Atlas in {latest}
+        ({Math.abs(AT.latest.onAtlasSample - AT.latest.atlas)} places) than in the year the case
+        chose to validate on.</p>
+      </section>
+
+      <section id="s6">
+        <h2><span class="num">6</span> Finding three — the comparison the page draws is not in the data</h2>
+        <p>The complexity chapter does not only report Indonesia's rank; it contrasts it with the
+        neighbours, stating that "Vietnam, the Philippines, and India each climbed twenty or more
+        places over the same decade." That is a specific, checkable claim, and it is the one claim
+        here that its own data contradicts outright.</p>
+        <figure>
+          <Fragment set:html={F4} />
+          <figcaption><b>Figure 4.</b> Complexity places gained between {decade} and {latest}, from the
+          case's own published trajectory and from the Growth Lab's HS92 rankings. The dashed line is
+          the threshold the page's sentence asserts.</figcaption>
+        </figure>
+        <ul class="facts">
+          {named.map((p: any) => (
+            <li><b>{p.iso3}</b> — the case's own numbers: #{p.from} → #{p.to}, {signed(p.gain)} places.
+            The Atlas: #{p.atlasFrom} → #{p.atlasTo}, {signed(p.atlasGain)}.</li>
+          ))}
+        </ul>
+        <p>Not one of the three named economies gained twenty places in either dataset. The largest is
+        {A.peerClaim.maxGain} on the case's own numbers and {A.peerClaim.maxAtlasGain} on the Atlas's.
+        The sentence appears to have been carried over from a thirty-year comparison, where it is
+        true for two of the three ({named.filter((p: any) => p.gain30 >= 20).map((p: any) => p.iso3).join(" and ")}
+        gained {named.filter((p: any) => p.gain30 >= 20).map((p: any) => p.gain30).join(" and ")} places
+        since {A.firstYear}) and still false for the third.</p>
+        <p>The correction does not rescue the underlying argument, and it should not be allowed to.
+        Downstreaming did not raise Indonesia's complexity — that much survives, on both datasets and
+        in the same direction (our {signed(A.peerLadder[0].gain)}, the Atlas's
+        {signed(A.peerLadder[0].atlasGain)} over the decade). What does not survive is the idea that
+        the ranking is precise enough to stage a race in.</p>
+      </section>
+
+      <section id="s7">
+        <h2><span class="num">7</span> Finding four — fifteen times the money, thirty-five times the tonnage</h2>
+        <p>The other half of the case is the nickel gambit: an export ban in {N.base[0] + 1}, tightened to a
+        full prohibition in 2020, followed by a collapse in ore exports and a surge in processed
+        product. BACI records a quantity in metric tonnes alongside every value. The case never reads
+        it. Reading it changes what the fifteen-fold figure means.</p>
+        <figure>
+          <Fragment set:html={F5} />
+          <figcaption><b>Figure 5.</b> Processed-nickel exports indexed to the {N.base[0]}–{N.base[N.base.length - 1]}
+          average, on a logarithmic scale: dollars earned, tonnes shipped, and the average price per
+          tonne. Shaded bands are the two comparison windows. Hover any point.</figcaption>
+        </figure>
+        <p>Between the pre-ban window and the {N.peak[0]}–{N.peak[N.peak.length - 1]} peak, the value of
+        processed-nickel exports rose <b>{sig(N.value)}×</b> — the page's "fifteen times", confirmed.
+        But the tonnage rose <b>{sig(N.tonnes)}×</b>. The average price per tonne
+        <b>fell {pct(1 - N.unitValue, 0)}</b>, from US${Math.round(N.uvBase).toLocaleString()} to
+        US${Math.round(N.uvPeak).toLocaleString()}. Decomposed in logs, volume accounts for
+        {pct(N.shareVolume, 0)} of the rise and price contributes negatively.</p>
+        <p>That is not a price shock. It is a change in what is being shipped.</p>
+        <figure>
+          <Fragment set:html={F6} />
+          <figcaption><b>Figure 6.</b> The composition of the case's "processed nickel" basket, before
+          and after, at HS6. Shares of the annual average value in each window.</figcaption>
+        </figure>
+        <p>In the base window the basket was {pct(N.composition["Nickel mattes & unwrought (HS 75)"].vBase / N.compositionBaseTotal, 0)} nickel
+        mattes and unwrought nickel — concentrated, high-grade intermediate product. By the peak window
+        that share is {pct(N.composition["Nickel mattes & unwrought (HS 75)"].vPeak / N.compositionPeakTotal, 0)},
+        and the basket is {pct(N.composition["Ferro-nickel (720260)"].vPeak / N.compositionPeakTotal, 0)}
+        ferro-nickel and {pct(N.composition["Stainless steel (7218/19/20)"].vPeak / N.compositionPeakTotal, 0)}
+        stainless steel. Ferro-nickel and stainless are mostly iron by weight. Indonesia is now
+        exporting the iron too, and being paid for the nickel in it.</p>
+        <p class="pull">Downstreaming multiplied the dollars by {sig(N.value)} and the tonnes by
+        {sig(N.tonnes)}. Every dollar of processed-nickel export now moves
+        {sig(N.tonnes / N.value)} times as much material as it did before the ban — and therefore
+        roughly that much more furnace, freight and fuel.</p>
+        <p class="caveat"><b>One check the case passes, on a definition we tried to break.</b> The
+        case's "processed nickel" basket is defined by HS4 prefixes, and HS 7202 at four digits is
+        <i>all</i> ferro-alloys, including ferro-manganese, ferro-silicon and ferro-chromium, which
+        contain no nickel. If those lines carried the growth, the fifteen-fold figure would be an
+        artefact of the code list. They do not: at HS6 they are {pct(N.nonNickelPeakShare, 2)} of the
+        peak basket. Narrowing the definition to lines that must contain nickel — ferro-nickel plus
+        all of HS 75, dropping stainless steel — still gives <b>{sig(N.narrowValue)}×</b> in value and
+        {sig(N.narrowTonnes)}× in tonnes. The basket is honestly constructed.</p>
+      </section>
+
+      <section id="s8">
+        <h2><span class="num">8</span> Finding five — the bill the tonnage arrives with</h2>
+        <p>The case pre-registered a test of whether the smelter build-out is visible on the import
+        side, and published its failure: capital-goods imports grew {pct(IN.capGrowth, 1)} against
+        {pct(IN.totalGrowth, 1)} for all imports, beating the total by only
+        {(IN.excess * 100).toFixed(1)} points. That failure is robust and worth restating, because it
+        is more informative than the page makes it. Machinery and electrical equipment have been
+        between {pct(Math.min(...IN.capShare.map((c: any) => c.share)), 0)} and
+        {pct(Math.max(...IN.capShare.map((c: any) => c.share)), 0)} of Indonesia's import bill in every
+        year since {IN.capShare[0].year}. A build-out large enough to multiply an export chapter
+        {sig(N.value)}-fold left no visible mark on that share at all.</p>
+        <figure>
+          <Fragment set:html={F7} />
+          <figcaption><b>Figure 7.</b> The pre-registered smelter-input basket, base
+          {N.base[0]}–{N.base[N.base.length - 1]} to peak {N.peak[0]}–{N.peak[N.peak.length - 1]}. Signed
+          logarithmic scale; copper clears the registered threshold, blue fell. Coal and the two
+          limestone lines were entered as controls, on the reasoning that Indonesia has both
+          domestically and would not need to import them.</figcaption>
+        </figure>
+        <p>What did move is the feedstock, and the case says so. Our contribution is to connect it to
+        section 7: the input bill tracks <i>tonnes</i>, not dollars.
+        {IN.rows[0].label} imports rose {(IN.rows[0].growth + 1).toFixed(0)}× to {bn(IN.rows[0].peak)} a
+        year — in the country that exports more coal than any other on earth — and the five bulk
+        inputs together rose {sig(IN.bulkRatio, 1)}×. Against {sig(N.tonnes)}× the tonnage exported,
+        that is the same order of magnitude; against {sig(N.value)}× the dollars, it is not.</p>
+        <figure>
+          <Fragment set:html={F8} />
+          <figcaption><b>Figure 8.</b> The trade-account arithmetic of the nickel gambit, as annual
+          averages. Ore exports given up are the {N.base[0]}–{N.base[N.base.length - 1]} average less the
+          peak-window average.</figcaption>
+        </figure>
+        <p class="caveat"><b>A number on the page is a level reported as an increment.</b> The page
+        states "the US$28.5B a year of additional processed-nickel exports". {bn(N.vPeak)} is the
+        peak-window <i>level</i>; the increment over the base window is <b>{bn(N.gain)}</b>. Against
+        {bn(IN.added)} of extra imported inputs, the correct ratio is
+        {pct(IN.shareOfGain, 1)} — nearer a seventh than the "eighth" the page states, and that is
+        before the {bn(N.oreForegone)} of ore exports given up. Corrected, the trade account still
+        clears {bn(A.ledger[3].v)} a year to the good; the direction of the page's argument is
+        unchanged, its arithmetic is not.</p>
+        <p>Two caveats bound this ledger in the other direction, and neither is measurable in trade
+        data. Gross export value is not national income: the Morowali and Weda Bay complexes are
+        substantially foreign-owned, so an unknown share of {bn(N.gain)} accrues to equity abroad.
+        And the coal that matters most is <i>domestic</i> — the captive power plants that run the
+        furnaces burn Indonesian coal, which never appears in an import statistic. The
+        {bn(IN.added)} measured here is therefore a floor on the input cost, not the input cost.</p>
+      </section>
+
+      <section id="s9">
+        <h2><span class="num">9</span> Finding six — a failed check that turns out to be harmless, tested rather than argued</h2>
+        <p>The case publishes a failure honestly: BACI puts Indonesia's goods exports about a sixth
+        above what Indonesia itself reports, every year that can be checked, against a registered
+        tolerance of ±{pct(GP.tolerance, 0)}. Our re-derivation reproduces it exactly —
+        {bnUsd(GP.baci)} against {bnUsd(GP.bps)} in {GP.year}, {pct(GP.deviation, 1)} over, spread
+        across {GP.nPartners} partners with no aggregate or "not elsewhere specified" code in the top
+        twelve. The import side reconciles at {pct(GP.importDeviation, 1)}, comfortably inside its
+        ±{pct(GP.importTolerance, 0)} band.</p>
+        <p>The mechanism is not mysterious. BACI averages each flow as the exporter and the importer
+        declared it, weighted by an estimated reliability of each reporter
+        (<a href="#ref-baci">Gaulier &amp; Zignago 2010</a>). BACI's Indonesian exports are therefore
+        largely a statement about what the world says it received from Indonesia. The world says it
+        received {bnUsd(GP.excess)} more in {GP.year} than Indonesia says it shipped.</p>
+        <p>The page then argues the failure does not touch chapters 1–6, "because RCA is a ratio of
+        <i>shares</i>, and a roughly proportional level difference cancels". That argument is correct
+        only if the difference <i>is</i> proportional, which the page asserts and does not test. We
+        tested it, by removing the {GP.year} excess from Indonesia's export matrix under three
+        assumptions and recomputing the whole index each time.</p>
+        <figure>
+          <Fragment set:html={F9} />
+          <figcaption><b>Figure 9.</b> Top: BACI against Indonesia's own published totals. Bottom: the
+          complexity rank after the {GP.year} excess is removed under three different assumptions
+          about where it sits.</figcaption>
+        </figure>
+        <p>The page is right, and now it is right for a demonstrated reason. Removing the excess
+        proportionally takes Indonesia from #{CF.baseRank} to #{CF.cases[0].rank} — one place, and in
+        the direction of <i>less</i> complexity. Attributing all of it to mineral fuels — the largest
+        chapter, {pct(GP.chapters[0].share, 1)} of exports, and the most adversarial assumption we
+        could construct — takes it to #{CF.cases[1].rank}. Spreading it over fuels, palm oil and ores
+        gives #{CF.cases[2].rank}. The largest effect available in any direction is
+        {Math.max(...CF.cases.map((c: any) => Math.abs(c.shift)))} places, against a year-to-year
+        noise band of {R.maxAbsYoY}.</p>
+        <p class="caveat">The comparative-advantage matrix underneath is a little more fragile than the
+        index it feeds. Indonesia has {CF.mcpProducts} products at RCA ≥ 1 in {GP.year}, of which
+        <b>{CF.nearBoundary} ({pct(CF.nearBoundaryShare, 0)})</b> sit within
+        ±{pct(CF.excessShare, 1)} of the RCA = 1 line — close enough that a mis-stated value for that
+        single product would move it in or out of the set. The product space is drawn from that set,
+        so the map is softer at its edges than the rank is.</p>
+      </section>
+
+      <section id="s10">
+        <h2><span class="num">10</span> Finding seven — both halves of the network are U-shaped, and one caption says otherwise</h2>
+        <p>The partner chapters make a shape argument: Indonesia's customer base diversified for two
+        decades and re-concentrated for one — a U — while its supplier base "did the opposite and
+        never stopped". The first half is right. The second is not, on the case's own series.</p>
+        <p>Before checking the shape we checked the measurement. A Herfindahl index computed over a
+        partner roster that grows — BACI lists {C.rows[0].nExp} Indonesian export partners in
+        {C.rows[0].year} and {C.rows[C.rows.length - 1].nExp} by {C.rows[C.rows.length - 1].year} — can
+        fall for reasons that have nothing to do with trade. So we recomputed the whole series on the
+        {C.panelExp} export partners and {C.panelImp} import partners present in <i>every</i> one of
+        the {A.nYears} years.</p>
+        <figure>
+          <Fragment set:html={F10} />
+          <figcaption><b>Figure 10.</b> Partner concentration, {A.firstYear}–{A.vintage}, zero-based.
+          Solid lines use every partner; the dashed line of the same colour is the same series computed
+          on partners present in all {A.nYears} years. Circles mark each series' minimum.</figcaption>
+        </figure>
+        <p>The diversification is real. On a roster frozen for thirty years the fall is, if anything,
+        marginally larger — <b>{pct(C.survivingShare, 0)} of the measured decline survives</b> — because
+        the frozen-roster index runs slightly higher in every year, as it must, and traces the same
+        curve with the same trough in {C.troughPanel}. This was the artefact we most expected to find,
+        and it is not there.</p>
+        <p>The supplier claim is a different matter. Import concentration did not rise monotonically:
+        it <b>fell</b> from {Math.round(C.imp.first)} in {A.firstYear} to {Math.round(C.imp.trough)} in
+        {C.imp.troughYear}, stayed <i>below</i> its starting level for
+        <b>{C.imp.yearsBelowStart} of {A.nYears} years</b>, and only crossed back above it in
+        {C.imp.crossedBackYear} before climbing to {Math.round(C.imp.last)} today. Both sides of the
+        network are U-shaped. The import U simply turned earlier and has gone further past its
+        starting point ({pct(C.imp.last / C.imp.first - 1, 0)} above {A.firstYear}) than the export U
+        has recovered towards its own ({pct(1 - C.exp.last / C.exp.first, 0)} still below).</p>
+        <p>The correct statement is sharper than the one the page makes, and it is a better argument
+        for the same conclusion: Indonesia spent two decades diversifying <i>both</i> sides of its
+        network and one decade re-concentrating both, and the supplier side re-concentrated faster,
+        further, and onto one country — China takes {pct(CX.chinaExpShare, 1)} of what Indonesia sells
+        and supplies {pct(CX.chinaImpShare, 1)} of what it buys.</p>
+      </section>
+
+      <section id="s11">
+        <h2><span class="num">11</span> What follows for decisions</h2>
+        <p>Evidence is only worth gathering if it changes an action. Read strictly, this case
+        supports three uses and forbids a fourth.</p>
+        <ol class="uses">
+          <li><b>Structural monitoring of the downstreaming programme.</b> The tonnage-versus-value
+          decomposition in section 7 is the highest-value output here and it is currently not
+          published at all. A {sig(N.tonnes)}× rise in physical throughput for a {sig(N.value)}× rise in
+          receipts is a directly actionable fact for the Ministry of Energy and Mineral Resources and
+          for Bappenas: it prices the electricity, the port capacity and the emissions the policy
+          commits Indonesia to, none of which scale with revenue.</li>
+          <li><b>Import-dependence monitoring.</b> {bn(IN.added)} a year of new imported smelter
+          feedstock, {pct(IN.rows[0].peak / IN.added, 0)} of it coal, is a supply-chain exposure that
+          did not exist in {N.base[0]} and that no export statistic reveals. It has an address:
+          section 10's supplier concentration is the map of it.</li>
+          <li><b>Trade-negotiation evidence.</b> Indonesia lost <a href="#ref-ds592">WTO DS592</a> on
+          the ore export ban in November 2022 and appealed into a non-functioning Appellate Body. The
+          ledger in Figure 8 — gross gain, foregone ore, imported inputs — is the arithmetic any
+          successor policy will be argued over, and it is computable from public data.</li>
+          <li class="no"><b>Not: ranking Indonesia against its neighbours by complexity.</b> On this
+          evidence the rank cannot resolve differences smaller than roughly ten places, its own
+          year-to-year noise is {sig(R.meanAbsYoY, 1)} places, and two pipelines that agree at
+          ρ = {sig(G.mean, 3)} disagree about Indonesia by {sig(AT.meanGapOnSameSample, 1)}. The
+          <i>level</i> of the rank should be withdrawn from the headline and the <i>direction</i> of
+          the index — which is stable, and which says downstreaming did not diversify the basket —
+          kept.</li>
+        </ol>
+        <p class="pull">The complexity index is a good instrument being asked a question it cannot
+        answer. It reliably tells you what kind of economy Indonesia is. It cannot tell you which
+        seat it is in.</p>
+      </section>
+
+      <section id="s12">
+        <h2><span class="num">12</span> What remains open</h2>
+        <p>Three of the checks this review opened were answered in sections 7, 9 and 10. Four remain,
+        and we state them as work not done rather than as caveats.</p>
+        <ol class="next">
+          <li><b>Nickel content, not gross tonnage.</b> Section 7 shows the basket moving towards
+          low-grade material but cannot say by how much in nickel terms, because HS codes do not carry
+          assay. Contained-nickel tonnage — from ferro-nickel and NPI grade assumptions — would convert
+          the {sig(N.tonnes)}× into a metal-content figure and settle whether Indonesia is
+          exporting more nickel or more iron.</li>
+          <li><b>The domestic energy bill.</b> The {bn(IN.added)} in Figure 8 counts only imported
+          inputs. Captive coal generation at the smelter complexes is domestic and invisible to trade
+          data; pairing installed captive capacity with the tonnage series would close the ledger.</li>
+          <li><b>Where the reconciliation gap actually sits.</b> Section 9 bounds its effect but does
+          not locate it. Comparing BACI chapter by chapter against Indonesia's own published
+          chapter-level exports would say whether {bnUsd(GP.excess)} is spread or concentrated —
+          which matters much more for the mirror-statistics literature than it does for the index.</li>
+          <li><b>A confidence interval for the rank.</b> The right fix for section 5 is not to stop
+          publishing a rank but to publish it with an interval. Resampling the product matrix would
+          give the band directly, and on the evidence of Figure 3 that band is wide enough to be the
+          most honest number this case could print.</li>
+        </ol>
+      </section>
+
+      <section id="refs">
+        <h2><span class="num">13</span> References and reproducibility</h2>
+        <ol class="refs">
+          <li id="ref-hh">Hidalgo, C.A. &amp; Hausmann, R. (2009). The building blocks of economic
+          complexity. <i>PNAS</i> 106(26), 10570–10575. doi:10.1073/pnas.0900943106</li>
+          <li id="ref-hkbh">Hidalgo, C.A., Klinger, B., Barabási, A.-L. &amp; Hausmann, R. (2007). The
+          product space conditions the development of nations. <i>Science</i> 317(5837), 482–487.
+          doi:10.1126/science.1144581</li>
+          <li id="ref-mealy">Mealy, P., Farmer, J.D. &amp; Teytelboym, A. (2019). Interpreting economic
+          complexity. <i>Science Advances</i> 5(1), eaau1705. doi:10.1126/sciadv.aau1705</li>
+          <li id="ref-balassa">Balassa, B. (1965). Trade liberalisation and "revealed" comparative
+          advantage. <i>The Manchester School</i> 33(2), 99–123.
+          doi:10.1111/j.1467-9957.1965.tb00050.x</li>
+          <li id="ref-atlas">The Growth Lab at Harvard University. Growth Projections and Complexity
+          Rankings, V6. Harvard Dataverse. doi:10.7910/DVN/XTAQMC. Columns
+          <code>eci_hs92</code>/<code>eci_rank_hs92</code>, {A.firstYear}–{A.vintage}, used as the
+          benchmark in Figures 1, 2 and 4.</li>
+          <li id="ref-baci">Gaulier, G. &amp; Zignago, S. (2010). BACI: International Trade Database at
+          the Product-Level. The 1994–2007 Version. <i>CEPII Working Paper</i> 2010-23. Release
+          {A.release} used here; Etalab 2.0 licence.</li>
+          <li id="ref-ds592">World Trade Organization. Indonesia — Measures Relating to Raw Materials
+          (DS592). Panel report circulated 30 November 2022; found the nickel ore export prohibition
+          and the domestic processing requirement inconsistent with GATT Article XI:1. Appealed by
+          Indonesia 8 December 2022.</li>
+          <li id="ref-bps">BPS-Statistics Indonesia. Total goods exports and imports, annual, current
+          US$ — the national benchmark against which BACI is reconciled in Figure 9.</li>
+        </ol>
+        <p class="repro">Every figure on this page is generated in the page's own frontmatter from
+        <code>web/src/data/article.json</code>, which <code>pipeline/article.py</code> derives from the
+        case's published view-models and from <code>web/src/data/review.json</code>, written by
+        <code>pipeline/review.py</code>. Sections 4–6 and 9 use an ECI re-implementation independent of
+        the case's own; it reproduces the case's published rank to a mean of
+        {sig(A.reproduction.meanAbsRankDiff, 1)} places over {A.nYears} years. Data vintage: BACI
+        release {A.release}, trade through {A.vintage}. The rank-correlation threshold, the rank
+        acceptance window, the export tolerance and the nickel-import hypotheses were all committed to
+        version control before the corresponding results were computed; this review changed none of
+        them.</p>
+      </section>
+
+      <footer class="end">
+        <p>Part of the Demo Lab. Built end-to-end on public data — acquisition, pipeline, model,
+        validation, and this review.</p>
+        <a class="cta" href={`${BASE}/`}>← Back to the instrument</a>
+      </footer>
+    </article>
+
+    <div id="tip" hidden></div>
+
+    <style is:global>
+      body { margin: 0; background: var(--ground); color: var(--ink);
+        font-family: var(--font-body); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+      *, *::before, *::after { box-sizing: border-box; }
+      a { color: var(--accent); }
+
+      .bar { position: sticky; top: 0; z-index: 20; display: flex; justify-content: space-between;
+        align-items: center; gap: 16px; padding: 12px 24px;
+        background: color-mix(in srgb, var(--ground) 92%, transparent);
+        backdrop-filter: blur(8px); border-bottom: 1px solid var(--hairline); }
+      .back { text-decoration: none; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.06em; }
+      .stamp { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); text-align: right; }
+
+      article { max-width: 50rem; margin: 0 auto; padding: 0 24px 12vh; }
+      .masthead { padding: 9vh 0 4vh; border-bottom: 1px solid var(--hairline); }
+      .eyebrow { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--accent); }
+      h1 { font-family: var(--font-display); font-size: clamp(1.9rem, 5vw, 3rem); line-height: 1.1;
+        letter-spacing: -0.02em; margin: 18px 0 20px; }
+      .standfirst { font-size: 1.12rem; color: var(--ink); margin: 0 0 26px; max-width: 42rem; }
+      .byline { display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: var(--font-data);
+        font-size: 0.74rem; letter-spacing: 0.08em; color: var(--ink-muted); text-transform: uppercase; }
+
+      .abstract { margin: 5vh 0; padding: 26px 28px; border: 1px solid var(--hairline);
+        border-left: 3px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
+      .abstract h2 { font-family: var(--font-data); font-size: 0.76rem; letter-spacing: 0.16em;
+        color: var(--accent); margin: 0 0 14px; text-transform: uppercase; }
+      .abstract p { margin: 0 0 12px; font-size: 0.97rem; }
+      .abstract p:last-child { margin-bottom: 0; }
+
+      .toc { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 20px 0 8px; margin-bottom: 4vh;
+        border-bottom: 1px solid var(--hairline); font-family: var(--font-data); font-size: 0.74rem; }
+      .toc a { text-decoration: none; color: var(--ink-muted); }
+      .toc a:hover { color: var(--accent); }
+
+      section { margin: 6vh 0; }
+      h2 { font-family: var(--font-display); font-size: clamp(1.3rem, 3.4vw, 1.55rem); line-height: 1.25;
+        letter-spacing: -0.01em; margin: 0 0 20px; display: flex; gap: 14px; align-items: baseline; }
+      .num { font-family: var(--font-data); font-size: 0.9rem; color: var(--accent); flex: none; }
+      p { margin: 0 0 18px; }
+      b { color: #FFF0E2; font-weight: 600; }
+
+      .caveat { border-left: 2px solid var(--alert); padding: 2px 0 2px 18px; color: var(--ink-muted); }
+      .caveat b { color: var(--alert); }
+      .pull { font-size: 1.08rem; line-height: 1.6; border-left: 3px solid var(--accent);
+        padding: 8px 0 8px 20px; color: #FFF0E2; }
+
+      figure { margin: 34px 0; padding: 20px 18px 14px; border: 1px solid var(--hairline);
+        border-radius: var(--radius); background: var(--surface); }
+      .fig { display: block; width: 100%; height: auto; overflow: visible; }
+      figcaption { font-size: 0.85rem; color: var(--ink-muted); margin-top: 14px; line-height: 1.55; }
+      figcaption b { color: var(--ink); }
+      .hv { cursor: crosshair; transition: r 0.12s; }
+      .hv:hover { r: 6; }
+
+      ul.facts { padding-left: 20px; margin: 0 0 18px; }
+      ul.facts li { margin-bottom: 8px; font-size: 0.95rem; color: var(--ink-muted); }
+      ul.facts b { color: var(--accent); }
+
+      ol.uses, ol.next { padding-left: 22px; margin: 0 0 18px; }
+      ol.uses li, ol.next li { margin-bottom: 14px; }
+      ol.uses li.no { color: var(--ink-muted); }
+      ol.uses li.no b { color: var(--alert); }
+
+      ol.refs { padding-left: 22px; font-size: 0.9rem; color: var(--ink-muted); }
+      ol.refs li { margin-bottom: 12px; }
+      .repro { font-size: 0.86rem; color: var(--ink-muted); border-top: 1px solid var(--hairline);
+        padding-top: 18px; }
+      code { font-family: var(--font-data); font-size: 0.88em; color: var(--accent);
+        overflow-wrap: anywhere; }
+
+      .end { margin-top: 8vh; padding-top: 26px; border-top: 1px solid var(--hairline); }
+      .end p { color: var(--ink-muted); font-size: 0.9rem; }
+      .cta { display: inline-block; font-family: var(--font-data); font-size: 0.78rem;
+        letter-spacing: 0.08em; color: var(--accent); border: 1px solid var(--accent);
+        border-radius: 4px; padding: 10px 18px; text-decoration: none; }
+      .cta:hover { background: var(--accent-ink); }
+
+      #tip { position: fixed; z-index: 60; pointer-events: none; background: var(--surface-raised);
+        border: 1px solid var(--hairline); border-radius: 5px; padding: 8px 11px;
+        font-family: var(--font-data); font-size: 0.72rem; line-height: 1.5; color: var(--ink);
+        box-shadow: 0 8px 26px rgba(0,0,0,0.5); max-width: 16rem; }
+
+      @media (max-width: 680px) {
+        article { padding: 0 16px 10vh; }
+        .masthead { padding-top: 5vh; }
+        figure { padding: 14px 8px 10px; }
+        .bar { padding: 10px 14px; gap: 10px; }
+        .stamp.dim { font-size: 0.62rem; letter-spacing: 0.06em; }
+        .toc { font-size: 0.7rem; gap: 6px 12px; }
+      }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+
+    <script>
+      /* Hover read-outs. Pure SVG and DOM — no GPU path anywhere on this page. */
+      const tip = document.getElementById("tip");
+      const show = (html: string, e: MouseEvent) => {
+        if (!tip) return;
+        tip.innerHTML = html; tip.hidden = false;
+        const r = tip.getBoundingClientRect();
+        let x = e.clientX + 14, y = e.clientY + 14;
+        if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+        if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+        tip.style.left = x + "px"; tip.style.top = y + "px";
+      };
+      document.querySelectorAll<SVGElement>(".hv").forEach((el) => {
+        el.addEventListener("mousemove", (e) => show(el.dataset.t ?? "", e as MouseEvent));
+        el.addEventListener("mouseleave", () => { if (tip) tip.hidden = true; });
+      });
+    </script>
+  </body>
+</html>
