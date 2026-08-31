@@ -1,0 +1,1248 @@
+---
+/* Review article — the case, stress-tested against the literature.
+ *
+ * Every figure is built in frontmatter from data/article.json (the case's own published
+ * outputs, via pipeline/article.py) and data/review.json (the eleven review tests, via
+ * pipeline/review.py). Nothing here is drawn by hand, so the prose cannot drift from the
+ * numbers. SVG only: no WebGL, no canvas anywhere on this page.
+ */
+import "../styles/tokens.css";
+import A from "../data/article.json";
+import R from "../data/review.json";
+
+const CORAL = "#E4562E", BLUE = "#3E8EDE", GREEN = "#57B26A", AMBER = "#E0A63F";
+const INK = "#E9EAED", MUTED = "#989DA8", GRID = "#272C36", SLATE = "#6B7CA6";
+
+const pct = (x: number, d = 1) => `${(x * 100).toFixed(d)}%`;
+const fx = (x: number, d = 3) => x.toFixed(d);
+const nf = (x: number) => Math.round(x).toLocaleString("en-US");
+const esc = (s: string) =>
+  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/* ── literature constants, transcribed from the sources named in §References ─────────────
+   All values below were read from the published PDFs, not from secondary summaries.
+   ITDP (2016) Table 2, p.11 — People Near Transit, non-OECD nations.
+   Peralta-Quiros, Kerzhner & Avner (2019) Tables 1 and 3, pp. 9-11 — the only published set
+     that reports our exact quantity: population-weighted % of employment opportunities
+     reachable in 60 minutes by public transport, with a Gini of the same measure.
+   Owen, Liu & Lind (2025) Table 2, p.3 — jobs reachable, absolute counts.
+   Guzman, Oviedo & Rivera (2017) §5.1 — Gini of gravity accessibility, Bogotá.
+   Delbosc & Currie (2011) — Gini of transit SUPPLY against population, Melbourne.
+   Wessel & Farber (2019) Discussion — schedule optimism of 5-15%.
+   Pereira (2019) Table 1, p.326 — mean accessibility change by threshold, Rio.            */
+const WB = {                                            // World Bank PRWP 8971, Tables 1 & 3
+  cities: [
+    { k: "Dakar", a: 0.467, g: 0.18, km2: 2325 },
+    { k: "Douala", a: 0.390, g: 0.30, km2: 288 },
+    { k: "Bamako", a: 0.343, g: 0.37, km2: 478 },
+    { k: "Lusaka", a: 0.341, g: 0.42, km2: 837 },
+    { k: "Kampala", a: 0.317, g: 0.36, km2: 834 },
+    { k: "Conakry", a: 0.294, g: 0.41, km2: 196 },
+    { k: "Nairobi", a: 0.285, g: 0.36, km2: 822 },
+    { k: "Harare", a: 0.208, g: 0.42, km2: 1454 },
+    { k: "Kigali", a: 0.152, g: 0.26, km2: 454 },
+    { k: "Dar es Salaam", a: 0.122, g: 0.60, km2: 1000 },
+    { k: "Cape Town", a: 0.065, g: 0.63, km2: 2467 },
+  ],
+};
+const LIT = {
+  itdp: { jakarta: 0.44, greater: 0.16, year: 2016, mode: "BRT corridors only",
+          jakartaPop: 9991788, greaterPop: 28019545, near: 4410442 },
+  giniBogotaPT: 0.348, giniMelbSupply: 0.68,
+  gtfsOptimismLo: 0.05, gtfsOptimismHi: 0.15,
+  rio: [{ t: 30, v: 0.133 }, { t: 60, v: 0.113 }, { t: 90, v: 0.042 }, { t: 120, v: 0.024 }],
+  aaaNY: 1156929, aaaAtlanta: 59826, aaaYear: 2024,
+  brtdataKmh: 19, brtdataYear: 2013,
+};
+
+const S = A.scenarios, C = A.by_cutoff, PL = A.poverty_link;
+const cut30 = C[0], cut60 = C[C.length - 1];
+const TA = R.A_threshold, TB = R.B_naive, TD = R.D_maup, TE = R.E_edge;
+const TF = R.F_rail, TH = R.H_precision, TI = R.I_incidence, TJ = R.J_volume, TK = R.K_denominator;
+
+/* ── Figure 1 · where the denominator actually is ───────────────────────────────────── */
+function fig1() {
+  const rings = TB.denominator.rings;
+  const W = 720, H = 268, L = 96, Rr = 150, T = 36;
+  const bw = W - L - Rr, rh = 32;
+  const max = Math.max(...rings.map((r: any) => Math.max(r.jobs, r.pop)));
+  const body = rings.map((r: any, i: number) => {
+    const y = T + i * rh;
+    const wj = (r.jobs / max) * bw, wp = (r.pop / max) * bw;
+    const lab = r.hi > 900 ? `${r.lo}+ km` : `${r.lo}–${r.hi} km`;
+    return `<text x="${L - 12}" y="${y + 15}" fill="${INK}" font-size="11.5" text-anchor="end">${lab}</text>
+      <rect x="${L}" y="${y + 3}" width="${wj.toFixed(1)}" height="9" fill="${CORAL}" rx="2"/>
+      <rect x="${L}" y="${y + 15}" width="${wp.toFixed(1)}" height="9" fill="${SLATE}" rx="2"/>
+      <text x="${(L + Math.max(wj, wp) + 9).toFixed(1)}" y="${y + 11}" fill="${CORAL}" font-size="10.5" font-family="var(--font-data)">${pct(r.jobs, 1)}</text>
+      <text x="${(L + Math.max(wj, wp) + 9).toFixed(1)}" y="${y + 23}" fill="${SLATE}" font-size="10.5" font-family="var(--font-data)">${pct(r.pop, 1)}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Most of the region's job-dense floorspace sits more than 20 km from the centre of mass">
+    <rect x="${L}" y="10" width="11" height="9" fill="${CORAL}" rx="2"/><text x="${L + 18}" y="19" fill="${MUTED}" font-size="11.5">job-dense floorspace</text>
+    <rect x="${L + 170}" y="10" width="11" height="9" fill="${SLATE}" rx="2"/><text x="${L + 188}" y="19" fill="${MUTED}" font-size="11.5">population</text>
+    ${body}
+    <text x="${L}" y="${T + rings.length * rh + 20}" fill="${MUTED}" font-size="11">${pct(TB.denominator.beyond_20km_jobs_share, 0)} of the denominator lies beyond 20 km of the region's own centre of mass</text>
+  </svg>`;
+}
+
+/* ── Figure 2 · the whole answer moves with the cut-off ─────────────────────────────── */
+function fig2() {
+  const W = 720, H = 288, L = 176, Rr = 66, T = 44, rowH = 74;
+  const rows = [
+    { k: "Gini of access", get: (r: any) => r.gini, f: (v: number) => fx(v, 3) },
+    { k: "Palma ratio", get: (r: any) => r.palma, f: (v: number) => `${v.toFixed(1)}×` },
+    { k: "DKI ÷ Bodetabek median", get: (r: any) => r.ratio, f: (v: number) => `${v.toFixed(0)}×` },
+  ];
+  const xs = (i: number) => L + (i / (C.length - 1)) * (W - L - Rr);
+  const body = rows.map((row, ri) => {
+    const vals = C.map((r: any) => row.get(r));
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    const y0 = T + ri * rowH + 40, span = 30;
+    const sy = (v: number) => y0 - ((v - lo) / (hi - lo || 1)) * span;
+    const path = vals.map((v, i) => `${i ? "L" : "M"}${xs(i).toFixed(1)} ${sy(v).toFixed(1)}`).join("");
+    // the lowest point in each row sits level with the row label, so its value goes below
+    const dots = vals.map((v, i) =>
+      `<circle cx="${xs(i).toFixed(1)}" cy="${sy(v).toFixed(1)}" r="${i === vals.length - 1 ? 5.2 : 4}" fill="${i === vals.length - 1 ? CORAL : SLATE}"/>
+       <text x="${xs(i).toFixed(1)}" y="${(sy(v) + (v === lo ? 17 : -12)).toFixed(1)}" fill="${i === vals.length - 1 ? CORAL : MUTED}" font-size="11.5" text-anchor="middle" font-family="var(--font-data)">${row.f(v)}</text>`).join("");
+    return `<text x="${L - 16}" y="${(y0 - span / 2 + 4).toFixed(1)}" fill="${INK}" font-size="12.5" text-anchor="end">${esc(row.k)}</text>
+      <path d="${path}" fill="none" stroke="${SLATE}" stroke-width="2"/>${dots}`;
+  }).join("");
+  const heads = C.map((r: any, i: number) =>
+    `<text x="${xs(i).toFixed(1)}" y="${T - 22}" fill="${i === C.length - 1 ? CORAL : MUTED}" font-size="12" text-anchor="middle" font-family="var(--font-data)">${r.cutoff} min</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Gini, Palma ratio and the core-periphery gap all rise steeply as the time budget grows from 30 to 60 minutes">
+    ${heads}${body}
+    <text x="${xs(C.length - 1).toFixed(1)}" y="${H - 8}" fill="${CORAL}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">the published choice</text>
+  </svg>`;
+}
+
+/* ── Figure 3 · Lorenz curves, one per time budget, plus walking ────────────────────── */
+function fig3() {
+  const W = 720, H = 430, L = 62, Rr = 216, T = 18, B = 52;
+  const sx = (v: number) => L + v * (W - L - Rr);
+  const sy = (v: number) => H - B - v * (H - T - B);
+  const line = (curve: number[][], col: string, dash = "") =>
+    `<path fill="none" stroke="${col}" stroke-width="2.2" ${dash ? `stroke-dasharray="${dash}"` : ""}
+       d="${curve.map((p: number[], i: number) => `${i ? "L" : "M"}${sx(p[0]).toFixed(1)} ${sy(p[1]).toFixed(1)}`).join("")}"/>`;
+  const series = [
+    { k: `60 min · G ${fx(cut60.gini)}`, c: TA.rows[2].lorenz, col: CORAL, d: "" },
+    { k: `45 min · G ${fx(C[1].gini)}`, c: TA.rows[1].lorenz, col: AMBER, d: "" },
+    { k: `30 min · G ${fx(cut30.gini)}`, c: TA.rows[0].lorenz, col: GREEN, d: "" },
+    { k: `walking · G ${fx(S.walk.gini)}`, c: S.walk.lorenz, col: SLATE, d: "5 4" },
+  ];
+  const grid = [0, 0.25, 0.5, 0.75, 1].map((v) =>
+    `<line x1="${sx(0)}" y1="${sy(v).toFixed(1)}" x2="${sx(1).toFixed(1)}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.6"/>
+     <text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">${(v * 100).toFixed(0)}%</text>
+     <text x="${sx(v).toFixed(1)}" y="${H - B + 19}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${(v * 100).toFixed(0)}%</text>`).join("");
+  const legend = series.map((s, i) =>
+    `<line x1="${W - Rr + 16}" y1="${T + 30 + i * 24}" x2="${W - Rr + 40}" y2="${T + 30 + i * 24}" stroke="${s.col}" stroke-width="2.4" ${s.d ? `stroke-dasharray="${s.d}"` : ""}/>
+     <text x="${W - Rr + 48}" y="${T + 34 + i * 24}" fill="${MUTED}" font-size="11.5">${esc(s.k)}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Lorenz curves of population-weighted access at 30, 45 and 60 minutes and for walking only; the longer the budget the further the curve bows from the diagonal">
+    ${grid}
+    <line x1="${sx(0)}" y1="${sy(0)}" x2="${sx(1).toFixed(1)}" y2="${sy(1).toFixed(1)}" stroke="${MUTED}" stroke-dasharray="3 4" opacity="0.7"/>
+    ${series.map((s) => line(s.c, s.col, s.d)).join("")}
+    ${legend}
+    <text x="${W - Rr + 16}" y="${T + 12}" fill="${INK}" font-size="11.5" font-weight="600">Longer hour, steeper curve</text>
+    <text x="${((L + W - Rr) / 2).toFixed(1)}" y="${H - 12}" fill="${MUTED}" font-size="11.5" text-anchor="middle">cumulative share of people, worst-served first →</text>
+    <text x="14" y="${((H - B + T) / 2).toFixed(1)}" fill="${MUTED}" font-size="11.5" text-anchor="middle" transform="rotate(-90 14 ${((H - B + T) / 2).toFixed(1)})">cumulative share of reachable floorspace →</text>
+  </svg>`;
+}
+
+/* ── Figure 4 · the benchmark, and what the study area does to it ───────────────────── */
+function fig4() {
+  const mine = [
+    { k: "Jabodetabek region", a: S.all.mean_jobs_share, g: S.all.gini, km2: TD.study_area_km2, ours: true },
+    { k: "DKI Jakarta only", a: TK.dki_on_city_denominator.mean, g: TK.dki_on_city_denominator.gini,
+      km2: TD.dki_area_km2, ours: true },
+  ];
+  const rows = [...WB.cities, ...mine].sort((x, y) => y.a - x.a);
+  const W = 720, T = 54, rh = 25, L = 128;
+  const H = T + rows.length * rh + 30;
+  const aw = 178, ax = L + 8;                               // access panel
+  const gx = 470, gw = 172;                                 // Gini panel
+  const amax = 0.5, gmax = 0.8;
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rh;
+    const col = r.ours ? CORAL : SLATE;
+    const w = Math.min(r.a / amax, 1) * aw;
+    const gxx = gx + (r.g / gmax) * gw;
+    return `<text x="${L - 10}" y="${y + 4}" fill="${r.ours ? INK : MUTED}" font-size="11.5" text-anchor="end"${r.ours ? ' font-weight="600"' : ""}>${esc(r.k)}</text>
+      <rect x="${ax}" y="${y - 6}" width="${w.toFixed(1)}" height="12" fill="${col}" rx="2" opacity="${r.ours ? 1 : 0.72}"/>
+      <text x="${(ax + w + 7).toFixed(1)}" y="${y + 4}" fill="${col}" font-size="10.5" font-family="var(--font-data)">${pct(r.a, 1)}</text>
+      <text x="${gx - 42}" y="${y + 4}" fill="${MUTED}" font-size="10" text-anchor="end" font-family="var(--font-data)">${nf(r.km2)}</text>
+      <line x1="${gx}" y1="${y}" x2="${gx + gw}" y2="${y}" stroke="${GRID}"/>
+      <circle cx="${gxx.toFixed(1)}" cy="${y}" r="${r.ours ? 5 : 3.8}" fill="${col}"/>
+      <text x="${(gx + gw + 8).toFixed(1)}" y="${y + 4}" fill="${col}" font-size="10.5" font-family="var(--font-data)">${r.g.toFixed(2)}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Jabodetabek's regional access share and Gini against eleven African cities measured the same way, with DKI Jakarta alone measured on a city denominator">
+    <text x="${ax}" y="20" fill="${INK}" font-size="11.5" font-weight="600">opportunities reachable in 60 min</text>
+    <text x="${ax}" y="34" fill="${MUTED}" font-size="10">population-weighted mean · bar clipped at ${pct(amax, 0)}</text>
+    <text x="${gx - 42}" y="34" fill="${MUTED}" font-size="10" text-anchor="end">km²</text>
+    <text x="${gx}" y="20" fill="${INK}" font-size="11.5" font-weight="600">Gini of the same measure</text>
+    <text x="${gx}" y="34" fill="${MUTED}" font-size="10">0 &nbsp;→&nbsp; ${gmax}</text>
+    ${body}
+    <text x="${L - 10}" y="${H - 10}" fill="${MUTED}" font-size="10.5" text-anchor="end">source</text>
+    <text x="${ax}" y="${H - 10}" fill="${MUTED}" font-size="10.5">African cities: World Bank PRWP 8971, Tables 1 and 3 — the only published set reporting this exact quantity</text>
+  </svg>`;
+}
+
+/* ── Figure 5 · the compass test ────────────────────────────────────────────────────── */
+function fig5() {
+  const W = 720, H = 440, L = 66, Rr = 24, T = 20, B = 92;
+  const pts = TB.scatter;
+  const posY = pts.filter((p: any) => p.y > 0).map((p: any) => p.y);
+  const posX = pts.filter((p: any) => p.x > 0).map((p: any) => p.x);
+  const yLo = Math.log10(Math.min(...posY)), yHi = Math.log10(Math.max(...posY));
+  const xLo = Math.log10(Math.min(...posX)), xHi = Math.log10(Math.max(...posX));
+  const plotB = H - B, zeroY = H - 44;
+  const sx = (v: number) => L + ((Math.log10(Math.max(v, 10 ** xLo)) - xLo) / (xHi - xLo)) * (W - L - Rr);
+  const sy = (v: number) => plotB - ((Math.log10(v) - yLo) / (yHi - yLo)) * (plotB - T);
+  const dots = pts.map((p: any) => {
+    const cy = p.y > 0 ? sy(p.y) : zeroY + ((p.n.length * 7) % 11) - 5;
+    return `<circle class="d1 ${p.dki ? "dki" : ""}" cx="${sx(p.x).toFixed(1)}" cy="${cy.toFixed(1)}" r="2.4" data-n="${esc(p.n)}" data-r="${esc(p.r)}" data-x="${(p.x * 100).toFixed(2)}" data-y="${p.y > 0 ? (p.y * 100).toFixed(3) : "0"}"/>`;
+  }).join("");
+  const dec = [-6, -5, -4, -3, -2, -1];
+  const yt = dec.filter((e) => e >= yLo && e <= yHi).map((e) =>
+    `<line x1="${L}" y1="${sy(10 ** e).toFixed(1)}" x2="${W - Rr}" y2="${sy(10 ** e).toFixed(1)}" stroke="${GRID}" opacity="0.5"/>
+     <text x="${L - 9}" y="${(sy(10 ** e) + 4).toFixed(1)}" fill="${MUTED}" font-size="10" text-anchor="end">${(10 ** (e + 2)).toFixed(Math.max(0, -(e + 2)))}%</text>`).join("");
+  const xt = dec.filter((e) => e >= xLo && e <= xHi).map((e) =>
+    `<text x="${sx(10 ** e).toFixed(1)}" y="${plotB + 17}" fill="${MUTED}" font-size="10" text-anchor="middle">${(10 ** (e + 2)).toFixed(Math.max(0, -(e + 2)))}%</text>`).join("");
+  const mc = sx(TB.median_circle10);
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Routed 60-minute access against floorspace within 10 km as the crow flies; a strip along the bottom holds the kelurahan that reach nothing">
+    ${yt}
+    <line x1="${L}" y1="${plotB}" x2="${W - Rr}" y2="${plotB}" stroke="${GRID}"/>
+    <line x1="${L}" y1="${T}" x2="${L}" y2="${plotB}" stroke="${GRID}"/>
+    ${xt}<g class="dots">${dots}</g>
+    <line x1="${mc.toFixed(1)}" y1="${T}" x2="${mc.toFixed(1)}" y2="${zeroY + 10}" stroke="${AMBER}" stroke-dasharray="3 4" opacity="0.75"/>
+    <text x="${(mc - 7).toFixed(1)}" y="${T + 12}" fill="${AMBER}" font-size="10" text-anchor="end" font-family="var(--font-data)">median circle</text>
+    <rect x="${L}" y="${zeroY - 10}" width="${(W - Rr - L).toFixed(1)}" height="20" fill="${CORAL}" opacity="0.07" rx="3"/>
+    <text x="${L - 9}" y="${zeroY + 4}" fill="${CORAL}" font-size="10" text-anchor="end">0</text>
+    <text x="${W - Rr}" y="${zeroY - 15}" fill="${CORAL}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">${nf(TA.rows[2].zero_units)} kelurahan reach nothing at all</text>
+    <text x="${((L + W - Rr) / 2).toFixed(1)}" y="${H - 8}" fill="${MUTED}" font-size="11.5" text-anchor="middle">share of the region's floorspace within 10 km as the crow flies → (log)</text>
+    <text x="13" y="${((plotB + T) / 2).toFixed(1)}" fill="${MUTED}" font-size="11.5" text-anchor="middle" transform="rotate(-90 13 ${((plotB + T) / 2).toFixed(1)})">routed 60-minute access → (log)</text>
+    <circle cx="${L + 16}" cy="${plotB - 46}" r="3.4" fill="${CORAL}" opacity="0.8"/><text x="${L + 25}" y="${plotB - 42}" fill="${MUTED}" font-size="11">DKI Jakarta</text>
+    <circle cx="${L + 16}" cy="${plotB - 26}" r="3.4" fill="${SLATE}" opacity="0.6"/><text x="${L + 25}" y="${plotB - 22}" fill="${MUTED}" font-size="11">Bodetabek</text>
+  </svg>`;
+}
+
+/* ── Figure 6 · the places the network fails ────────────────────────────────────────── */
+function fig6() {
+  const rows = TB.network_failure_list;
+  const W = 720, T = 30, rh = 30, L = 216, Rr = 204;
+  const H = T + rows.length * rh + 30;
+  const max = Math.max(...rows.map((r: any) => r.circle10));
+  const bw = W - L - Rr;
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rh;
+    const w = (r.circle10 / max) * bw;
+    return `<text x="${L - 12}" y="${y + 13}" fill="${INK}" font-size="12" text-anchor="end">${esc(r.adm4_name)}</text>
+      <text x="${L - 12}" y="${y + 25}" fill="${MUTED}" font-size="10" text-anchor="end">${esc(r.adm3_name)}, ${esc(r.adm2_name)}</text>
+      <rect x="${L}" y="${y + 6}" width="${w.toFixed(1)}" height="14" fill="${SLATE}" rx="2"/>
+      <text x="${(L + w + 8).toFixed(1)}" y="${y + 17}" fill="${SLATE}" font-size="11" font-family="var(--font-data)">${pct(r.circle10, 1)}</text>
+      <text x="${W - 6}" y="${y + 17}" fill="${CORAL}" font-size="11" text-anchor="end" font-family="var(--font-data)">reaches 0% in an hour</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Kelurahan with a large share of the region's floorspace within ten kilometres that reach none of it within an hour">
+    <text x="${L}" y="${T - 12}" fill="${MUTED}" font-size="11">share of the region's job-dense floorspace within 10 km, straight line</text>
+    ${body}
+    <text x="${L}" y="${H - 8}" fill="${CORAL}" font-size="11.5" font-family="var(--font-data)">${nf(TB.network_failures)} kelurahan · ${nf(TB.network_failure_pop)} people in this condition</text>
+  </svg>`;
+}
+
+/* ── Figure 7 · who the system's gains go to ────────────────────────────────────────── */
+function fig7() {
+  const d = TI.deciles;
+  const W = 720, H = 380, L = 58, Rr = 190, T = 26, B = 60;
+  const max = Math.max(...d.map((r: any) => r.all));
+  const sq = (v: number) => Math.sqrt(Math.max(v, 0) / max);
+  const bw = (W - L - Rr) / d.length, barW = bw * 0.62;
+  const sy = (v: number) => H - B - sq(v) * (H - T - B);
+  const body = d.map((r: any, i: number) => {
+    const x = L + i * bw + (bw - barW) / 2;
+    const seg = (v: number, col: string) =>
+      `<rect x="${x.toFixed(1)}" y="${sy(v).toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(0.8, sy(0) - sy(v)).toFixed(1)}" fill="${col}"/>`;
+    return `${seg(r.all, CORAL)}${seg(r.no_rail, AMBER)}${seg(r.walk, SLATE)}
+      <text x="${(x + barW / 2).toFixed(1)}" y="${H - B + 17}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${r.d}</text>`;
+  }).join("");
+  const ticks = [0.0005, 0.005, 0.02, 0.045].filter((v) => v <= max).map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - Rr}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.55"/>
+     <text x="${L - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10" text-anchor="end">${(v * 100).toFixed(v < 0.01 ? 2 : 1)}%</text>`).join("");
+  const key = [["bus + rail + walk", CORAL], ["without rail", AMBER], ["walking only", SLATE]]
+    .map(([k, c], i) =>
+      `<rect x="${W - Rr + 14}" y="${T + 12 + i * 22}" width="11" height="11" fill="${c}" rx="2"/>
+       <text x="${W - Rr + 32}" y="${T + 22 + i * 22}" fill="${MUTED}" font-size="11">${k}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Access by population decile, ranked by walking access; every layer adds most to the deciles that already have most">
+    ${ticks}${body}${key}
+    <text x="${W - Rr + 14}" y="${T + 100}" fill="${INK}" font-size="11.5">${pct(TI.transit.dki_share_of_gain, 0)} of what the</text>
+    <text x="${W - Rr + 14}" y="${T + 116}" fill="${INK}" font-size="11.5">system adds goes to</text>
+    <text x="${W - Rr + 14}" y="${T + 132}" fill="${CORAL}" font-size="11.5">the ${pct(TI.rail.dki_share_of_pop, 0)} inside DKI</text>
+    <line x1="${L}" y1="${H - B}" x2="${W - Rr}" y2="${H - B}" stroke="${GRID}"/>
+    <text x="${((L + W - Rr) / 2).toFixed(1)}" y="${H - 14}" fill="${MUTED}" font-size="11.5" text-anchor="middle">population decile, worst-served on foot first → · square-root scale</text>
+  </svg>`;
+}
+
+/* ── Figure 8 · access against poverty ──────────────────────────────────────────────── */
+function fig8() {
+  const q = PL.quintiles;
+  const W = 720, H = 340, L = 62, Rr = 62, T = 34, B = 78;
+  const bw = (W - L - Rr) / q.length, barW = bw * 0.5;
+  const maxA = Math.max(...q.map((r: any) => r.median_access));
+  const H0 = (H - B - T) * 0.9;
+  const sy = (v: number) => H - B - Math.sqrt(v / maxA) * H0;
+  const zy = (v: number) => H - B - v * H0;
+  // Two series share this panel, so the bar value goes inside the bar wherever it fits and the
+  // line value sits up and to the right of its dot. Nothing is centred on the same point twice.
+  const acc = (v: number) => (v < 0.0001 ? pct(v, 4) : pct(v, 2));
+  const bars = q.map((r: any, i: number) => {
+    const cx = L + i * bw + bw / 2, x = cx - barW / 2;
+    const top = sy(r.median_access), h = H - B - top;
+    const inside = h > 30;
+    return `<rect x="${x.toFixed(1)}" y="${top.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${CORAL}" opacity="0.85" rx="2"/>
+      <text x="${cx.toFixed(1)}" y="${(top + (inside ? 15 : -7)).toFixed(1)}" fill="${inside ? "#2A0C03" : CORAL}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">${acc(r.median_access)}</text>
+      <text x="${cx.toFixed(1)}" y="${H - B + 17}" fill="${INK}" font-size="11" text-anchor="middle">Q${r.q}</text>
+      <text x="${cx.toFixed(1)}" y="${H - B + 31}" fill="${MUTED}" font-size="9.5" text-anchor="middle">poverty ${r.poverty_lo.toFixed(1)}–${r.poverty_hi.toFixed(1)}%</text>
+      <text x="${cx.toFixed(1)}" y="${H - B + 45}" fill="${MUTED}" font-size="9.5" text-anchor="middle">${(r.pop / 1e6).toFixed(1)}M people</text>`;
+  }).join("");
+  const zpath = q.map((r: any, i: number) =>
+    `${i ? "L" : "M"}${(L + i * bw + bw / 2).toFixed(1)} ${zy(r.zero_share).toFixed(1)}`).join("");
+  const zdots = q.map((r: any, i: number) => {
+    const cx = L + i * bw + bw / 2, cy = zy(r.zero_share);
+    return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.2" fill="${BLUE}"/>
+      <text x="${(cx + barW / 2 + 14).toFixed(1)}" y="${(cy - 8).toFixed(1)}" fill="${BLUE}" font-size="10.5" font-family="var(--font-data)">${pct(r.zero_share, 1)}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Median access falls and the share of kelurahan reaching nothing rises steadily from the least poor to the poorest fifth">
+    <line x1="${L}" y1="${H - B}" x2="${W - Rr}" y2="${H - B}" stroke="${GRID}"/>
+    ${bars}<path d="${zpath}" fill="none" stroke="${BLUE}" stroke-width="2"/>${zdots}
+    <rect x="${L}" y="10" width="11" height="9" fill="${CORAL}" rx="2"/><text x="${L + 18}" y="19" fill="${MUTED}" font-size="11">median 60-minute access (√ scale)</text>
+    <circle cx="${L + 258}" cy="15" r="4" fill="${BLUE}"/><text x="${L + 268}" y="19" fill="${MUTED}" font-size="11">share reaching nothing at all</text>
+    <text x="${((L + W - Rr) / 2).toFixed(1)}" y="${H - 12}" fill="${MUTED}" font-size="11.5" text-anchor="middle">kelurahan grouped by their kecamatan's poverty rate — least poor to poorest →</text>
+  </svg>`;
+}
+
+/* ── Figure 9 · footprint against volume ────────────────────────────────────────────── */
+function fig9() {
+  const W = 720, H = 296, L = 158, T = 52, rowH = 54;
+  const xa = L + 110, xb = W - 190;
+  const rows = [
+    { k: "DKI median access", a: TJ.surface.dki_median, b: TJ.volume.dki_median, f: (v: number) => pct(v, 2) },
+    { k: "Bodetabek median access", a: TJ.surface.bodetabek_median, b: TJ.volume.bodetabek_median, f: (v: number) => pct(v, 3) },
+    { k: "core ÷ periphery gap", a: TJ.surface.ratio, b: TJ.volume.ratio, f: (v: number) => `${v.toFixed(0)}×` },
+    { k: "Gini of access", a: TJ.surface.gini, b: TJ.volume.gini, f: (v: number) => fx(v, 3) },
+  ];
+  const body = rows.map((r, i) => {
+    const y = T + i * rowH;
+    const col = r.b > r.a ? CORAL : BLUE;
+    return `<text x="${L - 16}" y="${y + 5}" fill="${INK}" font-size="12.5" text-anchor="end">${esc(r.k)}</text>
+      <circle cx="${xa}" cy="${y}" r="4.5" fill="${SLATE}"/>
+      <line x1="${xa + 7}" y1="${y}" x2="${xb - 8}" y2="${y}" stroke="${col}" stroke-width="1.6" opacity="0.55"/>
+      <path d="M${xb - 15} ${y - 4.5} L${xb - 9} ${y} L${xb - 15} ${y + 4.5}" fill="none" stroke="${col}" stroke-width="1.6"/>
+      <circle cx="${xb}" cy="${y}" r="5.5" fill="${col}"/>
+      <text x="${xa - 12}" y="${y + 4}" fill="${SLATE}" font-size="11.5" text-anchor="end" font-family="var(--font-data)">${r.f(r.a)}</text>
+      <text x="${xb + 12}" y="${y + 4}" fill="${col}" font-size="11.5" font-family="var(--font-data)">${r.f(r.b)}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Re-measuring the same routed hour on building volume rather than building footprint raises DKI access, lowers periphery access and widens the gap">
+    <text x="${xa}" y="${T - 28}" fill="${SLATE}" font-size="11.5" text-anchor="middle">footprint</text>
+    <text x="${xa}" y="${T - 15}" fill="${MUTED}" font-size="10" text-anchor="middle">GHS-BUILT-S</text>
+    <text x="${xb}" y="${T - 28}" fill="${CORAL}" font-size="11.5" text-anchor="middle">volume</text>
+    <text x="${xb}" y="${T - 15}" fill="${MUTED}" font-size="10" text-anchor="middle">GHS-BUILT-V</text>
+    ${body}
+    <text x="${L - 16}" y="${T + rows.length * rowH + 10}" fill="${MUTED}" font-size="11.5" text-anchor="end">rank correlation</text>
+    <text x="${xa - 100}" y="${T + rows.length * rowH + 10}" fill="${GREEN}" font-size="11.5" font-family="var(--font-data)">ρ ${fx(TJ.rho_surface_volume, 4)} — the ordering does not move</text>
+  </svg>`;
+}
+
+/* ── Figure 10 · the timetable runs fast, and geometry says why ─────────────────────── */
+function fig10() {
+  const rows = TF.rows;
+  const W = 720, H = 266, L = 200, Rr = 116, T = 48, rowH = 66;
+  const bw = W - L - Rr;
+  const NAME: Record<string, string> = {
+    mrt_north_south: "MRT · Lebak Bulus → Bundaran HI",
+    krl_bogor: "KRL · Bogor → Jakarta Kota",
+    lrt_jabodebek: "LRT · Harjamukti → Dukuh Atas",
+  };
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rowH;
+    const sched = (r.scheduled_min / r.published_min) * bw;
+    const pred = (1 - r.deficit) * bw;
+    return `<text x="${L - 14}" y="${y + 4}" fill="${INK}" font-size="12" text-anchor="end">${esc(NAME[r.line] ?? r.line)}</text>
+      <text x="${L - 14}" y="${y + 18}" fill="${MUTED}" font-size="10" text-anchor="end">${r.stations} stations · ${r.published_km} km published</text>
+      <rect x="${L}" y="${y - 8}" width="${bw.toFixed(1)}" height="15" fill="${GRID}" rx="2"/>
+      <rect x="${L}" y="${y - 8}" width="${sched.toFixed(1)}" height="15" fill="${CORAL}" rx="2"/>
+      <line x1="${(L + pred).toFixed(1)}" y1="${y - 14}" x2="${(L + pred).toFixed(1)}" y2="${y + 13}" stroke="${BLUE}" stroke-width="2"/>
+      <text x="${(W - Rr + 10).toFixed(1)}" y="${y + 4}" fill="${CORAL}" font-size="11" font-family="var(--font-data)">−${pct(r.observed_optimism, 1)}</text>
+      <text x="${(W - Rr + 10).toFixed(1)}" y="${y + 18}" fill="${BLUE}" font-size="10" font-family="var(--font-data)">−${pct(r.deficit, 1)} chord</text>
+      <text x="${(L + sched - 6).toFixed(1)}" y="${y + 3}" fill="#2A0C03" font-size="10.5" text-anchor="end" font-family="var(--font-data)">${r.scheduled_min} min</text>
+      <text x="${(L + bw - 6).toFixed(1)}" y="${y + 3}" fill="${MUTED}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">${r.published_min}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="All three hand-encoded rail lines are scheduled faster than their operators' published journey times, by close to the amount the straight-line station geometry predicts">
+    <text x="${L}" y="${T - 26}" fill="${MUTED}" font-size="11">grey = the operator's published end-to-end time · orange = what the routed timetable schedules</text>
+    ${body}
+    <line x1="${L}" y1="${H - 24}" x2="${L + 24}" y2="${H - 24}" stroke="${BLUE}" stroke-width="2"/>
+    <text x="${L + 32}" y="${H - 20}" fill="${MUTED}" font-size="10.5">where the schedule would land if the only error were the straight-line station geometry</text>
+  </svg>`;
+}
+
+/* ── Figure 11 · people near transit — two different estimators ─────────────────────── */
+function fig11() {
+  const W = 720, H = 274, pad = 78, base = 200, bh = 130;
+  const P = A.checks.plausibility;
+  const groups = [
+    { k: "Jakarta (DKI)", mine: P.pnt_jakarta, theirs: LIT.itdp.jakarta },
+    { k: "Greater Jakarta", mine: P.pnt_greater, theirs: LIT.itdp.greater },
+  ];
+  const gw = (W - pad * 2) / 2;
+  const bar = (v: number, x: number, col: string, lab: string) => {
+    const h = v * bh;
+    return `<rect x="${x}" y="${(base - h).toFixed(1)}" width="42" height="${h.toFixed(1)}" fill="${col}" rx="2"/>
+      <text x="${x + 21}" y="${(base - h - 8).toFixed(1)}" fill="${col}" font-size="12" text-anchor="middle" font-family="var(--font-data)">${pct(v, 0)}</text>
+      <text x="${x + 21}" y="${base + 16}" fill="${MUTED}" font-size="10" text-anchor="middle">${lab}</text>`;
+  };
+  const body = groups.map((g, i) => {
+    const xg = pad + i * gw;
+    return `<text x="${(xg + gw / 2).toFixed(1)}" y="${base + 40}" fill="${INK}" font-size="12.5" text-anchor="middle">${esc(g.k)}</text>
+      ${bar(g.mine, xg + gw / 2 - 52, CORAL, "this build")}
+      ${bar(g.theirs, xg + gw / 2 + 10, BLUE, `ITDP ${LIT.itdp.year}`)}`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="This build's people-near-transit share is far above the ITDP 2016 anchors, but the two count different things">
+    <rect x="${pad}" y="14" width="11" height="11" fill="${CORAL}" rx="2"/>
+    <text x="${pad + 18}" y="24" fill="${MUTED}" font-size="11.5">any stop, headway ≤ 15 min, 1 km straight line — ${nf(P.frequent_stops)} stops</text>
+    <rect x="${pad}" y="34" width="11" height="11" fill="${BLUE}" rx="2"/>
+    <text x="${pad + 18}" y="44" fill="${MUTED}" font-size="11.5">ITDP ${LIT.itdp.year}: rapid transit only (${esc(LIT.itdp.mode)}), 1 km straight line</text>
+    <line x1="${pad}" y1="${base}" x2="${W - pad}" y2="${base}" stroke="${GRID}"/>
+    ${body}
+    <text x="${W / 2}" y="${H - 8}" fill="${MUTED}" font-size="10.5" text-anchor="middle">ITDP's two rows share one numerator (${nf(LIT.itdp.near)}): in ${LIT.itdp.year} the rapid-transit network did not leave the city</text>
+  </svg>`;
+}
+
+/* ── Figure 12 · the units are modifiable ───────────────────────────────────────────── */
+function fig12() {
+  const rows = TD.rungs;
+  const W = 720, H = 216, L = 176, Rr = 190, T = 42, rowH = 50;
+  const bw = W - L - Rr, maxG = 0.8;
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rowH;
+    const w = (r.gini / maxG) * bw;
+    const col = i === 0 ? CORAL : SLATE;
+    return `<text x="${L - 14}" y="${y + 4}" fill="${INK}" font-size="12.5" text-anchor="end">${esc(r.level)}</text>
+      <text x="${L - 14}" y="${y + 18}" fill="${MUTED}" font-size="10" text-anchor="end">${nf(r.units)} units</text>
+      <rect x="${L}" y="${y - 9}" width="${w.toFixed(1)}" height="17" fill="${col}" rx="2"/>
+      <text x="${(L + w + 9).toFixed(1)}" y="${y + 4}" fill="${col}" font-size="11.5" font-family="var(--font-data)">Gini ${fx(r.gini)}</text>
+      <text x="${W - 6}" y="${y + 4}" fill="${col}" font-size="11.5" text-anchor="end" font-family="var(--font-data)">Palma ${r.palma.toFixed(1)}×</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="The same data aggregated to coarser units gives a much lower Gini and a far lower Palma ratio">
+    <text x="${L}" y="${T - 22}" fill="${MUTED}" font-size="11.5">identical people, identical network, identical hour — only the reporting unit changes</text>
+    ${body}
+    <text x="${L}" y="${H - 10}" fill="${MUTED}" font-size="11">kelurahan areas run ${TD.area_km2.min} km² to ${TD.area_km2.max} km² — a ${nf(TD.area_km2.ratio)}-fold range</text>
+  </svg>`;
+}
+
+const F = [fig1(), fig2(), fig3(), fig4(), fig5(), fig6(), fig7(), fig8(), fig9(), fig10(), fig11(), fig12()];
+
+const palmaLift = cut60.palma / cut30.palma;
+const ratioLift = cut60.ratio / cut30.ratio;
+const volLift = TJ.volume.dki_median / TJ.surface.dki_median - 1;
+const worstQ = PL.quintiles[PL.quintiles.length - 1], bestQ = PL.quintiles[0];
+const tjOd = A.checks.timetable.ods[0];
+const capeTown = WB.cities[WB.cities.length - 1];
+const nairobi = WB.cities.find((c) => c.k === "Nairobi")!;
+const dkiVsBod = TI.transit.dki_mean_delta / TI.transit.bod_mean_delta;
+/* where the city-frame result actually lands in the benchmark set — computed, not asserted */
+const cityMean = TK.dki_on_city_denominator.mean, cityGini = TK.dki_on_city_denominator.gini;
+const byAcc = [...WB.cities].sort((a, b) => a.a - b.a);
+const accBelow = [...byAcc].reverse().find((c) => c.a < cityMean)!;
+const accAbove = byAcc.find((c) => c.a > cityMean)!;
+const giniMoreUnequal = WB.cities.filter((c) => c.g > cityGini).length;
+const regionBelowAll = WB.cities.every((c) => c.a > S.all.mean_jobs_share);
+---
+<html lang="en" data-case="transit" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Does an Hour of Transit Measure Jakarta's Inequality?</title>
+    <meta name="description" content="An adversarial review of a cumulative-opportunity transit-accessibility study of Jabodetabek: threshold sensitivity, the study-area effect, distributional incidence, and the equity axis computed at last." />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="back" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/`}>← The hour</a>
+      <span class="stamp dim">REVIEW ARTICLE · DATA VINTAGE {A.vintage}</span>
+    </header>
+
+    <article>
+      <div class="masthead">
+        <span class="eyebrow">METHODS &amp; VALIDATION · TRANSIT ACCESS AND URBAN EQUITY</span>
+        <h1>Does an hour of transit measure Jakarta's inequality?</h1>
+        <p class="standfirst">A stress test of a cumulative-opportunity accessibility model of
+        Jabodetabek — {nf(A.origins)} kelurahan, {nf(A.destinations)} destination cells,
+        {A.feeds.transjakarta_routes + A.feeds.rail_routes} routed transit lines. The routing is
+        sound and the ordering it produces survives everything we threw at it. Almost every
+        headline built on top of that ordering is a property of the sixty-minute boundary, the
+        study area, the footprint proxy or the reporting unit — and the one distributional claim
+        the case could not make, we make here.</p>
+        <div class="byline">
+          <span>Demo Lab · FMV</span><span>Routed {A.window.date} {A.window.from}–{A.window.to}</span>
+          <span>{nf(A.origins)} origins · {A.cutoffs.join("/")} min</span>
+        </div>
+      </div>
+
+      <section class="abstract">
+        <h2>Abstract</h2>
+        <p><b>Question.</b> Does a 60-minute cumulative-opportunity map support the equity claims
+        made on top of it, and does the routing machinery earn its keep against a map and a ruler?</p>
+        <p><b>Method.</b> Eleven pre-specified tests on the case's own published outputs: a
+        threshold sweep, a study-area re-basing, a naive-baseline horse-race, an
+        opportunity-definition swap, a modifiable-areal-unit ladder, an edge-effect scan, a
+        rail-geometry audit, the distributional link to independent poverty estimates, an
+        export-precision check, and a re-measurement of the identical routed matrix on building
+        volume rather than building footprint. Benchmarks were read from the published PDFs.</p>
+        <p><b>Findings.</b> The inequality headline is mostly the clock and the map frame. Moving
+        the budget from {cut30.cutoff} to {cut60.cutoff} minutes lifts the Gini from
+        <b>{fx(cut30.gini)}</b> to <b>{fx(cut60.gini)}</b>, the Palma from
+        {cut30.palma.toFixed(1)}× to {cut60.palma.toFixed(1)}× and the core-to-periphery gap from
+        {cut30.ratio.toFixed(0)}× to {cut60.ratio.toFixed(0)}×. Re-based from a
+        {nf(TD.study_area_km2)} km² region to the {nf(TD.dki_area_km2)} km² city — the frame every
+        published benchmark uses — DKI's mean access rises from {pct(TK.dki_on_region_denominator.mean, 1)}
+        to <b>{pct(TK.dki_on_city_denominator.mean, 1)}</b> and its Gini falls to
+        <b>{fx(TK.dki_on_city_denominator.gini)}</b>, placing Jakarta unremarkably inside the range
+        of the eleven African cities the World Bank measured the same way. A circle drawn on a map
+        with no network in it reproduces <b>R² {fx(TB.r2_naive, 2)}</b> of the routed measure, so
+        the value of the routing is the residual — and the residual is nameable:
+        <b>{nf(TB.network_failures)} kelurahan</b> holding <b>{nf(TB.network_failure_pop)} people</b>
+        sit within 10 km of more than the median share of the region's job-dense floorspace and
+        reach <i>none</i> of it in an hour. The system is relatively regressive:
+        <b>{pct(TI.transit.dki_share_of_gain, 0)}</b> of what public transport adds over walking
+        accrues to the {pct(TI.rail.dki_share_of_pop, 0)} of the region inside DKI. The equity axis
+        the build published as <i>pending</i> is computable and we compute it: rank correlation
+        <b>{fx(PL.spearman_rho, 2)}</b> against kecamatan poverty, concentration index
+        <b>+{fx(PL.concentration_index)}</b>, and the share of kelurahan reaching nothing rises from
+        {pct(bestQ.zero_share, 0)} in the least-poor fifth to <b>{pct(worstQ.zero_share, 0)}</b> in
+        the poorest.</p>
+        <p><b>Conclusion.</b> This is a strong <i>ranking</i> instrument and a weak <i>level</i>
+        instrument. Every ordinal result survives every perturbation; no cardinal headline does.
+        Published as "who is cut off, and where the network fails people who live beside
+        opportunity", it is defensible and immediately actionable. Published as "the gap is
+        {cut60.ratio.toFixed(0)}×", it is a statement about a clock and a bounding box.</p>
+      </section>
+
+      <nav class="toc">
+        <a href="#s1">1 · The claim under test</a><a href="#s2">2 · Prior art</a>
+        <a href="#s3">3 · What was computed</a><a href="#s4">4 · The hour is the finding</a>
+        <a href="#s5">5 · The frame is the finding too</a><a href="#s6">6 · The compass test</a>
+        <a href="#s7">7 · Where the network fails</a><a href="#s8">8 · Who the gains go to</a>
+        <a href="#s9">9 · The equity axis, computed</a><a href="#s10">10 · Footprint, not floor area</a>
+        <a href="#s11">11 · The timetable runs fast</a><a href="#s12">12 · The check that passed</a>
+        <a href="#s13">13 · Modifiable units</a><a href="#s14">14 · What follows for decisions</a>
+        <a href="#s15">15 · What remains open</a><a href="#refs">References</a>
+      </nav>
+
+      <section id="s1">
+        <h2><span class="num">1</span> The claim under test</h2>
+        <p>The case computes, for each of Jabodetabek's {nf(A.origins)} kelurahan and desa, the
+        share of the region's job-dense floorspace reachable door-to-door within
+        {A.cutoffs[A.cutoffs.length - 1]} minutes on scheduled public transport, and builds an
+        equity argument on the distribution of that number: a Gini of {fx(S.all.gini)}, a Palma of
+        {S.all.palma.toFixed(1)}×, and a core-to-periphery gap of {cut60.ratio.toFixed(0)}×.</p>
+        <p>Three questions follow, and they are not the same question. <b>Is the routing right?</b>
+        <b>Is the measure informative?</b> And <b>does the measure support the word "equity"?</b>
+        The first is largely engineering and the case handles it well. The second and third are
+        measurement theory, and that is where this review spends its time.</p>
+        <p class="pull">A cumulative-opportunity measure is a count of what falls inside a
+        boundary. Every property it has — including its inequality — is jointly a property of the
+        city and of the boundary. Publishing the number without the boundary's sensitivity is
+        publishing half the result.</p>
+      </section>
+
+      <section id="s2">
+        <h2><span class="num">2</span> Prior art, and what can and cannot be compared</h2>
+        <p><a href="#ref-pereira19">Pereira (2019)</a> is the decisive methodological prior. Running
+        a BRT expansion in Rio de Janeiro through cumulative-opportunity measures at four time
+        thresholds, he found the <i>policy verdict itself</i> changed with the threshold: mean
+        accessibility gains of {pct(LIT.rio[0].v, 1)} at 30 minutes and {pct(LIT.rio[1].v, 1)} at 60
+        fell to {pct(LIT.rio[2].v, 1)} and {pct(LIT.rio[3].v, 1)} at 90 and 120, turning a
+        progressive-looking project into a modest, evenly-spread one. He names this the modifiable
+        temporal unit problem. <a href="#ref-boisjoly">Boisjoly &amp; El-Geneidy (2017)</a>, auditing
+        32 metropolitan transport plans, found practice thresholds cluster between 30 and 60 minutes
+        with no principled basis for the choice.</p>
+        <p><a href="#ref-wessel">Wessel &amp; Farber (2019)</a> put a number on the cost of routing a
+        timetable rather than a bus. Rebuilding routable networks from archived vehicle-location
+        data for four North American agencies, they report that schedule-based accessibility
+        measures "may overestimate net accessibility on average by about
+        {pct(LIT.gtfsOptimismLo, 0)}–{pct(LIT.gtfsOptimismHi, 0)} percent or more", and that the
+        error is spatially patterned rather than random. Those four agencies are among the world's
+        better-adhering; for Jakarta's mixed traffic the range is a floor, not an estimate.</p>
+        <p><b>Almost nothing published reports the quantity this case reports.</b> The University of
+        Minnesota's <a href="#ref-aaa">Access Across America</a> series publishes absolute counts,
+        not shares — New York's average worker reaches {nf(LIT.aaaNY)} jobs within 60 minutes by
+        transit and Atlanta's {nf(LIT.aaaAtlanta)}, a nineteen-fold spread inside one country, on a
+        quantity that is not a percentage of anything. Brazil's Access to Opportunities Project
+        likewise publishes counts. And its own authors warn against exactly the comparison a
+        percentage invites: <a href="#ref-ipea">IPEA's technical note</a> states the cumulative
+        indicator "is not appropriate for comparing accessibility levels between cities of very
+        different sizes", and <a href="#ref-wu">Wu et al. (2021)</a>, across 117 cities, show job
+        access scales <i>sublinearly</i> with metropolitan population — so enlarging the study area
+        mechanically lowers the share.</p>
+        <p>One published set does report our exact quantity.
+        <a href="#ref-wb">Peralta-Quiros, Kerzhner &amp; Avner (2019)</a> measure, for eleven African
+        cities, "the percentage of estimated employment opportunities throughout the city accessible
+        by the average individual within 60 minutes" by public transport, population-weighted, over
+        a 07:00–09:00 window — and publish a Gini of the same measure. Six of the eleven use an
+        "Employment Opportunity Area" grid scored from mapped establishments rather than payroll
+        counts, which is conceptually close to a floorspace proxy. §5 uses it.</p>
+        <p>On the equity side, other published accessibility Ginis measure different constructs.
+        <a href="#ref-guzman">Guzman, Oviedo &amp; Rivera (2017)</a> report {LIT.giniBogotaPT} for
+        Bogotá, but on a <i>gravity</i> measure with continuous decay; <a href="#ref-delbosc">Delbosc
+        &amp; Currie (2011)</a> report {LIT.giniMelbSupply} for Melbourne, but of transit <i>supply</i>.
+        A binary threshold manufactures exact zeros a gravity measure never produces, so a
+        cumulative Gini will normally exceed a gravity Gini on the same city. That is testable here,
+        because the pipeline also publishes an exponential-decay measure with half-weight at
+        {A.gravity_half_weight_min} minutes: on that, Jabodetabek gives {fx(TA.gravity.gini)}.</p>
+        <p class="caveat"><b>What we could not obtain.</b> <a href="#ref-andani">Andani et al. (2025)</a>
+        is the closest published comparator — a district-level cumulative-opportunity job-accessibility
+        study of Jakarta across car, motorcycle and public transport, reporting that motorcycles
+        deliver the broadest and most equitably distributed access and public transport the most
+        severe inequality. It sits behind a paywall we could not pass, so we cite its qualitative
+        conclusions and quote no numbers from it.</p>
+      </section>
+
+      <section id="s3">
+        <h2><span class="num">3</span> What was actually computed</h2>
+        <p><b>Routing.</b> r5py/R5 over the OpenStreetMap street and footpath graph plus three GTFS
+        feeds: the official TransJakarta feed ({nf(A.feeds.transjakarta_routes)} routes including
+        {A.feeds.mikrotrans_routes} Mikrotrans, {nf(A.feeds.transjakarta_stops)} stops), a
+        hand-encoded frequency feed for {A.feeds.rail_routes} rail lines, and a community angkot
+        feed for Bogor ({A.feeds.angkot_routes} routes). Departures every minute across
+        {A.window.from}–{A.window.to} on {A.window.date}, p50 over the window. Travel time is
+        door-to-door: access walk, wait, in-vehicle, transfer and egress, with a
+        {A.max_walk_min}-minute walking budget in every scenario and a {A.max_trip_min}-minute cap.
+        Waiting and transfers are therefore <i>in</i>; ojek, becak and unscheduled paratransit are
+        out. That is the right architecture, and the first thing a reviewer should check.</p>
+        <p><b>Opportunity.</b> A {A.lattice.cell_m} m lattice of {nf(A.lattice.cells)} cells
+        carrying GHS-BUILT-S NRES non-residential built surface as the jobs proxy, capturing
+        {pct(A.lattice.jobs_covered, 1)} of the region's proxy and {pct(A.lattice.pop_covered, 1)}
+        of its population. Destinations are routed at each cell's population-weighted centre of
+        mass rather than its geometric centre — a good decision that removed a large earlier
+        artefact.</p>
+        <p><b>Denominator.</b> The denominator is the whole region's floorspace, and the region is
+        not the city.</p>
+        <figure>
+          <Fragment set:html={F[0]} />
+          <figcaption><b>Figure 1.</b> Where the denominator lives, in rings from the region's own
+          floorspace-weighted centre of mass ({TB.centre_of_mass[0]}, {TB.centre_of_mass[1]} — south
+          Jakarta, not the CBD). {pct(TB.denominator.beyond_20km_jobs_share, 0)} of the measured
+          job-dense floorspace lies beyond 20 km: the warehousing and manufacturing belt of Bekasi,
+          Tangerang and Bogor. A resident who reaches every office in the CBD still reaches a small
+          share of <i>this</i> denominator.</figcaption>
+        </figure>
+        <p class="caveat"><b>Checks, as published.</b> {A.checks.passed} of {A.checks.hard} hard
+        checks passed. The timetable check failed {A.checks.timetable.of - A.checks.timetable.passed}
+        of {A.checks.timetable.of} legs; network integrity failed on
+        {A.checks.network.unreachable_mainland} unroutable mainland origins; the external routing
+        comparison was never evaluated ("{A.checks.external.reason}"). The case publishes all of
+        this unretouched, which is the correct behaviour and the reason the rest of this review can
+        be specific.</p>
+      </section>
+
+      <section id="s4">
+        <h2><span class="num">4</span> Finding one — the hour is the finding</h2>
+        <p>The pipeline computes access at {A.cutoffs.join(", ")} minutes. The equity chapter used
+        only the last. Recomputing the entire distributional package at each threshold shows how
+        much of the headline belongs to the clock.</p>
+        <figure>
+          <Fragment set:html={F[1]} />
+          <figcaption><b>Figure 2.</b> Every inequality statistic the case reports, at each of its
+          own three time budgets. Each row has its own vertical scale; the point is the shape, and
+          the shape is the same in all three.</figcaption>
+        </figure>
+        <p>The Gini moves from {fx(cut30.gini)} to {fx(cut60.gini)}. The Palma multiplies by
+        <b>{palmaLift.toFixed(1)}</b>. And the statistic the case leads with — the ratio of the DKI
+        median to the Bodetabek median — moves from <b>{cut30.ratio.toFixed(0)}×</b> to
+        <b>{cut60.ratio.toFixed(0)}×</b>, a factor of {ratioLift.toFixed(1)}. The headline "a gap of
+        {cut60.ratio.toFixed(0)}×" is, on the case's own data, equally a headline of
+        "{cut30.ratio.toFixed(0)}×".</p>
+        <figure>
+          <Fragment set:html={F[2]} />
+          <figcaption><b>Figure 3.</b> The Lorenz curve of population-weighted access at each
+          budget, with walking alone for reference. The curves nest: a longer hour bows the curve
+          further from the diagonal, not closer to it.</figcaption>
+        </figure>
+        <p>The direction is worth dwelling on, because it is counter-intuitive and it is not what
+        the Rio study found. Lengthening the budget makes the distribution <i>more</i> unequal here.
+        The mechanism is compounding: fifteen extra minutes given to someone already standing on a
+        corridor buys another interchange and another wedge of the city, while the same fifteen
+        minutes given to someone with a two-kilometre walk to a thirty-minute-headway feeder buys
+        nothing. Access to a network is convex in time for those on it and flat for those off it.</p>
+        <p class="pull">That is a real result about Jabodetabek, and it is more interesting than the
+        headline it undermines: the region's transport disadvantage is not a gradient, it is a
+        threshold. You are on the network or you are not, and time only helps the former.</p>
+        <p>The gravity measure the pipeline already computes — no cut-off at all — gives a Gini of
+        {fx(TA.gravity.gini)}, between the 45- and 60-minute cumulative values. Its rank correlation
+        with the 60-minute measure is {fx(TA.rho_60_gravity, 3)}, and the 30- and 60-minute rankings
+        correlate at {fx(TA.rho_30_60, 3)}. <b>The levels move enormously; the ordering barely moves
+        at all.</b> That distinction runs through every finding below.</p>
+      </section>
+
+      <section id="s5">
+        <h2><span class="num">5</span> Finding two — and so is the frame</h2>
+        <p>The second half of the problem is spatial rather than temporal. The measure asks what
+        share of a <b>{nf(TD.study_area_km2)} km²</b> region's floorspace a resident can reach.
+        Every published benchmark asks what share of a <i>city's</i>. Jabodetabek as drawn here is
+        {(TD.study_area_km2 / capeTown.km2).toFixed(1)} times the area of Cape Town's study region
+        and {(TD.study_area_km2 / nairobi.km2).toFixed(1)} times Nairobi's, and
+        {pct(1 - TK.city_denominator_share_of_region, 0)} of its floorspace is outside DKI.</p>
+        <p>So we re-based the measure without re-routing anything: DKI residents, DKI destinations,
+        DKI's own floorspace as the denominator, on the identical published travel-time matrix.</p>
+        <figure>
+          <Fragment set:html={F[3]} />
+          <figcaption><b>Figure 4.</b> The case's two framings against the eleven African cities in
+          World Bank PRWP 8971 — the only published set reporting the same quantity: the
+          population-weighted percentage of employment opportunities reachable in 60 minutes by
+          public transport, with a Gini of that measure. Study-area size in km² sits between the two
+          panels, because it is doing much of the work.</figcaption>
+        </figure>
+        <p>On the city frame DKI's population-weighted mean access is
+        <b>{pct(cityMean, 1)}</b>, not {pct(S.all.mean_jobs_share, 1)}, and its Gini is
+        <b>{fx(cityGini)}</b>, not {fx(S.all.gini)}. That places Jakarta between {accBelow.k}
+        ({pct(accBelow.a, 1)}) and {accAbove.k} ({pct(accAbove.a, 1)}) on level, and more equal
+        than {giniMoreUnequal} of the {WB.cities.length} on distribution. Measured as a city,
+        <b>Jakarta is unremarkable</b>. Measured as a {nf(TD.study_area_km2)} km² region it falls
+        below {regionBelowAll ? `all ${WB.cities.length}` : "most"} of them, Cape Town included —
+        the most spatially mismatched large city in the set, at {pct(capeTown.a, 1)} and a Gini of
+        {capeTown.g}.</p>
+        <p>Both numbers are correct. They answer different questions, and the case answers only the
+        second while writing headlines that read as the first. The regional framing is the right one
+        for a Jabodetabek planning authority — the periphery's disconnection from the region's own
+        industrial floorspace is exactly the policy problem — but it must be labelled as a regional
+        statistic, with the study area stated, every time it is quoted.</p>
+        <p class="caveat"><b>Where this comparison is weak.</b> The African cities' opportunity
+        variable is an establishment-scored grid or, for two cities, a census of employees; ours is
+        built surface. Their study areas are drawn on access patterns; ours on administrative
+        boundaries. Their transport data are largely mapped paratransit — which is precisely what
+        Jabodetabek's periphery lacks in this build. Every one of those differences would tend to
+        make Jakarta look worse than a fair comparison would, so read Figure 4 as an order of
+        magnitude and a warning about framing, not as a league table.</p>
+      </section>
+
+      <section id="s6">
+        <h2><span class="num">6</span> Finding three — a compass reproduces most of the map</h2>
+        <p>Before crediting a routing engine, ask what a ruler would have said. We built the crudest
+        possible alternative: for each kelurahan, the share of the region's job-dense floorspace
+        lying within 10 km <i>as the crow flies</i> — no streets, no timetables, no transfers — plus
+        straight-line distance to the region's floorspace-weighted centre of mass.</p>
+        <figure>
+          <Fragment set:html={F[4]} />
+          <figcaption><b>Figure 5.</b> Routed 60-minute access against the straight-line circle,
+          both on log scales, one dot per kelurahan. The strip along the bottom holds the
+          {nf(TA.rows[2].zero_units)} units that reach nothing and therefore have no logarithm.
+          Hover any dot.</figcaption>
+        </figure>
+        <p>Circle and distance together explain <b>R² {fx(TB.r2_naive, 3)}</b> of the log of routed
+        access across the {nf(TB.n_positive)} kelurahan that reach anything, and the rank
+        correlation between circle and routed measure across all {nf(A.origins)} units is
+        <b>{fx(TB.rho_circle_routed, 3)}</b>. Distance to the centre alone gives
+        {fx(TB.models["distance to the centre of mass"], 3)}; the 5 km circle alone,
+        {fx(TB.models["floorspace within 5 km"], 3)}.</p>
+        <p>This is not a demolition — two-fifths of the variance is genuinely network. But it does
+        mean the <i>choropleth is not the product</i>. A map shaded by routed access looks, to the
+        eye, almost identical to a map shaded by distance from the middle of Jakarta, and a reader
+        who takes the headline from the picture has learned something they already knew.</p>
+      </section>
+
+      <section id="s7">
+        <h2><span class="num">7</span> Finding four — the residual is the product</h2>
+        <p>If the circle predicts most of the map, the places where it fails are where the analysis
+        earns its keep. We asked a deliberately blunt question: which kelurahan have more than the
+        median amount of the region's floorspace within 10 km of them and still reach <i>none</i> of
+        it inside an hour?</p>
+        <figure>
+          <Fragment set:html={F[5]} />
+          <figcaption><b>Figure 6.</b> The eight largest cases by nearby floorspace. Every one is in
+          the Bekasi or Tangerang industrial fringe — kelurahan surrounded by the region's factories
+          and warehouses with no scheduled service connecting them to any of it inside the hour.</figcaption>
+        </figure>
+        <p>There are <b>{nf(TB.network_failures)}</b> such kelurahan, holding
+        <b>{nf(TB.network_failure_pop)} people</b>. Bitung Jaya in Cikupa has
+        {pct(TB.network_failure_list[0].circle10, 1)} of the whole region's job-dense floorspace
+        within 10 km of it and reaches none of it. These are not remote villages; they are the
+        dormitory desa of Jabodetabek's manufacturing belt, and the finding is that the region's
+        industrial workforce lives inside a labour market it cannot reach on scheduled transport.</p>
+        <p>The mirror image is equally diagnostic, once a handful of remote desa are set aside —
+        {esc(TB.over[0].adm4_name)}, {esc(TB.over[1].adm4_name)} and {esc(TB.over[2].adm4_name)} top
+        the residual list only because their local circle is so close to nothing that reaching
+        anything at all beats the prediction. The substantive over-performers are the next four:
+        {esc(TB.over[3].adm4_name)}, {esc(TB.over[4].adm4_name)}, {esc(TB.over[5].adm4_name)} and
+        {esc(TB.over[6].adm4_name)}, all in the centre of {esc(TB.over[3].adm2_name)}, which reach
+        roughly {Math.round(Math.exp(TB.over[3].resid))} times what their own neighbourhood would
+        predict. That is the KRL Bogor line, and it is what a corridor is <i>for</i>. A ranked list
+        of both residuals is a project pipeline; the shaded map is a poster.</p>
+        <p class="caveat"><b>One of these has a mundane cause.</b> Bitung Jaya is also on the case's
+        own list of {A.checks.network.unreachable_mainland} mainland origins whose
+        population-weighted centre snaps to an isolated street fragment, so its zero is a graph
+        defect rather than a service fact. The other {TB.network_failures - 1} route normally. The
+        case is right to publish the unroutable list; it should also cross it against this one, so a
+        reader can tell a broken graph from a broken bus network.</p>
+      </section>
+
+      <section id="s8">
+        <h2><span class="num">8</span> Finding five — the system is relatively regressive</h2>
+        <p>The case prices each layer by what it adds to the average resident: rail
+        {pct(A.rail_contribution.mean_access_delta, 2)}, the whole public-transport system
+        {pct(A.transit_contribution.mean_access_delta, 2)} over walking. A mean says how much
+        opportunity a network creates. It says nothing about who receives it.</p>
+        <figure>
+          <Fragment set:html={F[6]} />
+          <figcaption><b>Figure 7.</b> Population deciles ranked by walking access alone, with the
+          bus and rail layers stacked on top. The vertical scale is square-root, so the poorest
+          deciles are visible at all; on a linear scale the left half of this chart is a flat line.</figcaption>
+        </figure>
+        <p><b>{pct(TI.transit.dki_share_of_gain, 0)}</b> of everything public transport adds over
+        walking accrues to the <b>{pct(TI.rail.dki_share_of_pop, 0)}</b> of the region's people who
+        live inside DKI Jakarta, and {pct(TI.transit.top_decile_share_of_gain, 0)} to the best-served
+        tenth. For the rail layer the figures are {pct(TI.rail.dki_share_of_gain, 0)} and
+        {pct(TI.rail.top_decile_share_of_gain, 0)}. The mean DKI resident gains
+        {pct(TI.transit.dki_mean_delta, 2)} from the system; the mean Bodetabek resident gains
+        {pct(TI.transit.bod_mean_delta, 3)} — a factor of {dkiVsBod.toFixed(0)}.</p>
+        <p>The Gini follows: {fx(S.walk.gini)} on foot, {fx(S.no_rail.gini)} with buses,
+        {fx(S.all.gini)} with everything. <b>Every layer of Jabodetabek's public transport network
+        raises access and raises inequality at the same time.</b></p>
+        <p class="caveat"><b>Three things this does not mean.</b> First, nobody loses: the case's own
+        monotonicity check confirms access never falls when a layer is added, so this is relative
+        regressivity in a rising tide, not harm. Second, a rising Gini alongside a rising mean is a
+        property of any concentrated improvement and is not by itself an indictment. Third, and most
+        important, the periphery's paratransit is almost entirely missing from the data — one
+        community angkot feed exists — so the Bodetabek baseline is a floor and the measured
+        concentration is an upper bound. State all three or state none.</p>
+      </section>
+
+      <section id="s9">
+        <h2><span class="num">9</span> Finding six — the equity axis, computed</h2>
+        <p>The case is titled "Transit Access &amp; Urban Equity" and reported its poverty
+        cross-link as <i>pending</i>, because the poverty case it depends on had not published when
+        it ran. It has since. We ran the link.</p>
+        <p>Two things were wrong beyond the ordering. The cross-link code searched for a column whose
+        name contained both "adm3" and "code"; the estimates publish that key as <code>pcode</code>,
+        so the join would have reported an unrecognised schema even after the dependency was met.
+        And the column search would have selected the official regency headcount broadcast downward
+        rather than the modelled small-area estimate. Both are fixed in the case's pipeline, and the
+        axis is now computed on the {PL.source_year} vintage across {nf(PL.kecamatan_matched)}
+        kecamatan.</p>
+        <figure>
+          <Fragment set:html={F[7]} />
+          <figcaption><b>Figure 8.</b> Kelurahan grouped into fifths by their kecamatan's estimated
+          poverty rate. Bars are the population-weighted median 60-minute access on a square-root
+          scale; the blue line is the share of kelurahan in each fifth reaching no measured
+          job-dense floorspace at all.</figcaption>
+        </figure>
+        <p>The rank correlation between access and poverty is <b>{fx(PL.spearman_rho, 3)}</b> and the
+        population-weighted concentration index of access over the poverty ranking is
+        <b>+{fx(PL.concentration_index)}</b> — access accrues to the less poor. The blue line is the
+        cleaner statement: the share of kelurahan reaching nothing measurable rises monotonically
+        from <b>{pct(bestQ.zero_share, 1)}</b> in the least-poor fifth to
+        <b>{pct(worstQ.zero_share, 1)}</b> in the poorest, a factor of
+        {(worstQ.zero_share / bestQ.zero_share).toFixed(0)}.
+        {nf(PL.double_disadvantage_count)} kelurahan — {nf(PL.double_disadvantage_pop)} people,
+        {pct(PL.double_disadvantage_pop_share, 1)} of the region — fall in both the worst access
+        quintile and the worst poverty quintile.</p>
+        <p class="caveat"><b>Read the bars carefully; they are not monotone.</b> Median access falls
+        from {pct(bestQ.median_access, 2)} in Q1 to {pct(PL.quintiles[2].median_access, 3)} in Q3 and
+        then rises again, and the population-weighted <i>mean</i> is non-monotone too. The reason is
+        real rather than statistical: Jakarta's inner-city kampung are both poor and extremely well
+        connected, so the poorest quintile holds two populations — the connected urban poor and the
+        disconnected peripheral poor — and averaging across them hides the thing that matters. The
+        zero-access share separates them cleanly, which is why it, and not the mean, is the equity
+        statistic to publish. Note also that poverty is constant within a kecamatan
+        ({nf(PL.kecamatan_matched)} distinct values across {nf(A.origins)} units), so
+        within-kecamatan variation in access is orthogonal to it by construction.</p>
+      </section>
+
+      <section id="s10">
+        <h2><span class="num">10</span> Finding seven — a footprint is not a floor area</h2>
+        <p>The jobs proxy is GHS-BUILT-S NRES: non-residential built <i>surface</i>, in square metres
+        of ground covered. A single-storey warehouse in Cikarang and a forty-storey tower on
+        Sudirman contribute in proportion to their footprints. Every tall building in Jakarta is
+        counted at a fraction of the employment it holds, and every shed on the periphery at a
+        multiple.</p>
+        <p>This is cheap to test without re-routing. The same GHSL family publishes GHS-BUILT-V NRES
+        — building <i>volume</i>, same 100 m grid, same epoch, same licence. We downloaded the
+        matching tile, re-weighted the identical published travel-time matrix, and recomputed the
+        measure.</p>
+        <figure>
+          <Fragment set:html={F[8]} />
+          <figcaption><b>Figure 9.</b> The same routed hour, measured on footprint and on volume.
+          The region's non-residential stock averages {TJ.mean_storeys} storeys, so the two
+          denominators are genuinely different objects.</figcaption>
+        </figure>
+        <p>The DKI median rises from {pct(TJ.surface.dki_median, 2)} to
+        <b>{pct(TJ.volume.dki_median, 2)}</b> — {pct(volLift, 0)} higher — the Bodetabek median
+        <i>falls</i> from {pct(TJ.surface.bodetabek_median, 3)} to
+        {pct(TJ.volume.bodetabek_median, 3)}, and the core-to-periphery gap widens from
+        {TJ.surface.ratio.toFixed(0)}× to <b>{TJ.volume.ratio.toFixed(0)}×</b>. The Gini rises from
+        {fx(TJ.surface.gini)} to {fx(TJ.volume.gini)} and the Palma from
+        {TJ.surface.palma.toFixed(0)}× to {TJ.volume.palma.toFixed(0)}×.</p>
+        <p>Two conclusions, pointing opposite ways. The published levels <b>understate</b>
+        concentration — the footprint proxy flatters the periphery by counting its sheds at full
+        weight. And the rank correlation between the two measures is
+        <b>{fx(TJ.rho_surface_volume, 4)}</b>: not a single kelurahan changes place meaningfully.
+        Volume is the better default and the case should switch to it, but nothing already published
+        about the ordering is wrong.</p>
+      </section>
+
+      <section id="s11">
+        <h2><span class="num">11</span> Finding eight — the timetable runs fast, and reality runs slower</h2>
+        <p>No operator publishes a GTFS feed for KRL, MRT or either LRT, so the case hand-encodes
+        them from published headways and end-to-end journey times, distributing run time along the
+        inter-station geometry at each line's average commercial speed. It flags a
+        ±{A.rail_caveat_pct} % caveat and tests three lines against their operators' own figures.
+        All three pass. But all three deviate <i>in the same direction</i>.</p>
+        <figure>
+          <Fragment set:html={F[9]} />
+          <figcaption><b>Figure 10.</b> Published end-to-end time against what the routed timetable
+          actually schedules, for the three lines with an operator figure. The blue tick marks where
+          the schedule would land if the only error were that run time is laid along straight lines
+          between stations while the operator's time is for the real alignment.</figcaption>
+        </figure>
+        <p>The mean optimism is <b>{pct(TF.mean_optimism, 1)}</b> and the mean chord shortfall is
+        <b>{pct(TF.mean_deficit, 1)}</b>. For the MRT the two are
+        {pct(TF.rows[0].observed_optimism, 1)} against {pct(TF.rows[0].deficit, 1)}, and for the LRT
+        {pct(TF.rows[2].observed_optimism, 1)} against {pct(TF.rows[2].deficit, 1)} — close enough
+        that the geometry is plainly the mechanism. For the KRL Bogor line the chord explains only
+        {pct(TF.rows[1].deficit, 1)} of a {pct(TF.rows[1].observed_optimism, 1)} gap, so something
+        else is fast there too. A single scale factor per line, calibrated to close the published
+        gap, would remove this in an afternoon; a ±{A.rail_caveat_pct} % caveat does not, because
+        the error is a bias, not a spread.</p>
+        <p>The bus side of the same check fails, and its framing deserves a second look. The official
+        TransJakarta feed contains no end-to-end Corridor 1 trip, so the check compares the feed's
+        scheduled commercial speed — <b>{tjOd.scheduled_kmh} km/h</b> over {tjOd.median_trip_km} km
+        of straight-line inter-stop distance — against brtdata.org's published
+        <b>{tjOd.published_kmh} km/h</b> corridor average, and concludes the routed bus times are
+        "conservative, not optimistic". Two caveats belong with that. Straight-line distance
+        understates the real corridor by roughly a tenth, so the true scheduled speed is nearer 12
+        than {tjOd.scheduled_kmh}. And the {LIT.brtdataKmh} km/h benchmark carries a
+        {LIT.brtdataYear} date on brtdata.org — a thirteen-year-old grey-literature figure being
+        used to fail a {A.vintage.slice(0, 4)} feed.</p>
+        <p class="caveat">More fundamentally, <a href="#ref-wessel">Wessel &amp; Farber (2019)</a>
+        show that <i>any</i> schedule-based accessibility measure overstates by
+        {pct(LIT.gtfsOptimismLo, 0)}–{pct(LIT.gtfsOptimismHi, 0)} even when the schedule is honest,
+        because real headways vary and variance lengthens average waiting time. That correction
+        applies on top of everything above; it bites hardest on the high-frequency corridors where
+        this case's access is concentrated; and their four North American agencies are a best case.
+        The case states "scheduled, not congested" clearly and repeatedly. What it does not state is
+        that the error has a known sign and a known rough magnitude.</p>
+      </section>
+
+      <section id="s12">
+        <h2><span class="num">12</span> Finding nine — the check that passed does not test what it claims</h2>
+        <p>Of {A.checks.hard} hard checks, one passed, and its most quotable component is a
+        replication of ITDP's People Near Transit indicator. The build reports
+        {pct(A.checks.plausibility.pnt_jakarta, 0)} of Jakarta's population and
+        {pct(A.checks.plausibility.pnt_greater, 0)} of Greater Jakarta's within 1 km of service at a
+        headway of 15 minutes or better, against ITDP's {LIT.itdp.year} anchors of
+        {pct(LIT.itdp.jakarta, 0)} and {pct(LIT.itdp.greater, 0)}, and notes that it "should read
+        high, and does".</p>
+        <figure>
+          <Fragment set:html={F[10]} />
+          <figcaption><b>Figure 11.</b> The two figures side by side. They are not the same
+          estimator, and the difference between them is mostly definitional.</figcaption>
+        </figure>
+        <p>We read ITDP's report. Its Table 2 gives Jakarta City {pct(LIT.itdp.jakarta, 0)}
+        ({nf(LIT.itdp.near)} of {nf(LIT.itdp.jakartaPop)}) and Jakarta Metro
+        {pct(LIT.itdp.greater, 0)} ({nf(LIT.itdp.near)} of {nf(LIT.itdp.greaterPop)}) — the
+        <i>same numerator</i>, because, as ITDP states, the rapid-transit network did not extend
+        past the city borders. Its definition of rapid transit is BRT, LRT or metro meeting the BRT
+        Standard's Basics, at headways under 20 minutes between 06:00 and 22:00. In Jakarta in
+        {LIT.itdp.year} that meant TransJakarta's BRT corridors and nothing else: <b>KRL Commuter
+        Line was not counted</b>.</p>
+        <p>The build's replication counts every stop in the feed at a 15-minute headway or better —
+        {nf(A.checks.plausibility.frequent_stops)} of them, Mikrotrans and commuter rail included.
+        That is a defensible measure of service coverage. It is not ITDP's measure, and the
+        difference between {pct(LIT.itdp.greater, 0)} and
+        {pct(A.checks.plausibility.pnt_greater, 0)} for Greater Jakarta is mostly the decision to
+        count KRL, not eight years of construction. Two further problems compound it: at
+        {pct(A.checks.plausibility.pnt_jakarta, 0)} of Jakarta the statistic has no room left to
+        discriminate — almost any network would clear it — and the anchors are a decade old, which
+        makes "above the anchor" a statement about {LIT.itdp.year} rather than about this model.</p>
+        <p class="pull">A check that cannot fail is not a check. This one should be relabelled as
+        what it is — a coverage statistic — and either dropped from the check list or rebuilt to
+        ITDP's actual definition, where it would be a genuine and interesting test.</p>
+      </section>
+
+      <section id="s13">
+        <h2><span class="num">13</span> Finding ten — modifiable units, and an edge that turns out not to matter</h2>
+        <p><a href="#ref-kwan">Kwan &amp; Weber (2008)</a> state the general problem plainly: "MAUP
+        will be a problem for any zone-based accessibility measure" — though their own empirical
+        test, on individual space-time measures, found little variation across zone schemes. Here
+        the effect is large, and easy to measure because the P-codes nest.</p>
+        <figure>
+          <Fragment set:html={F[11]} />
+          <figcaption><b>Figure 12.</b> The identical population-weighted distribution reported at
+          three administrative levels. Nothing about the city or the network changes between the
+          rows.</figcaption>
+        </figure>
+        <p>Aggregating from {nf(TD.rungs[0].units)} kelurahan to {nf(TD.rungs[2].units)} kabupaten
+        and kota moves the Gini from {fx(TD.rungs[0].gini)} to {fx(TD.rungs[2].gini)} and the Palma
+        from {TD.rungs[0].palma.toFixed(1)}× to {TD.rungs[2].palma.toFixed(1)}× — a factor of
+        {(TD.rungs[0].palma / TD.rungs[2].palma).toFixed(1)} on the Palma, from redrawing lines on a
+        map. The units are also wildly unequal in size, from {TD.area_km2.min} km² to
+        {TD.area_km2.max} km², a {nf(TD.area_km2.ratio)}-fold range, and access correlates
+        {fx(TD.rho_area_access, 2)} with area. Kelurahan is the right unit for this question — it is
+        where people and services actually are — but the Palma in particular should never be quoted
+        without it.</p>
+        <p><b>The edge effect, by contrast, is a null.</b> The study clips at a bounding box, so
+        opportunities just outside it are invisible: Karawang's industrial estates east of Cikarang,
+        Serang to the west. We scanned access against distance from the boundary. Only
+        <b>{nf(TE.within_10km_units)} kelurahan</b> — {pct(TE.within_10km_pop_share, 1)} of the
+        region's population — lie within 10 km of the edge. Truncation is not a material driver of
+        the zero mass, and we say so rather than leaving it as an unquantified worry.</p>
+        <p class="caveat"><b>One publication defect, now fixed.</b> The per-kelurahan file the map
+        reads rounded access to four decimal places. The population-weighted median of that measure
+        is {fx(TH.median_value, 4)}, so the rounding step was {pct(TH.resolution_vs_median, 0)} of
+        the median value, and <b>{nf(TH.quantised_to_zero)} kelurahan holding
+        {nf(TH.quantised_pop)} people</b> ({pct(TH.quantised_pop_share, 1)} of the region) were
+        published as exactly zero when they were not. The map painted them the same colour as the
+        {nf(TH.true_zero)} genuine zeros. The export now writes six decimals.</p>
+      </section>
+
+      <section id="s14">
+        <h2><span class="num">14</span> What follows for decisions</h2>
+        <p>Evidence is worth gathering only if it changes an action. Read strictly, this instrument
+        supports four uses and forbids a fifth.</p>
+        <ol class="uses">
+          <li><b>A corridor pipeline, for Dishub DKI and the Jabodetabek transport authority.</b>
+          The {nf(TB.network_failures)} kelurahan with opportunity next door and no way to reach it
+          — {nf(TB.network_failure_pop)} people, concentrated in the Bekasi and Tangerang industrial
+          fringe — are a ranked, named, defensible list of feeder-route candidates. This is the
+          highest-value output in the whole case and it is currently invisible on the page.</li>
+          <li><b>A targeting layer for TransJakarta's Mikrotrans expansion.</b> The residuals in §7
+          identify precisely where a low-cost feeder converts nearby floorspace into reachable
+          floorspace. Kota Bogor's centre shows the upside when it works.</li>
+          <li><b>A before-and-after frame for KAI Commuter and MRT Jakarta.</b> The scenario
+          machinery already prices the rail layer; §8 shows its incidence. Any new line can be
+          scored the same way — and scored on <i>who gains</i> rather than on the mean.</li>
+          <li><b>An equity screen for Bappenas.</b> §9's double-disadvantage list —
+          {nf(PL.double_disadvantage_count)} kelurahan, {nf(PL.double_disadvantage_pop)} people, poor
+          and disconnected together — is exactly the intersection a national planning agency needs
+          and rarely has, and it exists only because two Demo Lab cases were joined.</li>
+          <li class="no"><b>Not: a cardinal statement of the size of the gap.</b>
+          "{cut60.ratio.toFixed(0)}×" is {cut30.ratio.toFixed(0)}× at a shorter budget,
+          {TJ.volume.ratio.toFixed(0)}× on a better proxy, and unquotable without the reporting unit
+          and the study area. Publish the ordering and the named lists; do not publish the
+          multiplier as though it were measured.</li>
+        </ol>
+        <p>The same discipline applies to the hospital figure.
+        {pct(A.scenarios.all.pop_share_no_hospital_60min, 0)} of the region cannot reach a hospital
+        in an hour <i>on scheduled public transport</i> — but Jabodetabek moves on motorcycles, and
+        <a href="#ref-andani">Andani et al. (2025)</a> find motorcycle access in Jakarta both broader
+        and more equally distributed than transit access. The statistic is a real indictment of the
+        transport network. It is not a statement about healthcare access, and the page has been
+        corrected to say which one it is.</p>
+      </section>
+
+      <section id="s15">
+        <h2><span class="num">15</span> What remains open</h2>
+        <ol class="next">
+          <li><b>Route the motorcycle.</b> Every equity conclusion here is conditional on a mode that
+          carries a minority of the region's trips. A second matrix on the same graph, with ojek
+          speeds and no timetable, would turn "who can reach work by bus" into "who can reach work",
+          and would test the case's central claim directly.</li>
+          <li><b>Validate against realised times.</b> The external routing comparison was never run
+          ({A.checks.external.reason}). Any archived vehicle-location or probe feed would let the
+          {pct(LIT.gtfsOptimismLo, 0)}–{pct(LIT.gtfsOptimismHi, 0)} schedule optimism be measured for
+          Jakarta rather than imported from Toronto and Boston.</li>
+          <li><b>Calibrate the hand-encoded rail per line to close the published gap.</b> §11 shows
+          the error is a bias with a geometric cause, not a spread. One scale factor per line removes
+          most of it, and the ±{A.rail_caveat_pct} % caveat can then mean what it says.</li>
+          <li><b>Obtain Andani et al. (2025) and compare like for like.</b> It is the only published
+          cumulative-opportunity accessibility study of Jakarta we could find, it appears to use a
+          different threshold again, and it is the one document that could turn this case's headline
+          from unbenchmarkable into benchmarked.</li>
+          <li><b>Publish the measure at every threshold and both frames by default.</b> Not as a
+          robustness appendix — as the result. §4 and §5 are not caveats about the finding; they
+          <i>are</i> the finding.</li>
+        </ol>
+      </section>
+
+      <section id="refs">
+        <h2><span class="num">16</span> References and reproducibility</h2>
+        <ol class="refs">
+          <li id="ref-pereira19">Pereira, R.H.M. (2019). Future accessibility impacts of transport
+          policy scenarios: Equity and sensitivity to travel time thresholds for Bus Rapid Transit
+          expansion in Rio de Janeiro. <i>Journal of Transport Geography</i> 74, 321–332.
+          doi:10.1016/j.jtrangeo.2018.12.005</li>
+          <li id="ref-wb">Peralta-Quiros, T., Kerzhner, T. &amp; Avner, P. (2019). <i>Exploring
+          Accessibility to Employment Opportunities in African Cities: A First Benchmark.</i> World
+          Bank Policy Research Working Paper 8971. doi:10.1596/1813-9450-8971 — Tables 1 and 3,
+          pp. 9–11.</li>
+          <li id="ref-wessel">Wessel, N. &amp; Farber, S. (2019). On the accuracy of schedule-based
+          GTFS for measuring accessibility. <i>Journal of Transport and Land Use</i> 12(1), 475–500.
+          doi:10.5198/jtlu.2019.1502</li>
+          <li id="ref-wu">Wu, H., Avner, P., Boisjoly, G., Braga, C.K.V., El-Geneidy, A., Huang, J.,
+          Kerzhner, T., Murphy, B., Niedzielski, M.A., Pereira, R.H.M., Pritchard, J.P., Stewart, A.,
+          Wang, J. &amp; Levinson, D. (2021). Urban access across the globe: an international
+          comparison of different transport modes. <i>npj Urban Sustainability</i> 1, 16.
+          doi:10.1038/s42949-021-00020-2</li>
+          <li id="ref-aaa">Owen, A., Liu, S.S. &amp; Lind, E.M. (2025). <i>Access Across America:
+          Transit 2024.</i> Report CTS 25-18, Accessibility Observatory, University of Minnesota.
+          Dataset doi:10.13020/gd60-km49. Table 2, p. 3.</li>
+          <li id="ref-guzman">Guzman, L.A., Oviedo, D. &amp; Rivera, C. (2017). Assessing equity in
+          transport accessibility to work and study: The Bogotá region. <i>Journal of Transport
+          Geography</i> 58, 236–246. doi:10.1016/j.jtrangeo.2016.12.016</li>
+          <li id="ref-delbosc">Delbosc, A. &amp; Currie, G. (2011). Using Lorenz curves to assess
+          public transport equity. <i>Journal of Transport Geography</i> 19(6), 1252–1259.
+          doi:10.1016/j.jtrangeo.2011.02.008</li>
+          <li id="ref-boisjoly">Boisjoly, G. &amp; El-Geneidy, A. (2017). How to get there? A critical
+          assessment of accessibility objectives and indicators in metropolitan transportation
+          plans. <i>Transport Policy</i> 55, 38–50. doi:10.1016/j.tranpol.2016.12.011</li>
+          <li id="ref-kwan">Kwan, M-P. &amp; Weber, J. (2008). Scale and accessibility: Implications
+          for the analysis of land use–travel interaction. <i>Applied Geography</i> 28(2), 110–123.
+          doi:10.1016/j.apgeog.2007.07.002</li>
+          <li id="ref-andani">Andani, I.G.A., Qamilla, N., Izdihar, R.P., Safira, M., Sakti, A. &amp;
+          Syabri, I. (2025). Spatial, mobility, or socio-economic inequity? A district level job
+          accessibility evaluation in Jakarta, Indonesia. <i>International Journal of Urban
+          Sciences.</i> doi:10.1080/12265934.2025.2553714 — <i>cited qualitatively; full text not
+          obtained.</i></li>
+          <li id="ref-itdp">Institute for Transportation and Development Policy (2016). <i>People
+          Near Transit: Improving Accessibility and Rapid Transit Coverage in Large Cities.</i> New
+          York: ITDP. Table 2, p. 11. Grey literature, no DOI.</li>
+          <li id="ref-ipea">Pereira, R.H.M. et al. (2020). <i>Desigualdades socioespaciais de acesso
+          a oportunidades nas cidades brasileiras.</i> Texto para Discussão 2535, IPEA, Brasília,
+          p. 29. Grey literature; no resolvable DOI.</li>
+          <li id="ref-r5">Conway, M.W., Byrd, A. &amp; van der Linden, M. (2017). Evidence-Based
+          Transit and Land Use Sketch Planning Using Interactive Accessibility Methods on Combined
+          Schedule and Headway-Based Networks. <i>Transportation Research Record</i> 2653(1), 45–53.
+          doi:10.3141/2653-06 — the R5 engine used here through r5py.</li>
+          <li id="ref-ghsl">European Commission JRC (2023). GHSL Global Human Settlement Layer
+          R2023A — GHS-BUILT-S NRES and GHS-BUILT-V NRES, epoch 2020, 100 m Mollweide; GHS-POP epoch
+          2025. CC BY 4.0.</li>
+          <li id="ref-brtdata">BRT+ Centre of Excellence &amp; ITDP. <i>Global BRTData</i>, Jakarta
+          entry (commercial speed {LIT.brtdataKmh} km/h, labelled {LIT.brtdataYear}). Grey
+          literature.</li>
+        </ol>
+        <p class="repro">Every figure and every number on this page is generated in the page's own
+        frontmatter from <code>data/article.json</code> and <code>data/review.json</code>, written by
+        <code>pipeline/article.py</code> and <code>pipeline/review.py</code> from the case's own
+        published outputs — <code>data/equity.json</code>, <code>data/stats.json</code>,
+        <code>data/access_adm4.parquet</code> and the routed travel-time matrix. The only
+        hand-entered values on this page are the literature constants in §2 and Figures 4 and 11,
+        each transcribed from the published PDF table named beside it. The eleven review tests were
+        specified before they were run and all eleven are reported, including the two that returned
+        nulls — edge effects, and the invariance of the ranking under the surface-to-volume swap.
+        Data vintage {A.vintage}; routed {A.window.date} {A.window.from}–{A.window.to}, p50 over the
+        window. The volume and city-frame tests re-weight the published matrix and re-route nothing,
+        so each isolates one definitional choice exactly. There is no WebGL and no canvas on this
+        page.</p>
+      </section>
+
+      <footer class="end">
+        <p>Part of the Demo Lab. Built end-to-end on public data — acquisition, routing, model,
+        validation, and this review.</p>
+        <a class="cta" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/`}>← Back to the hour</a>
+      </footer>
+    </article>
+
+    <div id="tip" hidden></div>
+
+    <style is:global>
+      body { margin: 0; background: var(--ground); color: var(--ink);
+        font-family: var(--font-body); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+      *, *::before, *::after { box-sizing: border-box; }
+      a { color: var(--accent); }
+
+      .bar { position: sticky; top: 0; z-index: 20; display: flex; justify-content: space-between;
+        align-items: center; gap: 16px; padding: 12px 24px;
+        background: color-mix(in srgb, var(--ground) 92%, transparent);
+        backdrop-filter: blur(8px); border-bottom: 1px solid var(--hairline); }
+      .back { text-decoration: none; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.06em; }
+      .stamp { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); }
+
+      article { max-width: 50rem; margin: 0 auto; padding: 0 24px 12vh; }
+      .masthead { padding: 9vh 0 4vh; border-bottom: 1px solid var(--hairline); }
+      .eyebrow { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--accent); }
+      h1 { font-family: var(--font-display); font-size: clamp(1.85rem, 5vw, 3.1rem); line-height: 1.1;
+        letter-spacing: -0.02em; margin: 18px 0 20px; }
+      .standfirst { font-size: 1.1rem; color: var(--ink); margin: 0 0 26px; max-width: 42rem; }
+      .byline { display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: var(--font-data);
+        font-size: 0.74rem; letter-spacing: 0.08em; color: var(--ink-muted); text-transform: uppercase; }
+
+      .abstract { margin: 5vh 0; padding: 26px 28px; border: 1px solid var(--hairline);
+        border-left: 3px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
+      .abstract h2 { font-family: var(--font-data); font-size: 0.76rem; letter-spacing: 0.16em;
+        color: var(--accent); margin: 0 0 14px; text-transform: uppercase; }
+      .abstract p { margin: 0 0 12px; font-size: 0.97rem; }
+      .abstract p:last-child { margin-bottom: 0; }
+
+      .toc { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 20px 0 8px; margin-bottom: 4vh;
+        border-bottom: 1px solid var(--hairline); font-family: var(--font-data); font-size: 0.74rem; }
+      .toc a { text-decoration: none; color: var(--ink-muted); }
+      .toc a:hover { color: var(--accent); }
+
+      section { margin: 6vh 0; }
+      h2 { font-family: var(--font-display); font-size: 1.5rem; line-height: 1.25; letter-spacing: -0.01em;
+        margin: 0 0 20px; display: flex; gap: 14px; align-items: baseline; text-wrap: balance; }
+      .num { font-family: var(--font-data); font-size: 0.9rem; color: var(--accent); flex: none; }
+      p { margin: 0 0 18px; }
+      b { color: #FFE7DC; font-weight: 600; }
+
+      .caveat { border-left: 2px solid var(--up); padding: 2px 0 2px 18px; color: var(--ink-muted); }
+      .caveat b { color: var(--up); }
+      .pull { font-size: 1.08rem; line-height: 1.6; border-left: 3px solid var(--accent);
+        padding: 8px 0 8px 20px; color: #FFE7DC; }
+
+      figure { margin: 34px 0; padding: 20px 18px 14px; border: 1px solid var(--hairline);
+        border-radius: var(--radius); background: var(--surface); }
+      .fig { display: block; width: 100%; height: auto; overflow: visible; }
+      figcaption { font-size: 0.85rem; color: var(--ink-muted); margin-top: 14px; line-height: 1.55; }
+      figcaption b { color: var(--ink); }
+
+      .d1 { fill: #6B7CA6; opacity: 0.5; transition: opacity 0.12s; cursor: crosshair; }
+      .d1.dki { fill: #E4562E; opacity: 0.8; }
+      .d1:hover { opacity: 1; }
+
+      ol.uses, ol.next { padding-left: 22px; margin: 0 0 18px; }
+      ol.uses li, ol.next li { margin-bottom: 14px; }
+      ol.uses li.no { color: var(--ink-muted); }
+      ol.uses li.no b { color: var(--accent); }
+      ol.uses li::marker, ol.next li::marker { color: var(--accent); }
+
+      ol.refs { padding-left: 22px; font-size: 0.9rem; color: var(--ink-muted); }
+      ol.refs li { margin-bottom: 12px; }
+      .repro { font-size: 0.86rem; color: var(--ink-muted); border-top: 1px solid var(--hairline); padding-top: 18px; }
+      code { font-family: var(--font-data); font-size: 0.88em; color: var(--accent); overflow-wrap: anywhere; }
+
+      .end { margin-top: 8vh; padding-top: 26px; border-top: 1px solid var(--hairline); }
+      .end p { color: var(--ink-muted); font-size: 0.9rem; }
+      .cta { display: inline-block; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.08em;
+        color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 10px 18px; text-decoration: none; }
+      .cta:hover { background: var(--accent-ink); }
+
+      #tip { position: fixed; z-index: 60; pointer-events: none; background: var(--surface-raised);
+        border: 1px solid var(--hairline); border-radius: 5px; padding: 8px 11px; font-family: var(--font-data);
+        font-size: 0.72rem; line-height: 1.5; color: var(--ink); box-shadow: 0 8px 26px rgba(0,0,0,0.55); }
+
+      @media (max-width: 680px) {
+        article { padding: 0 16px 10vh; }
+        .masthead { padding-top: 5vh; }
+        .abstract { padding: 18px 16px; }
+        figure { padding: 14px 8px 10px; }
+      }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+
+    <script>
+      /* Hover read-out for the scatter. Pure SVG, no GPU path. */
+      const tip = document.getElementById("tip");
+      const show = (html, e) => {
+        tip.innerHTML = html; tip.hidden = false;
+        const r = tip.getBoundingClientRect();
+        let x = e.clientX + 14, y = e.clientY + 14;
+        if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+        if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+        tip.style.left = x + "px"; tip.style.top = y + "px";
+      };
+      document.querySelectorAll(".d1").forEach((el) => {
+        el.addEventListener("mousemove", (e) => {
+          const d = el.dataset;
+          show(`<b>${d.n}</b><br>${d.r}<br>within 10 km ${d.x}%<br>reached in 60 min ${d.y}%`, e);
+        });
+        el.addEventListener("mouseleave", () => { tip.hidden = true; });
+      });
+    </script>
+  </body>
+</html>
