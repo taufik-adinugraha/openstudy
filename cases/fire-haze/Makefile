@@ -12,7 +12,7 @@
 PY := uv run python pipeline
 
 .PHONY: rebuild fires era5 era5-poll cams fwi static indices ground features risk transport \
-        validate export refresh brief web help
+        validate export refresh brief web help review article
 
 help:
 	@echo "rebuild     full DAG: fires -> static -> indices -> era5 -> cams -> ground"
@@ -33,6 +33,9 @@ help:
 	@echo ""
 	@echo "era5-poll   drain the CDS queue without resubmitting (safe to run repeatedly)"
 	@echo "fwi         drain the EWDS queue only — the CEMS baseline for gate G-J2"
+	@echo "review      the adversarial re-scoring: average precision, the ROC decomposition,"
+	@echo "            the FWI audit, the trajectory replay, and the spatially blocked refit"
+	@echo "article     build web/src/data/article.json, which /haze/article renders"
 	@echo ""
 	@echo "NOTE: CDS/ADS/EWDS all authenticate with the one ECMWF token in .env.  ADS and EWDS"
 	@echo "      each needed a ONE-TIME browser policy acceptance; both were accepted 2026-08-30"
@@ -79,6 +82,13 @@ validate:        ## gates G-J1..G-J5
 
 export:
 	$(PY)/export_web.py
+
+review:          ## data/review.json — the adversarial re-scoring behind /haze/article
+	$(PY)/review.py
+	$(PY)/review.py --only spatial
+
+article:         ## web/src/data/article.json — the review article's data layer
+	$(PY)/article.py data/stats.json data/review.json web/src/data/article.json
 
 refresh:         ## cron target (daily); idempotent by acquisition date
 	$(PY)/ingest_fires.py --nrt-only && $(PY)/features.py && $(PY)/risk.py --predict-only \
