@@ -191,13 +191,28 @@ const maxMean = summary.topMean[0].v;
             <button id="btn-sol" class="on">TOTAL LIGHT</button><button id="btn-mean">INTENSITY</button>
           </div>
         </div>
+        <p class="how-to-read"><b>Total light</b> is the sum of radiance falling inside a regency, so it
+        rewards size and breadth — big industrial regencies lead. <b>Intensity</b> is the mean radiance
+        per pixel, which is independent of size — dense city cores lead. Darker means dimmer, on a log
+        scale that is <b>fixed across all 103 months</b>, so colours are comparable as the player runs.
+        One consequence is worth knowing before you read the animation: a cloudy monsoon month goes dark
+        across the whole map because the satellite saw less of it, not because the lights went out. The
+        coverage figure below the slider tells you which months those are.</p>
       </div>
       <div id="map"></div>
-      <div class="player" aria-label="month player">
-        <button id="btn-play" aria-label="play">▶</button>
-        <input id="month-range" type="range" min="0" max="0" step="1" value="0" aria-label="month" />
-        <output class="month-out" id="hud-month"></output>
-        <div class="hud"><span id="hud-sol"></span><span id="hud-cov"></span><span id="hud-mover"></span></div>
+      <div class="map-foot">
+        <div class="legend" id="legend" aria-hidden="true">
+          <span class="stamp dim" id="legend-title">TOTAL LIGHT</span>
+          <div class="legend-ramp"><i></i></div>
+          <div class="legend-ticks" id="legend-ticks"></div>
+          <span class="legend-note stamp dim">log scale · fixed across all months · top 0.5% clipped</span>
+        </div>
+        <div class="player" aria-label="month player">
+          <button id="btn-play" aria-label="play">▶</button>
+          <input id="month-range" type="range" min="0" max="0" step="1" value="0" aria-label="month" />
+          <output class="month-out" id="hud-month"></output>
+          <div class="hud"><span id="hud-sol"></span><span id="hud-cov"></span><span id="hud-mover"></span></div>
+        </div>
       </div>
       <aside id="region-panel" hidden>
         <button id="panel-close" aria-label="close">×</button>
@@ -388,11 +403,28 @@ const maxMean = summary.topMean[0].v;
         }
         return out;
       };
+      /* ONE fixed scale per metric, taken over every month at once. Re-deriving the
+         ceiling from each month's own distribution (as this did) made colours mean
+         different things in different frames, so the player animated the shifting
+         distribution as if it were shifting light — the same trap frames.py avoids
+         in the hero with a single fixed stretch. */
+      const scaleCache = {};
+      const scaleFor = (metric) => {
+        if (scaleCache[metric]) return scaleCache[metric];
+        const idx = metric === "sol" ? 0 : 1;
+        const all = [];
+        for (const id in ledger.regions) {
+          const ser = ledger.regions[id].series;
+          for (const m in ser) { const v = ser[m][idx]; if (v > 0) all.push(v); }
+        }
+        all.sort(d3.ascending);
+        const top = d3.quantile(all, 0.995) ?? 1;
+        return (scaleCache[metric] = { top, hi: Math.log10(top + 1), n: all.length });
+      };
       // inject normalized shade value v ∈ [0,1] into feature properties
       const shade = (month, metric) => {
         const vals = values(month, metric);
-        const arr = [...vals.values()].filter((v) => v > 0);
-        const hi = Math.log10((d3.quantile(arr.sort(d3.ascending), 0.995) ?? 1) + 1);
+        const { hi } = scaleFor(metric);
         for (const f of geo.features) {
           const v = vals.get(f.properties.id) ?? 0;
           f.properties.v = Math.min(Math.log10(v + 1) / hi, 1);
@@ -608,6 +640,22 @@ const maxMean = summary.topMean[0].v;
         console.warn("WebGL map unavailable — 2-D canvas fallback:", err?.message ?? err);
         mapApi = sect("map (2-D fallback)", () => canvasMap());
       }
+      /* Legend ticks are the inverse of the shade transform, so they read in real
+         units: v = log10(x+1)/hi  =>  x = 10^(v·hi) − 1. */
+      const legendTitle = document.getElementById("legend-title");
+      const legendTicks = document.getElementById("legend-ticks");
+      function renderLegend() {
+        if (!legendTicks) return;
+        const { hi } = scaleFor(state.metric);
+        const sol = state.metric === "sol";
+        legendTitle.textContent = sol
+          ? "TOTAL LIGHT · SUM OF RADIANCE PER REGENCY"
+          : "INTENSITY · MEAN RADIANCE (nW/cm²·sr)";
+        const f = sol ? d3.format(".2~s") : d3.format(".2~r");
+        legendTicks.innerHTML = [0, 0.25, 0.5, 0.75, 1]
+          .map((v) => `<span>${f(Math.pow(10, v * hi) - 1)}</span>`).join("");
+      }
+      renderLegend();
       if (mapApi) mapApi.ready(() => mapApi.paint(state.month, state.metric));
 
       /* controls + URL state (options already populated above) */
@@ -617,6 +665,7 @@ const maxMean = summary.topMean[0].v;
         state.metric = metric;
         bSol.classList.toggle("on", metric === "sol");
         bMean.classList.toggle("on", metric === "mean");
+        renderLegend();
         mapApi?.paint(state.month, state.metric); syncHash();
       };
       bSol.onclick = () => setMetric("sol");
@@ -1023,10 +1072,23 @@ const maxMean = summary.topMean[0].v;
       .toggle button:focus-visible, .controls select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
       #map { height: 76vh; }
-      .player { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 12;
-        width: min(760px, calc(100% - 40px)); display: grid; grid-template-columns: auto 1fr auto; gap: 8px 14px; align-items: center;
-        padding: 10px 14px 9px; background: color-mix(in srgb, var(--surface-raised) 80%, transparent);
-        backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid var(--hairline); border-radius: 8px; }
+      /* Below the map, not over it — the floating panel used to cover southern Java. */
+      .map-foot { max-width: 72rem; margin: 0 auto; padding: 18px 24px 0;
+        display: grid; grid-template-columns: minmax(210px, 300px) 1fr; gap: 18px 34px; align-items: start; }
+      .player { display: grid; grid-template-columns: auto 1fr auto; gap: 8px 14px; align-items: center;
+        padding: 12px 16px 11px; background: var(--surface); border: 1px solid var(--hairline); border-radius: 8px; }
+
+      .legend { display: flex; flex-direction: column; gap: 6px; }
+      .legend-ramp { height: 12px; border-radius: 3px; overflow: hidden; border: 1px solid var(--hairline); }
+      .legend-ramp i { display: block; height: 100%;
+        background: linear-gradient(90deg, #05070F 0%, #1B2447 25%, #7A5A22 50%, #E8A33D 75%, #FFEFC9 100%); }
+      .legend-ticks { display: flex; justify-content: space-between; font-family: var(--font-data);
+        font-size: 0.68rem; letter-spacing: 0.04em; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+      .legend-note { font-size: 0.66rem !important; line-height: 1.4; }
+      .how-to-read { flex-basis: 100%; margin: 10px 0 0; max-width: 60rem; font-size: 0.9rem;
+        line-height: 1.6; color: var(--ink-muted); }
+      .how-to-read b { color: var(--ink); font-weight: 600; }
+      @media (max-width: 720px) { .map-foot { grid-template-columns: 1fr; } }
       #btn-play { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--accent); background: var(--accent-ink);
         color: var(--accent); cursor: pointer; font-size: 0.75rem; display: grid; place-items: center; padding: 0 0 0 1px; }
       #btn-play:hover { box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent); }
@@ -1042,7 +1104,7 @@ const maxMean = summary.topMean[0].v;
       .player .hud b { color: var(--ink); font-weight: 600; }
       .player .hud .mover { color: var(--accent); }
       .player .hud .masked { color: var(--down); }
-      @media (max-width: 640px) { .player { bottom: 12px; } .player .hud { font-size: 0.75rem; gap: 2px 12px; } }
+      @media (max-width: 640px) { .player .hud { font-size: 0.75rem; gap: 2px 12px; } }
       #chart-tip { position: absolute; z-index: 30; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px; font-family: var(--font-data); font-size: 0.75rem; line-height: 1.6; color: var(--ink); }
       #tooltip { position: absolute; z-index: 10; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px; font-family: var(--font-data); font-size: 0.75rem; line-height: 1.5; color: var(--ink); }
       #region-panel[hidden] { display: none; }
