@@ -819,9 +819,11 @@ import "maplibre-gl/dist/maplibre-gl.css";
         items.push(["Bodetabek, median resident", pct(sAll.bodetabek_median, 2), "population-weighted"]);
         co.innerHTML = items.map(([l, v, s]) => `<div class="callout"><span class="co-v">${v}</span><span class="co-l">${l}</span><span class="co-s">${s}</span></div>`).join("");
         const ratio = sAll.bodetabek_median > 0 ? (sAll.dki_median / sAll.bodetabek_median) : null;
+        const c30 = (equity.by_cutoff ?? []).find((r) => r.cutoff === 30);
         document.getElementById("ch2-sowhat").textContent =
           `So what: the median resident of DKI Jakarta reaches ${pct(sAll.dki_median, 2)} of the region's job-dense floorspace in an hour; the median resident of Bodetabek reaches ${pct(sAll.bodetabek_median, 2)}` +
-          (ratio && isFinite(ratio) ? ` — a gap of ${ratio.toFixed(0)}×, which no amount of individual effort closes.` : ".");
+          (ratio && isFinite(ratio) ? ` — a gap of ${ratio.toFixed(0)}× at this cutoff, ${c30 ? `and ${c30.ratio.toFixed(0)}× at thirty minutes. ` : ". "}` : ". ") +
+          "Both are gaps in the scheduled network this models; the motorcycles most of the region actually travels on are not routed here.";
         document.getElementById("foot-stamp").textContent =
           `A DEMO-LAB CASE · STATIC SNAPSHOT · ROUTED ${access.window.date} ${access.window.from}–${access.window.to} · GENERATED ${(stats?.generated ?? "").slice(0, 10)}`;
       });

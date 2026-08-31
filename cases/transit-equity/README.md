@@ -17,7 +17,7 @@ Access = share of Jabodetabek's job-dense floorspace (GHS-BUILT-S NRES) reachabl
 | | |
 |---|---|
 | DKI Jakarta, median resident | **4.29 %** |
-| Bodetabek, median resident | **0.05 %** — a gap of ~86× |
+| Bodetabek, median resident | **0.05 %** — a gap of 88× at 60 min, 14× at 30 min |
 | Menteng (pop-weighted) | 9.98 %, 9 min to a hospital |
 | Bekasi (pop-weighted) | 0.31 %, 20 min to a hospital |
 | Gini of population-weighted access | **0.743** (0.737 without rail, 0.629 walking only) |

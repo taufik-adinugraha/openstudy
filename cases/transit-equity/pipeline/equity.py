@@ -136,10 +136,12 @@ def main() -> None:
             "palma_note": None if palma is not None else
                 "undefined — the bottom 40 % of the population reach essentially nothing",
             "lorenz": curve,
-            "median_jobs_share": round(wmedian(a.jobs_share.values, a["pop"].values), 4),
-            "mean_jobs_share": round(float(np.average(a.jobs_share, weights=a["pop"])), 4),
-            "dki_median": round(wmedian(dki.jobs_share.values, dki["pop"].values), 4),
-            "bodetabek_median": round(wmedian(bod.jobs_share.values, bod["pop"].values), 4),
+            # Six decimals: the medians here are ~2e-3 and their ratio is a headline, so
+            # rounding at 1e-4 made the same gap read 86x here and 88x in by_cutoff.
+            "median_jobs_share": round(wmedian(a.jobs_share.values, a["pop"].values), 6),
+            "mean_jobs_share": round(float(np.average(a.jobs_share, weights=a["pop"])), 6),
+            "dki_median": round(wmedian(dki.jobs_share.values, dki["pop"].values), 6),
+            "bodetabek_median": round(wmedian(bod.jobs_share.values, bod["pop"].values), 6),
             "median_nearest_hospital_min": (float(np.nanmedian(a.nearest_hosp_min))
                                             if a.nearest_hosp_min.notna().any() else None),
             "pop_no_hospital_60min": float(a.loc[a.hospitals == 0, "pop"].sum()),
@@ -149,16 +151,16 @@ def main() -> None:
         A, N = out["scenarios"]["all"], out["scenarios"]["no_rail"]
         out["rail_contribution"] = {
             "gini_delta": None if A["gini"] is None or N["gini"] is None else round(A["gini"] - N["gini"], 4),
-            "median_access_delta": round(A["median_jobs_share"] - N["median_jobs_share"], 4),
-            "mean_access_delta": round(A["mean_jobs_share"] - N["mean_jobs_share"], 4),
+            "median_access_delta": round(A["median_jobs_share"] - N["median_jobs_share"], 6),
+            "mean_access_delta": round(A["mean_jobs_share"] - N["mean_jobs_share"], 6),
             "note": "what the KRL/MRT/LRT layer adds on top of TransJakarta + walking; "
                     "rail times are hand-encoded from published headways (±15 %)."}
     if "all" in out["scenarios"] and "walk" in out["scenarios"]:
         A, W = out["scenarios"]["all"], out["scenarios"]["walk"]
         out["transit_contribution"] = {
             "gini_delta": None if A["gini"] is None or W["gini"] is None else round(A["gini"] - W["gini"], 4),
-            "median_access_delta": round(A["median_jobs_share"] - W["median_jobs_share"], 4),
-            "mean_access_delta": round(A["mean_jobs_share"] - W["mean_jobs_share"], 4),
+            "median_access_delta": round(A["median_jobs_share"] - W["median_jobs_share"], 6),
+            "mean_access_delta": round(A["mean_jobs_share"] - W["mean_jobs_share"], 6),
             "note": "the whole public-transport system against walking alone."}
 
     # The hour is a choice, so publish what the other choices give. A cumulative-opportunity
