@@ -15,8 +15,10 @@ Astro dev on port 4327, base `/jakarta`). Gate G-C3 (own LiCSBAS run) pending.
     make grid      deposited field → 0.001° velocity raster + gates G-C1/G-C2
     make fuse      kelurahan exposure + the clock + gates G-C4/G-C5
     make export    NaN-safe web view-models + hero render
+    make review    the eight adversarial-review tests → data/derived/review.json
+    make article   review.json + published outputs → web/src/data/article.json
     make validate  = grid + fuse (re-evaluates every gate)
-    make rebuild   = ingest + grid + fuse + export
+    make rebuild   = ingest + grid + fuse + export + review + article
 
 `uv sync` first. Long jobs run as transient units
 (`sudo systemd-run --unit jk-<name> … -p MemoryMax=4G`); the full
@@ -38,6 +40,32 @@ people on ground below +1 m: 391 k (2025) → 468 k (2050) under linear
 extrapolation; below mean sea level: 121 k → 192 k; 14 kelurahan already have
 low ground below MSL.
 
+## Adversarial review (`/jakarta/article`, 15 sections, 11 figures)
+
+`pipeline/review.py` runs eight pre-specified tests over data already on disk;
+`pipeline/article.py` turns them plus the published outputs into
+`web/src/data/article.json`, which both the article and the corrected case page
+read, so prose can never drift from numbers.
+
+| Test | Result |
+|------|--------|
+| H · replication vs the depositors' own table S2 | **PASS** — all five kota, largest mean error **0.032 cm/yr** |
+| B · InSAR vs GNSS on matched windows | InSAR − GNSS(whole record) **+1.78 ± 0.51** mm/yr → **−0.03 ± 0.89** on 2017+ (+0.40 ± 0.90 on 2018+) |
+| A · deceleration | CJKT **−8.58 → −3.77** mm/yr; 3/3 metro stations slowed (+3.18 mean); 12/17 elsewhere on north Java accelerated |
+| C · ground estimator | below +1 m 2025: **391,029** (cell min) · 144,346 (q25) · **35,965** (cell mean); 61,713 people on 1,981 cells pinned to exactly 0.00 m |
+| D · elevation epoch | 391,029 → **432,584** today = the published clock's **2037** |
+| E · datum sweep | +10 cm sea level: below-MSL 2050 192,155 → 220,805 |
+| F · radar switched off | 2050 ranking **ρ = 0.959**, 19/20 top-20 shared |
+| G · decaying rate | 2050 below +1 m **422,303** vs 468,034 published (59% of the rise disappears) |
+
+Corrections applied to the case page: the hero's "north coast" framing (12 of the
+20 fastest-median kelurahan are in Jakarta Barat, 6 of 20 coastal, ρ(rate, low
+ground) = 0.149); the false reference-frame explanation in the validation footer;
+the hotspot footnote's attribution of the whole gap with 2000s literature to pixel
+size; the unqualified "below +1 m" headline; the one-sided clock caveat; the
+un-disclosed rounding artefact in the below-MSL series; the exposure ranking's
+elevation dominance; and the flood check reframed from apology to finding.
+
 ## Decisions pending user verification
 
 1. **Gate renumbering.** The build brief asked for G-C4 = exposure sanity; the
@@ -53,9 +81,12 @@ low ground below MSL.
    clamped at −5 m; kelurahan "low ground" = p10 of those cell values. In
    fully roofed cells this still overstates ground; stated on the page.
 5. **No DEM epoch correction.** GLO-30 (2011–2015 acquisitions, ±2–4 m
-   vertical) is taken as the 2025 surface. Fast hotspots have lost a further
-   0.3–0.5 m since acquisition, so the clock is, if anything, optimistic.
-   Chosen over speculative back-casting; stated on the page.
+   vertical) is taken as the 2025 surface. Chosen over speculative back-casting;
+   stated on the page. **Revised after the review:** the omission is now priced
+   (`pipeline/review.py` test D — 391,029 → 432,584 below +1 m today, i.e. 12 of
+   the clock's 25 years) and the page no longer claims the clock is "if anything,
+   optimistic": a fixed sea-level datum pushes the same way, while the
+   constant-rate assumption pushes hard the other way.
 6. **Clock assumptions.** Linear extrapolation of 2017–2023 rates; cells
    without InSAR coverage held stable; thresholds +1 m and 0 m (EGM2008 MSL).
    Momentum, not a forecast — repeated wherever the clock appears.
