@@ -859,7 +859,10 @@ const flipped = rv
       table.rank td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
       table.rank td span { display: block; color: var(--ink); } table.rank td i { color: var(--ink-muted); font-style: normal; font-size: 0.75rem; }
       table.rank td.era-name { color: var(--accent); white-space: nowrap; }
-      table.rank.small { font-size: 0.78rem; } table.rank td.num { text-align: right; font-variant-numeric: tabular-nums; } table.rank th:not(:first-child) { text-align: right; } table.rank.anchors th:last-child, table.rank.anchors td:last-child { text-align: right; }
+      table.rank.small { font-size: 0.78rem; } table.rank td.num { text-align: right; font-variant-numeric: tabular-nums; }
+      /* Right-align headers only where the body cells are numeric. The era table's cells are
+         left-aligned text, so a blanket rule here put its #1..#6 over the wrong columns. */
+      table.rank.small th:not(:first-child) { text-align: right; } table.rank.anchors th:last-child, table.rank.anchors td:last-child { text-align: right; }
       table.rank.anchors th:not(:first-child) { text-align: right; }
       .two-up { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px 40px; align-items: start; } .two-up h3 { margin-top: 0; }
 
