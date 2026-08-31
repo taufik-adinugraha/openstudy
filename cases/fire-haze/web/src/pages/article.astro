@@ -1016,8 +1016,9 @@ const bestComp = FW1.like_for_like.best_component;
         <figure>
           <Fragment set:html={F7} />
           <figcaption><b>Figure 7.</b> Ensemble half-width (root-mean-square distance from the
-          ensemble's own centre) against travel time, over {nf(TR.receptor_days)} receptor-days,
-          with the share of parcels still inside the domain on the right axis. Hover any point.</figcaption>
+          ensemble's own centre) against travel time, over {nf(TR.receptor_days)} receptor-days.
+          The slate curve is the share of released parcels still inside the domain, falling from
+          all of them at six hours to {pct(TR.ensemble[6].surv, 0)} at 72. Hover any point.</figcaption>
         </figure>
         <p>The ensemble half-width is {TR.ensemble[0].med.toFixed(0)} km at six hours,
         {TR.ensemble[2].med.toFixed(0)} km at a day, and
@@ -1159,9 +1160,10 @@ const bestComp = FW1.like_for_like.best_component;
           The hero's smaller print does say heights come from GFAS "where GFAS exists"; the chapter
           that draws the plume does not. Since release height decides whether smoke settles locally
           or joins the flow across the Strait — and since
-          <a href="#ref-stohl">Draxler and Hess</a> showed that starting a trajectory at 10, 200 and
-          750 m produces "quite substantial" differences where a ±0.5° horizontal offset produces
-          almost none — this is the single most consequential unqualified sentence on the page.</li>
+          <a href="#ref-draxler">Draxler &amp; Hess (1998)</a> showed that starting a trajectory at
+          10, 200 and 750 m produces "quite substantial" differences where a ±0.5° horizontal offset
+          produces almost none — this is the single most consequential unqualified sentence on the
+          page.</li>
           <li><b>"Drawn beside the CAMS chemistry forecast."</b> Chapter 04 promises the trajectory
           result next to a real chemistry-transport model, with divergence as the finding. The
           published transport metadata records that comparison as
@@ -1375,6 +1377,10 @@ const bestComp = FW1.like_for_like.best_component;
           <li id="ref-stohl">Stohl, A. (1998). Computation, accuracy and applications of
           trajectories — a review and bibliography. <i>Atmospheric Environment</i> 32(6), 947–966.
           doi:10.1016/S1352-2310(98)00184-8</li>
+          <li id="ref-draxler">Draxler, R.R. &amp; Hess, G.D. (1998). An overview of the HYSPLIT_4
+          modelling system for trajectories, dispersion and deposition.
+          <i>Australian Meteorological Magazine</i> 47(4), 295–308 — <i>the release-height
+          sensitivity quoted in §12.</i></li>
           <li id="ref-engstrom">Engström, A. &amp; Magnusson, L. (2009). Estimating trajectory
           uncertainties due to flow dependent errors in the atmospheric analysis.
           <i>Atmospheric Chemistry and Physics</i> 9(22), 8857–8867. doi:10.5194/acp-9-8857-2009</li>
