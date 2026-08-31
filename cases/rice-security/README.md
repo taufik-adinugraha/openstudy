@@ -23,16 +23,37 @@ dashboard live at `http://52.77.253.154:4333/rice`. `make rebuild` is the entry 
 
 ## What it found — all five gates red, and the reason is measurable
 
-**Headline: we find the rice; we find one crop where there are two.** Detected paddy extent sits
-inside Open-SEA-Rice-10 on **82.6 %** of its area, and the seasonal shape of the harvest tracks
-BPS month for month. But the detector returns **~1.5 crops per rice cell per year** in the
-irrigated commands where agronomy and BPS both say two, so a harvested-area figure — which is a
-*flow* — is short by exactly that factor: **−50 % in West Java's big irrigated blocks, −85 to
-−97 % in East Java's more fragmented ones**. The mechanism is measured, not guessed: a 100 m cell
-holds several 0.3–0.5 ha sawah plots that are not transplanted on the same day, so the cell mean
-never swings as far as a plot does and the second, weaker cycle disappears into the first. Where
-the damping is largest the shortfall is largest — Indramayu's rice cells swing **9.3 dB** in VH
-and we recover half of KSA; Lamongan's swing **6.6 dB** and we recover a tenth.
+> **CORRECTED 2026-08-31 after the adversarial review** (`pipeline/audit.py`,
+> `web/src/pages/article.astro`, served at `/rice/article`). The original headline — *"we find the
+> rice; we find one crop where there are two"* — is **wrong**, and it was wrong in a way the case's
+> own data already contradicted. The corrected headline is below; the superseded text is kept in
+> git history rather than quietly deleted.
+
+**Headline: we find a third of the rice, and about three-quarters of the crops on the third we
+find.** Harvested area is a flow, so the ratio to BPS factors exactly into an extent recall and an
+intensity recall, and both are measurable against Open-SEA-Rice-10:
+
+| year | fields found | crops per field found | = share of KSA | extent's share of the deficit |
+|---|---|---|---|---|
+| 2023 | 33.8 % | 73.9 % | 25.4 % | **78 %** |
+| 2024 | 39.6 % | 71.1 % | 30.3 % | **73 %** |
+| 2025 | 47.0 % | 79.2 % | 35.0 % | **76 %** |
+
+So roughly **three-quarters of the shortfall is fields never found**, not crops never counted. The
+82.6 % figure the page used to quote as evidence that "we find the rice" is a *precision*, which a
+detector can always buy by detecting less; per-year **recall is 31–39 %**. On cells Open-SEA-Rice-10
+calls double-cropping we return **1.49 cycles, not one**, and we see only **37.8 %** of those cells
+at all — against **3.6 %** of single-cropping cells and **12.5 %** of triple-cropping ones. The
+deficit is not seasonal either: after removing a systematic one-month late bias, the rendeng lobe is
+recovered at 26.2 % and the gadu lobe at 27.8 %.
+
+**What does explain it is revisit.** Thinning Karawang's own record from a 6-day to a 12-day gap —
+same fields, same detector, same thresholds — costs **92 % of its crop cycles and 72 % of its
+fields**, and reproduces East Java's observed shortfall. Running the other way, as Sentinel-1C and
+1D came online inside the sample Lamongan's median gap fell 12 → 8 days and its recall rose
+**×4.36** (3.7 % → 16.3 %). Sentinel-1B failed on 2021-12-23, six months *before* this record opens,
+so the whole series already sits on the degraded side of that event. Cell size is a real
+second-order effect; **revisit binds first**.
 
 | Gate | Result | Number |
 |---|---|---|
@@ -41,6 +62,16 @@ and we recover half of KSA; Lamongan's swing **6.6 dB** and we recover a tenth.
 | **G-I3** Cropping intensity | **FAIL** | irrigated units **1.09–1.58** cycles/yr against a 1.5–2.5 band (Karawang 1.58 and Subang 1.56 pass; Indramayu 1.44, Bojonegoro 1.13, Lamongan 1.09 fail). Rainfed Grobogan **1.10**, which *passes* its own <1.5 clause. |
 | **G-I4** Rice-map agreement | **FAIL** | we reproduce **51.2 %** of Open-SEA-Rice-10's rice area against a 70 % threshold — but **82.6 %** of our detected paddy is inside their map. We are conservative, not wrong: 251,710 cells are theirs only, 55,510 ours only. |
 | **G-I5** Temporal hold-out | **FAIL** | 2025/26 uncalibrated **−62.1 %** / MAPE 67.2 %; calibrated **+3.7 %** on the sum but MAPE 104.6 % monthly; timing **4.5 weeks**. |
+
+**Two further review findings on the table above.** G-I1's *calibrated* R² 0.82 is an annual
+aggregate: at the kabupaten-**month** resolution the calibration was actually fitted at, its R² is
+**0.06**, and the satellite supplies **5.0 %** of the calibrated hectares — negatively in
+Bojonegoro, Grobogan and Lamongan, where the fitted interaction's effective slope on detected area
+is below zero. G-I2's 5.0-week timing error survives a shape-based re-estimator (whole-curve
+cross-correlation gives the same 1-month median), so it is not an argmax artefact: 10 of 15
+unit-years sit at a clean **+1 month** and 3 at −4 months, which is the lobe alias. Remove the
+one-month constant and the correlation between our monthly curve and BPS's rises from **0.11 to
+0.77** — the harvest **date**, not the hectare count, is the output that works.
 
 **The single most telling number in the case:** applying the literature's unchanged −17 dB
 flooding rule at a 100 m cell yields **15,161 ha** where the scale-adapted criterion yields

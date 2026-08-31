@@ -1,0 +1,1200 @@
+---
+/* Review article — the case, stress-tested against its own data and the literature.
+ *
+ * Every figure is built here in frontmatter from data/article.json, which pipeline/article.py
+ * derives from the case's published summary and from pipeline/audit.py's independent
+ * recomputation. Nothing is drawn by hand, so the prose cannot drift from the numbers.
+ * SVG only: no WebGL, no canvas.
+ */
+import "../styles/tokens.css";
+import A from "../data/article.json";
+
+const PADDY = "#A8CE3A";      /* accent — the rice signal */
+const OFFICIAL = "#4BB8A9";   /* official statistics, everywhere in the lab */
+const FLOOD = "#2F7E96";
+const VEG = "#5FA83F";
+const RIPE = "#E6B94F";
+const STUBBLE = "#B4805A";
+const ALERT = "#E08B54";
+const INK = "#E8EEEC", MUTED = "#93A5A2", GRID = "#1F2E31";
+
+const KCOL: Record<string, string> = {
+  Indramayu: PADDY, Karawang: OFFICIAL, Subang: VEG,
+  Bojonegoro: RIPE, Lamongan: ALERT, Grobogan: FLOOD,
+};
+void STUBBLE;
+
+const esc = (s: unknown) =>
+  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const pct = (x: number, d = 1) => `${(x * 100).toFixed(d)}%`;
+const kha = (x: number) => `${(x / 1000).toFixed(0)}k ha`;
+const num = (x: number) => Math.round(x).toLocaleString("en-US");
+
+/* ── Literature, transcribed from the published papers ──────────────────────────────
+ * These are the only hand-entered numbers on the page and they are other people's.
+ * Everything else comes from article.json. */
+const LIT = {
+  torbick: { area_ha: 6_652_111, r2: 0.78, images: 632, sensor: "Sentinel-1A", country: "Myanmar" },
+  riice: { images: 127, footprints: 13, countries: 6, acc_lo: 85, acc_hi: 95, mapped_mha: 1.6 },
+  opensea: { oa: 0.983, kappa: 0.870, f1: 0.879, idn_r2: 0.85, idn_mean_err_ha: 6460,
+             idn_rmse_ha: 11440, sea_r2: 0.92, sea_gap_pct: 4.3 },
+};
+
+/* ── derived scalars the prose uses ──────────────────────────────────────────────── */
+const H = A.headline;
+const dec = A.decomposition.aggregate;
+const first = dec[0], last = dec[dec.length - 1];
+const cc = A.crop_class.summary;
+const lad = A.thinning.ladder;
+const lad0 = lad[0], lad1 = lad[1];
+const wu = A.revisit.within_unit;
+const bestGain = [...wu].sort((a: any, b: any) => b.gain - a.gain)[0];
+const kabRows = A.decomposition.by_kabupaten;
+const worstKab = [...kabRows].sort((a: any, b: any) => a.ratio_ksa - b.ratio_ksa)[0];
+const meanGap: Record<string, number> = {};
+for (const r of A.revisit.rows) {
+  meanGap[r.kabupaten] = (meanGap[r.kabupaten] ?? 0) + r.median_gap_days / 3;
+}
+const vhRiseLo = Math.min(...A.kabupaten.map((k: any) => k.median_vh_rise_db));
+const vhRiseHi = Math.max(...A.kabupaten.map((k: any) => k.median_vh_rise_db));
+const lagBins: Record<number, number> = {};
+for (const r of A.timing.rows) lagBins[r.xcorr_lag_months] = (lagBins[r.xcorr_lag_months] ?? 0) + 1;
+const lagSorted = Object.entries(lagBins).map(([k, v]) => ({ lag: Number(k), n: v }))
+  .sort((a, b) => b.n - a.n);
+const modal = lagSorted[0];
+const aliased = lagSorted.filter((r) => Math.abs(r.lag) >= 3).reduce((s, r) => s + r.n, 0);
+const prfYears = A.prf.rows.filter((r: any) => r.year !== "pooled");
+const prfP = [Math.min(...prfYears.map((r: any) => r.precision)),
+              Math.max(...prfYears.map((r: any) => r.precision))];
+const prfR = [Math.min(...prfYears.map((r: any) => r.recall)),
+              Math.max(...prfYears.map((r: any) => r.recall))];
+const sens = A.sensitivity;
+const sensBase = sens["_baseline_two_units_ha"];
+const riseUp = sens["VH rise 3 dB (looser)"] / sensBase - 1;
+const riseDn = sens["VH rise 5 dB (stricter)"] / sensBase - 1;
+
+/* ══════════════════════════════════════════════════════════════════════════════════
+   Figure 1 · the shortfall factors — and it factors the other way
+   ══════════════════════════════════════════════════════════════════════════════════ */
+function fig1() {
+  const W = 720, Hh = 440, L = 64, R = 158, T = 24, B = 56;
+  const x0 = 0, x1 = 1.08, y0 = 0, y1 = 1.12;
+  const sx = (v: number) => L + ((v - x0) / (x1 - x0)) * (W - L - R);
+  const sy = (v: number) => Hh - B - ((v - y0) / (y1 - y0)) * (Hh - T - B);
+  const iso = [0.15, 0.25, 0.5, 0.75, 1.0].map((c) => {
+    const pts: string[] = [];
+    for (let i = 0; i <= 60; i++) {
+      const xv = x0 + 0.02 + (i / 60) * (x1 - x0 - 0.02);
+      const yv = c / xv;
+      if (yv > y1 || yv < y0) continue;
+      pts.push(`${pts.length ? "L" : "M"}${sx(xv).toFixed(1)} ${sy(yv).toFixed(1)}`);
+    }
+    const lx = Math.min(x1 - 0.04, Math.max(c / y1 + 0.02, 0.06));
+    return `<path d="${pts.join("")}" fill="none" stroke="${GRID}" stroke-width="1.1"
+      stroke-dasharray="${c === 1 ? "none" : "3 4"}" opacity="0.9"/>
+      <text x="${sx(lx).toFixed(1)}" y="${(sy(Math.min(c / lx, y1)) - 6).toFixed(1)}"
+        fill="${MUTED}" font-size="9.5" font-family="var(--font-data)">${(c * 100).toFixed(0)}%</text>`;
+  }).join("");
+  const dots = kabRows.map((r: any) =>
+    `<circle class="d1" cx="${sx(r.recall_extent).toFixed(1)}" cy="${sy(r.recall_ci).toFixed(1)}" r="5"
+      fill="${KCOL[r.kabupaten] ?? PADDY}" stroke="${GRID}" stroke-width="0.8"
+      data-n="${esc(r.kabupaten)} ${r.year}"
+      data-t="fields found ${(r.recall_extent * 100).toFixed(0)}% · crops per field ${(r.recall_ci * 100).toFixed(0)}% · ${(r.ratio_ksa * 100).toFixed(0)}% of the benchmark"/>`).join("");
+  const pred = `<g>
+    <line x1="${sx(1).toFixed(1)}" y1="${(sy(0.5) - 9).toFixed(1)}" x2="${sx(1).toFixed(1)}" y2="${(sy(0.5) + 9).toFixed(1)}" stroke="${ALERT}" stroke-width="2"/>
+    <line x1="${(sx(1) - 9).toFixed(1)}" y1="${sy(0.5).toFixed(1)}" x2="${(sx(1) + 9).toFixed(1)}" y2="${sy(0.5).toFixed(1)}" stroke="${ALERT}" stroke-width="2"/>
+    <text x="${(sx(1) - 14).toFixed(1)}" y="${(sy(0.5) + 4).toFixed(1)}" fill="${ALERT}" font-size="10.5" text-anchor="end">what the stated</text>
+    <text x="${(sx(1) - 14).toFixed(1)}" y="${(sy(0.5) + 17).toFixed(1)}" fill="${ALERT}" font-size="10.5" text-anchor="end">diagnosis predicts</text></g>`;
+  const legend = Object.keys(KCOL).map((k, i) =>
+    `<circle cx="${W - R + 20}" cy="${T + 12 + i * 19}" r="4.5" fill="${KCOL[k]}"/>
+     <text x="${W - R + 32}" y="${T + 16 + i * 19}" fill="${MUTED}" font-size="11">${esc(k)}</text>`).join("");
+  const tx = [0, 0.25, 0.5, 0.75, 1.0].map((v) =>
+    `<text x="${sx(v).toFixed(1)}" y="${Hh - B + 19}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${(v * 100).toFixed(0)}%</text>`).join("");
+  const ty = [0, 0.25, 0.5, 0.75, 1.0].map((v) =>
+    `<text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">${(v * 100).toFixed(0)}%</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Extent recall against cropping-intensity recall for every regency-year; all points sit at low extent recall, not low intensity recall">
+    <line x1="${L}" y1="${Hh - B}" x2="${W - R}" y2="${Hh - B}" stroke="${GRID}"/>
+    <line x1="${L}" y1="${T}" x2="${L}" y2="${Hh - B}" stroke="${GRID}"/>
+    ${iso}${tx}${ty}${pred}${dots}${legend}
+    <text x="${((L + W - R) / 2).toFixed(1)}" y="${Hh - 14}" fill="${MUTED}" font-size="11.5" text-anchor="middle">share of the rice FIELDS we find →</text>
+    <text x="15" y="${(Hh / 2).toFixed(1)}" fill="${MUTED}" font-size="11.5" text-anchor="middle" transform="rotate(-90 15 ${(Hh / 2).toFixed(1)})">share of the CROPS per field →</text>
+    <text x="${(W - R + 12).toFixed(1)}" y="${Hh - B - 4}" fill="${MUTED}" font-size="10" font-family="var(--font-data)">dashed = share of</text>
+    <text x="${(W - R + 12).toFixed(1)}" y="${Hh - B + 9}" fill="${MUTED}" font-size="10" font-family="var(--font-data)">the benchmark</text>
+  </svg>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════
+   Figure 2 · three independent measurements, and a benchmark that does not move
+   ══════════════════════════════════════════════════════════════════════════════════ */
+function fig2() {
+  const W = 720, Hh = 372, L = 218, R = 96;
+  const bw = W - L - R;
+  const yr = A.benchmark.map_vs_ksa_year;
+  const rowAgg = dec.find((d: any) => d.year === yr) ?? dec[0];
+  const rows = [
+    { k: `BPS field survey (KSA), ${yr}`, v: rowAgg.ksa_ha, c: OFFICIAL },
+    { k: "Independent 10 m rice map", v: A.benchmark.map_implied_ha, c: FLOOD },
+    { k: "This instrument", v: rowAgg.detected_harvested_ha, c: PADDY },
+  ];
+  const max = Math.max(...rows.map((r) => r.v)) * 1.02;
+  const bars = rows.map((r, i) => {
+    const y = 30 + i * 34;
+    const w = (r.v / max) * bw;
+    return `<text x="${L - 12}" y="${y + 15}" fill="${INK}" font-size="11.5" text-anchor="end">${esc(r.k)}</text>
+      <rect x="${L}" y="${y + 3}" width="${w.toFixed(1)}" height="17" fill="${r.c}" rx="2"/>
+      <text x="${(L + w + 9).toFixed(1)}" y="${y + 16}" fill="${r.c}" font-size="11" font-family="var(--font-data)">${num(r.v)} ha</text>`;
+  }).join("");
+  const gapPct = A.benchmark.map_vs_ksa_pct;
+
+  /* lower panel — the national KSA series, with the 2018 method break drawn as a break */
+  const ser = A.benchmark.national_ksa_mha as Record<string, number>;
+  const yrs = Object.keys(ser).map(Number).sort((a, b) => a - b);
+  const pT = 196, pB = Hh - 40, pL = 60, pR = 40;
+  const preY = 2015, allYrs = [preY, ...yrs];
+  const sxp = (y: number) => pL + ((y - preY) / (yrs[yrs.length - 1] - preY)) * (W - pL - pR);
+  const vmax = 15.2, vmin = 9.4;
+  const syp = (v: number) => pB - ((v - vmin) / (vmax - vmin)) * (pB - pT);
+  const line = yrs.map((y, i) => `${i ? "L" : "M"}${sxp(y).toFixed(1)} ${syp(ser[String(y)]).toFixed(1)}`).join("");
+  const dots = yrs.map((y) =>
+    `<circle cx="${sxp(y).toFixed(1)}" cy="${syp(ser[String(y)]).toFixed(1)}" r="3.2" fill="${OFFICIAL}"/>`).join("");
+  const preHa = A.benchmark.pre_ksa_ha / 1e6;
+  const ticks = allYrs.filter((y) => y % 2 === 1 || y === 2018 || y === 2025).map((y) =>
+    `<text x="${sxp(y).toFixed(1)}" y="${pB + 17}" fill="${MUTED}" font-size="10" text-anchor="middle">${String(y).slice(2)}</text>`).join("");
+  const gl = [10, 12, 14].map((v) =>
+    `<line x1="${pL}" y1="${syp(v).toFixed(1)}" x2="${W - pR}" y2="${syp(v).toFixed(1)}" stroke="${GRID}" opacity="0.6"/>
+     <text x="${pL - 8}" y="${(syp(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10" text-anchor="end">${v}</text>`).join("");
+  const openX = sxp(2022) + ((sxp(2023) - sxp(2022)) / 2);
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="The official survey, an independent satellite rice map and this instrument, for the same six regencies; and the national official series showing the 2018 method break sits outside the record">
+    <text x="16" y="18" fill="${MUTED}" font-size="10.5" font-family="var(--font-data)">HARVESTED AREA, SIX REGENCIES</text>
+    ${bars}
+    <text x="${L}" y="${30 + 3 * 34 + 14}" fill="${MUTED}" font-size="11">The two independent benchmarks agree within ${Math.abs(gapPct).toFixed(1)}% of each other.</text>
+    <line x1="16" y1="176" x2="${W - 16}" y2="176" stroke="${GRID}"/>
+    <text x="16" y="${pT - 12}" fill="${MUTED}" font-size="10.5" font-family="var(--font-data)">NATIONAL HARVESTED AREA, Mha</text>
+    ${gl}${ticks}
+    <circle cx="${sxp(preY).toFixed(1)}" cy="${syp(preHa).toFixed(1)}" r="3.6" fill="${MUTED}"/>
+    <text x="${(sxp(preY) + 8).toFixed(1)}" y="${(syp(preHa) - 7).toFixed(1)}" fill="${MUTED}" font-size="10">old method ${preHa.toFixed(2)}</text>
+    <line x1="${(sxp(preY) + 2).toFixed(1)}" y1="${syp(preHa).toFixed(1)}" x2="${(sxp(2018) - 2).toFixed(1)}" y2="${syp(ser["2018"]).toFixed(1)}" stroke="${ALERT}" stroke-width="1.4" stroke-dasharray="2 5"/>
+    <text x="${sxp(2016.5).toFixed(1)}" y="${((syp(preHa) + syp(ser["2018"])) / 2 - 8).toFixed(1)}" fill="${ALERT}" font-size="10.5" text-anchor="middle">method change ${A.benchmark.break_pct}%</text>
+    <path d="${line}" fill="none" stroke="${OFFICIAL}" stroke-width="2.2"/>${dots}
+    <line x1="${openX.toFixed(1)}" y1="${pT - 4}" x2="${openX.toFixed(1)}" y2="${pB}" stroke="${PADDY}" stroke-dasharray="3 4" stroke-width="1.4"/>
+    <text x="${(openX + 6).toFixed(1)}" y="${pT + 8}" fill="${PADDY}" font-size="10.5">our record opens</text>
+  </svg>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════
+   Figure 3 · detection against the independent map's own crop count
+   ══════════════════════════════════════════════════════════════════════════════════ */
+function fig3() {
+  const W = 720, Hh = 286;
+  const names = ["single-crop", "double-crop", "triple-crop"];
+  const cls = ["1", "2", "3"];
+  const counts = A.mask.class_counts as Record<string, number>;
+  /* left panel — how many of these cells we detect at all */
+  const aL = 60, aR = 336, aT = 56, aB = 216;
+  const bwA = (aR - aL) / 3;
+  const left = cls.map((c, i) => {
+    const v = cc[c].detect_rate;
+    const h = v * (aB - aT);
+    const x = aL + i * bwA + bwA * 0.22;
+    return `<rect x="${x.toFixed(1)}" y="${(aB - h).toFixed(1)}" width="${(bwA * 0.56).toFixed(1)}" height="${h.toFixed(1)}" fill="${PADDY}" rx="2"/>
+      <text x="${(x + bwA * 0.28).toFixed(1)}" y="${(aB - h - 7).toFixed(1)}" fill="${PADDY}" font-size="11" text-anchor="middle" font-family="var(--font-data)">${(v * 100).toFixed(1)}%</text>
+      <text x="${(x + bwA * 0.28).toFixed(1)}" y="${aB + 16}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${names[i].split("-")[0]}</text>
+      <text x="${(x + bwA * 0.28).toFixed(1)}" y="${aB + 29}" fill="${MUTED}" font-size="9.5" text-anchor="middle" font-family="var(--font-data)">${(counts[c] / 1000).toFixed(0)}k cells</text>`;
+  }).join("");
+  const glA = [0.25, 0.5, 0.75, 1].map((v) =>
+    `<line x1="${aL}" y1="${(aB - v * (aB - aT)).toFixed(1)}" x2="${aR}" y2="${(aB - v * (aB - aT)).toFixed(1)}" stroke="${GRID}" opacity="0.6"/>
+     <text x="${aL - 7}" y="${(aB - v * (aB - aT) + 4).toFixed(1)}" fill="${MUTED}" font-size="9.5" text-anchor="end">${(v * 100).toFixed(0)}%</text>`).join("");
+  /* right panel — how many crops we count where we do find them */
+  const bL = 424, bR = 700, bT = 56, bB = 216;
+  const bwB = (bR - bL) / 3, ymax = 3.2;
+  const right = cls.map((c, i) => {
+    const v = cc[c].cond;
+    const truth = Number(c);
+    const h = (v / ymax) * (bB - bT);
+    const th = (truth / ymax) * (bB - bT);
+    const x = bL + i * bwB + bwB * 0.22;
+    const w = bwB * 0.56;
+    return `<rect x="${x.toFixed(1)}" y="${(bB - th).toFixed(1)}" width="${w.toFixed(1)}" height="${th.toFixed(1)}" fill="${FLOOD}" opacity="0.3" rx="2"/>
+      <line x1="${x.toFixed(1)}" y1="${(bB - th).toFixed(1)}" x2="${(x + w).toFixed(1)}" y2="${(bB - th).toFixed(1)}" stroke="${FLOOD}" stroke-width="2"/>
+      <rect x="${(x + w * 0.18).toFixed(1)}" y="${(bB - h).toFixed(1)}" width="${(w * 0.64).toFixed(1)}" height="${h.toFixed(1)}" fill="${PADDY}" rx="2"/>
+      <text x="${(x + w / 2).toFixed(1)}" y="${(bB - h - 7).toFixed(1)}" fill="${PADDY}" font-size="11" text-anchor="middle" font-family="var(--font-data)">${v.toFixed(2)}</text>
+      <text x="${(x + w / 2).toFixed(1)}" y="${bB + 16}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${names[i].split("-")[0]}</text>
+      <text x="${(x + w / 2).toFixed(1)}" y="${bB + 29}" fill="${FLOOD}" font-size="9.5" text-anchor="middle" font-family="var(--font-data)">map says ${truth}</text>`;
+  }).join("");
+  const glB = [1, 2, 3].map((v) =>
+    `<line x1="${bL}" y1="${(bB - (v / ymax) * (bB - bT)).toFixed(1)}" x2="${bR}" y2="${(bB - (v / ymax) * (bB - bT)).toFixed(1)}" stroke="${GRID}" opacity="0.6"/>
+     <text x="${bL - 7}" y="${(bB - (v / ymax) * (bB - bT) + 4).toFixed(1)}" fill="${MUTED}" font-size="9.5" text-anchor="end">${v}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="We detect 3.6 percent of single-crop cells and 37.8 percent of double-crop cells; where we detect them we count 1.07, 1.49 and 1.15 crops against a map that says one, two and three">
+    <text x="${aL}" y="26" fill="${INK}" font-size="12">Cells we find at all</text>
+    <text x="${aL}" y="41" fill="${MUTED}" font-size="10.5">of every cell the map calls rice</text>
+    <text x="${bL}" y="26" fill="${INK}" font-size="12">Crops we count where we find them</text>
+    <text x="${bL}" y="41" fill="${MUTED}" font-size="10.5">against the map's own crop count</text>
+    ${glA}${glB}
+    <line x1="${aL}" y1="${aB}" x2="${aR}" y2="${aB}" stroke="${GRID}"/>
+    <line x1="${bL}" y1="${bB}" x2="${bR}" y2="${bB}" stroke="${GRID}"/>
+    ${left}${right}
+    <text x="${W / 2}" y="${Hh - 8}" fill="${MUTED}" font-size="11" text-anchor="middle">classes of the independent 10 m map, ${A.full_years[0]}–${A.full_years[A.full_years.length - 1]} mean</text>
+  </svg>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════
+   Figure 4 · the deficit through the year
+   ══════════════════════════════════════════════════════════════════════════════════ */
+function fig4() {
+  const W = 720, Hh = 436, L = 56, R = 132, T = 34, B = 156;
+  const m = A.seasonal.by_month;
+  const adj = A.seasonal.by_month_lag_corrected;
+  const adjTot = adj.reduce((s: number, r: any) => s + r.ours_ha, 0);
+  const sx = (mm: number) => L + ((mm - 1) / 11) * (W - L - R);
+  const ymax = Math.max(...m.map((r: any) => Math.max(r.share_ours, r.share_ksa))) * 1.15;
+  const sy = (v: number) => Hh - B - (v / ymax) * (Hh - T - B);
+  const path = (vals: number[], col: string, dash: string) =>
+    `<path d="${vals.map((v, i) => `${i ? "L" : "M"}${sx(i + 1).toFixed(1)} ${sy(v).toFixed(1)}`).join("")}"
+      fill="none" stroke="${col}" stroke-width="2.2" stroke-dasharray="${dash}"/>`;
+  const band = (m0: number, m1: number, lab: string, col: string) =>
+    `<rect x="${sx(m0).toFixed(1)}" y="${T - 8}" width="${(sx(m1) - sx(m0)).toFixed(1)}" height="${(Hh - B - T + 8).toFixed(1)}" fill="${col}" opacity="0.07"/>
+     <text x="${((sx(m0) + sx(m1)) / 2).toFixed(1)}" y="${T - 12}" fill="${col}" font-size="10.5" text-anchor="middle">${lab}</text>`;
+  const rb0 = Hh - B + 56, rbH = 58;
+  const rmax = Math.max(...m.map((r: any) => r.ratio ?? 0)) * 1.1;
+  const ratio = m.map((r: any) => {
+    const v = r.ratio ?? 0;
+    const h = (v / rmax) * rbH;
+    return `<rect x="${(sx(r.month) - 11).toFixed(1)}" y="${(rb0 + rbH - h).toFixed(1)}" width="22" height="${h.toFixed(1)}" fill="${PADDY}" opacity="0.8" rx="1.5"/>
+      <text x="${sx(r.month).toFixed(1)}" y="${(rb0 + rbH - h - 4).toFixed(1)}" fill="${MUTED}" font-size="9" text-anchor="middle" font-family="var(--font-data)">${(v * 100).toFixed(0)}</text>`;
+  }).join("");
+  const MM = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+  const ticks = MM.map((s, i) =>
+    `<text x="${sx(i + 1).toFixed(1)}" y="${Hh - B + 18}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${s}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Monthly share of harvest, ours against the official survey, and the recovery ratio per month">
+    ${band(2, 5, "rendeng harvest", OFFICIAL)}${band(7, 10, "gadu harvest", RIPE)}
+    <line x1="${L}" y1="${Hh - B}" x2="${W - R}" y2="${Hh - B}" stroke="${GRID}"/>
+    ${ticks}
+    ${path(m.map((r: any) => r.share_ksa), OFFICIAL, "none")}
+    ${path(m.map((r: any) => r.share_ours), PADDY, "none")}
+    ${path(adj.map((r: any) => r.ours_ha / adjTot), PADDY, "4 4")}
+    <g><line x1="${W - R + 14}" y1="${T + 10}" x2="${W - R + 34}" y2="${T + 10}" stroke="${OFFICIAL}" stroke-width="2.2"/>
+      <text x="${W - R + 40}" y="${T + 14}" fill="${MUTED}" font-size="11">official survey</text>
+      <line x1="${W - R + 14}" y1="${T + 32}" x2="${W - R + 34}" y2="${T + 32}" stroke="${PADDY}" stroke-width="2.2"/>
+      <text x="${W - R + 40}" y="${T + 36}" fill="${MUTED}" font-size="11">ours</text>
+      <line x1="${W - R + 14}" y1="${T + 54}" x2="${W - R + 34}" y2="${T + 54}" stroke="${PADDY}" stroke-width="2.2" stroke-dasharray="4 4"/>
+      <text x="${W - R + 40}" y="${T + 58}" fill="${MUTED}" font-size="11">ours, ${A.seasonal.lag_months_removed}-month</text>
+      <text x="${W - R + 40}" y="${T + 71}" fill="${MUTED}" font-size="11">lag removed</text></g>
+    <text x="16" y="${(T + 6).toFixed(1)}" fill="${MUTED}" font-size="10" font-family="var(--font-data)">share</text>
+    <text x="16" y="${rb0 - 12}" fill="${MUTED}" font-size="10.5" font-family="var(--font-data)">SHARE OF THAT MONTH'S OFFICIAL HARVEST WE RECOVER, %</text>
+    <line x1="${L}" y1="${rb0 + rbH}" x2="${W - R}" y2="${rb0 + rbH}" stroke="${GRID}"/>
+    ${ratio}
+  </svg>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════
+   Figure 5 · the controlled test — same fields, fewer looks
+   ══════════════════════════════════════════════════════════════════════════════════ */
+function fig5() {
+  const W = 720, Hh = 400, L = 62, R = 156, T = 26, B = 56;
+  const x0 = 2.5, x1 = 26, y0 = 0, y1 = 0.78;
+  const sx = (v: number) => L + ((v - x0) / (x1 - x0)) * (W - L - R);
+  const sy = (v: number) => Hh - B - ((v - y0) / (y1 - y0)) * (Hh - T - B);
+  const line = lad.map((r: any, i: number) =>
+    `${i ? "L" : "M"}${sx(r.median_gap_days).toFixed(1)} ${sy(r.extent_recall_vs_prior).toFixed(1)}`).join("");
+  const ladDots = lad.map((r: any) =>
+    `<circle class="d1" cx="${sx(r.median_gap_days).toFixed(1)}" cy="${sy(r.extent_recall_vs_prior).toFixed(1)}" r="6"
+       fill="${PADDY}" stroke="${GRID}" stroke-width="1"
+       data-n="${esc(A.thinning.kabupaten)}, thinned to 1 look in ${r.thin}"
+       data-t="${r.n_acquisitions} looks · ${r.median_gap_days} d gap · ${(r.extent_recall_vs_prior * 100).toFixed(1)}% of fields found"/>
+     <text x="${(sx(r.median_gap_days) - 10).toFixed(1)}" y="${(sy(r.extent_recall_vs_prior) - 10).toFixed(1)}" fill="${PADDY}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">${(r.extent_recall_vs_prior * 100).toFixed(1)}%</text>`).join("");
+  const obs = A.revisit.overlay.map((r: any) =>
+    `<circle class="d1" cx="${sx(r.gap).toFixed(1)}" cy="${sy(r.recall).toFixed(1)}" r="4.2"
+      fill="${KCOL[r.kabupaten] ?? MUTED}" opacity="0.9" stroke="${GRID}" stroke-width="0.7"
+      data-n="${esc(r.kabupaten)} ${r.year}"
+      data-t="${r.acq} looks · ${r.gap} d gap · ${(r.recall * 100).toFixed(1)}% of fields found"/>`).join("");
+  const tx = [4, 6, 8, 12, 18, 24].map((v) =>
+    `<line x1="${sx(v).toFixed(1)}" y1="${Hh - B}" x2="${sx(v).toFixed(1)}" y2="${Hh - B + 4}" stroke="${GRID}"/>
+     <text x="${sx(v).toFixed(1)}" y="${Hh - B + 18}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${v}</text>`).join("");
+  const ty = [0, 0.2, 0.4, 0.6].map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - R}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.6"/>
+     <text x="${L - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">${(v * 100).toFixed(0)}%</text>`).join("");
+  const legend = Object.keys(KCOL).map((k, i) =>
+    `<circle cx="${W - R + 20}" cy="${T + 66 + i * 18}" r="4" fill="${KCOL[k]}"/>
+     <text x="${W - R + 31}" y="${T + 70 + i * 18}" fill="${MUTED}" font-size="10.5">${esc(k)}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Share of rice fields found against the median revisit gap; the controlled thinning curve and the six regencies' own observed points fall together">
+    ${ty}${tx}
+    <line x1="${L}" y1="${Hh - B}" x2="${W - R}" y2="${Hh - B}" stroke="${GRID}"/>
+    <path d="${line}" fill="none" stroke="${PADDY}" stroke-width="2.6" opacity="0.85"/>
+    ${ladDots}${obs}
+    <g><circle cx="${W - R + 20}" cy="${T + 12}" r="6" fill="${PADDY}"/>
+      <text x="${W - R + 31}" y="${T + 16}" fill="${MUTED}" font-size="10.5">${esc(A.thinning.kabupaten)},</text>
+      <text x="${W - R + 31}" y="${T + 29}" fill="${MUTED}" font-size="10.5">looks removed</text>
+      <text x="${W - R + 12}" y="${T + 52}" fill="${MUTED}" font-size="10.5">observed:</text></g>
+    ${legend}
+    <text x="${((L + W - R) / 2).toFixed(1)}" y="${Hh - 14}" fill="${MUTED}" font-size="11.5" text-anchor="middle">median days between radar looks →</text>
+    <text x="15" y="${(Hh / 2).toFixed(1)}" fill="${MUTED}" font-size="11.5" text-anchor="middle" transform="rotate(-90 15 ${(Hh / 2).toFixed(1)})">share of the rice fields found →</text>
+  </svg>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════
+   Figure 6 · revisit rose inside the sample, and detection rose with it
+   ══════════════════════════════════════════════════════════════════════════════════ */
+function fig6() {
+  const rows = [...wu].sort((a: any, b: any) => b.gain - a.gain);
+  const W = 720, L = 108, R = 216, T = 34, rh = 34;
+  const Hh = T + rows.length * rh + 34;
+  const max = 0.78;
+  const sx = (v: number) => L + (v / max) * (W - L - R);
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rh + 14;
+    const x1 = sx(r.recall_first), x2 = sx(r.recall_last);
+    const moved = r.gap_last < r.gap_first;
+    return `<text x="${L - 12}" y="${y + 4}" fill="${INK}" font-size="11.5" text-anchor="end">${esc(r.kabupaten)}</text>
+      <line x1="${x1.toFixed(1)}" y1="${y}" x2="${x2.toFixed(1)}" y2="${y}" stroke="${moved ? PADDY : MUTED}" stroke-width="2" opacity="0.55"/>
+      <circle cx="${x1.toFixed(1)}" cy="${y}" r="4.4" fill="${MUTED}"/>
+      <circle cx="${x2.toFixed(1)}" cy="${y}" r="5.4" fill="${moved ? PADDY : MUTED}"/>
+      <text x="${(W - R + 8).toFixed(1)}" y="${y + 4}" fill="${MUTED}" font-size="9.5" font-family="var(--font-data)">${r.gap_first}→${r.gap_last} d gap · ${r.acq_first}→${r.acq_last} looks</text>
+      <text x="${(W - 14).toFixed(1)}" y="${y + 4}" fill="${moved ? PADDY : MUTED}" font-size="11" text-anchor="end" font-family="var(--font-data)">×${r.gain.toFixed(2)}</text>`;
+  }).join("");
+  const ticks = [0, 0.2, 0.4, 0.6].map((v) =>
+    `<line x1="${sx(v).toFixed(1)}" y1="${T - 4}" x2="${sx(v).toFixed(1)}" y2="${Hh - 26}" stroke="${GRID}" opacity="0.6"/>
+     <text x="${sx(v).toFixed(1)}" y="${Hh - 10}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${(v * 100).toFixed(0)}%</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Share of rice fields found in 2023 against 2025 for each regency, with the change in revisit gap">
+    ${ticks}${body}
+    <text x="${L - 12}" y="${T - 6}" fill="${MUTED}" font-size="10" text-anchor="end" font-family="var(--font-data)">${A.full_years[0]} → ${A.full_years[A.full_years.length - 1]}</text>
+    <text x="${((L + W - R) / 2).toFixed(1)}" y="${T - 6}" fill="${MUTED}" font-size="10.5" text-anchor="middle">share of the rice fields found</text>
+  </svg>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════
+   Figure 7 · what the "damping" observable actually measures
+   ══════════════════════════════════════════════════════════════════════════════════ */
+function fig7() {
+  const W = 720, Hh = 320, L = 62, R = 150, T = 26, B = 54;
+  const x0 = 2.5, x1 = 26, y0 = 4.5, y1 = 9.4;
+  const sx = (v: number) => L + ((v - x0) / (x1 - x0)) * (W - L - R);
+  const sy = (v: number) => Hh - B - ((v - y0) / (y1 - y0)) * (Hh - T - B);
+  const line = lad.map((r: any, i: number) =>
+    `${i ? "L" : "M"}${sx(r.median_gap_days).toFixed(1)} ${sy(r.vh_range_db).toFixed(1)}`).join("");
+  const ladDots = lad.map((r: any) =>
+    `<circle cx="${sx(r.median_gap_days).toFixed(1)}" cy="${sy(r.vh_range_db).toFixed(1)}" r="5.6" fill="${PADDY}"/>
+     <text x="${(sx(r.median_gap_days) + 10).toFixed(1)}" y="${(sy(r.vh_range_db) + 17).toFixed(1)}" fill="${PADDY}" font-size="10.5" font-family="var(--font-data)">${r.vh_range_db.toFixed(2)}</text>`).join("");
+  const obs = Object.entries(A.revisit.vh_range_db).map(([k, v]: any) =>
+    `<circle class="d1" cx="${sx(meanGap[k] ?? 10).toFixed(1)}" cy="${sy(v).toFixed(1)}" r="5" fill="${KCOL[k] ?? MUTED}" stroke="${GRID}" stroke-width="0.8"
+       data-n="${esc(k)}" data-t="mean gap ${(meanGap[k] ?? 0).toFixed(1)} d · canopy swing ${v.toFixed(2)} dB"/>`).join("");
+  const leg7 = Object.keys(KCOL).map((k, i) =>
+    `<circle cx="${W - R + 18}" cy="${T + 56 + i * 17}" r="4" fill="${KCOL[k]}"/>
+     <text x="${W - R + 29}" y="${T + 60 + i * 17}" fill="${MUTED}" font-size="10.5">${esc(k)}</text>`).join("");
+  const tx = [4, 6, 8, 12, 18, 24].map((v) =>
+    `<text x="${sx(v).toFixed(1)}" y="${Hh - B + 18}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${v}</text>`).join("");
+  const ty = [5, 6, 7, 8, 9].map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - R}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.55"/>
+     <text x="${L - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">${v}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Canopy swing in decibels against revisit gap; thinning one regency's own record moves it only 1.6 decibels">
+    ${ty}${tx}
+    <line x1="${L}" y1="${Hh - B}" x2="${W - R}" y2="${Hh - B}" stroke="${GRID}"/>
+    <path d="${line}" fill="none" stroke="${PADDY}" stroke-width="2.4" opacity="0.85"/>
+    ${ladDots}${obs}
+    <g><circle cx="${W - R + 18}" cy="${T + 12}" r="5.6" fill="${PADDY}"/>
+      <text x="${W - R + 29}" y="${T + 16}" fill="${MUTED}" font-size="10.5">${esc(A.thinning.kabupaten)} thinned</text>
+      <text x="${W - R + 8}" y="${T + 40}" fill="${MUTED}" font-size="10.5">observed:</text></g>
+    ${leg7}
+    <text x="${((L + W - R) / 2).toFixed(1)}" y="${Hh - 12}" fill="${MUTED}" font-size="11.5" text-anchor="middle">median days between radar looks →</text>
+    <text x="15" y="${(Hh / 2).toFixed(1)}" fill="${MUTED}" font-size="11.5" text-anchor="middle" transform="rotate(-90 15 ${(Hh / 2).toFixed(1)})">canopy swing, dB →</text>
+  </svg>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════
+   Figure 8 · what the calibrated series is made of
+   ══════════════════════════════════════════════════════════════════════════════════ */
+function fig8() {
+  const rows = [...A.calibration.per_kabupaten].sort(
+    (a: any, b: any) => b.satellite_share - a.satellite_share);
+  const W = 720, L = 108, R = 186, T = 56, rh = 30;
+  const Hh = T + rows.length * rh + 40;
+  const lo = -0.05, hi = 0.20;
+  const sx = (v: number) => L + ((v - lo) / (hi - lo)) * (W - L - R);
+  const zx = sx(0);
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rh;
+    const x = sx(Math.min(r.satellite_share, 0)), w = Math.abs(sx(r.satellite_share) - zx);
+    const neg = r.satellite_share < 0;
+    return `<text x="${L - 12}" y="${y + 16}" fill="${INK}" font-size="11.5" text-anchor="end">${esc(r.kabupaten)}</text>
+      <rect x="${x.toFixed(1)}" y="${y + 5}" width="${Math.max(w, 1.5).toFixed(1)}" height="16" fill="${neg ? ALERT : PADDY}" rx="2"/>
+      <text x="${(neg ? x - 7 : x + w + 7).toFixed(1)}" y="${y + 17}" fill="${neg ? ALERT : PADDY}" font-size="11" text-anchor="${neg ? "end" : "start"}" font-family="var(--font-data)">${(r.satellite_share * 100).toFixed(1)}%</text>
+      <text x="${(W - 16).toFixed(1)}" y="${y + 17}" fill="${MUTED}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">slope ${r.effective_slope_on_detected.toFixed(2)} · swing ${r.vh_range_db.toFixed(1)} dB</text>`;
+  }).join("");
+  const ticks = [-0.05, 0, 0.05, 0.1, 0.15, 0.2].map((v) =>
+    `<line x1="${sx(v).toFixed(1)}" y1="${T - 6}" x2="${sx(v).toFixed(1)}" y2="${Hh - 30}" stroke="${GRID}" opacity="${v === 0 ? 1 : 0.5}"/>
+     <text x="${sx(v).toFixed(1)}" y="${Hh - 14}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${(v * 100).toFixed(0)}%</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Share of each regency's calibrated hectares that the satellite measurement actually contributes; three of six are negative">
+    <text x="16" y="24" fill="${MUTED}" font-size="10.5" font-family="var(--font-data)">SHARE OF THE CALIBRATED HECTARES THE SATELLITE CONTRIBUTES</text>
+    <text x="16" y="40" fill="${MUTED}" font-size="10.5">the remainder is the fitted constant and the regency's fixed covariates</text>
+    ${ticks}${body}
+  </svg>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════
+   Figure 9 · the knife-edge
+   ══════════════════════════════════════════════════════════════════════════════════ */
+function fig9() {
+  const rows = [
+    { k: "literature rule, unchanged (VV < −17 dB)", v: sens["literature -17 dB absolute, unchanged"], c: ALERT },
+    { k: "canopy-rise threshold 5 dB (stricter)", v: sens["VH rise 5 dB (stricter)"], c: ALERT },
+    { k: "flood-depth threshold 4 dB (stricter)", v: sens["flood drop 4 dB (stricter)"], c: MUTED },
+    { k: "as published", v: sensBase, c: PADDY },
+    { k: "flood-depth threshold 2 dB (looser)", v: sens["flood drop 2 dB (looser)"], c: MUTED },
+    { k: "canopy-rise threshold 3 dB (looser)", v: sens["VH rise 3 dB (looser)"], c: OFFICIAL },
+  ];
+  const W = 720, L = 258, R = 92, T = 40, rh = 30;
+  const Hh = T + rows.length * rh + 40;
+  const lo = Math.log10(1.0e4), hi = Math.log10(1.3e6);
+  const sx = (v: number) => L + ((Math.log10(Math.max(v, 1.05e4)) - lo) / (hi - lo)) * (W - L - R);
+  const body = rows.map((r, i) => {
+    const y = T + i * rh;
+    const w = sx(r.v) - L;
+    const base = r.k === "as published";
+    return `<text x="${L - 12}" y="${y + 16}" fill="${base ? INK : MUTED}" font-size="11" text-anchor="end">${esc(r.k)}</text>
+      <rect x="${L}" y="${y + 4}" width="${Math.max(w, 2).toFixed(1)}" height="17" fill="${r.c}" opacity="${base ? 1 : 0.75}" rx="2"/>
+      <text x="${(L + Math.max(w, 2) + 8).toFixed(1)}" y="${y + 17}" fill="${r.c}" font-size="10.5" font-family="var(--font-data)">${num(r.v)}</text>`;
+  }).join("");
+  const ticks = [1e4, 1e5, 1e6].map((v) =>
+    `<line x1="${sx(v).toFixed(1)}" y1="${T - 6}" x2="${sx(v).toFixed(1)}" y2="${Hh - 30}" stroke="${GRID}" opacity="0.55"/>
+     <text x="${sx(v).toFixed(1)}" y="${Hh - 14}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${v >= 1e6 ? "1M" : v >= 1e5 ? "100k" : "10k"}</text>`).join("");
+  const bx = sx(sensBase);
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Detected hectares under each threshold variant on a logarithmic scale; a one-decibel change in the canopy-rise threshold moves the answer by plus 40 or minus 51 percent">
+    <text x="16" y="24" fill="${MUTED}" font-size="10.5" font-family="var(--font-data)">DETECTED HECTARES, TWO REGENCIES, LOG SCALE</text>
+    ${ticks}
+    <line x1="${bx.toFixed(1)}" y1="${T - 6}" x2="${bx.toFixed(1)}" y2="${Hh - 30}" stroke="${PADDY}" stroke-dasharray="3 4" opacity="0.8"/>
+    ${body}
+  </svg>`;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════════
+   Figure 10 · the timing failure is one systematic month
+   ══════════════════════════════════════════════════════════════════════════════════ */
+function fig10() {
+  const W = 720, Hh = 250;
+  const rows = A.timing.rows;
+  const bins: Record<number, number> = {};
+  for (const r of rows) bins[r.xcorr_lag_months] = (bins[r.xcorr_lag_months] ?? 0) + 1;
+  const ks = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
+  const maxN = Math.max(...ks.map((k) => bins[k] ?? 0));
+  const aL = 60, aR = 400, aT = 62, aB = 190;
+  const bw = (aR - aL) / ks.length;
+  const hist = ks.map((k, i) => {
+    const n = bins[k] ?? 0;
+    const h = maxN ? (n / maxN) * (aB - aT) : 0;
+    const x = aL + i * bw + bw * 0.18;
+    return `<rect x="${x.toFixed(1)}" y="${(aB - h).toFixed(1)}" width="${(bw * 0.64).toFixed(1)}" height="${h.toFixed(1)}" fill="${k === 0 ? MUTED : PADDY}" rx="2"/>
+      ${n ? `<text x="${(x + bw * 0.32).toFixed(1)}" y="${(aB - h - 6).toFixed(1)}" fill="${PADDY}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">${n}</text>` : ""}
+      <text x="${(x + bw * 0.32).toFixed(1)}" y="${aB + 16}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${k > 0 ? "+" : ""}${k}</text>`;
+  }).join("");
+  const bL = 486, bB = 190, bT = 62, bwB = 54;
+  const pair = [
+    { k: "as published", v: A.timing.median_xcorr_at_zero, c: MUTED },
+    { k: `shifted ${A.timing.median_abs_xcorr_lag_months} month`, v: A.timing.median_xcorr_at_lag, c: PADDY },
+  ].map((r, i) => {
+    const h = Math.max(2, r.v * (bB - bT));
+    const x = bL + i * 96;
+    return `<rect x="${x}" y="${(bB - h).toFixed(1)}" width="${bwB}" height="${h.toFixed(1)}" fill="${r.c}" rx="2"/>
+      <text x="${x + bwB / 2}" y="${(bB - h - 7).toFixed(1)}" fill="${r.c}" font-size="11" text-anchor="middle" font-family="var(--font-data)">${r.v.toFixed(2)}</text>
+      <text x="${x + bwB / 2}" y="${bB + 16}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${esc(r.k)}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Distribution of the whole-curve lag across regency-years, and the correlation with the official curve before and after removing that lag">
+    <text x="${aL}" y="30" fill="${INK}" font-size="12">Where the whole curve sits</text>
+    <text x="${aL}" y="45" fill="${MUTED}" font-size="10.5">months our harvest curve lags the official one, ${A.timing.n} regency-years</text>
+    <text x="${bL}" y="30" fill="${INK}" font-size="12">Shape agreement</text>
+    <text x="${bL}" y="45" fill="${MUTED}" font-size="10.5">median correlation</text>
+    <line x1="${aL}" y1="${aB}" x2="${aR}" y2="${aB}" stroke="${GRID}"/>
+    <line x1="${bL - 12}" y1="${bB}" x2="${W - 30}" y2="${bB}" stroke="${GRID}"/>
+    ${hist}${pair}
+    <text x="${(aL + aR) / 2}" y="${Hh - 10}" fill="${MUTED}" font-size="11" text-anchor="middle">lag, months</text>
+  </svg>`;
+}
+
+const F1 = fig1(), F2 = fig2(), F3 = fig3(), F4 = fig4(), F5 = fig5();
+const F6 = fig6(), F7 = fig7(), F8 = fig8(), F9 = fig9(), F10 = fig10();
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+---
+
+<html lang="en" data-case="rice" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Can Radar Count Java's Rice Harvest?</title>
+    <meta name="description" content="An adversarial review of a Sentinel-1 paddy detector over six of Java's largest rice regencies: the shortfall against the official survey, decomposed, and the diagnosis tested." />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="back" href={`${BASE}/`}>← The instrument</a>
+      <span class="stamp dim">REVIEW ARTICLE · DATA VINTAGE {A.vintage}</span>
+    </header>
+
+    <article>
+      <div class="masthead">
+        <span class="eyebrow">METHODS &amp; VALIDATION · RICE &amp; FOOD SECURITY</span>
+        <h1>Can radar count Java's rice harvest?</h1>
+        <p class="standfirst">A stress test of a Sentinel-1 paddy detector over six of Java's largest
+        rice regencies, {A.sar_window[0].slice(0, 7)} to {A.sar_window[1].slice(0, 7)}. The instrument
+        publishes five failed checks and one diagnosis — that it finds the rice but finds one crop
+        where there are two. We factor the shortfall, and find the diagnosis is the wrong way round:
+        three-quarters of it is fields never found at all. Then we identify what actually sets the
+        detection rate, by taking looks away from a regency that has enough of them.</p>
+        <div class="byline">
+          <span>Demo Lab · FMV</span><span>Data through {A.sar_window[1]}</span>
+          <span>{num(A.cells)} cells · {num(A.cycles)} crop cycles</span>
+        </div>
+      </div>
+
+      <section class="abstract">
+        <h2>Abstract</h2>
+        <p><b>Question.</b> Indonesia's rice harvested area is measured by a field survey with a
+        two-month lag. Sentinel-1 sees through monsoon cloud and could in principle measure the same
+        quantity as it happens. We ask what a published radar paddy detector actually recovers, and
+        whether the reason it falls short is the one its own page gives.</p>
+        <p><b>Method.</b> {num(A.cells)} cells of {A.cell_m} m over {A.kabupaten.length} kabupaten in
+        {A.provinces.join(", ")}, {A.sar_window[0]}–{A.sar_window[1]}, benchmarked against BPS's
+        area-frame survey (KSA) and, independently, against a published 10 m rice map whose own
+        single/double/triple classes carry a cropping intensity. All statistics below are recomputed
+        from the case's own stored output; one controlled experiment removes radar looks from a single
+        regency and re-runs the unchanged detector.</p>
+        <p><b>Findings.</b> The benchmark is not the moving target: the survey's 2018 method change
+        ({A.benchmark.break_pct}%) is {2022 - A.benchmark.break_year} years before the record opens, the
+        five-regency series varies by only {A.benchmark.five_unit_cv_pct}% over the whole survey era,
+        and the independent satellite map lands within <b>{Math.abs(A.benchmark.map_vs_ksa_pct).toFixed(1)}%</b>
+        of it. The shortfall is real and it factors: detected area is
+        <b>{pct(H.ratio_last, 0)}</b> of the benchmark in {last.year}, the product of finding
+        <b>{pct(H.recall_extent_last, 0)}</b> of the fields and
+        <b>{pct(H.recall_ci_last, 0)}</b> of the crops on the fields it finds — so
+        <b>{pct(H.share_extent, 0)}</b> of the deficit is missing fields, not missing crops. On cells
+        the independent map calls double-cropping the detector returns <b>{cc["2"].cond.toFixed(2)}</b>
+        crops, not one; it detects only <b>{pct(cc["1"].detect_rate, 1)}</b> of single-cropping cells and
+        <b>{pct(cc["3"].detect_rate, 1)}</b> of triple-cropping ones. The deficit is not in the second
+        season either: once a systematic {A.seasonal.lag_months_removed}-month late bias is removed, the
+        two harvest lobes are recovered at {pct(A.seasonal.lobes_lag_corrected.rendeng.ratio, 0)} and
+        {pct(A.seasonal.lobes_lag_corrected.gadu.ratio, 0)}. What does predict detection is revisit:
+        thinning {A.thinning.kabupaten}'s own record from {lad0.median_gap_days} to
+        {lad1.median_gap_days} days between looks, with the fields, the detector and the thresholds
+        unchanged, costs <b>{pct(1 - lad1.cycles_vs_full, 0)}</b> of its crop cycles and
+        <b>{pct(1 - lad1.extent_vs_full, 0)}</b> of its fields — and reproduces the East Java
+        regencies' observed shortfall. As Sentinel-1C and 1D came online inside the sample,
+        {esc(bestGain.kabupaten)}'s gap fell {bestGain.gap_first}→{bestGain.gap_last} days and its
+        recall rose <b>×{bestGain.gain.toFixed(2)}</b>. Finally, the calibrated series the case
+        reports at R² {A.calibration.r2_annual_calibrated.toFixed(2)} on the annual panel has a monthly
+        R² of <b>{A.calibration.r2_monthly_calibrated.toFixed(2)}</b>, and the satellite contributes
+        <b>{pct(A.calibration.mean_sat_share, 1)}</b> of its hectares — negatively in
+        {A.calibration.negative_units.length} of {A.kabupaten.length} regencies.</p>
+        <p><b>Conclusion.</b> This is a <i>sampling</i> instrument, not a <i>resolution</i> one. The
+        case attributes every failure to cell size and proposes a smaller cell; the evidence says the
+        binding constraint is how often the satellite looks. The correct product is not a hectare
+        count at all — it is the harvest date, which the same detector already gets to within one
+        systematic month with a shape correlation of {A.timing.median_xcorr_at_lag.toFixed(2)}.</p>
+      </section>
+
+      <nav class="toc">
+        <a href="#s1">1 · The claim under test</a><a href="#s2">2 · Prior art</a>
+        <a href="#s3">3 · Data and method</a><a href="#s4">4 · The benchmark holds</a>
+        <a href="#s5">5 · The shortfall factors</a><a href="#s6">6 · By the map's crop count</a>
+        <a href="#s7">7 · Not the second season</a><a href="#s8">8 · Same fields, fewer looks</a>
+        <a href="#s9">9 · What damping measures</a><a href="#s10">10 · The calibrated series</a>
+        <a href="#s11">11 · The knife-edge</a><a href="#s12">12 · The one usable output</a>
+        <a href="#s13">13 · What follows for decisions</a><a href="#s14">14 · What remains open</a>
+        <a href="#refs">References</a>
+      </nav>
+
+      <section id="s1">
+        <h2><span class="num">1</span> The claim under test</h2>
+        <p>Indonesia measures rice harvested area with the KSA area sampling frame: enumerators
+        classify the crop stage at fixed sample points every month, and the classification is grossed
+        up to a regency figure published about two months later. It is a good survey. It is also slow,
+        it cannot be interrogated below its own sample density, and it is the number on which rice
+        import decisions, procurement targets and the national self-sufficiency programme are argued.</p>
+        <p>Radar is the obvious challenger. Java's rice grows through the monsoon under cloud that
+        defeats optical sensors, and the crop calendar is written directly into the backscatter:
+        a flooded field before transplanting is a mirror and collapses the signal, a tillering canopy
+        is a volume of vertical scatterers and lifts it, and the crop is cut and it drops again. The
+        case under review implements exactly that, over {num(A.cells)} cells of {A.cell_m} m and
+        {A.seasons.length} seasons, and publishes {A.checks_passed} of {A.checks.length} checks
+        passed.</p>
+        <p>Publishing five failures is the right instinct, and it means the <i>diagnosis</i> is the
+        product. The page's diagnosis is a single sentence: <i>"we find the rice; we find one crop
+        where there are two."</i> That sentence makes an arithmetically testable claim, because
+        harvested area is a flow and factors exactly:</p>
+        <p class="pull">harvested area = the fields that grew rice × the crops each field grew</p>
+        <p>If the diagnosis is right, the first factor is near complete and the second is near half.
+        Sections 5 to 7 measure both.</p>
+      </section>
+
+      <section id="s2">
+        <h2><span class="num">2</span> Prior art, and what a working system looks like</h2>
+        <p>Radar rice mapping is not new and it is not speculative. <a href="#ref-nelson">Nelson et al.
+        (2014)</a>, reporting the RIICE programme, mapped {LIT.riice.mapped_mha} million hectares of rice
+        across {LIT.riice.footprints} footprints in {LIT.riice.countries} Asian countries from
+        {LIT.riice.images} X-band images, with classification accuracies of {LIT.riice.acc_lo}–{LIT.riice.acc_hi}%
+        against more than 1,300 field observations. <a href="#ref-torbick">Torbick et al. (2017)</a> is
+        the closer comparator, because it is C-band Sentinel-1 over a tropical monsoon country: from
+        {LIT.torbick.images} {LIT.torbick.sensor} images they mapped {num(LIT.torbick.area_ha)} ha of
+        harvested rice across {LIT.torbick.country} and reported <b>R² = {LIT.torbick.r2}</b> against the
+        government census.</p>
+        <p>The third benchmark is not a paper but a product we can test against pixel by pixel.
+        <a href="#ref-opensea">Open-SEA-Rice-10</a> (Ginting et al., 2025) maps Southeast Asian rice at
+        10 m for {A.mask.year} with an overall accuracy of {pct(LIT.opensea.oa, 1)} and an F1 of
+        {LIT.opensea.f1}, and — decisively for this review — labels every rice pixel
+        <i>single</i>, <i>double</i> or <i>triple</i> crop. Its harvested-area estimates agree with
+        official statistics at R² {LIT.opensea.sea_r2} region-wide and R² {LIT.opensea.idn_r2} for
+        Indonesia. It is therefore simultaneously an independent extent map <i>and</i> an independent
+        statement about cropping intensity, made by other people, from a different method.</p>
+        <p>Set against that literature, this case's uncalibrated result — R²
+        {A.g1.uncalibrated.kabupaten_r2} against the official survey, and
+        {A.g1.uncalibrated.aggregate_by_year[0].diff_pct}% on the {A.g1.uncalibrated.aggregate_by_year[0].year}
+        aggregate — is not a marginal miss. It is a different order of outcome from published work on
+        the same sensor, and that is what makes the diagnosis worth testing rather than accepting.</p>
+      </section>
+
+      <section id="s3">
+        <h2><span class="num">3</span> Data, method, and what the instrument published</h2>
+        <p><b>Radar.</b> Sentinel-1 radiometrically terrain-corrected γ⁰ at 10 m, read at 80 m and
+        aggregated to a {A.cell_m} m analysis cell, {num(A.acquisitions)} acquisitions across
+        {A.kabupaten.length} regencies, orbits normalised separately and never mixed, averaged in
+        linear power.</p>
+        <p><b>Detector.</b> A local minimum of VV at least {A.thresholds.flood_drop_db} dB below the
+        cell's own {A.thresholds.flood_baseline_pctl}th-percentile baseline marks transplanting; a VH
+        rise of at least {A.thresholds.rise_db} dB within {A.thresholds.rise_window_days} days confirms
+        it is a crop; the following VH maximum is heading; harvest follows. Events whose defining dates
+        sit inside an observation gap longer than {A.thresholds.max_gap_days} days are refused.</p>
+        <p><b>Benchmarks.</b> BPS monthly KSA harvested area per regency for West and East Java, annual
+        for Central Java; and Open-SEA-Rice-10 as an independent extent and intensity map.</p>
+        <div class="checks">
+          {A.checks.map((c: any) => (
+            <div class={`chk ${c.pass ? "ok" : "no"}`}>
+              <span class="cn">Check {c.n}</span>
+              <span class="cname">{c.name}</span>
+              <span class="cdet">{c.detail}</span>
+            </div>
+          ))}
+        </div>
+        <p class="caveat"><b>Where this review agrees with the case.</b> The thresholds were fixed
+        before results and are not tuned here either. The scope is honestly stated. The flow/stock
+        distinction — that a field yielding two crops contributes its area twice — is correctly
+        implemented, and it is the reason the shortfall can be factored at all. Nothing below is a
+        complaint about rigour; it is a disagreement about a diagnosis.</p>
+      </section>
+
+      <section id="s4">
+        <h2><span class="num">4</span> Finding one — the benchmark is not the moving target</h2>
+        <p>The first hypothesis any reviewer should test is that the official series moved rather than
+        the satellite failing. BPS replaced a generation of eye-estimates with the KSA area frame from
+        reference year {A.benchmark.break_year}, and that break is real and large: national harvested
+        area steps from {(A.benchmark.pre_ksa_ha / 1e6).toFixed(2)} Mha under the old method to
+        {(A.benchmark.first_ksa_ha / 1e6).toFixed(2)} Mha under the new one, a change of
+        <b>{A.benchmark.break_pct}%</b>, with {2016}–{2017} a moratorium carrying no data at all.</p>
+        <figure>
+          <Fragment set:html={F2} />
+          <figcaption><b>Figure 1.</b> Top: three measurements of harvested area over the same six
+          regencies in {A.benchmark.map_vs_ksa_year}. Bottom: the national official series, with the
+          {A.benchmark.break_year} method change drawn as the break it is, and the point at which this
+          case's radar record opens.</figcaption>
+        </figure>
+        <p>But the break cannot explain this shortfall, because it is {2022 - A.benchmark.break_year}
+        years before the radar record opens. Inside the window the benchmark is quiet: over the whole
+        survey era the five regencies with a continuous series move within
+        <b>{A.benchmark.five_unit_range_pct}%</b> peak to trough, a coefficient of variation of
+        {A.benchmark.five_unit_cv_pct}%.</p>
+        <p>The stronger test is corroboration by something that is not a survey at all. Summing
+        Open-SEA-Rice-10's own crop classes over exactly these six regencies gives
+        <b>{num(A.benchmark.map_implied_ha)} ha</b> of harvested area against the survey's
+        {num(dec.find((d: any) => d.year === A.benchmark.map_vs_ksa_year)?.ksa_ha ?? 0)} ha — a gap of
+        <b>{A.benchmark.map_vs_ksa_pct > 0 ? "+" : ""}{A.benchmark.map_vs_ksa_pct}%</b>. An area-frame
+        field survey and a 10 m satellite product built by unrelated authors agree to within a point
+        and a half. The benchmark is sound, and the {pct(1 - H.ratio_last, 0)} that is missing is ours.</p>
+        <p class="caveat"><b>One honest caution on the corroboration.</b> Open-SEA-Rice-10 derives its
+        crop count from NDVI peaks in optical imagery, which is the method this case exists to avoid in
+        a cloudy country. It is therefore an independent benchmark for <i>extent</i> without
+        qualification, and an independent benchmark for <i>intensity</i> that shares no method with the
+        survey but does share a known weakness. That it lands within
+        {Math.abs(A.benchmark.map_vs_ksa_pct).toFixed(1)}% of KSA anyway is what makes it usable here.</p>
+      </section>
+
+      <section id="s5">
+        <h2><span class="num">5</span> Finding two — the shortfall factors, and it factors the other way</h2>
+        <p>Because harvested area is a flow, the ratio of our figure to the benchmark is exactly the
+        product of two recalls: the share of the rice fields we find at all, and the share of each
+        field's crops we count where we do find it. Both are measurable against the independent map,
+        and neither has been reported.</p>
+        <figure>
+          <Fragment set:html={F1} />
+          <figcaption><b>Figure 2.</b> Every regency-year plotted by its two recalls. Dashed curves are
+          contours of constant agreement with the benchmark. The stated diagnosis — all the fields, half
+          the crops — predicts the marked point on the right-hand edge. Not one observation is near it.
+          Hover any dot.</figcaption>
+        </figure>
+        <p>In {last.year} the instrument reports <b>{pct(last.ratio_ksa, 0)}</b> of the benchmark. That
+        is {pct(last.recall_extent, 0)} of the fields multiplied by {pct(last.recall_ci, 0)} of the
+        crops. Averaged over the three complete years, <b>{pct(H.share_extent, 0)} of the deficit is the
+        extent term</b> and only {pct(1 - H.share_extent, 0)} is the intensity term. The detector is not
+        finding the rice and missing a season. It is missing most of the rice.</p>
+        <p>The per-regency picture is starker than the aggregate. {esc(worstKab.kabupaten)} in
+        {worstKab.year} recovers <b>{pct(worstKab.recall_extent, 1)}</b> of its rice fields —
+        {pct(worstKab.ratio_ksa, 1)} of the benchmark — while still counting
+        {worstKab.det_ci.toFixed(2)} crops on the few fields it does find.</p>
+        <p>The case's own page already carries the number that says this, and reads it the other way
+        round. It quotes <b>{pct(A.g4.agreement_on_ours, 0)}</b> agreement "on our own area" as evidence
+        that the rice is found. That figure is a <i>precision</i>, and precision is the one statistic a
+        detector can always buy by detecting less. Recomputed per year rather than pooled across four
+        seasons against a one-year map, precision is
+        {pct(prfP[0], 0)}–{pct(prfP[1], 0)} and recall is
+        <b>{pct(prfR[0], 0)}–{pct(prfR[1], 0)}</b>. Both numbers are true;
+        only one of them is the answer to "do we find the rice".</p>
+      </section>
+
+      <section id="s6">
+        <h2><span class="num">6</span> Finding three — asked in the map's own units, the diagnosis fails again</h2>
+        <p>The independent map labels each rice cell with the number of crops it grows. That converts
+        the diagnosis into a prediction with no wriggle room: on cells the map calls double-cropping,
+        a detector that "finds one crop where there are two" should return about one.</p>
+        <figure>
+          <Fragment set:html={F3} />
+          <figcaption><b>Figure 3.</b> Left: the share of each class's cells in which we detect any crop
+          cycle at all. Right: the number of cycles we count in the cells where we detect one, against
+          the map's own crop count for that class (the pale bar).</figcaption>
+        </figure>
+        <p>On double-cropping cells the detector returns <b>{cc["2"].cond.toFixed(2)}</b> cycles, not
+        one — {pct(cc["2"].cond / 2, 0)} of the truth, which is a real shortfall but not the stated one.
+        It also separates the classes far less than it should: the ratio of what it counts on
+        double-cropping cells to what it counts on single-cropping cells is
+        <b>{cc.ratio_cond_2_over_1.toFixed(2)}</b> where the map says {cc.ratio_map_2_over_1}, and on
+        triple-cropping cells it counts {cc["3"].cond.toFixed(2)} against three.</p>
+        <p>The left panel is the finding that matters. The detector sees
+        <b>{pct(cc["2"].detect_rate, 1)}</b> of double-cropping cells,
+        <b>{pct(cc["1"].detect_rate, 1)}</b> of single-cropping cells and
+        <b>{pct(cc["3"].detect_rate, 1)}</b> of triple-cropping cells. It is not a rice detector with a
+        counting problem; it is a detector of one particular signature — deeply flooded, synchronously
+        transplanted, irrigated double-crop paddy — that is nearly blind to everything else rice does in
+        Java. Single-cropped rice is largely rainfed and often direct-seeded, so it never presents the
+        standing-water minimum the first rule requires; triple-cropped fields turn over faster than the
+        {A.thresholds.min_cycle_days}-day minimum cycle allows.</p>
+      </section>
+
+      <section id="s7">
+        <h2><span class="num">7</span> Finding four — nor is the deficit in the second season</h2>
+        <p>"One crop where there are two" has a seasonal signature. Java's calendar is bimodal: the
+        wet-season <i>rendeng</i> harvest peaks around March, the dry-season <i>gadu</i> harvest around
+        August. A detector that finds the first crop and misses the second should recover the rendeng
+        lobe well and the gadu lobe badly.</p>
+        <figure>
+          <Fragment set:html={F4} />
+          <figcaption><b>Figure 4.</b> Monthly harvest as a share of the year, ours against the official
+          survey, with our curve also shown corrected for the systematic
+          {A.seasonal.lag_months_removed}-month late bias measured in §12. The bars below are the share
+          of each month's official harvest we recover.</figcaption>
+        </figure>
+        <p>As published, the pattern is the opposite of the prediction: we recover
+        {pct(A.seasonal.lobes.rendeng.ratio, 0)} of the rendeng harvest and
+        <b>{pct(A.seasonal.lobes.gadu.ratio, 0)}</b> of the gadu harvest — the second season is
+        recovered {A.seasonal.lobes.gadu_over_rendeng_ratio.toFixed(2)} times <i>better</i> than the
+        first. That comparison is contaminated, because the detector's harvest dates run late and a late
+        bias moves mass out of the first lobe into the second. Removing the measured
+        {A.seasonal.lag_months_removed}-month lag flattens it: rendeng
+        {pct(A.seasonal.lobes_lag_corrected.rendeng.ratio, 0)}, gadu
+        {pct(A.seasonal.lobes_lag_corrected.gadu.ratio, 0)}, a ratio of
+        <b>{A.seasonal.lobes_lag_corrected.gadu_over_rendeng_ratio.toFixed(2)}</b>.</p>
+        <p>Either way the conclusion is the same and it is the one the diagnosis forbids: the deficit is
+        <b>flat across the calendar</b>. Whatever the detector is missing, it is not a season.</p>
+        <p>The shoulder months are the exception and they are diagnostic rather than encouraging. January,
+        June, November and December carry {pct(A.seasonal.lobes.shoulder.share_ksa, 0)} of the official harvest but
+        {pct(A.seasonal.lobes.shoulder.share_ours, 0)} of ours, and we "recover"
+        {pct(A.seasonal.lobes.shoulder.ratio, 0)} of them — more than either real lobe. That is not
+        detection; it is the late bias of §12 smearing genuine February–May harvests into the months
+        after them, and it is why a monthly comparison flatters this instrument in exactly the months
+        nobody is procuring against.</p>
+      </section>
+
+      <section id="s8">
+        <h2><span class="num">8</span> Finding five — the decisive test: same fields, fewer looks</h2>
+        <p>If the deficit is neither a season nor a crop count, what sets it? The observable that moves
+        with it across regencies is how often the satellite looked. The problem with a cross-regency
+        comparison is that everything else moves too — soil, variety, plot size, irrigation command. So
+        we ran the experiment that holds all of it fixed.</p>
+        <p>We took {esc(A.thinning.kabupaten)}, the densest record in the sample
+        ({lad0.n_acquisitions} looks, {lad0.median_gap_days} days apart), removed looks from its own
+        time series, rebuilt the series through what survived, and re-ran the identical detector with
+        identical thresholds. Nothing about the fields changed. Only the number of looks did.</p>
+        <figure>
+          <Fragment set:html={F5} />
+          <figcaption><b>Figure 5.</b> The chartreuse line is {esc(A.thinning.kabupaten)} with looks
+          progressively removed, pooled over all {A.seasons.length} seasons. The small dots are the six
+          regencies as they actually are, one per calendar year, so they sit lower than the curve for
+          the same gap; the shape, not the level, is the comparison. Hover any point.</figcaption>
+        </figure>
+        <p>Halving the looks — {lad0.median_gap_days} days between them to {lad1.median_gap_days} —
+        costs <b>{pct(1 - lad1.cycles_vs_full, 0)} of the crop cycles</b> and
+        <b>{pct(1 - lad1.extent_vs_full, 0)} of the fields</b>. At {lad[2].median_gap_days} days
+        {pct(lad[2].extent_recall_vs_prior, 1)} of the fields survive; at {lad[3].median_gap_days} days,
+        {pct(lad[3].extent_recall_vs_prior, 2)}. Detection is not a slope in revisit. It is a cliff, and
+        the edge sits between eight and twelve days — exactly where the East Java regencies sit.</p>
+        <p class="pull">Thinned to a {lad1.median_gap_days}-day gap, {esc(A.thinning.kabupaten)}'s own
+        fields yield {pct(lad1.extent_recall_vs_prior, 1)} recall. Bojonegoro, at a
+        {A.revisit.rows.find((r: any) => r.kabupaten === "Bojonegoro" && r.year === 2023)?.median_gap_days}-day
+        gap, yields {pct(A.revisit.rows.find((r: any) => r.kabupaten === "Bojonegoro" && r.year === 2023)?.recall_extent ?? 0, 1)}.
+        The experiment reproduces the case's own cross-section from revisit alone.</p>
+        <p>There is a second, natural experiment in the same data, and it runs the other way. Sentinel-1B
+        failed on {A.revisit.s1b_failure}, six months <i>before</i> this record opens, so the whole series
+        sits on the degraded side of that event and the obvious before/after test is unavailable. But
+        Sentinel-1C and 1D came into service <i>during</i> it, and revisit rose.</p>
+        <figure>
+          <Fragment set:html={F6} />
+          <figcaption><b>Figure 6.</b> Share of rice fields found in {A.full_years[0]} (grey) against
+          {A.full_years[A.full_years.length - 1]} (chartreuse), with each regency's change in revisit gap.
+          Regencies whose gap did not change gained little; the one whose gap fell furthest gained most.</figcaption>
+        </figure>
+        <p>{esc(bestGain.kabupaten)}'s median gap fell from {bestGain.gap_first} to
+        {bestGain.gap_last} days and its recall rose <b>×{bestGain.gain.toFixed(2)}</b>, from
+        {pct(bestGain.recall_first, 1)} to {pct(bestGain.recall_last, 1)} — with no change to the
+        detector, the thresholds, the crop or the fields. Across all
+        {A.revisit.rows.length} regency-years the correlation between revisit gap and recall is
+        <b>{A.revisit.corr_gap_vs_recall}</b>.</p>
+        <p class="caveat"><b>What the thinning test does not do.</b> It rebuilds the series by
+        interpolating through the surviving looks rather than re-deriving it from the raw scenes, so it
+        reproduces {pct(A.thinning.baseline_vs_published, 0)} of the published cycle count at full
+        density. Every rung is built the same way, so the ladder is internally consistent and the
+        comparison against the observed regencies is like for like — but a full re-ingest at reduced
+        density would be the cleaner version, and the absolute level of each rung should be read as
+        indicative rather than exact.</p>
+      </section>
+
+      <section id="s9">
+        <h2><span class="num">9</span> Finding six — the "damping" the case measures is largely revisit</h2>
+        <p>The case has a mechanism for the shortfall and it is a good one: a {A.cell_m} m cell holds
+        several 0.3–0.5 ha paddy plots that are not transplanted on the same day, so the cell mean never
+        swings as far as a single plot does, and the second cycle is averaged away. It measures that
+        damping as the cell's seasonal VH range, builds it into the calibration as an interaction term,
+        and reads the cross-section off it.</p>
+        <p>That mechanism makes a prediction the thinning test can check. If the canopy swing measures
+        plot heterogeneity, removing looks should barely move it.</p>
+        <figure>
+          <Fragment set:html={F7} />
+          <figcaption><b>Figure 7.</b> The seasonal canopy swing against revisit. The chartreuse line
+          is {esc(A.thinning.kabupaten)} with looks removed; the small dots are each regency as observed,
+          plotted at its own mean gap.</figcaption>
+        </figure>
+        <p>Thinning {esc(A.thinning.kabupaten)} from {lad0.median_gap_days} to {lad[3].median_gap_days}
+        days moves its canopy swing from {lad0.vh_range_db.toFixed(2)} to {lad[3].vh_range_db.toFixed(2)}
+        dB — {(lad0.vh_range_db - lad[3].vh_range_db).toFixed(2)} dB — while costing
+        {pct(1 - lad[3].extent_vs_full, 1)} of its fields. So the swing does respond to sampling, but
+        weakly; it cannot be the channel through which revisit destroys detection.</p>
+        <p>Two conclusions follow, and they point in different directions. First, the case's damping
+        term is not the mechanism: what fewer looks destroy is the <i>shape</i> the detector tests for —
+        a local minimum, then a {A.thresholds.rise_db} dB rise inside
+        {A.thresholds.rise_window_days} days — not the amplitude it never tests directly. Second, the
+        East Java regencies do sit genuinely below the thinning curve on swing
+        ({Math.min(...Object.values(A.revisit.vh_range_db).map(Number)).toFixed(2)} dB against
+        {lad1.vh_range_db.toFixed(2)} dB for {esc(A.thinning.kabupaten)} thinned to the same gap), so
+        there <i>is</i> a real amplitude difference on top of the sampling one. The case's error is not
+        that the damping is imaginary. It is that damping was made to carry a cross-section that revisit
+        explains.</p>
+      </section>
+
+      <section id="s10">
+        <h2><span class="num">10</span> Finding seven — the calibrated series is almost entirely not the satellite</h2>
+        <p>The case reports a calibrated R² of
+        {A.calibration.r2_annual_calibrated.toFixed(2)} against the official survey. The case is careful to publish
+        the uncalibrated result beside it and to fail the check on that basis, which is exactly right.
+        It is still worth saying what the calibrated number is.</p>
+        <p>The calibration is fitted on {A.calibration.n_fit_rows} regency-<i>month</i> rows. At that
+        resolution — the resolution it was fitted at — its R² against the survey is
+        <b>{A.calibration.r2_monthly_calibrated.toFixed(2)}</b>. The {A.calibration.r2_annual_calibrated.toFixed(2)} is what
+        appears after twelve monthly predictions are summed into a year, which is mostly a statement
+        that regencies differ in size.</p>
+        <figure>
+          <Fragment set:html={F8} />
+          <figcaption><b>Figure 8.</b> How much of each regency's calibrated hectares the satellite
+          measurement contributes. The rest is the fitted constant and covariates that do not vary within
+          a regency.</figcaption>
+        </figure>
+        <p>Across the panel the detected area supplies <b>{pct(A.calibration.mean_sat_share, 1)}</b> of
+        the calibrated hectares. Worse, the interaction that carries the damping story gives the detected
+        area an effective slope of {A.calibration.coefficients.detected_kha} −
+        {Math.abs(A.calibration.coefficients.detected_kha_x_inv_vh_range * 10).toFixed(2)} ÷ swing, which
+        <b>changes sign below {A.calibration.sign_flip_vh_range_db} dB</b>. Three of the six regencies —
+        {A.calibration.negative_units.join(", ")} — sit below that line, so the fitted model says that in
+        those regencies the more rice the satellite finds, the less rice the survey will report. That is
+        not a calibration; it is a set of regency constants with a sign error attached.</p>
+      </section>
+
+      <section id="s11">
+        <h2><span class="num">11</span> Finding eight — the detector sits on a knife-edge it does not declare</h2>
+        <p>The case publishes a threshold-sensitivity table, which is more than most do. Read as a
+        stability statement rather than a disclosure, it is alarming.</p>
+        <figure>
+          <Fragment set:html={F9} />
+          <figcaption><b>Figure 9.</b> Detected hectares under each threshold variant, logarithmic scale.
+          The published setting is marked.</figcaption>
+        </figure>
+        <p>Moving the canopy-rise threshold by one decibel in either direction changes the answer by
+        <b>{riseUp > 0 ? "+" : ""}{pct(riseUp, 0)}</b> and <b>{pct(riseDn, 0)}</b>. That is not a
+        robustness range; it is the whole result. The reason is visible in the case's own diagnostics:
+        the median detected rise is {vhRiseLo.toFixed(2)}–{vhRiseHi.toFixed(2)} dB against a threshold of
+        {A.thresholds.rise_db.toFixed(1)} dB, so half of all detections sit within a decibel of
+        rejection. A speckle realisation, an incidence-angle residual or a missing look is enough to move
+        an event across the line — which is precisely why removing looks in §8 is so destructive.</p>
+        <p class="caveat">The literature's unchanged single-plot rule (VV below
+        {A.thresholds.flood_db} dB) yields {num(sens["literature -17 dB absolute, unchanged"])} ha where
+        the scale-adapted criterion yields {num(sensBase)} ha. The case is right that this is a fact
+        about the analysis cell rather than about Indonesian rice, and right to publish it. But the
+        restated criterion inherits the fragility rather than curing it.</p>
+      </section>
+
+      <section id="s12">
+        <h2><span class="num">12</span> Finding nine — the one output that works is the one presented as a failure</h2>
+        <p>The timing check fails at a median error of {A.g2.median_abs_error_weeks} weeks against a
+        {A.g2.threshold_weeks}-week threshold, and the case attributes part of that to the detector
+        locking onto the wrong lobe of a bimodal harvest. That attribution is testable: an argmax of a
+        two-peaked curve is brittle, but the whole curve is not. We re-scored the same regency-years by
+        sliding our monthly harvest curve around the calendar and taking the shift that best matches the
+        survey's.</p>
+        <figure>
+          <Fragment set:html={F10} />
+          <figcaption><b>Figure 10.</b> Left: the whole-curve lag, in months, across the
+          {A.timing.n} regency-years with a monthly benchmark. Right: median correlation with the
+          official curve as published, and after removing that lag.</figcaption>
+        </figure>
+        <p>The shape-based estimator gives the same median as the argmax —
+        {A.timing.median_abs_xcorr_lag_months} month against
+        {A.timing.median_abs_argmax_error_months} — so the median failure is not an artefact of the
+        estimator. What the distribution adds is that the failure has two modes, not one.
+        <b>{modal.n} of {A.timing.n}</b> regency-years sit at a clean
+        {modal.lag > 0 ? "+" : ""}{modal.lag}-month lag; {aliased} sit four or more months away, which
+        on a bimodal calendar is the lobe alias the case describes. So both explanations are partly
+        right — and the dominant one is a <b>systematic, one-signed, one-month late bias</b>. Once that
+        single constant is removed, the correlation between our monthly harvest curve and the official
+        one rises from <b>{A.timing.median_xcorr_at_zero.toFixed(2)}</b> to
+        <b>{A.timing.median_xcorr_at_lag.toFixed(2)}</b>.</p>
+        <p class="pull">The instrument that cannot count hectares can tell you, three weeks before the
+        survey can, that the harvest is arriving early or late. That is a different product, and it is
+        the one worth selling.</p>
+        <p>A systematic bias is a calibration constant, not an error; the estimated harvest date is
+        heading plus {A.thresholds.head_to_harvest_days} days, and heading is dated from a maximum that
+        a sparse series finds late. The correction is one number and it is estimable from the same
+        panel. The hectare count, by contrast, needs a different satellite tasking regime.</p>
+      </section>
+
+      <section id="s13">
+        <h2><span class="num">13</span> What follows for decisions</h2>
+        <p>Indonesian rice numbers are not academic. BPS's KSA figure feeds the Ministry of
+        Agriculture's production accounting, Bulog's procurement and stock targets, and Badan Pangan
+        Nasional's advice on whether to import — a decision taken on a scale of hundreds of thousands to
+        millions of tonnes, months ahead of the harvest it is meant to cover. An instrument that claims
+        to see the harvest before the survey does is claiming to move that decision.</p>
+        <ol class="uses">
+          <li><b>Not: an independent hectare count.</b> At {pct(H.ratio_last, 0)} of the benchmark
+          uncalibrated, and {A.calibration.mean_sat_share > 0 ? pct(A.calibration.mean_sat_share, 0) : ""}
+          satellite content once calibrated, this cannot referee a national area figure and should not be
+          offered as a second opinion on one. The independent 10 m map already does that job better and
+          agrees with the survey to {Math.abs(A.benchmark.map_vs_ksa_pct).toFixed(1)}%.</li>
+          <li><b>Yes: harvest timing, with the bias removed.</b> A shape correlation of
+          {A.timing.median_xcorr_at_lag.toFixed(2)} at a fixed one-month offset is a usable early-warning signal for
+          when the peak lands, which is the input procurement scheduling actually needs and the one the
+          survey delivers late. This is the product.</li>
+          <li><b>Yes: a revisit-adequacy map.</b> The single most decision-relevant output of this review
+          is that a {lad1.median_gap_days}-day gap costs {pct(1 - lad1.extent_vs_full, 0)} of the fields.
+          A map of where Java is and is not observed densely enough to monitor is worth having before
+          anyone commissions monitoring, and this pipeline can produce it today.</li>
+          <li><b>Yes: disagreement as a triage list.</b> Cells the independent map calls rice and the
+          radar never sees are either a detector blind spot or a real change in what is grown there. That
+          list is a survey design input, and it is currently discarded.</li>
+        </ol>
+        <p><b>Where this sits on the FMV axis.</b> FMV's stated priority is closing the gap between
+        accumulating data and acting on it, across Insight, Strategy &amp; Influence, Connection &amp;
+        Engagement and Systems &amp; Learning. As built, this case is an Insight artefact that produces a
+        number nobody can act on. Reframed as an <i>observability</i> assessment — where in Indonesia can
+        rice be monitored from orbit at all, at what revisit, with what lead time, and what would it cost
+        to close the gap — it becomes a Systems &amp; Learning product with a direct decision attached,
+        and one that a statistical agency can adopt without conceding that its own numbers are wrong.
+        That is the version of this case worth taking to BPS.</p>
+      </section>
+
+      <section id="s14">
+        <h2><span class="num">14</span> What remains open</h2>
+        <ol class="next">
+          <li><b>Re-ingest at reduced density, properly.</b> §8's ladder interpolates through surviving
+          looks rather than re-deriving the series from scenes. Re-running the ingest with orbits
+          withheld would give the same curve without the caveat, and would also separate "fewer dates"
+          from "fewer orbits", which the current test conflates.</li>
+          <li><b>A detector that does not need a hard threshold.</b> §11 shows half of all detections sit
+          within a decibel of rejection. A likelihood or shape-matching formulation over the whole cycle,
+          rather than three sequential thresholds, would degrade gracefully with sampling instead of
+          falling off a cliff — and is the change most likely to make the East Java regencies work.</li>
+          <li><b>Estimate and publish the timing bias.</b> One constant, estimated on the calibration
+          years, scored on the hold-out. It converts §12 from a finding into a product.</li>
+          <li><b>Ask BPS for the KSA phase labels.</b> The survey's own <i>vegetatif / generatif /
+          persiapan lahan</i> classification is the exact label set this detector wants, and it is
+          published through the API for one province with almost no rice. A data request costs a letter
+          and would turn every one of these checks into a supervised problem.</li>
+          <li><b>Test the smaller cell against the more frequent look.</b> The case proposes 20–30 m
+          cells as the fix. This review's evidence says revisit binds first. Both are testable on the
+          same six regencies, and the answer decides what a pilot should buy.</li>
+        </ol>
+      </section>
+
+      <section id="refs">
+        <h2><span class="num">15</span> References and reproducibility</h2>
+        <ol class="refs">
+          <li id="ref-nelson">Nelson, A., Setiyono, T., Rala, A.B. et al. (2014). Towards an Operational
+          SAR-Based Rice Monitoring System in Asia: Examples from 13 Demonstration Sites across Asia in
+          the RIICE Project. <i>Remote Sensing</i> 6(11), 10773–10812. doi:10.3390/rs61110773</li>
+          <li id="ref-torbick">Torbick, N., Chowdhury, D., Salas, W. &amp; Qi, J. (2017). Monitoring Rice
+          Agriculture across Myanmar Using Time Series Sentinel-1 Assisted by Landsat-8 and PALSAR-2.
+          <i>Remote Sensing</i> 9(2), 119. doi:10.3390/rs9020119</li>
+          <li id="ref-opensea">Ginting, F.I., Rudiyanto, Fatchurachman et al. (2025). Open-SEA-Rice-10:
+          high-resolution maps of rice harvested area and cropping intensity in Southeast Asia.
+          <i>Scientific Data</i> 12, 1408. doi:10.1038/s41597-025-05722-1. Dataset:
+          doi:{A.mask.doi}</li>
+          <li id="ref-bps">BPS-Statistics Indonesia. Luas Panen Padi, Kerangka Sampel Area (KSA) method
+          from reference year {A.benchmark.break_year}. WebAPI monthly kabupaten tables for Jawa Barat and
+          Jawa Timur; annual for Jawa Tengah. The methodology note attached to the national table states
+          the replacement of the eye-estimate <i>Statistik Pertanian</i> method in BPS's own words.</li>
+          <li id="ref-mpc">Sentinel-1 RTC γ⁰ via Microsoft Planetary Computer (collection
+          <code>sentinel-1-rtc</code>, CC BY 4.0), produced by Catalyst from ESA Sentinel-1 GRD.
+          Contains modified Copernicus Sentinel data {A.sar_window[0].slice(0, 4)}–{A.sar_window[1].slice(0, 4)}.</li>
+        </ol>
+        <p class="repro">Every figure on this page is generated in the page's own frontmatter from
+        <code>web/src/data/article.json</code>, written by <code>pipeline/article.py</code> from the
+        case's published summary and from <code>pipeline/audit.py</code>, which recomputes each test
+        independently from the stored cell, cycle and benchmark tables. The controlled thinning
+        experiment of §8 is <code>audit.py</code>'s test E and re-uses the case's own
+        <code>phenology.detect_cycles</code> unmodified. No threshold was changed to produce any result
+        here. Data vintage {A.vintage}; radar record {A.sar_window[0]} to {A.sar_window[1]};
+        {A.seasons.length} seasons; benchmark years {A.full_years.join(", ")}.</p>
+      </section>
+
+      <footer class="end">
+        <p>Part of the Demo Lab. Built end-to-end on public data — acquisition, pipeline, model,
+        validation, and this review.</p>
+        <a class="cta" href={`${BASE}/`}>← Back to the instrument</a>
+      </footer>
+    </article>
+
+    <div id="tip" hidden></div>
+
+    <style is:global>
+      body { margin: 0; background: var(--ground); color: var(--ink);
+        font-family: var(--font-body); line-height: 1.7; -webkit-font-smoothing: antialiased;
+        overflow-x: hidden; }
+      *, *::before, *::after { box-sizing: border-box; }
+      a { color: var(--accent); }
+
+      .bar { position: sticky; top: 0; z-index: 20; display: flex; justify-content: space-between;
+        align-items: center; gap: 16px; padding: 12px 24px;
+        background: color-mix(in srgb, var(--ground) 92%, transparent);
+        backdrop-filter: blur(8px); border-bottom: 1px solid var(--hairline); }
+      .back { text-decoration: none; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.06em; }
+      .stamp { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); }
+
+      article { max-width: 50rem; margin: 0 auto; padding: 0 24px 12vh; }
+      .masthead { padding: 9vh 0 4vh; border-bottom: 1px solid var(--hairline); }
+      .eyebrow { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--accent); }
+      h1 { font-family: var(--font-display); font-size: clamp(1.9rem, 5vw, 3rem); line-height: 1.1;
+        letter-spacing: -0.02em; margin: 18px 0 20px; }
+      .standfirst { font-size: 1.1rem; color: var(--ink); margin: 0 0 26px; max-width: 42rem; }
+      .byline { display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: var(--font-data);
+        font-size: 0.74rem; letter-spacing: 0.08em; color: var(--ink-muted); text-transform: uppercase; }
+
+      .abstract { margin: 5vh 0; padding: 26px 28px; border: 1px solid var(--hairline);
+        border-left: 3px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
+      .abstract h2 { font-family: var(--font-data); font-size: 0.76rem; letter-spacing: 0.16em;
+        color: var(--accent); margin: 0 0 14px; text-transform: uppercase; }
+      .abstract p { margin: 0 0 12px; font-size: 0.96rem; }
+      .abstract p:last-child { margin-bottom: 0; }
+
+      .toc { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 20px 0 8px; margin-bottom: 4vh;
+        border-bottom: 1px solid var(--hairline); font-family: var(--font-data); font-size: 0.74rem; }
+      .toc a { text-decoration: none; color: var(--ink-muted); }
+      .toc a:hover { color: var(--accent); }
+
+      section { margin: 6vh 0; }
+      h2 { font-family: var(--font-display); font-size: clamp(1.3rem, 3.4vw, 1.55rem); line-height: 1.25;
+        letter-spacing: -0.01em; margin: 0 0 20px; display: flex; gap: 14px; align-items: baseline; }
+      .num { font-family: var(--font-data); font-size: 0.9rem; color: var(--accent); flex: none; }
+      p { margin: 0 0 18px; }
+      b { color: #F2F7EE; font-weight: 600; }
+
+      .caveat { border-left: 2px solid var(--alert); padding: 2px 0 2px 18px; color: var(--ink-muted); }
+      .caveat b { color: var(--alert); }
+      .pull { font-size: 1.08rem; line-height: 1.6; border-left: 3px solid var(--accent);
+        padding: 8px 0 8px 20px; color: #F2F7EE; }
+
+      figure { margin: 34px 0; padding: 20px 18px 14px; border: 1px solid var(--hairline);
+        border-radius: var(--radius); background: var(--surface); }
+      .fig { display: block; width: 100%; height: auto; overflow: visible; }
+      figcaption { font-size: 0.85rem; color: var(--ink-muted); margin-top: 14px; line-height: 1.55; }
+      figcaption b { color: var(--ink); }
+      .d1 { cursor: crosshair; transition: opacity 0.12s; }
+      .d1:hover { opacity: 1; }
+
+      .checks { display: grid; gap: 8px; margin: 24px 0 26px; }
+      .chk { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 4px 14px;
+        padding: 12px 14px; border: 1px solid var(--hairline); border-radius: var(--radius);
+        background: var(--surface); border-left: 3px solid var(--alert); }
+      .chk.ok { border-left-color: var(--accent); }
+      .cn { font-family: var(--font-data); font-size: 0.7rem; letter-spacing: 0.1em;
+        color: var(--alert); text-transform: uppercase; align-self: center; }
+      .chk.ok .cn { color: var(--accent); }
+      .cname { font-size: 0.95rem; color: var(--ink); font-weight: 600; }
+      .cdet { grid-column: 2; font-family: var(--font-data); font-size: 0.76rem;
+        color: var(--ink-muted); line-height: 1.5; overflow-wrap: anywhere; }
+
+      ol.uses, ol.next { padding-left: 22px; margin: 0 0 18px; }
+      ol.uses li, ol.next li { margin-bottom: 14px; }
+      ol.uses li:first-child { color: var(--ink-muted); }
+      ol.uses li:first-child b { color: var(--alert); }
+
+      ol.refs { padding-left: 22px; font-size: 0.9rem; color: var(--ink-muted); }
+      ol.refs li { margin-bottom: 12px; overflow-wrap: anywhere; }
+      .repro { font-size: 0.86rem; color: var(--ink-muted); border-top: 1px solid var(--hairline);
+        padding-top: 18px; }
+      code { font-family: var(--font-data); font-size: 0.88em; color: var(--accent);
+        overflow-wrap: anywhere; }
+
+      .end { margin-top: 8vh; padding-top: 26px; border-top: 1px solid var(--hairline); }
+      .end p { color: var(--ink-muted); font-size: 0.9rem; }
+      .cta { display: inline-block; font-family: var(--font-data); font-size: 0.78rem;
+        letter-spacing: 0.08em; color: var(--accent); border: 1px solid var(--accent);
+        border-radius: 4px; padding: 10px 18px; text-decoration: none; }
+      .cta:hover { background: var(--accent-ink); }
+
+      #tip { position: fixed; z-index: 60; pointer-events: none; background: var(--surface-raised);
+        border: 1px solid var(--hairline); border-radius: 5px; padding: 8px 11px;
+        font-family: var(--font-data); font-size: 0.72rem; line-height: 1.5; color: var(--ink);
+        max-width: 260px; box-shadow: 0 8px 26px rgba(0,0,0,0.55); }
+
+      @media (max-width: 680px) {
+        article { padding: 0 16px 10vh; }
+        .masthead { padding-top: 5vh; }
+        .abstract { padding: 18px 16px; }
+        figure { padding: 12px 8px 10px; }
+        .chk { grid-template-columns: 1fr; }
+        .cdet { grid-column: 1; }
+        h2 { gap: 10px; }
+      }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+
+    <script>
+      /* Hover read-outs. Pure SVG, no GPU path. */
+      const tip = document.getElementById("tip") as HTMLElement;
+      const show = (html: string, e: MouseEvent) => {
+        tip.innerHTML = html;
+        tip.hidden = false;
+        const r = tip.getBoundingClientRect();
+        let x = e.clientX + 14, y = e.clientY + 14;
+        if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+        if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+        tip.style.left = x + "px";
+        tip.style.top = y + "px";
+      };
+      document.querySelectorAll<SVGElement>(".d1").forEach((el) => {
+        el.addEventListener("mousemove", (e) =>
+          show(`<b>${el.dataset.n}</b><br>${el.dataset.t}`, e as MouseEvent));
+        el.addEventListener("mouseleave", () => { tip.hidden = true; });
+      });
+    </script>
+  </body>
+</html>

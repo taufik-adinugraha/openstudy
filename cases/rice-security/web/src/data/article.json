@@ -1,0 +1,1909 @@
+{
+ "vintage": "2026-08-30",
+ "generated": "2026-08-30T17:39:14Z",
+ "sar_window": [
+  "2022-07-01",
+  "2026-08-31"
+ ],
+ "seasons": [
+  "2022/23",
+  "2023/24",
+  "2024/25",
+  "2025/26"
+ ],
+ "cells": 1226885,
+ "cell_m": 100,
+ "kabupaten_ha": 1226404.0,
+ "provinces": [
+  "Jawa Barat",
+  "Jawa Tengah",
+  "Jawa Timur"
+ ],
+ "cycles": 1175477,
+ "acquisitions": 1235,
+ "full_years": [
+  2023,
+  2024,
+  2025
+ ],
+ "checks": [
+  {
+   "n": 1,
+   "name": "Reconciliation with the official survey",
+   "pass": false,
+   "detail": "uncalibrated R\u00b2 -11.0889, MAPE 72.68%; calibrated R\u00b2 0.8167 on the annual panel"
+  },
+  {
+   "n": 2,
+   "name": "Harvest timing",
+   "pass": false,
+   "detail": "median |error| 5.02 weeks against a 2.0-week threshold"
+  },
+  {
+   "n": 3,
+   "name": "Cropping intensity",
+   "pass": false,
+   "detail": "irrigated units Indramayu 1.44, Karawang 1.58, Subang 1.56, Bojonegoro 1.13, Lamongan 1.09, Grobogan 1.1"
+  },
+  {
+   "n": 4,
+   "name": "Agreement with an independent rice map",
+   "pass": false,
+   "detail": "51.2% of the published map reproduced against a 70% threshold"
+  },
+  {
+   "n": 5,
+   "name": "Held-out season",
+   "pass": false,
+   "detail": "uncalibrated -62.05% on the sum, MAPE 67.2%"
+  }
+ ],
+ "checks_passed": 0,
+ "g1": {
+  "uncalibrated": {
+   "aggregate_by_year": [
+    {
+     "year": 2023,
+     "ours_ha": 252558.0,
+     "ksa_ha": 996434.0,
+     "diff_pct": -74.65
+    },
+    {
+     "year": 2024,
+     "ours_ha": 248988.0,
+     "ksa_ha": 821704.0,
+     "diff_pct": -69.7
+    },
+    {
+     "year": 2025,
+     "ours_ha": 328936.0,
+     "ksa_ha": 939422.0,
+     "diff_pct": -64.99
+    }
+   ],
+   "worst_abs_diff_pct": 74.65,
+   "kabupaten_r2": -11.0889,
+   "kabupaten_mape": 72.68
+  },
+  "calibrated": {
+   "aggregate_by_year": [
+    {
+     "year": 2023,
+     "ours_ha": 1015016.0,
+     "ksa_ha": 996434.0,
+     "diff_pct": 1.86
+    },
+    {
+     "year": 2024,
+     "ours_ha": 840747.0,
+     "ksa_ha": 821704.0,
+     "diff_pct": 2.32
+    },
+    {
+     "year": 2025,
+     "ours_ha": 891498.0,
+     "ksa_ha": 939422.0,
+     "diff_pct": -5.1
+    }
+   ],
+   "worst_abs_diff_pct": 5.1,
+   "kabupaten_r2": 0.8167,
+   "kabupaten_mape": 6.62
+  }
+ },
+ "g2": {
+  "median_abs_error_weeks": 5.02,
+  "threshold_weeks": 2.0,
+  "unit_bias_weeks": {
+   "Bojonegoro": -5.24,
+   "Indramayu": 4.97,
+   "Karawang": -3.48,
+   "Lamongan": 10.02,
+   "Subang": -2.17
+  },
+  "worst_unit_bias_weeks": 10.02
+ },
+ "g3": {
+  "band": [
+   1.5,
+   2.5
+  ],
+  "units": {
+   "Indramayu": 1.44,
+   "Karawang": 1.58,
+   "Subang": 1.56,
+   "Bojonegoro": 1.13,
+   "Lamongan": 1.09,
+   "Grobogan": 1.1
+  }
+ },
+ "g4": {
+  "agreement_on_prior": 0.5118,
+  "agreement_on_ours": 0.8262,
+  "prior_rice_cells": 515615,
+  "detected_cells": 319415,
+  "prior_only_cells": 251710,
+  "ours_only_cells": 55510,
+  "threshold": 0.7
+ },
+ "benchmark": {
+  "break_year": 2018,
+  "break_pct": -19.4,
+  "pre_ksa_ha": 14116638,
+  "first_ksa_ha": 11377934,
+  "record_opens": "2022-07-01",
+  "break_inside_window": false,
+  "five_unit_series": [
+   {
+    "year": 2018,
+    "ha": 890828.0
+   },
+   {
+    "year": 2019,
+    "ha": 827165.0
+   },
+   {
+    "year": 2020,
+    "ha": 861623.0
+   },
+   {
+    "year": 2021,
+    "ha": 861973.0
+   },
+   {
+    "year": 2022,
+    "ha": 912211.0
+   },
+   {
+    "year": 2023,
+    "ha": 866803.0
+   },
+   {
+    "year": 2024,
+    "ha": 821704.0
+   },
+   {
+    "year": 2025,
+    "ha": 939422.0
+   }
+  ],
+  "five_unit_range_pct": 14.33,
+  "five_unit_cv_pct": 4.3,
+  "national_ksa_mha": {
+   "2018": 11.38,
+   "2019": 10.68,
+   "2020": 10.66,
+   "2021": 10.41,
+   "2022": 10.45,
+   "2023": 10.21,
+   "2024": 10.05,
+   "2025": 11.32
+  },
+  "national_2025_jump_pct": 12.64,
+  "map_implied_ha": 1010219.0,
+  "map_vs_ksa_pct": 1.38,
+  "map_vs_ksa_year": 2023
+ },
+ "decomposition": {
+  "aggregate": [
+   {
+    "year": 2023,
+    "n_units": 6,
+    "detected_extent_ha": 174362.0,
+    "detected_harvested_ha": 252558.0,
+    "map_extent_ha": 515365.0,
+    "map_harvest_ha": 1010219.0,
+    "ksa_ha": 996434.0,
+    "det_ci": 1.448,
+    "map_ci": 1.96,
+    "recall_extent": 0.3383,
+    "recall_ci": 0.7389,
+    "ratio_ksa": 0.2535,
+    "ratio_map": 0.25,
+    "map_vs_ksa": 1.0138,
+    "share_extent": 0.7818
+   },
+   {
+    "year": 2024,
+    "n_units": 5,
+    "detected_extent_ha": 179785.0,
+    "detected_harvested_ha": 248988.0,
+    "map_extent_ha": 453623.0,
+    "map_harvest_ha": 884199.0,
+    "ksa_ha": 821704.0,
+    "det_ci": 1.385,
+    "map_ci": 1.949,
+    "recall_extent": 0.3963,
+    "recall_ci": 0.7105,
+    "ratio_ksa": 0.303,
+    "ratio_map": 0.2816,
+    "map_vs_ksa": 1.0761,
+    "share_extent": 0.7303
+   },
+   {
+    "year": 2025,
+    "n_units": 5,
+    "detected_extent_ha": 212960.0,
+    "detected_harvested_ha": 328936.0,
+    "map_extent_ha": 453623.0,
+    "map_harvest_ha": 884199.0,
+    "ksa_ha": 939422.0,
+    "det_ci": 1.545,
+    "map_ci": 1.949,
+    "recall_extent": 0.4695,
+    "recall_ci": 0.7924,
+    "ratio_ksa": 0.3501,
+    "ratio_map": 0.372,
+    "map_vs_ksa": 0.9412,
+    "share_extent": 0.7647
+   }
+  ],
+  "by_kabupaten": [
+   {
+    "kabupaten": "Indramayu",
+    "year": 2023.0,
+    "paddy_extent_ha": 55828.582,
+    "harvested_ha": 75488.3906,
+    "ksa_ha": 230456.96,
+    "prior_extent_ha": 106856.0391,
+    "prior_harvest_ha": 213592.2526,
+    "prior_ci": 1.9989,
+    "det_ci": 1.3521,
+    "recall_extent": 0.5225,
+    "recall_ci": 0.6765,
+    "ratio_ksa": 0.3276,
+    "ratio_map": 0.3534,
+    "share_extent": 0.6242,
+    "benchmark_usable": 1.0
+   },
+   {
+    "kabupaten": "Indramayu",
+    "year": 2024.0,
+    "paddy_extent_ha": 62179.1836,
+    "harvested_ha": 85796.5156,
+    "ksa_ha": 212866.19,
+    "prior_extent_ha": 106856.0391,
+    "prior_harvest_ha": 213592.2526,
+    "prior_ci": 1.9989,
+    "det_ci": 1.3798,
+    "recall_extent": 0.5819,
+    "recall_ci": 0.6903,
+    "ratio_ksa": 0.4031,
+    "ratio_map": 0.4017,
+    "share_extent": 0.5936,
+    "benchmark_usable": 1.0
+   },
+   {
+    "kabupaten": "Indramayu",
+    "year": 2025.0,
+    "paddy_extent_ha": 75984.5781,
+    "harvested_ha": 120318.9844,
+    "ksa_ha": 239497.73,
+    "prior_extent_ha": 106856.0391,
+    "prior_harvest_ha": 213592.2526,
+    "prior_ci": 1.9989,
+    "det_ci": 1.5835,
+    "recall_extent": 0.7111,
+    "recall_ci": 0.7922,
+    "ratio_ksa": 0.5024,
+    "ratio_map": 0.5633,
+    "share_extent": 0.5941,
+    "benchmark_usable": 1.0
+   },
+   {
+    "kabupaten": "Karawang",
+    "year": 2023.0,
+    "paddy_extent_ha": 53212.9609,
+    "harvested_ha": 87888.3125,
+    "ksa_ha": 189064.62,
+    "prior_extent_ha": 96517.6797,
+    "prior_harvest_ha": 192921.4685,
+    "prior_ci": 1.9988,
+    "det_ci": 1.6516,
+    "recall_extent": 0.5513,
+    "recall_ci": 0.8263,
+    "ratio_ksa": 0.4649,
+    "ratio_map": 0.4556,
+    "share_extent": 0.7573,
+    "benchmark_usable": 1.0
+   },
+   {
+    "kabupaten": "Karawang",
+    "year": 2024.0,
+    "paddy_extent_ha": 54297.0039,
+    "harvested_ha": 78111.9531,
+    "ksa_ha": 183065.46,
+    "prior_extent_ha": 96517.6797,
+    "prior_harvest_ha": 192921.4685,
+    "prior_ci": 1.9988,
+    "det_ci": 1.4386,
+    "recall_extent": 0.5626,
+    "recall_ci": 0.7197,
+    "ratio_ksa": 0.4267,
+    "ratio_map": 0.4049,
+    "share_extent": 0.6362,
+    "benchmark_usable": 1.0
+   },
+   {
+    "kabupaten": "Karawang",
+    "year": 2025.0,
+    "paddy_extent_ha": 56689.8906,
+    "harvested_ha": 94339.6094,
+    "ksa_ha": 202292.99,
+    "prior_extent_ha": 96517.6797,
+    "prior_harvest_ha": 192921.4685,
+    "prior_ci": 1.9988,
+    "det_ci": 1.6641,
+    "recall_extent": 0.5874,
+    "recall_ci": 0.8326,
+    "ratio_ksa": 0.4664,
+    "ratio_map": 0.489,
+    "share_extent": 0.7438,
+    "benchmark_usable": 1.0
+   },
+   {
+    "kabupaten": "Subang",
+    "year": 2023.0,
+    "paddy_extent_ha": 39180.6211,
+    "harvested_ha": 60726.0703,
+    "ksa_ha": 174864.99,
+    "prior_extent_ha": 77240.8906,
+    "prior_harvest_ha": 154072.373,
+    "prior_ci": 1.9947,
+    "det_ci": 1.5499,
+    "recall_extent": 0.5073,
+    "recall_ci": 0.777,
+    "ratio_ksa": 0.3473,
+    "ratio_map": 0.3941,
+    "share_extent": 0.729,
+    "benchmark_usable": 1.0
+   },
+   {
+    "kabupaten": "Subang",
+    "year": 2024.0,
+    "paddy_extent_ha": 39771.7578,
+    "harvested_ha": 59513.8477,
+    "ksa_ha": 163881.65,
+    "prior_extent_ha": 77240.8906,
+    "prior_harvest_ha": 154072.373,
+    "prior_ci": 1.9947,
+    "det_ci": 1.4964,
+    "recall_extent": 0.5149,
+    "recall_ci": 0.7502,
+    "ratio_ksa": 0.3632,
+    "ratio_map": 0.3863,
+    "share_extent": 0.6978,
+    "benchmark_usable": 1.0
+   },
+   {
+    "kabupaten": "Subang",
+    "year": 2025.0,
+    "paddy_extent_ha": 44001.5625,
+    "harvested_ha": 71564.2031,
+    "ksa_ha": 184318.68,
+    "prior_extent_ha": 77240.8906,
+    "prior_harvest_ha": 154072.373,
+    "prior_ci": 1.9947,
+    "det_ci": 1.6264,
+    "recall_extent": 0.5697,
+    "recall_ci": 0.8154,
+    "ratio_ksa": 0.3883,
+    "ratio_map": 0.4645,
+    "share_extent": 0.7338,
+    "benchmark_usable": 1.0
+   },
+   {
+    "kabupaten": "Grobogan",
+    "year": 2023.0,
+    "paddy_extent_ha": 9826.7461,
+    "harvested_ha": 10601.3574,
+    "ksa_ha": 129630.82,
+    "prior_extent_ha": 61741.6641,
+    "prior_harvest_ha": 126020.3425,
+    "prior_ci": 2.0411,
+    "det_ci": 1.0788,
+    "recall_extent": 0.1592,
+    "recall_ci": 0.5286,
+    "ratio_ksa": 0.0818,
+    "ratio_map": 0.0841,
+    "share_extent": 0.7424,
+    "benchmark_usable": 1.0
+   },
+   {
+    "kabupaten": "Grobogan",
+    "year": 2024.0,
+    "paddy_extent_ha": 17026.4219,
+    "harvested_ha": 17966.1621,
+    "ksa_ha": 84846.36,
+    "prior_extent_ha": 61741.6641,
+    "prior_harvest_ha": 126020.3425,
+    "prior_ci": 2.0411,
+    "det_ci": 1.0552,
+    "recall_extent": 0.2758,
+    "recall_ci": 0.517,
+    "ratio_ksa": 0.2117,
+    "ratio_map": 0.1426,
+    "share_extent": 0.6613,
+    "benchmark_usable": 0.0
+   },
+   {
+    "kabupaten": "Grobogan",
+    "year": 2025.0,
+    "paddy_extent_ha": 11321.9248,
+    "harvested_ha": 13329.5078,
+    "ksa_ha": 104159.0,
+    "prior_extent_ha": 61741.6641,
+    "prior_harvest_ha": 126020.3425,
+    "prior_ci": 2.0411,
+    "det_ci": 1.1773,
+    "recall_extent": 0.1834,
+    "recall_ci": 0.5768,
+    "ratio_ksa": 0.128,
+    "ratio_map": 0.1058,
+    "share_extent": 0.7551,
+    "benchmark_usable": 0.0
+   },
+   {
+    "kabupaten": "Bojonegoro",
+    "year": 2023.0,
+    "paddy_extent_ha": 12902.6533,
+    "harvested_ha": 14373.5264,
+    "ksa_ha": 132712.02,
+    "prior_extent_ha": 81504.3438,
+    "prior_harvest_ha": 173060.658,
+    "prior_ci": 2.1233,
+    "det_ci": 1.114,
+    "recall_extent": 0.1583,
+    "recall_ci": 0.5246,
+    "ratio_ksa": 0.1083,
+    "ratio_map": 0.0831,
+    "share_extent": 0.7408,
+    "benchmark_usable": 1.0
+   },
+   {
+    "kabupaten": "Bojonegoro",
+    "year": 2024.0,
+    "paddy_extent_ha": 15218.0273,
+    "harvested_ha": 16536.8086,
+    "ksa_ha": 131220.56,
+    "prior_extent_ha": 81504.3438,
+    "prior_harvest_ha": 173060.658,
+    "prior_ci": 2.1233,
+    "det_ci": 1.0867,
+    "recall_extent": 0.1867,
+    "recall_ci": 0.5118,
+    "ratio_ksa": 0.126,
+    "ratio_map": 0.0956,
+    "share_extent": 0.7147,
+    "benchmark_usable": 1.0
+   },
+   {
+    "kabupaten": "Bojonegoro",
+    "year": 2025.0,
+    "paddy_extent_ha": 21415.7031,
+    "harvested_ha": 25475.1113,
+    "ksa_ha": 160748.49,
+    "prior_extent_ha": 81504.3438,
+    "prior_harvest_ha": 173060.658,
+    "prior_ci": 2.1233,
+    "det_ci": 1.1896,
+    "recall_extent": 0.2628,
+    "recall_ci": 0.5602,
+    "ratio_ksa": 0.1585,
+    "ratio_map": 0.1472,
+    "share_extent": 0.6976,
+    "benchmark_usable": 1.0
+   },
+   {
+    "kabupaten": "Lamongan",
+    "year": 2023.0,
+    "paddy_extent_ha": 3409.9753,
+    "harvested_ha": 3479.9954,
+    "ksa_ha": 139704.81,
+    "prior_extent_ha": 91504.1719,
+    "prior_harvest_ha": 150552.061,
+    "prior_ci": 1.6453,
+    "det_ci": 1.0205,
+    "recall_extent": 0.0373,
+    "recall_ci": 0.6203,
+    "ratio_ksa": 0.0249,
+    "ratio_map": 0.0231,
+    "share_extent": 0.8732,
+    "benchmark_usable": 1.0
+   },
+   {
+    "kabupaten": "Lamongan",
+    "year": 2024.0,
+    "paddy_extent_ha": 8319.3799,
+    "harvested_ha": 9028.582,
+    "ksa_ha": 130670.42,
+    "prior_extent_ha": 91504.1719,
+    "prior_harvest_ha": 150552.061,
+    "prior_ci": 1.6453,
+    "det_ci": 1.0852,
+    "recall_extent": 0.0909,
+    "recall_ci": 0.6596,
+    "ratio_ksa": 0.0691,
+    "ratio_map": 0.06,
+    "share_extent": 0.8521,
+    "benchmark_usable": 1.0
+   },
+   {
+    "kabupaten": "Lamongan",
+    "year": 2025.0,
+    "paddy_extent_ha": 14868.2529,
+    "harvested_ha": 17237.9297,
+    "ksa_ha": 152564.32,
+    "prior_extent_ha": 91504.1719,
+    "prior_harvest_ha": 150552.061,
+    "prior_ci": 1.6453,
+    "det_ci": 1.1594,
+    "recall_extent": 0.1625,
+    "recall_ci": 0.7047,
+    "ratio_ksa": 0.113,
+    "ratio_map": 0.1145,
+    "share_extent": 0.8385,
+    "benchmark_usable": 1.0
+   }
+  ]
+ },
+ "headline": {
+  "ratio_first": 0.2535,
+  "ratio_last": 0.3501,
+  "recall_extent_first": 0.3383,
+  "recall_extent_last": 0.4695,
+  "recall_ci_first": 0.7389,
+  "recall_ci_last": 0.7924,
+  "share_extent": 0.7589,
+  "map_ci": 1.949,
+  "det_ci": 1.545
+ },
+ "crop_class": {
+  "summary": {
+   "1": {
+    "cond": 1.0717,
+    "uncond": 0.0381,
+    "detect_rate": 0.0356
+   },
+   "2": {
+    "cond": 1.4879,
+    "uncond": 0.5638,
+    "detect_rate": 0.3775
+   },
+   "3": {
+    "cond": 1.1504,
+    "uncond": 0.1465,
+    "detect_rate": 0.1246
+   },
+   "ratio_cond_2_over_1": 1.3884,
+   "ratio_map_2_over_1": 2.0
+  },
+  "rows": [
+   {
+    "mask_class": 0,
+    "map_crops": 0,
+    "year": 2023,
+    "n_cells": 711270,
+    "cells_detected": 12713,
+    "detect_rate": 0.0179,
+    "cycles": 14557,
+    "cond_cycles_per_cell": 1.145,
+    "uncond_cycles_per_cell": 0.0205
+   },
+   {
+    "mask_class": 0,
+    "map_crops": 0,
+    "year": 2024,
+    "n_cells": 711270,
+    "cells_detected": 29311,
+    "detect_rate": 0.0412,
+    "cycles": 32241,
+    "cond_cycles_per_cell": 1.1,
+    "uncond_cycles_per_cell": 0.0453
+   },
+   {
+    "mask_class": 0,
+    "map_crops": 0,
+    "year": 2025,
+    "n_cells": 711270,
+    "cells_detected": 22460,
+    "detect_rate": 0.0316,
+    "cycles": 25748,
+    "cond_cycles_per_cell": 1.1464,
+    "uncond_cycles_per_cell": 0.0362
+   },
+   {
+    "mask_class": 1,
+    "map_crops": 1,
+    "year": 2023,
+    "n_cells": 38083,
+    "cells_detected": 791,
+    "detect_rate": 0.0208,
+    "cycles": 857,
+    "cond_cycles_per_cell": 1.0834,
+    "uncond_cycles_per_cell": 0.0225
+   },
+   {
+    "mask_class": 1,
+    "map_crops": 1,
+    "year": 2024,
+    "n_cells": 38083,
+    "cells_detected": 1580,
+    "detect_rate": 0.0415,
+    "cycles": 1653,
+    "cond_cycles_per_cell": 1.0462,
+    "uncond_cycles_per_cell": 0.0434
+   },
+   {
+    "mask_class": 1,
+    "map_crops": 1,
+    "year": 2025,
+    "n_cells": 38083,
+    "cells_detected": 1697,
+    "detect_rate": 0.0446,
+    "cycles": 1842,
+    "cond_cycles_per_cell": 1.0854,
+    "uncond_cycles_per_cell": 0.0484
+   },
+   {
+    "mask_class": 2,
+    "map_crops": 2,
+    "year": 2023,
+    "n_cells": 459959,
+    "cells_detected": 159673,
+    "detect_rate": 0.3471,
+    "cycles": 235930,
+    "cond_cycles_per_cell": 1.4776,
+    "uncond_cycles_per_cell": 0.5129
+   },
+   {
+    "mask_class": 2,
+    "map_crops": 2,
+    "year": 2024,
+    "n_cells": 459959,
+    "cells_detected": 164197,
+    "detect_rate": 0.357,
+    "cycles": 231198,
+    "cond_cycles_per_cell": 1.4081,
+    "uncond_cycles_per_cell": 0.5026
+   },
+   {
+    "mask_class": 2,
+    "map_crops": 2,
+    "year": 2025,
+    "n_cells": 459959,
+    "cells_detected": 197039,
+    "detect_rate": 0.4284,
+    "cycles": 310927,
+    "cond_cycles_per_cell": 1.578,
+    "uncond_cycles_per_cell": 0.676
+   },
+   {
+    "mask_class": 3,
+    "map_crops": 3,
+    "year": 2023,
+    "n_cells": 17573,
+    "cells_detected": 1364,
+    "detect_rate": 0.0776,
+    "cycles": 1486,
+    "cond_cycles_per_cell": 1.0894,
+    "uncond_cycles_per_cell": 0.0846
+   },
+   {
+    "mask_class": 3,
+    "map_crops": 3,
+    "year": 2024,
+    "n_cells": 17573,
+    "cells_detected": 1907,
+    "detect_rate": 0.1085,
+    "cycles": 2132,
+    "cond_cycles_per_cell": 1.118,
+    "uncond_cycles_per_cell": 0.1213
+   },
+   {
+    "mask_class": 3,
+    "map_crops": 3,
+    "year": 2025,
+    "n_cells": 17573,
+    "cells_detected": 3299,
+    "detect_rate": 0.1877,
+    "cycles": 4103,
+    "cond_cycles_per_cell": 1.2437,
+    "uncond_cycles_per_cell": 0.2335
+   }
+  ]
+ },
+ "seasonal": {
+  "by_month": [
+   {
+    "month": 1,
+    "ours_ha": 70501.0,
+    "ksa_ha": 72418.0,
+    "ratio": 0.9735,
+    "share_ours": 0.086,
+    "share_ksa": 0.0279
+   },
+   {
+    "month": 2,
+    "ours_ha": 49612.0,
+    "ksa_ha": 100836.0,
+    "ratio": 0.492,
+    "share_ours": 0.0605,
+    "share_ksa": 0.0388
+   },
+   {
+    "month": 3,
+    "ours_ha": 39810.0,
+    "ksa_ha": 318489.0,
+    "ratio": 0.125,
+    "share_ours": 0.0486,
+    "share_ksa": 0.1225
+   },
+   {
+    "month": 4,
+    "ours_ha": 34239.0,
+    "ksa_ha": 355886.0,
+    "ratio": 0.0962,
+    "share_ours": 0.0418,
+    "share_ksa": 0.1369
+   },
+   {
+    "month": 5,
+    "ours_ha": 83026.0,
+    "ksa_ha": 358936.0,
+    "ratio": 0.2313,
+    "share_ours": 0.1013,
+    "share_ksa": 0.1381
+   },
+   {
+    "month": 6,
+    "ours_ha": 139769.0,
+    "ksa_ha": 245956.0,
+    "ratio": 0.5683,
+    "share_ours": 0.1705,
+    "share_ksa": 0.0946
+   },
+   {
+    "month": 7,
+    "ours_ha": 85573.0,
+    "ksa_ha": 222007.0,
+    "ratio": 0.3855,
+    "share_ours": 0.1044,
+    "share_ksa": 0.0854
+   },
+   {
+    "month": 8,
+    "ours_ha": 57509.0,
+    "ksa_ha": 158993.0,
+    "ratio": 0.3617,
+    "share_ours": 0.0701,
+    "share_ksa": 0.0612
+   },
+   {
+    "month": 9,
+    "ours_ha": 35973.0,
+    "ksa_ha": 183518.0,
+    "ratio": 0.196,
+    "share_ours": 0.0439,
+    "share_ksa": 0.0706
+   },
+   {
+    "month": 10,
+    "ours_ha": 61083.0,
+    "ksa_ha": 274276.0,
+    "ratio": 0.2227,
+    "share_ours": 0.0745,
+    "share_ksa": 0.1055
+   },
+   {
+    "month": 11,
+    "ours_ha": 78544.0,
+    "ksa_ha": 198529.0,
+    "ratio": 0.3956,
+    "share_ours": 0.0958,
+    "share_ksa": 0.0764
+   },
+   {
+    "month": 12,
+    "ours_ha": 84240.0,
+    "ksa_ha": 109721.0,
+    "ratio": 0.7678,
+    "share_ours": 0.1027,
+    "share_ksa": 0.0422
+   }
+  ],
+  "by_month_lag_corrected": [
+   {
+    "month": 1,
+    "ours_ha": 49612.0
+   },
+   {
+    "month": 2,
+    "ours_ha": 39810.0
+   },
+   {
+    "month": 3,
+    "ours_ha": 34239.0
+   },
+   {
+    "month": 4,
+    "ours_ha": 83026.0
+   },
+   {
+    "month": 5,
+    "ours_ha": 139769.0
+   },
+   {
+    "month": 6,
+    "ours_ha": 85573.0
+   },
+   {
+    "month": 7,
+    "ours_ha": 57509.0
+   },
+   {
+    "month": 8,
+    "ours_ha": 35973.0
+   },
+   {
+    "month": 9,
+    "ours_ha": 61083.0
+   },
+   {
+    "month": 10,
+    "ours_ha": 78544.0
+   },
+   {
+    "month": 11,
+    "ours_ha": 84240.0
+   },
+   {
+    "month": 12,
+    "ours_ha": 70501.0
+   }
+  ],
+  "lag_months_removed": 1,
+  "lobes": {
+   "rendeng": {
+    "months": [
+     2,
+     3,
+     4,
+     5
+    ],
+    "ours_ha": 206686.0,
+    "ksa_ha": 1134146.0,
+    "ratio": 0.1822,
+    "share_ours": 0.2521,
+    "share_ksa": 0.4363
+   },
+   "gadu": {
+    "months": [
+     7,
+     8,
+     9,
+     10
+    ],
+    "ours_ha": 240139.0,
+    "ksa_ha": 838794.0,
+    "ratio": 0.2863,
+    "share_ours": 0.2929,
+    "share_ksa": 0.3227
+   },
+   "shoulder": {
+    "months": [
+     1,
+     6,
+     11,
+     12
+    ],
+    "ours_ha": 373055.0,
+    "ksa_ha": 626624.0,
+    "ratio": 0.5953,
+    "share_ours": 0.455,
+    "share_ksa": 0.241
+   },
+   "gadu_over_rendeng_ratio": 1.5714
+  },
+  "lobes_lag_corrected": {
+   "rendeng": {
+    "months": [
+     2,
+     3,
+     4,
+     5
+    ],
+    "ours_ha": 296844.0,
+    "ksa_ha": 1134146.0,
+    "ratio": 0.2617,
+    "share_ours": 0.3621,
+    "share_ksa": 0.4363
+   },
+   "gadu": {
+    "months": [
+     7,
+     8,
+     9,
+     10
+    ],
+    "ours_ha": 233110.0,
+    "ksa_ha": 838794.0,
+    "ratio": 0.2779,
+    "share_ours": 0.2843,
+    "share_ksa": 0.3227
+   },
+   "shoulder": {
+    "months": [
+     1,
+     6,
+     11,
+     12
+    ],
+    "ours_ha": 289926.0,
+    "ksa_ha": 626624.0,
+    "ratio": 0.4627,
+    "share_ours": 0.3536,
+    "share_ksa": 0.241
+   },
+   "gadu_over_rendeng_ratio": 1.0619
+  }
+ },
+ "revisit": {
+  "rows": [
+   {
+    "kabupaten": "Indramayu",
+    "year": 2023,
+    "n_acquisitions": 40,
+    "n_orbits": 2,
+    "median_gap_days": 8.0,
+    "p90_gap_days": 12.0,
+    "max_gap_days": 24.0,
+    "paddy_extent_ha": 55828.582,
+    "harvested_ha": 75488.3906,
+    "ci": 1.3521,
+    "prior_extent_ha": 106856.0312,
+    "recall_extent": 0.5225
+   },
+   {
+    "kabupaten": "Indramayu",
+    "year": 2024,
+    "n_acquisitions": 44,
+    "n_orbits": 2,
+    "median_gap_days": 8.0,
+    "p90_gap_days": 12.0,
+    "max_gap_days": 24.0,
+    "paddy_extent_ha": 62179.1836,
+    "harvested_ha": 85796.5156,
+    "ci": 1.3798,
+    "prior_extent_ha": 106856.0312,
+    "recall_extent": 0.5819
+   },
+   {
+    "kabupaten": "Indramayu",
+    "year": 2025,
+    "n_acquisitions": 52,
+    "n_orbits": 2,
+    "median_gap_days": 8.0,
+    "p90_gap_days": 8.0,
+    "max_gap_days": 36.0,
+    "paddy_extent_ha": 75984.5781,
+    "harvested_ha": 120318.9844,
+    "ci": 1.5835,
+    "prior_extent_ha": 106856.0312,
+    "recall_extent": 0.7111
+   },
+   {
+    "kabupaten": "Karawang",
+    "year": 2023,
+    "n_acquisitions": 62,
+    "n_orbits": 3,
+    "median_gap_days": 4.0,
+    "p90_gap_days": 12.0,
+    "max_gap_days": 12.0,
+    "paddy_extent_ha": 53212.9609,
+    "harvested_ha": 87888.3125,
+    "ci": 1.6516,
+    "prior_extent_ha": 96517.6875,
+    "recall_extent": 0.5513
+   },
+   {
+    "kabupaten": "Karawang",
+    "year": 2024,
+    "n_acquisitions": 50,
+    "n_orbits": 3,
+    "median_gap_days": 9.0,
+    "p90_gap_days": 12.0,
+    "max_gap_days": 21.0,
+    "paddy_extent_ha": 54297.0039,
+    "harvested_ha": 78111.9531,
+    "ci": 1.4386,
+    "prior_extent_ha": 96517.6875,
+    "recall_extent": 0.5626
+   },
+   {
+    "kabupaten": "Karawang",
+    "year": 2025,
+    "n_acquisitions": 69,
+    "n_orbits": 3,
+    "median_gap_days": 4.0,
+    "p90_gap_days": 9.0,
+    "max_gap_days": 12.0,
+    "paddy_extent_ha": 56689.8906,
+    "harvested_ha": 94339.6094,
+    "ci": 1.6641,
+    "prior_extent_ha": 96517.6875,
+    "recall_extent": 0.5874
+   },
+   {
+    "kabupaten": "Subang",
+    "year": 2023,
+    "n_acquisitions": 54,
+    "n_orbits": 2,
+    "median_gap_days": 9.0,
+    "p90_gap_days": 12.0,
+    "max_gap_days": 12.0,
+    "paddy_extent_ha": 39180.6211,
+    "harvested_ha": 60726.0703,
+    "ci": 1.5499,
+    "prior_extent_ha": 77240.8906,
+    "recall_extent": 0.5073
+   },
+   {
+    "kabupaten": "Subang",
+    "year": 2024,
+    "n_acquisitions": 47,
+    "n_orbits": 2,
+    "median_gap_days": 9.0,
+    "p90_gap_days": 12.0,
+    "max_gap_days": 21.0,
+    "paddy_extent_ha": 39771.7578,
+    "harvested_ha": 59513.8477,
+    "ci": 1.4964,
+    "prior_extent_ha": 77240.8906,
+    "recall_extent": 0.5149
+   },
+   {
+    "kabupaten": "Subang",
+    "year": 2025,
+    "n_acquisitions": 55,
+    "n_orbits": 2,
+    "median_gap_days": 9.0,
+    "p90_gap_days": 11.1,
+    "max_gap_days": 12.0,
+    "paddy_extent_ha": 44001.5625,
+    "harvested_ha": 71564.2031,
+    "ci": 1.6264,
+    "prior_extent_ha": 77240.8906,
+    "recall_extent": 0.5697
+   },
+   {
+    "kabupaten": "Bojonegoro",
+    "year": 2023,
+    "n_acquisitions": 25,
+    "n_orbits": 2,
+    "median_gap_days": 12.0,
+    "p90_gap_days": 24.0,
+    "max_gap_days": 48.0,
+    "paddy_extent_ha": 12902.6533,
+    "harvested_ha": 14373.5264,
+    "ci": 1.114,
+    "prior_extent_ha": 81504.3438,
+    "recall_extent": 0.1583
+   },
+   {
+    "kabupaten": "Bojonegoro",
+    "year": 2024,
+    "n_acquisitions": 33,
+    "n_orbits": 2,
+    "median_gap_days": 12.0,
+    "p90_gap_days": 12.0,
+    "max_gap_days": 24.0,
+    "paddy_extent_ha": 15218.0273,
+    "harvested_ha": 16536.8086,
+    "ci": 1.0867,
+    "prior_extent_ha": 81504.3438,
+    "recall_extent": 0.1867
+   },
+   {
+    "kabupaten": "Bojonegoro",
+    "year": 2025,
+    "n_acquisitions": 64,
+    "n_orbits": 2,
+    "median_gap_days": 6.0,
+    "p90_gap_days": 12.0,
+    "max_gap_days": 18.0,
+    "paddy_extent_ha": 21415.7031,
+    "harvested_ha": 25475.1113,
+    "ci": 1.1896,
+    "prior_extent_ha": 81504.3438,
+    "recall_extent": 0.2628
+   },
+   {
+    "kabupaten": "Lamongan",
+    "year": 2023,
+    "n_acquisitions": 25,
+    "n_orbits": 2,
+    "median_gap_days": 12.0,
+    "p90_gap_days": 12.0,
+    "max_gap_days": 20.0,
+    "paddy_extent_ha": 3409.9753,
+    "harvested_ha": 3479.9954,
+    "ci": 1.0205,
+    "prior_extent_ha": 91504.1719,
+    "recall_extent": 0.0373
+   },
+   {
+    "kabupaten": "Lamongan",
+    "year": 2024,
+    "n_acquisitions": 37,
+    "n_orbits": 2,
+    "median_gap_days": 12.0,
+    "p90_gap_days": 12.0,
+    "max_gap_days": 12.0,
+    "paddy_extent_ha": 8319.3799,
+    "harvested_ha": 9028.582,
+    "ci": 1.0852,
+    "prior_extent_ha": 91504.1719,
+    "recall_extent": 0.0909
+   },
+   {
+    "kabupaten": "Lamongan",
+    "year": 2025,
+    "n_acquisitions": 42,
+    "n_orbits": 2,
+    "median_gap_days": 8.0,
+    "p90_gap_days": 12.0,
+    "max_gap_days": 24.0,
+    "paddy_extent_ha": 14868.2529,
+    "harvested_ha": 17237.9297,
+    "ci": 1.1594,
+    "prior_extent_ha": 91504.1719,
+    "recall_extent": 0.1625
+   },
+   {
+    "kabupaten": "Grobogan",
+    "year": 2023,
+    "n_acquisitions": 39,
+    "n_orbits": 2,
+    "median_gap_days": 10.0,
+    "p90_gap_days": 12.0,
+    "max_gap_days": 20.0,
+    "paddy_extent_ha": 9826.7461,
+    "harvested_ha": 10601.3574,
+    "ci": 1.0788,
+    "prior_extent_ha": 61741.6719,
+    "recall_extent": 0.1592
+   },
+   {
+    "kabupaten": "Grobogan",
+    "year": 2024,
+    "n_acquisitions": 49,
+    "n_orbits": 2,
+    "median_gap_days": 8.0,
+    "p90_gap_days": 12.0,
+    "max_gap_days": 12.0,
+    "paddy_extent_ha": 17026.4219,
+    "harvested_ha": 17966.1621,
+    "ci": 1.0552,
+    "prior_extent_ha": 61741.6719,
+    "recall_extent": 0.2758
+   },
+   {
+    "kabupaten": "Grobogan",
+    "year": 2025,
+    "n_acquisitions": 69,
+    "n_orbits": 2,
+    "median_gap_days": 5.0,
+    "p90_gap_days": 8.0,
+    "max_gap_days": 18.0,
+    "paddy_extent_ha": 11321.9248,
+    "harvested_ha": 13329.5078,
+    "ci": 1.1773,
+    "prior_extent_ha": 61741.6719,
+    "recall_extent": 0.1834
+   }
+  ],
+  "by_year": [
+   {
+    "year": 2023,
+    "mean_acquisitions": 40.8,
+    "mean_median_gap_days": 9.17,
+    "mean_extent_recall": 0.3226,
+    "mean_cycles_per_year": 1.295
+   },
+   {
+    "year": 2024,
+    "mean_acquisitions": 43.3,
+    "mean_median_gap_days": 9.67,
+    "mean_extent_recall": 0.3688,
+    "mean_cycles_per_year": 1.257
+   },
+   {
+    "year": 2025,
+    "mean_acquisitions": 58.5,
+    "mean_median_gap_days": 6.67,
+    "mean_extent_recall": 0.4128,
+    "mean_cycles_per_year": 1.4
+   }
+  ],
+  "corr_gap_vs_recall": -0.4852,
+  "overlay": [
+   {
+    "kabupaten": "Indramayu",
+    "year": 2023,
+    "gap": 8.0,
+    "recall": 0.5225,
+    "acq": 40,
+    "ci": 1.3521
+   },
+   {
+    "kabupaten": "Indramayu",
+    "year": 2024,
+    "gap": 8.0,
+    "recall": 0.5819,
+    "acq": 44,
+    "ci": 1.3798
+   },
+   {
+    "kabupaten": "Indramayu",
+    "year": 2025,
+    "gap": 8.0,
+    "recall": 0.7111,
+    "acq": 52,
+    "ci": 1.5835
+   },
+   {
+    "kabupaten": "Karawang",
+    "year": 2023,
+    "gap": 4.0,
+    "recall": 0.5513,
+    "acq": 62,
+    "ci": 1.6516
+   },
+   {
+    "kabupaten": "Karawang",
+    "year": 2024,
+    "gap": 9.0,
+    "recall": 0.5626,
+    "acq": 50,
+    "ci": 1.4386
+   },
+   {
+    "kabupaten": "Karawang",
+    "year": 2025,
+    "gap": 4.0,
+    "recall": 0.5874,
+    "acq": 69,
+    "ci": 1.6641
+   },
+   {
+    "kabupaten": "Subang",
+    "year": 2023,
+    "gap": 9.0,
+    "recall": 0.5073,
+    "acq": 54,
+    "ci": 1.5499
+   },
+   {
+    "kabupaten": "Subang",
+    "year": 2024,
+    "gap": 9.0,
+    "recall": 0.5149,
+    "acq": 47,
+    "ci": 1.4964
+   },
+   {
+    "kabupaten": "Subang",
+    "year": 2025,
+    "gap": 9.0,
+    "recall": 0.5697,
+    "acq": 55,
+    "ci": 1.6264
+   },
+   {
+    "kabupaten": "Bojonegoro",
+    "year": 2023,
+    "gap": 12.0,
+    "recall": 0.1583,
+    "acq": 25,
+    "ci": 1.114
+   },
+   {
+    "kabupaten": "Bojonegoro",
+    "year": 2024,
+    "gap": 12.0,
+    "recall": 0.1867,
+    "acq": 33,
+    "ci": 1.0867
+   },
+   {
+    "kabupaten": "Bojonegoro",
+    "year": 2025,
+    "gap": 6.0,
+    "recall": 0.2628,
+    "acq": 64,
+    "ci": 1.1896
+   },
+   {
+    "kabupaten": "Lamongan",
+    "year": 2023,
+    "gap": 12.0,
+    "recall": 0.0373,
+    "acq": 25,
+    "ci": 1.0205
+   },
+   {
+    "kabupaten": "Lamongan",
+    "year": 2024,
+    "gap": 12.0,
+    "recall": 0.0909,
+    "acq": 37,
+    "ci": 1.0852
+   },
+   {
+    "kabupaten": "Lamongan",
+    "year": 2025,
+    "gap": 8.0,
+    "recall": 0.1625,
+    "acq": 42,
+    "ci": 1.1594
+   },
+   {
+    "kabupaten": "Grobogan",
+    "year": 2023,
+    "gap": 10.0,
+    "recall": 0.1592,
+    "acq": 39,
+    "ci": 1.0788
+   },
+   {
+    "kabupaten": "Grobogan",
+    "year": 2024,
+    "gap": 8.0,
+    "recall": 0.2758,
+    "acq": 49,
+    "ci": 1.0552
+   },
+   {
+    "kabupaten": "Grobogan",
+    "year": 2025,
+    "gap": 5.0,
+    "recall": 0.1834,
+    "acq": 69,
+    "ci": 1.1773
+   }
+  ],
+  "vh_range_db": {
+   "Bojonegoro": 5.98,
+   "Grobogan": 5.84,
+   "Indramayu": 8.32,
+   "Karawang": 8.74,
+   "Lamongan": 5.89,
+   "Subang": 8.26
+  },
+  "s1b_failure": "2021-12-23",
+  "s1b_test_possible": false,
+  "within_unit": [
+   {
+    "kabupaten": "Bojonegoro",
+    "gap_first": 12.0,
+    "gap_last": 6.0,
+    "recall_first": 0.1583,
+    "recall_last": 0.2628,
+    "acq_first": 25,
+    "acq_last": 64,
+    "gain": 1.66
+   },
+   {
+    "kabupaten": "Grobogan",
+    "gap_first": 10.0,
+    "gap_last": 5.0,
+    "recall_first": 0.1592,
+    "recall_last": 0.1834,
+    "acq_first": 39,
+    "acq_last": 69,
+    "gain": 1.15
+   },
+   {
+    "kabupaten": "Indramayu",
+    "gap_first": 8.0,
+    "gap_last": 8.0,
+    "recall_first": 0.5225,
+    "recall_last": 0.7111,
+    "acq_first": 40,
+    "acq_last": 52,
+    "gain": 1.36
+   },
+   {
+    "kabupaten": "Karawang",
+    "gap_first": 4.0,
+    "gap_last": 4.0,
+    "recall_first": 0.5513,
+    "recall_last": 0.5874,
+    "acq_first": 62,
+    "acq_last": 69,
+    "gain": 1.07
+   },
+   {
+    "kabupaten": "Lamongan",
+    "gap_first": 12.0,
+    "gap_last": 8.0,
+    "recall_first": 0.0373,
+    "recall_last": 0.1625,
+    "acq_first": 25,
+    "acq_last": 42,
+    "gain": 4.36
+   },
+   {
+    "kabupaten": "Subang",
+    "gap_first": 9.0,
+    "gap_last": 9.0,
+    "recall_first": 0.5073,
+    "recall_last": 0.5697,
+    "acq_first": 54,
+    "acq_last": 55,
+    "gain": 1.12
+   }
+  ]
+ },
+ "thinning": {
+  "kabupaten": "Karawang",
+  "ladder": [
+   {
+    "thin": 1,
+    "n_acquisitions": 225,
+    "median_gap_days": 6.0,
+    "cycles": 284388,
+    "cells_detected": 69179,
+    "extent_ha": 69118.0,
+    "harvested_ha": 284137.0,
+    "extent_recall_vs_prior": 0.7161,
+    "vh_range_db": 8.5,
+    "cycles_per_detected_cell": 4.1109,
+    "cycles_vs_full": 1.0,
+    "extent_vs_full": 1.0
+   },
+   {
+    "thin": 2,
+    "n_acquisitions": 113,
+    "median_gap_days": 12.0,
+    "cycles": 22635,
+    "cells_detected": 19518,
+    "extent_ha": 19501.0,
+    "harvested_ha": 22615.0,
+    "extent_recall_vs_prior": 0.202,
+    "vh_range_db": 7.75,
+    "cycles_per_detected_cell": 1.1597,
+    "cycles_vs_full": 0.0796,
+    "extent_vs_full": 0.2821
+   },
+   {
+    "thin": 3,
+    "n_acquisitions": 75,
+    "median_gap_days": 18.0,
+    "cycles": 1511,
+    "cells_detected": 1477,
+    "extent_ha": 1476.0,
+    "harvested_ha": 1510.0,
+    "extent_recall_vs_prior": 0.0153,
+    "vh_range_db": 7.09,
+    "cycles_per_detected_cell": 1.023,
+    "cycles_vs_full": 0.0053,
+    "extent_vs_full": 0.0214
+   },
+   {
+    "thin": 4,
+    "n_acquisitions": 57,
+    "median_gap_days": 24.0,
+    "cycles": 233,
+    "cells_detected": 229,
+    "extent_ha": 229.0,
+    "harvested_ha": 233.0,
+    "extent_recall_vs_prior": 0.0024,
+    "vh_range_db": 6.91,
+    "cycles_per_detected_cell": 1.0175,
+    "cycles_vs_full": 0.0008,
+    "extent_vs_full": 0.0033
+   }
+  ],
+  "prior_rice_cells": 96603,
+  "published_cycles": 359755,
+  "baseline_vs_published": 0.791
+ },
+ "calibration": {
+  "coefficients": {
+   "intercept": 13.7177,
+   "detected_kha": 1.444,
+   "detected_kha_x_inv_vh_range": -0.9638,
+   "cropping_intensity": 3.9722,
+   "prior_share": 4.2848,
+   "obs_density": -31.0462
+  },
+  "n_fit_rows": 147,
+  "r2_monthly_calibrated": 0.0605,
+  "r2_monthly_uncalibrated": -0.8024,
+  "r2_monthly_holdout": 0.2207,
+  "r2_annual_calibrated": 0.8167,
+  "mean_sat_share": 0.0498,
+  "per_kabupaten": [
+   {
+    "kabupaten": "Bojonegoro",
+    "vh_range_db": 5.98,
+    "effective_slope_on_detected": -0.1677,
+    "mean_satellite_kha": -0.236,
+    "mean_calibrated_kha": 11.158,
+    "satellite_share": -0.0211
+   },
+   {
+    "kabupaten": "Grobogan",
+    "vh_range_db": 5.84,
+    "effective_slope_on_detected": -0.2063,
+    "mean_satellite_kha": -0.23,
+    "mean_calibrated_kha": 14.661,
+    "satellite_share": -0.0157
+   },
+   {
+    "kabupaten": "Indramayu",
+    "vh_range_db": 8.32,
+    "effective_slope_on_detected": 0.2856,
+    "mean_satellite_kha": 2.243,
+    "mean_calibrated_kha": 19.064,
+    "satellite_share": 0.1176
+   },
+   {
+    "kabupaten": "Karawang",
+    "vh_range_db": 8.74,
+    "effective_slope_on_detected": 0.3413,
+    "mean_satellite_kha": 2.453,
+    "mean_calibrated_kha": 15.38,
+    "satellite_share": 0.1595
+   },
+   {
+    "kabupaten": "Lamongan",
+    "vh_range_db": 5.89,
+    "effective_slope_on_detected": -0.1923,
+    "mean_satellite_kha": -0.172,
+    "mean_calibrated_kha": 11.801,
+    "satellite_share": -0.0146
+   },
+   {
+    "kabupaten": "Subang",
+    "vh_range_db": 8.26,
+    "effective_slope_on_detected": 0.2772,
+    "mean_satellite_kha": 1.456,
+    "mean_calibrated_kha": 13.631,
+    "satellite_share": 0.1068
+   }
+  ],
+  "sign_flip_vh_range_db": 6.675,
+  "negative_units": [
+   "Bojonegoro",
+   "Grobogan",
+   "Lamongan"
+  ]
+ },
+ "timing": {
+  "median_abs_argmax_error_months": 1.0,
+  "median_abs_xcorr_lag_months": 1.0,
+  "median_xcorr_at_lag": 0.7658,
+  "median_xcorr_at_zero": 0.1057,
+  "n": 15,
+  "rows": [
+   {
+    "kabupaten": "Bojonegoro",
+    "year": 2023,
+    "argmax_ours": 3,
+    "argmax_ksa": 3,
+    "argmax_error_months": 0,
+    "xcorr_lag_months": 1,
+    "xcorr_at_lag": 0.6638,
+    "xcorr_at_zero": 0.238
+   },
+   {
+    "kabupaten": "Bojonegoro",
+    "year": 2024,
+    "argmax_ours": 12,
+    "argmax_ksa": 4,
+    "argmax_error_months": -4,
+    "xcorr_lag_months": -4,
+    "xcorr_at_lag": 0.7658,
+    "xcorr_at_zero": -0.2743
+   },
+   {
+    "kabupaten": "Bojonegoro",
+    "year": 2025,
+    "argmax_ours": 3,
+    "argmax_ksa": 3,
+    "argmax_error_months": 0,
+    "xcorr_lag_months": -1,
+    "xcorr_at_lag": 0.5062,
+    "xcorr_at_zero": 0.3238
+   },
+   {
+    "kabupaten": "Indramayu",
+    "year": 2023,
+    "argmax_ours": 5,
+    "argmax_ksa": 4,
+    "argmax_error_months": 1,
+    "xcorr_lag_months": 1,
+    "xcorr_at_lag": 0.8713,
+    "xcorr_at_zero": 0.2622
+   },
+   {
+    "kabupaten": "Indramayu",
+    "year": 2024,
+    "argmax_ours": 6,
+    "argmax_ksa": 5,
+    "argmax_error_months": 1,
+    "xcorr_lag_months": 1,
+    "xcorr_at_lag": 0.9442,
+    "xcorr_at_zero": 0.0959
+   },
+   {
+    "kabupaten": "Indramayu",
+    "year": 2025,
+    "argmax_ours": 6,
+    "argmax_ksa": 5,
+    "argmax_error_months": 1,
+    "xcorr_lag_months": 1,
+    "xcorr_at_lag": 0.8619,
+    "xcorr_at_zero": 0.0552
+   },
+   {
+    "kabupaten": "Karawang",
+    "year": 2023,
+    "argmax_ours": 8,
+    "argmax_ksa": 12,
+    "argmax_error_months": -4,
+    "xcorr_lag_months": 1,
+    "xcorr_at_lag": 0.7238,
+    "xcorr_at_zero": 0.0672
+   },
+   {
+    "kabupaten": "Karawang",
+    "year": 2024,
+    "argmax_ours": 8,
+    "argmax_ksa": 7,
+    "argmax_error_months": 1,
+    "xcorr_lag_months": -4,
+    "xcorr_at_lag": 0.7343,
+    "xcorr_at_zero": -0.1208
+   },
+   {
+    "kabupaten": "Karawang",
+    "year": 2025,
+    "argmax_ours": 7,
+    "argmax_ksa": 6,
+    "argmax_error_months": 1,
+    "xcorr_lag_months": -4,
+    "xcorr_at_lag": 0.7743,
+    "xcorr_at_zero": -0.0881
+   },
+   {
+    "kabupaten": "Lamongan",
+    "year": 2023,
+    "argmax_ours": 8,
+    "argmax_ksa": 3,
+    "argmax_error_months": 5,
+    "xcorr_lag_months": 4,
+    "xcorr_at_lag": 0.4603,
+    "xcorr_at_zero": 0.1057
+   },
+   {
+    "kabupaten": "Lamongan",
+    "year": 2024,
+    "argmax_ours": 5,
+    "argmax_ksa": 3,
+    "argmax_error_months": 2,
+    "xcorr_lag_months": 1,
+    "xcorr_at_lag": 0.7027,
+    "xcorr_at_zero": 0.1986
+   },
+   {
+    "kabupaten": "Lamongan",
+    "year": 2025,
+    "argmax_ours": 4,
+    "argmax_ksa": 3,
+    "argmax_error_months": 1,
+    "xcorr_lag_months": 1,
+    "xcorr_at_lag": 0.4125,
+    "xcorr_at_zero": 0.2702
+   },
+   {
+    "kabupaten": "Subang",
+    "year": 2023,
+    "argmax_ours": 6,
+    "argmax_ksa": 10,
+    "argmax_error_months": -4,
+    "xcorr_lag_months": 1,
+    "xcorr_at_lag": 0.8669,
+    "xcorr_at_zero": 0.2329
+   },
+   {
+    "kabupaten": "Subang",
+    "year": 2024,
+    "argmax_ours": 6,
+    "argmax_ksa": 5,
+    "argmax_error_months": 1,
+    "xcorr_lag_months": 1,
+    "xcorr_at_lag": 0.8479,
+    "xcorr_at_zero": 0.1329
+   },
+   {
+    "kabupaten": "Subang",
+    "year": 2025,
+    "argmax_ours": 6,
+    "argmax_ksa": 4,
+    "argmax_error_months": 2,
+    "xcorr_lag_months": 1,
+    "xcorr_at_lag": 0.8702,
+    "xcorr_at_zero": 0.0763
+   }
+  ]
+ },
+ "prf": {
+  "prior_rice_cells": 515615,
+  "rows": [
+   {
+    "year": 2023,
+    "detected_cells": 174541,
+    "in_prior": 161828,
+    "precision": 0.9272,
+    "recall": 0.3139,
+    "f1": 0.469
+   },
+   {
+    "year": 2024,
+    "detected_cells": 196995,
+    "in_prior": 167684,
+    "precision": 0.8512,
+    "recall": 0.3252,
+    "f1": 0.4706
+   },
+   {
+    "year": 2025,
+    "detected_cells": 224495,
+    "in_prior": 202035,
+    "precision": 0.9,
+    "recall": 0.3918,
+    "f1": 0.546
+   },
+   {
+    "year": "pooled",
+    "detected_cells": 319415,
+    "in_prior": 263905,
+    "precision": 0.8262,
+    "recall": 0.5118,
+    "f1": 0.6321
+   }
+  ],
+  "note": "precision = share of our detections the map also calls rice; recall = share of the map's rice we detect"
+ },
+ "thresholds": {
+  "flood_drop_db": 3.0,
+  "flood_baseline_pctl": 80,
+  "flood_db": -17.0,
+  "rise_db": 4.0,
+  "rise_window_days": 45,
+  "heading_window_days": 100,
+  "head_to_harvest_days": 30,
+  "min_cycle_days": 85,
+  "max_gap_days": 24
+ },
+ "sensitivity": {
+  "flood drop 2 dB (looser)": 805144.0,
+  "flood drop 4 dB (stricter)": 622895.0,
+  "VH rise 3 dB (looser)": 1042240.0,
+  "VH rise 5 dB (stricter)": 363455.0,
+  "literature -17 dB absolute, unchanged": 15161.0,
+  "_baseline_two_units_ha": 744218.0
+ },
+ "kabupaten": [
+  {
+   "kabupaten": "Indramayu",
+   "province": "Jawa Barat",
+   "system": "irrigated",
+   "cells": 208650,
+   "cycles": 385411,
+   "median_vh_rise_db": 4.87,
+   "median_vv_min_db": -13.06,
+   "median_cycle_days": 126,
+   "share_cells_with_any_cycle": 0.443,
+   "acquisitions": 180
+  },
+  {
+   "kabupaten": "Karawang",
+   "province": "Jawa Barat",
+   "system": "irrigated",
+   "cells": 191587,
+   "cycles": 359755,
+   "median_vh_rise_db": 4.93,
+   "median_vv_min_db": -13.56,
+   "median_cycle_days": 132,
+   "share_cells_with_any_cycle": 0.379,
+   "acquisitions": 270
+  },
+  {
+   "kabupaten": "Subang",
+   "province": "Jawa Barat",
+   "system": "irrigated",
+   "cells": 217398,
+   "cycles": 263003,
+   "median_vh_rise_db": 5.03,
+   "median_vv_min_db": -12.9,
+   "median_cycle_days": 132,
+   "share_cells_with_any_cycle": 0.26,
+   "acquisitions": 220
+  },
+  {
+   "kabupaten": "Bojonegoro",
+   "province": "Jawa Timur",
+   "system": "irrigated",
+   "cells": 231278,
+   "cycles": 68883,
+   "median_vh_rise_db": 4.73,
+   "median_vv_min_db": -11.65,
+   "median_cycle_days": 108,
+   "share_cells_with_any_cycle": 0.172,
+   "acquisitions": 189
+  },
+  {
+   "kabupaten": "Lamongan",
+   "province": "Jawa Timur",
+   "system": "irrigated",
+   "cells": 175083,
+   "cycles": 43829,
+   "median_vh_rise_db": 4.45,
+   "median_vv_min_db": -12.07,
+   "median_cycle_days": 108,
+   "share_cells_with_any_cycle": 0.144,
+   "acquisitions": 153
+  },
+  {
+   "kabupaten": "Grobogan",
+   "province": "Jawa Tengah",
+   "system": "largely rainfed",
+   "cells": 202889,
+   "cycles": 54596,
+   "median_vh_rise_db": 4.44,
+   "median_vv_min_db": -11.3,
+   "median_cycle_days": 114,
+   "share_cells_with_any_cycle": 0.162,
+   "acquisitions": 223
+  }
+ ],
+ "mask": {
+  "product": "Open-SEA-Rice-10",
+  "doi": "10.5281/zenodo.14627003",
+  "year": 2021,
+  "res_m": 10,
+  "cells_rice": 515615,
+  "share_rice": 0.4203,
+  "class_counts": {
+   "0": 711270,
+   "1": 38083,
+   "2": 459959,
+   "3": 17573
+  }
+ }
+}
