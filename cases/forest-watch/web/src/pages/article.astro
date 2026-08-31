@@ -1,0 +1,1056 @@
+---
+/* Review article — the case, stress-tested against the literature and against itself.
+ *
+ * Every figure is built here in frontmatter from data/article.json, which pipeline/article.py
+ * derives from the case's own published outputs (data/stats.json, data/baserate.json and the
+ * event table itself). Nothing on this page is a hand-typed statistic, so the prose cannot
+ * drift from the pipeline. SVG only: no WebGL, no canvas.
+ */
+import "../styles/tokens.css";
+import A from "../data/article.json";
+
+const GREEN = "#57B26A", LOSS = "#B4552A", EMBER = "#E0A63F";
+const TEAL = "#4BB8A9", SLATE = "#7C93B8", RUBBER = "#8F6FB0";
+const INK = "#E7ECE6", MUTED = "#93A394", GRID = "#243025";
+
+const pct = (x: number | null, d = 1) => (x == null ? "—" : `${(x * 100).toFixed(d)}%`);
+const num = (x: number | null, d = 0) =>
+  x == null ? "—" : x.toLocaleString("en-GB", { minimumFractionDigits: d, maximumFractionDigits: d });
+const mha = (x: number | null, d = 2) => (x == null ? "—" : `${(x / 1e6).toFixed(d)} Mha`);
+const esc = (s: unknown) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+const L = A.loss, C = A.catchment, F = A.floor, ID = A.identifiability;
+const D = A.domain, S = A.sensors, R = A.record, DI = A.deforested_islands;
+const H = C.headline;
+
+/* Published benchmarks, transcribed from the papers cited in §14. Kept in one block so
+   every literature number on the page has a single, checkable origin. */
+const LIT = {
+  gaveau: { palmShareOfLoss: 0.32, lossMha: 9.79, toPalmMha: 3.09, palmMha: 16.24, adjMha: 18.83 },
+  austin: { palm: 0.23, lo: 0.18, hi: 0.25, grass: 0.20, smallAg: 0.22, timber: 0.14,
+            otherPlant: 0.07, logging: 0.10, other: 0.05, palmPeak: 0.40, palmLate: 0.15 },
+  curtis: { commodity: 0.27, forestry: 0.26, shifting: 0.24, wildfire: 0.23 },
+  descals: { mappedMha: 11.54, estMha: 12.05, industrial: 0.668 },
+  radd: { falsePos: 0.02, falseNeg: 0.05, mmuHa: 0.1, revisitLo: 6, revisitHi: 12 },
+};
+
+/* ── Figure 1 · two decades of loss, split by what the land already was ──────────── */
+function fig1() {
+  const W = 720, Hh = 430, Lm = 66, Rm = 54, T = 54, B = 46;
+  const ys = L.years as number[];
+  const n = ys.length;
+  const iw = (W - Lm - Rm) / n, bw = Math.min(20, iw * 0.74);
+  const max = Math.max(...(L.total_ha as number[]));
+  const sy = (v: number) => Hh - B - (v / max) * (Hh - T - B);
+  const sx = (i: number) => Lm + i * iw + iw / 2;
+  const stack = [
+    { k: "oil_palm_ha", c: LOSS, lab: "oil palm" },
+    { k: "wood_fibre_ha", c: EMBER, lab: "wood fibre" },
+    { k: "rubber_ha", c: RUBBER, lab: "rubber" },
+    { k: "outside_plantation_ha", c: "#3C5A42", lab: "outside mapped plantation" },
+  ];
+  let bars = "";
+  ys.forEach((y, i) => {
+    let base = 0;
+    const parts = stack.map((s) => {
+      const v = (L as any)[s.k][i] as number;
+      const y0 = sy(base + v), y1 = sy(base);
+      base += v;
+      return `<rect x="${(sx(i) - bw / 2).toFixed(1)}" y="${y0.toFixed(1)}" width="${bw.toFixed(1)}" ` +
+             `height="${Math.max(0.4, y1 - y0).toFixed(1)}" fill="${s.c}" opacity="0.92"/>`;
+    }).join("");
+    bars += `<g class="yr" data-y="${y}" data-t="${num(L.total_ha[i])}" data-p="${num(L.oil_palm_ha[i])}" ` +
+      `data-w="${num(L.wood_fibre_ha[i])}" data-r="${num(L.rubber_ha[i])}" ` +
+      `data-o="${num(L.outside_plantation_ha[i])}" data-s="${pct(L.in_plantation_share[i], 1)}">` +
+      `${parts}<rect x="${(sx(i) - iw / 2).toFixed(1)}" y="${T}" width="${iw.toFixed(1)}" ` +
+      `height="${Hh - T - B}" fill="transparent"/></g>`;
+  });
+  const shareLine = `<path fill="none" stroke="${GREEN}" stroke-width="2.2" stroke-dasharray="5 3" d="${
+    ys.map((_, i) => `${i ? "L" : "M"}${sx(i).toFixed(1)} ${(Hh - B - (L.in_plantation_share[i] / 0.7) * (Hh - T - B)).toFixed(1)}`).join("")}"/>`;
+  const yt = [0, 0.5e6, 1e6, 1.5e6, 2e6, 2.4e6].map((v) =>
+    `<line x1="${Lm}" y1="${sy(v).toFixed(1)}" x2="${W - Rm}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.7"/>
+     <text x="${Lm - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">${(v / 1e6).toFixed(1)}M</text>`).join("");
+  const rt = [0, 0.35, 0.7].map((v) =>
+    `<text x="${W - Rm + 8}" y="${(Hh - B - (v / 0.7) * (Hh - T - B) + 4).toFixed(1)}" fill="${GREEN}" font-size="10.5">${(v * 100).toFixed(0)}%</text>`).join("");
+  const xt = ys.map((y, i) => (y % 4 === 1 || i === n - 1)
+    ? `<text x="${sx(i).toFixed(1)}" y="${Hh - B + 18}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${String(y).slice(2)}</text>` : "").join("");
+  const leg = stack.map((s, i) =>
+    `<rect x="${Lm + i * 152}" y="14" width="10" height="10" rx="2" fill="${s.c}"/>
+     <text x="${Lm + i * 152 + 15}" y="23" fill="${MUTED}" font-size="10.5">${s.lab}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Indonesian tree-cover loss 2001 to 2025, split into loss inside mapped oil palm, wood fibre and rubber plantations and loss outside mapped plantation">
+    ${yt}${rt}${leg}
+    <text x="${Lm}" y="42" fill="${GREEN}" font-size="10.5" font-family="var(--font-data)">— — share of the year's loss inside mapped plantation (right axis)</text>
+    ${bars}${shareLine}${xt}
+    <text x="${Lm - 46}" y="${(T + Hh - B) / 2}" fill="${MUTED}" font-size="11" text-anchor="middle" transform="rotate(-90 ${Lm - 46} ${(T + Hh - B) / 2})">hectares of tree-cover loss</text>
+  </svg>`;
+}
+
+/* ── Figure 2 · the base rate ────────────────────────────────────────────────────── */
+function fig2() {
+  const W = 720, Hh = 400, Lm = 58, Rm = 168, T = 22, B = 52;
+  const bins = C.bins_km as number[];
+  const XMAX = 150;
+  const sx = (v: number) => Lm + (v / XMAX) * (W - Lm - Rm);
+  const sy = (v: number) => Hh - B - v * (Hh - T - B);
+  const series = [
+    { k: "land", c: SLATE, lab: "all Indonesian land" },
+    { k: "domain", c: TEAL, lab: "where an alert is possible" },
+    { k: "unfiltered", c: EMBER, lab: "alerted ha, no size floor" },
+    { k: "alert", c: LOSS, lab: "alerted ha, published events" },
+  ];
+  const paths = series.map((s) => {
+    const c = (C.cum as any)[s.k] as number[];
+    let d = `M${sx(0)} ${sy(0)}`;
+    for (let i = 0; i < bins.length - 1 && bins[i + 1] <= XMAX; i++)
+      d += `L${sx(bins[i + 1]).toFixed(1)} ${sy(c[i]).toFixed(1)}`;
+    return `<path fill="none" stroke="${s.c}" stroke-width="2.4" d="${d}"/>`;
+  }).join("");
+  const i50 = bins.indexOf(50) - 1;
+  const dots = series.map((s) => {
+    const v = (C.cum as any)[s.k][i50] as number;
+    return `<circle cx="${sx(50).toFixed(1)}" cy="${sy(v).toFixed(1)}" r="4.6" fill="${s.c}" stroke="#0C120D" stroke-width="1.4"/>`;
+  }).join("");
+  const rows = series.slice().reverse().map((s, i) => {
+    const v = (C.cum as any)[s.k][i50] as number;
+    const y = T + 26 + i * 30;
+    return `<rect x="${W - Rm + 8}" y="${y - 9}" width="9" height="9" rx="2" fill="${s.c}"/>
+      <text x="${W - Rm + 22}" y="${y}" fill="${INK}" font-size="11.5" font-family="var(--font-data)">${pct(v, 1)}</text>
+      <text x="${W - Rm + 22}" y="${y + 13}" fill="${MUTED}" font-size="10">${s.lab}</text>`;
+  }).join("");
+  const gl = [0, 0.25, 0.5, 0.75, 1].map((v) =>
+    `<line x1="${Lm}" y1="${sy(v).toFixed(1)}" x2="${W - Rm}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.7"/>
+     <text x="${Lm - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">${(v * 100).toFixed(0)}%</text>`).join("");
+  const xt = [0, 25, 50, 75, 100, 125, 150].map((v) =>
+    `<text x="${sx(v).toFixed(1)}" y="${Hh - B + 18}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${v}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Cumulative share of area within a given distance of the nearest palm mill, for all land, the alert detection domain, and alerted hectares">
+    ${gl}
+    <line x1="${sx(50).toFixed(1)}" y1="${T}" x2="${sx(50).toFixed(1)}" y2="${Hh - B}" stroke="${MUTED}" stroke-dasharray="3 4" opacity="0.65"/>
+    <text x="${(sx(50) + 6).toFixed(1)}" y="${T + 11}" fill="${MUTED}" font-size="10" font-family="var(--font-data)">50 km — the published radius</text>
+    ${paths}${dots}${rows}${xt}
+    <text x="${((Lm + W - Rm) / 2).toFixed(1)}" y="${Hh - 12}" fill="${MUTED}" font-size="11.5" text-anchor="middle">kilometres to the nearest of ${num(A.record.n_mills)} Universal Mill List mills →</text>
+  </svg>`;
+}
+
+/* ── Figure 4 · lift by radius ───────────────────────────────────────────────────── */
+function figLift() {
+  const W = 720, Hh = 300, Lm = 56, Rm = 26, T = 26, B = 52;
+  const radii = C.radii as number[];
+  const iw = (W - Lm - Rm) / radii.length;
+  const max = 3.4;
+  const sy = (v: number) => Hh - B - (v / max) * (Hh - T - B);
+  const bars = radii.map((rr, i) => {
+    const nat = (C.national as any)[String(rr)];
+    const v = nat.lift_vs_domain as number;
+    const x = Lm + i * iw + iw * 0.22, w = iw * 0.56;
+    const hot = rr === 50, best = rr === C.best_radius.km;
+    return `<g class="lf" data-r="${rr}" data-l="${v.toFixed(2)}" data-b="${pct(nat.domain_base, 1)}" data-a="${pct(nat.alert_ha_share, 1)}">
+      <rect x="${x.toFixed(1)}" y="${sy(v).toFixed(1)}" width="${w.toFixed(1)}" height="${(sy(0) - sy(v)).toFixed(1)}"
+        fill="${best ? GREEN : hot ? LOSS : "#3C5A42"}" rx="2" opacity="${best || hot ? 0.95 : 0.75}"/>
+      <text x="${(x + w / 2).toFixed(1)}" y="${(sy(v) - 7).toFixed(1)}" fill="${best ? GREEN : hot ? LOSS : MUTED}"
+        font-size="11" text-anchor="middle" font-family="var(--font-data)">${v.toFixed(2)}×</text>
+      <text x="${(x + w / 2).toFixed(1)}" y="${Hh - B + 18}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${rr}</text></g>`;
+  }).join("");
+  const one = sy(1);
+  const gl = [1, 2, 3].map((v) =>
+    `<line x1="${Lm}" y1="${sy(v).toFixed(1)}" x2="${W - Rm}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.7"/>
+     <text x="${Lm - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">${v}×</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Enrichment of alerted hectares near mills over the base rate, by catchment radius; the lift peaks at 10 kilometres and decays">
+    ${gl}${bars}
+    <line x1="${Lm}" y1="${one.toFixed(1)}" x2="${W - Rm}" y2="${one.toFixed(1)}" stroke="${MUTED}" stroke-dasharray="4 4"/>
+    <text x="${W - Rm}" y="14" fill="${MUTED}" font-size="10" text-anchor="end" font-family="var(--font-data)">dashed rule at 1.00× — no information</text>
+    <text x="${((Lm + W - Rm) / 2).toFixed(1)}" y="${Hh - 12}" fill="${MUTED}" font-size="11.5" text-anchor="middle">catchment radius, km →</text>
+  </svg>`;
+}
+
+/* ── Figure 3 · province by province ─────────────────────────────────────────────── */
+function figProv() {
+  const rows = (C.provinces as any[]).filter((p) => p.lift_50 != null)
+    .sort((a, b) => b.lift_50 - a.lift_50).slice(0, 16);
+  const W = 720, Lm = 152, Rm = 92, T = 30, rh = 22;
+  const Hh = T + rows.length * rh + 34;
+  const sx = (v: number) => Lm + v * (W - Lm - Rm);
+  const body = rows.map((p, i) => {
+    const y = T + i * rh + rh / 2;
+    const a = sx(p.domain_base_50), b = sx(p.alert_share_50);
+    const up = p.alert_share_50 >= p.domain_base_50;
+    return `<g class="pv" data-n="${esc(p.province)}" data-b="${pct(p.domain_base_50, 1)}" data-a="${pct(p.alert_share_50, 1)}" data-l="${p.lift_50.toFixed(2)}" data-h="${num(p.alert_ha)}">
+      <rect x="0" y="${y - rh / 2}" width="${W}" height="${rh}" fill="transparent"/>
+      <text x="${Lm - 12}" y="${y + 4}" fill="${INK}" font-size="11.5" text-anchor="end">${esc(p.province)}</text>
+      <line x1="${Math.min(a, b).toFixed(1)}" y1="${y}" x2="${Math.max(a, b).toFixed(1)}" y2="${y}"
+        stroke="${up ? LOSS : SLATE}" stroke-width="2.6" opacity="0.75"/>
+      <circle cx="${a.toFixed(1)}" cy="${y}" r="4" fill="${TEAL}"/>
+      <circle cx="${b.toFixed(1)}" cy="${y}" r="4" fill="${up ? LOSS : SLATE}"/>
+      <text x="${W - Rm + 14}" y="${y + 4}" fill="${p.lift_50 >= 1.3 ? LOSS : MUTED}" font-size="11"
+        font-family="var(--font-data)">${p.lift_50.toFixed(2)}×</text></g>`;
+  }).join("");
+  const gl = [0, 0.25, 0.5, 0.75, 1].map((v) =>
+    `<line x1="${sx(v).toFixed(1)}" y1="${T - 8}" x2="${sx(v).toFixed(1)}" y2="${Hh - 30}" stroke="${GRID}" opacity="0.6"/>
+     <text x="${sx(v).toFixed(1)}" y="${Hh - 14}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${(v * 100).toFixed(0)}%</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="For each province, the share of the detection domain within 50 kilometres of a mill against the share of alerted hectares, with the ratio">
+    ${gl}
+    <circle cx="${Lm}" cy="14" r="4" fill="${TEAL}"/><text x="${Lm + 10}" y="18" fill="${MUTED}" font-size="10.5">base rate</text>
+    <circle cx="${Lm + 92}" cy="14" r="4" fill="${LOSS}"/><text x="${Lm + 102}" y="18" fill="${MUTED}" font-size="10.5">alerted hectares</text>
+    <text x="${W - Rm + 14}" y="18" fill="${MUTED}" font-size="10.5">lift</text>
+    ${body}
+  </svg>`;
+}
+
+/* ── Figure 5 · the size floor ───────────────────────────────────────────────────── */
+function fig5() {
+  const rows = F.by_size as any[];
+  const W = 720, Lm = 96, Rm = 150, T = 66, rh = 34;
+  const Hh = T + rows.length * rh + 26;
+  const sx = (v: number) => Lm + v * (W - Lm - Rm);
+  const maxHa = Math.max(...rows.map((b) => b.ha));
+  const body = rows.map((b, i) => {
+    const y = T + i * rh;
+    const bh = 6 + Math.sqrt(b.ha / maxHa) * 20;
+    return `<g class="sz" data-b="${esc(b.band)}" data-e="${num(b.events)}" data-h="${num(b.ha)}" data-w="${pct(b.within_50km_ha_share, 1)}" data-m="${b.median_mill_km}">
+      <rect x="0" y="${y}" width="${W}" height="${rh}" fill="transparent"/>
+      <text x="${Lm - 12}" y="${(y + rh / 2 + 4).toFixed(1)}" fill="${INK}" font-size="11.5" text-anchor="end">${esc(b.band)} ha</text>
+      <rect x="${Lm}" y="${(y + rh / 2 - bh / 2).toFixed(1)}" width="${(sx(b.within_50km_ha_share) - Lm).toFixed(1)}"
+        height="${bh.toFixed(1)}" fill="${LOSS}" opacity="0.9" rx="2"/>
+      <text x="${(sx(b.within_50km_ha_share) - 9).toFixed(1)}" y="${(y + rh / 2 + 4).toFixed(1)}" fill="#170A04" font-size="11" text-anchor="end" font-family="var(--font-data)">${pct(b.within_50km_ha_share, 1)}</text>
+      <text x="${W - 6}" y="${(y + rh / 2 + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">median ${b.median_mill_km} km · ${num(b.ha)} ha</text></g>`;
+  }).join("");
+  const marks = [
+    { v: C.headline.domain_base as number, c: TEAL, lab: "base rate" },
+    { v: F.unfiltered_within_50 as number, c: EMBER, lab: "no size floor" },
+    { v: F.filtered_within_50 as number, c: INK, lab: "published" },
+  ].map((m, i) => `<line x1="${sx(m.v).toFixed(1)}" y1="${T - 12}" x2="${sx(m.v).toFixed(1)}" y2="${Hh - 22}"
+      stroke="${m.c}" stroke-dasharray="3 4" opacity="0.8"/>
+    <text x="${sx(m.v).toFixed(1)}" y="${18 + i * 15}" fill="${m.c}" font-size="10" text-anchor="middle" font-family="var(--font-data)">${m.lab} ${pct(m.v, 1)}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Share of alerted hectares within 50 kilometres of a mill, by event size; small events sit further from mills than large ones">
+    ${marks}${body}
+    <text x="${Lm}" y="${Hh - 4}" fill="${MUTED}" font-size="10.5">bar height is the hectares in the band · bar length is the share inside a catchment</text>
+  </svg>`;
+}
+
+/* ── Figure 6 · how many mills claim the same hectare ────────────────────────────── */
+function fig6() {
+  const W = 720, Hh = 246;
+  const m = ID.mills as any;
+  const only1 = 1 - (m.share_of_catchment_ha_with_2plus_mills as number);
+  const sx = (v: number) => 22 + v * 250;
+  const bars = [
+    { k: "one mill only", v: only1 },
+    { k: "two or more mills", v: m.share_of_catchment_ha_with_2plus_mills },
+    { k: "five or more mills", v: m.share_of_catchment_ha_with_5plus_mills },
+  ].map((b, i) => {
+    const y = 92 + i * 44;
+    return `<text x="22" y="${y - 6}" fill="${INK}" font-size="11.5">${b.k}</text>
+      <rect x="22" y="${y}" width="${(sx(b.v) - 22).toFixed(1)}" height="15" rx="2" fill="${LOSS}" opacity="${0.55 + i * 0.18}"/>
+      <text x="${(sx(b.v) + 9).toFixed(1)}" y="${y + 12}" fill="${LOSS}" font-size="11" font-family="var(--font-data)">${pct(b.v, 1)}</text>`;
+  }).join("");
+  const x0 = 380, bwMax = W - x0 - 24;
+  const big = Math.max(ID.pressure_sum_ha as number, ID.in_catchment_12m_ha as number);
+  const b1 = ((ID.in_catchment_12m_ha as number) / big) * bwMax;
+  const b2 = ((ID.pressure_sum_ha as number) / big) * bwMax;
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Most alerted hectares inside a catchment fall inside several catchments at once, and the published per-mill pressure sums to seven times the hectares that exist">
+    <text x="22" y="24" fill="${MUTED}" font-size="10.5" font-family="var(--font-data)">IN-CATCHMENT ALERTED HECTARES, CLAIMED BY…</text>
+    <text x="22" y="48" fill="${INK}" font-size="12.5">mean ${m.mean_over_alert_ha_in_catchment.toFixed(2)} mills per hectare</text>
+    <text x="22" y="68" fill="${MUTED}" font-size="11">median ${m.median} · 90th percentile ${m.p90} · most ${m.max}</text>
+    ${bars}
+    <line x1="352" y1="14" x2="352" y2="${Hh - 14}" stroke="${GRID}"/>
+    <text x="${x0}" y="24" fill="${MUTED}" font-size="10.5" font-family="var(--font-data)">THE RANKING'S OWN ARITHMETIC</text>
+    <text x="${x0}" y="56" fill="${INK}" font-size="11">alerted ha inside any catchment, 12 months</text>
+    <rect x="${x0}" y="64" width="${b1.toFixed(1)}" height="16" rx="2" fill="${TEAL}"/>
+    <text x="${(x0 + b1 + 8).toFixed(1)}" y="${76}" fill="${TEAL}" font-size="11" font-family="var(--font-data)">${num(ID.in_catchment_12m_ha)}</text>
+    <text x="${x0}" y="112" fill="${INK}" font-size="11">the per-mill pressure the page publishes, summed</text>
+    <rect x="${x0}" y="120" width="${b2.toFixed(1)}" height="16" rx="2" fill="${LOSS}"/>
+    <text x="${(x0 + b2 - 8).toFixed(1)}" y="${132}" fill="#170A04" font-size="11" text-anchor="end" font-family="var(--font-data)">${num(ID.pressure_sum_ha)}</text>
+    <text x="${x0}" y="176" fill="${LOSS}" font-size="20" font-family="var(--font-display)">${ID.double_count}×</text>
+    <text x="${x0 + 62}" y="176" fill="${LOSS}" font-size="11.5">over-count in the ranked column</text>
+    <text x="${x0}" y="202" fill="${MUTED}" font-size="10.5">${ID.n_mills_with_pressure} of ${ID.n_mills} mills carry a</text>
+    <text x="${x0}" y="218" fill="${MUTED}" font-size="10.5">non-zero score.</text>
+  </svg>`;
+}
+
+/* ── Figure 7 · what the sensor is allowed to see ────────────────────────────────── */
+function fig7() {
+  const W = 720, Hh = 296, Lm = 208, Rm = 92, T = 52;
+  const rows = [
+    { k: "SDPT v2 · this case's layer", v: (D.sdpt_palm_ha as number) / 1e6, c: LOSS },
+    { k: "Gaveau 2022 · adjusted", v: D.gaveau_adjusted_mha as number, c: SLATE },
+    { k: "Gaveau 2022 · mapped", v: D.gaveau_mapped_mha as number, c: SLATE },
+    { k: "Descals 2021 · estimate", v: D.descals_estimate_mha as number, c: SLATE },
+    { k: "Descals 2021 · mapped", v: D.descals_mapped_mha as number, c: SLATE },
+    { k: "…of SDPT inside the domain", v: (D.palm_in_domain_ha as number) / 1e6, c: TEAL },
+  ];
+  const max = Math.max(...rows.map((r0) => r0.v));
+  const rh = 38;
+  const sx = (v: number) => Lm + (v / max) * (W - Lm - Rm);
+  const body = rows.map((r0, i) => {
+    const y = T + i * rh;
+    return `<text x="${Lm - 12}" y="${y + 17}" fill="${i === 5 ? TEAL : INK}" font-size="11.5" text-anchor="end">${r0.k}</text>
+      <rect x="${Lm}" y="${y + 5}" width="${(sx(r0.v) - Lm).toFixed(1)}" height="17" rx="2" fill="${r0.c}" opacity="${i === 0 || i === 5 ? 0.95 : 0.55}"/>
+      <text x="${(sx(r0.v) + 9).toFixed(1)}" y="${y + 18}" fill="${i === 5 ? TEAL : i === 0 ? LOSS : MUTED}" font-size="11" font-family="var(--font-data)">${r0.v.toFixed(2)} Mha</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Indonesian oil palm extent in the layer this case uses against two published remote-sensed maps, and the small fraction of it that lies inside the alert detection domain">
+    <text x="${Lm - 12}" y="24" fill="${MUTED}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">MAPPED INDONESIAN OIL PALM</text>
+    <line x1="${Lm}" y1="${T - 10}" x2="${Lm}" y2="${T + rows.length * rh - 6}" stroke="${GRID}"/>
+    <line x1="${Lm}" y1="${T + 5 * rh - 4}" x2="${W - Rm}" y2="${T + 5 * rh - 4}" stroke="${GRID}" stroke-dasharray="3 3"/>
+    ${body}
+    <text x="${Lm}" y="${T + rows.length * rh + 20}" fill="${TEAL}" font-size="10.5">${pct(1 - (D.palm_in_domain_share as number), 1)} of the estate is invisible to this instrument.</text>
+  </svg>`;
+}
+
+/* ── Figure 8 · what two-sensor agreement measures ───────────────────────────────── */
+function fig8() {
+  const rows = S.by_size as any[];
+  const W = 720, Hh = 300, Lm = 56, Rm = 150, T = 30, B = 50;
+  const iw = (W - Lm - Rm) / rows.length;
+  const sy = (v: number) => Hh - B - v * (Hh - T - B);
+  const bars = rows.map((b, i) => {
+    const x = Lm + i * iw + iw * 0.2, w = iw * 0.6;
+    const inGate = ["5-20", "20-100", "100+"].includes(b.band);
+    return `<g class="ag" data-b="${esc(b.band)}" data-e="${num(b.events)}" data-a="${pct(b.agree, 1)}">
+      <rect x="${x.toFixed(1)}" y="${sy(b.agree).toFixed(1)}" width="${w.toFixed(1)}" height="${(sy(0) - sy(b.agree)).toFixed(1)}"
+        rx="2" fill="${inGate ? TEAL : "#3C5A42"}" opacity="0.9"/>
+      <text x="${(x + w / 2).toFixed(1)}" y="${(sy(b.agree) - 7).toFixed(1)}" fill="${inGate ? TEAL : MUTED}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">${pct(b.agree, 0)}</text>
+      <text x="${(x + w / 2).toFixed(1)}" y="${Hh - B + 17}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${esc(b.band)}</text>
+      <text x="${(x + w / 2).toFixed(1)}" y="${Hh - B + 31}" fill="${MUTED}" font-size="9.5" text-anchor="middle" opacity="0.75">${num(b.events)}</text></g>`;
+  }).join("");
+  const gl = [0, 0.25, 0.5, 0.75, 1].map((v) =>
+    `<line x1="${Lm}" y1="${sy(v).toFixed(1)}" x2="${W - Rm}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.7"/>
+     <text x="${Lm - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">${(v * 100).toFixed(0)}%</text>`).join("");
+  const gate = sy(S.gate_share as number), all = sy(S.agree_all_events as number);
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Optical confirmation of radar alerts rises steadily with event size, from 43 percent for the smallest events to 87 percent for the largest">
+    ${gl}${bars}
+    <line x1="${Lm}" y1="${gate.toFixed(1)}" x2="${W - Rm}" y2="${gate.toFixed(1)}" stroke="${TEAL}" stroke-dasharray="4 4"/>
+    <line x1="${Lm}" y1="${all.toFixed(1)}" x2="${W - Rm}" y2="${all.toFixed(1)}" stroke="${MUTED}" stroke-dasharray="4 4"/>
+    <text x="${W - Rm + 10}" y="${(gate + 4).toFixed(1)}" fill="${TEAL}" font-size="10.5" font-family="var(--font-data)">${pct(S.gate_share, 1)} published</text>
+    <text x="${W - Rm + 10}" y="${(gate + 18).toFixed(1)}" fill="${MUTED}" font-size="9.5">${pct(S.gate_event_share, 1)} of events</text>
+    <text x="${W - Rm + 10}" y="${(all + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" font-family="var(--font-data)">${pct(S.agree_all_events, 1)} all events</text>
+    <text x="${((Lm + W - Rm) / 2).toFixed(1)}" y="${Hh - 6}" fill="${MUTED}" font-size="11" text-anchor="middle">event size band, hectares (event count beneath)</text>
+  </svg>`;
+}
+
+/* ── Figure 9 · how far radar leads optical ──────────────────────────────────────── */
+function fig9() {
+  const W = 720, Hh = 280, Lm = 54, Rm = 26, T = 44, B = 52;
+  const hist = S.lead_hist as number[], edges = S.lead_edges as number[];
+  const max = Math.max(...hist);
+  const iw = (W - Lm - Rm) / hist.length;
+  const sy = (v: number) => Hh - B - (v / max) * (Hh - T - B);
+  const bars = hist.map((v, i) => {
+    const x = Lm + i * iw + 1.5, w = iw - 3;
+    const first = edges[i] >= 0;
+    return `<g class="ld" data-a="${edges[i]}" data-b="${edges[i + 1]}" data-n="${num(v)}">
+      <rect x="${x.toFixed(1)}" y="${sy(v).toFixed(1)}" width="${w.toFixed(1)}" height="${(sy(0) - sy(v)).toFixed(1)}"
+        rx="1.5" fill="${first ? LOSS : SLATE}" opacity="0.88"/></g>`;
+  }).join("");
+  const zx = Lm + 6 * iw;
+  const medX = Lm + ((S.lead.median as number) + 60) / 120 * (W - Lm - Rm);
+  const xt = [-60, -40, -20, 0, 20, 40, 60].map((v) =>
+    `<text x="${(Lm + (v + 60) / 120 * (W - Lm - Rm)).toFixed(1)}" y="${Hh - B + 18}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${v > 0 ? "+" + v : v}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Distribution of the number of days by which the radar alert precedes the optical alert for the same clearing; the median lead is 20 days">
+    <text x="${Lm}" y="20" fill="${SLATE}" font-size="10.5" font-family="var(--font-data)">← optical first</text>
+    <text x="${W - Rm}" y="20" fill="${LOSS}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">radar first → ${pct(S.lead.share_radar_first, 0)} of pairs</text>
+    ${bars}
+    <line x1="${zx.toFixed(1)}" y1="${T - 8}" x2="${zx.toFixed(1)}" y2="${Hh - B}" stroke="${MUTED}" opacity="0.8"/>
+    <line x1="${medX.toFixed(1)}" y1="${T - 8}" x2="${medX.toFixed(1)}" y2="${Hh - B}" stroke="${INK}" stroke-dasharray="3 3"/>
+    <text x="${(medX - 7).toFixed(1)}" y="${T - 12}" fill="${INK}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">median +${S.lead.median} days</text>
+    <text x="${Lm - 6}" y="${(sy(max) + 4).toFixed(1)}" fill="${MUTED}" font-size="10" text-anchor="end" font-family="var(--font-data)">${num(max)}</text>
+    <text x="${Lm - 6}" y="${(sy(0) + 4).toFixed(1)}" fill="${MUTED}" font-size="10" text-anchor="end" font-family="var(--font-data)">0</text>
+    ${xt}
+    <text x="${((Lm + W - Rm) / 2).toFixed(1)}" y="${Hh - 12}" fill="${MUTED}" font-size="11.5" text-anchor="middle">days between the radar detection and the optical one, ${num(S.lead.n_in_window)} matched events →</text>
+  </svg>`;
+}
+
+/* ── Figure 10 · what reconciles ─────────────────────────────────────────────────── */
+function fig10() {
+  const W = 720, Hh = 232, Lm = 190, Rm = 106, T = 44, rh = 44;
+  const pairs = [
+    { k: "Tree-cover loss 2023", ours: A.divergence.gfw_tree_cover_loss_ha["2023"], ref: A.divergence.gfw_published_ha["2023"] },
+    { k: "Tree-cover loss 2024", ours: A.divergence.gfw_tree_cover_loss_ha["2024"], ref: A.divergence.gfw_published_ha["2024"] },
+    { k: "Primary-forest loss 2023", ours: L.our_primary_loss["2023"], ref: L.gfw_published_primary_loss["2023"] },
+    { k: "Primary-forest loss 2024", ours: L.our_primary_loss["2024"], ref: L.gfw_published_primary_loss["2024"] },
+  ];
+  const max = Math.max(...pairs.map((p) => Math.max(p.ours, p.ref)));
+  const sx = (v: number) => Lm + (v / max) * (W - Lm - Rm);
+  const body = pairs.map((p, i) => {
+    const y = T + i * rh;
+    const d = 100 * (p.ours / p.ref - 1);
+    return `<text x="${Lm - 12}" y="${y + 16}" fill="${INK}" font-size="11.5" text-anchor="end">${p.k}</text>
+      <rect x="${Lm}" y="${y + 3}" width="${(sx(p.ours) - Lm).toFixed(1)}" height="11" rx="2" fill="${LOSS}" opacity="0.9"/>
+      <rect x="${Lm}" y="${y + 17}" width="${(sx(p.ref) - Lm).toFixed(1)}" height="11" rx="2" fill="${TEAL}" opacity="0.9"/>
+      <text x="${W - Rm + 10}" y="${y + 19}" fill="${MUTED}" font-size="11" font-family="var(--font-data)">${d >= 0 ? "+" : ""}${d.toFixed(2)}%</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${Hh}" class="fig" role="img" aria-label="Our independently recomputed hectares against Global Forest Watch's own published totals, agreeing to under one percent in all four comparisons">
+    <rect x="${Lm}" y="14" width="10" height="10" rx="2" fill="${LOSS}"/><text x="${Lm + 15}" y="23" fill="${MUTED}" font-size="10.5">this pipeline, recomputed from the tiles</text>
+    <rect x="${Lm + 250}" y="14" width="10" height="10" rx="2" fill="${TEAL}"/><text x="${Lm + 265}" y="23" fill="${MUTED}" font-size="10.5">GFW published</text>
+    ${body}
+  </svg>`;
+}
+
+const F1 = fig1(), F2 = fig2(), F3 = figProv(), F4 = figLift(), F5 = fig5();
+const F6 = fig6(), F7 = fig7(), F8 = fig8(), F9 = fig9(), F10 = fig10();
+
+const BASE = "/forest";
+const lossYears = `${L.years[0]}–${L.years[L.years.length - 1]}`;
+const riau = (C.provinces as any[]).find((p) => p.province === "Riau");
+const nkal = (C.provinces as any[]).find((p) => p.province === "North Kalimantan");
+const jambi = (C.provinces as any[]).find((p) => p.province === "Jambi");
+const wpap = (C.provinces as any[]).find((p) => p.province === "West Papua");
+const g1 = A.gates["G-H1"], g2 = A.gates["G-H2"], g3 = A.gates["G-H3"], g4 = A.gates["G-H4"];
+const tclDiff24 = ((A.divergence.gfw_tree_cover_loss_ha["2024"] /
+  A.divergence.gfw_published_ha["2024"] - 1) * 100).toFixed(2);
+/* How the published radius ranks among the radii tested, worst-first — stated rather than
+   asserted, because "least informative" would be wrong (75 and 100 km are worse). */
+const liftRank = (C.radii as number[])
+  .map((k) => ({ km: k, lift: (C.national as any)[String(k)].lift_vs_domain as number }))
+  .sort((a, b) => a.lift - b.lift);
+const worseThan50 = liftRank.filter((r0) => r0.lift < (C.national as any)["50"].lift_vs_domain)
+  .sort((a, b) => a.km - b.km).map((r0) => `${r0.km} km`).join(" and ");
+---
+<html lang="en" data-case="forest" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Does a Mill Catchment Tell You Anything?</title>
+    <meta name="description" content="An adversarial review of radar deforestation alerts linked to palm-mill catchments in Indonesia: base rates, size floors, and what spatial coincidence can and cannot support." />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="back" href={`${BASE}/`}>← The instrument</a>
+      <span class="stamp dim">REVIEW ARTICLE · {A.vintages.radd}</span>
+    </header>
+
+    <article>
+      <div class="masthead">
+        <span class="eyebrow">METHODS &amp; VALIDATION · FOREST &amp; COMMODITY WATCH</span>
+        <h1>Does a mill catchment tell you anything?</h1>
+        <p class="standfirst">The case reports that <b>{pct(R.linked_share_ha, 1)} of alerted hectares
+        fall inside a palm-mill sourcing catchment</b>. A conditional share is only informative
+        against its base rate, and nobody had computed one. We do — and then ask the same question of
+        every other number on the page.</p>
+        <div class="byline">
+          <span>Demo Lab · FMV</span>
+          <span>{A.vintages.radd}</span>
+          <span>{num(R.events)} events · {num(R.ha)} ha</span>
+        </div>
+      </div>
+
+      <section class="abstract">
+        <h2>Abstract</h2>
+        <p><b>Question.</b> Weekly radar alerts can say <i>where</i> forest was disturbed. The case
+        goes further and says <i>whose commodity system it was disturbed in</i>. We ask how much of
+        that second claim survives the base rate, the size filter, and the difference between
+        tree-cover loss and deforestation.</p>
+        <p><b>Method.</b> We re-derive every headline from the case's own published outputs, then add
+        three tests it never ran: a lattice sample of the alert instrument's entire detection domain
+        with the distance to the nearest of {num(R.n_mills)} mills at every point ({num(C.domain_ha)} ha
+        sampled at {C.lattice_m} m); a crossing of {lossYears} Hansen tree-cover loss with mapped
+        plantation extent and the 2001 primary-forest mask at native 30 m; and a recomputation of
+        the catchment share with the {R.min_cluster_ha} ha event floor removed.</p>
+        <p><b>Findings.</b> <b>{pct(H.domain_base, 1)}</b> of the land where an alert
+        can physically be raised is <i>already</i> within {R.mill_radius_km} km of a mill, and
+        {pct(H.land_base, 1)} of all Indonesian land is. The observed {pct(H.alert, 1)} is therefore a
+        lift of <b>{H.lift}×</b> over chance, not a finding of near-universal palm linkage — and on
+        unfiltered alert hectares it falls to {pct(H.unfiltered, 1)}, a lift of {H.unfiltered_lift}×.
+        The lift is <b>{C.best_radius.lift}×</b> at {C.best_radius.km} km — of the
+        {(C.radii as number[]).length} radii tested only {worseThan50} discriminate less than the
+        published {R.mill_radius_km} km. In Riau, where the case's own linkage check passes at
+        {pct(g4.riau_linked_share, 1)}, the base rate is {pct(riau.domain_base_50, 1)}: the check
+        cannot fail. Attribution is not identified either — a mean of
+        <b>{ID.mills.mean_over_alert_ha_in_catchment.toFixed(2)} mills</b> claim every in-catchment
+        hectare, and the per-mill pressure the page ranks sums to <b>{ID.double_count}×</b> the
+        hectares that exist. Separately, <b>{pct(L.grand_plantation_share, 1)}</b> of Indonesia's
+        {mha(L.grand_total_ha)} of {lossYears} tree-cover loss falls inside land already mapped as
+        plantation — the loss-is-not-deforestation gap, measured rather than asserted. The pipeline
+        itself reconciles: our recomputed primary-forest loss lands within
+        {L.primary_reconciliation_pct["2024"]}% of GFW's published Indonesian figure.</p>
+        <p><b>Conclusion.</b> This is a <i>triage</i> instrument, not an <i>attribution</i>
+        instrument. Read as "which weeks and which frontiers deserve a look", it is strong and
+        unusually well plumbed. Read as "three-quarters of this clearing belongs to the palm supply
+        chain", it says less than it appears to, and in the palm heartland it says nothing at all.</p>
+      </section>
+
+      <nav class="toc">
+        <a href="#s1">1 · The claim under test</a><a href="#s2">2 · What the literature attributes</a>
+        <a href="#s3">3 · Data and instrument</a><a href="#s4">4 · Loss is not deforestation</a>
+        <a href="#s5">5 · The base rate</a><a href="#s6">6 · The wrong radius</a>
+        <a href="#s7">7 · The size floor</a><a href="#s8">8 · Eight mills per hectare</a>
+        <a href="#s9">9 · The sensor's domain</a><a href="#s10">10 · What agreement measures</a>
+        <a href="#s11">11 · What reconciles</a><a href="#s12">12 · What follows for decisions</a>
+        <a href="#s13">13 · Corrections</a><a href="#refs">References</a>
+      </nav>
+
+      <section id="s1">
+        <h2><span class="num">1</span> The claim under test</h2>
+        <p>Global Forest Watch already publishes the pixels. This case's stated contribution is what
+        comes after them: every alert is clustered into a disturbance <i>event</i> and then tested
+        against mapped oil-palm extent, against the {R.mill_radius_km} km fresh-fruit-bunch catchment
+        of every mill on the Universal Mill List, and against peat and primary forest. The headline
+        that falls out — {pct(R.linked_share_ha, 1)} of alerted hectares linked to palm or a mill — is
+        the number a compliance desk would quote.</p>
+        <p>Three separate questions hide inside it, and the page answers only the first.
+        <b>Where</b> was forest disturbed? <b>How unusual</b> is it that the disturbance sits inside a
+        catchment? And <b>who</b>, if anyone, caused it? The first is measurement. The second needs a
+        denominator. The third needs a chain of custody that no proximity test can supply. This
+        review supplies the denominator and then asks what is left.</p>
+      </section>
+
+      <section id="s2">
+        <h2><span class="num">2</span> What the literature actually attributes to oil palm</h2>
+        <p><a href="#ref-austin">Austin et al. (2019)</a>, working from visually interpreted sample
+        plots, attribute <b>{pct(LIT.austin.palm, 0)}</b> (90% CI {pct(LIT.austin.lo, 0)}–{pct(LIT.austin.hi, 0)})
+        of Indonesian deforestation between 2001 and 2016 to oil palm, against {pct(LIT.austin.grass, 0)}
+        to grassland and shrubland, {pct(LIT.austin.smallAg, 0)} to small-scale agriculture and
+        {pct(LIT.austin.timber, 0)} to timber plantations. The palm share is not stable: it peaked near
+        {pct(LIT.austin.palmPeak, 0)} in 2008–09 and fell below {pct(LIT.austin.palmLate, 0)} by
+        2014–16.</p>
+        <p><a href="#ref-gaveau">Gaveau et al. (2022)</a>, mapping plantations directly, find
+        {LIT.gaveau.toPalmMha} Mha of old-growth forest converted to oil palm in 2001–2019 —
+        <b>{pct(LIT.gaveau.palmShareOfLoss, 0)}</b> of the {LIT.gaveau.lossMha} Mha lost. Globally,
+        <a href="#ref-curtis">Curtis et al. (2018)</a> attribute only {pct(LIT.curtis.commodity, 0)}
+        of forest loss to permanent commodity-driven deforestation, with {pct(LIT.curtis.forestry, 0)}
+        to forestry rotations that are not deforestation at all.</p>
+        <p class="pull">Every published estimate of palm's causal share of Indonesian forest loss sits
+        between {pct(LIT.austin.palm, 0)} and {pct(LIT.gaveau.palmShareOfLoss, 0)}. This page's
+        {pct(R.linked_share_ha, 0)} is two to three times higher — because it is not measuring the
+        same thing. It measures proximity, and proximity is cheap.</p>
+      </section>
+
+      <section id="s3">
+        <h2><span class="num">3</span> Data, and what the instrument actually is</h2>
+        <p><b>Alerts.</b> {A.vintages.radd} — Sentinel-1 C-band radar, {LIT.radd.revisitLo}–{LIT.radd.revisitHi}
+        day revisit, {LIT.radd.mmuHa} ha minimum mapping unit, unaffected by cloud
+        (<a href="#ref-reiche">Reiche et al. 2021</a>, who validate confirmed alerts at
+        {pct(LIT.radd.falsePos, 0)} false positives and {pct(LIT.radd.falseNeg, 0)} false negatives).
+        The record runs {R.first_date} → {R.last_date}; {pct(R.hi_conf_ha_share, 1)} of the hectares in
+        the event table are high-confidence, so the confidence flag is not where the risk lies.</p>
+        <p><b>Events.</b> Alert pixels are clustered 8-connected within a 28-day window and events
+        below {R.min_cluster_ha} ha are dropped, leaving {num(R.events)} events and {num(R.ha)} ha.
+        A further {num(R.dropped_outside_events)} events / {num(R.dropped_outside_ha)} ha are clipped
+        away as Malaysian, Bruneian, Papua New Guinean or Timorese — the 10-degree radar tiles are not
+        country-clipped, and without that clip a quarter of the "national" total belongs to somebody
+        else.</p>
+        <p><b>Linkage.</b> Mapped plantation is {A.vintages.palm} (SDPT v2), peat is
+        {A.vintages.peat}, primary forest is {A.vintages.primary}. Mill catchments are computed from
+        {num(R.n_mills)} Universal Mill List points with a KD-tree on the unit sphere. The
+        {R.mill_radius_km} km radius is the industry convention: fresh fruit bunches must reach a mill
+        within roughly a day of cutting, which historically bounded sourcing at about that distance.</p>
+        <p class="caveat"><b>What this review adds.</b> Three tests, all in
+        <code>pipeline/baserate.py</code>, all run on the same machine and the same tiles as the case
+        itself: (a) a {C.lattice_m} m lattice over the instrument's entire detection domain with the
+        mill distance at every sample; (b) {lossYears} Hansen loss crossed with plantation extent and
+        the primary-forest mask at native 30 m; (c) the catchment share recomputed on unfiltered alert
+        hectares. Nothing here uses data the case did not already have on disk.</p>
+      </section>
+
+      <section id="s4">
+        <h2><span class="num">4</span> Finding one — loss is not deforestation, and the gap is measurable</h2>
+        <p>The single most common misreading in this literature is that Hansen tree-cover loss is
+        deforestation. It is not: <a href="#ref-hansen">Hansen et al. (2013)</a> define it as
+        stand-replacement disturbance, and it counts an oil-palm block being replanted or an acacia
+        stand being harvested exactly as it counts primary forest being cleared. The case states that
+        caveat in prose and publishes the KLHK divergence panel. It never measured it. We did.</p>
+        <figure>
+          <Fragment set:html={F1} />
+          <figcaption><b>Figure 1.</b> Indonesian tree-cover loss {lossYears} at ≥30% canopy,
+          {mha(L.grand_total_ha)} in total, split by whether the pixel sits inside land that
+          SDPT v2 maps as planted trees. Dashed line: that share, on the right axis. Hover a year.</figcaption>
+        </figure>
+        <p><b>{pct(L.grand_plantation_share, 1)}</b> of all Indonesian tree-cover loss since
+        {L.years[0]} — {mha(L.grand_plantation_ha)} of {mha(L.grand_total_ha)} — falls inside land
+        already mapped as plantation: {L.grand_by_class_mha.oil_palm} Mha oil palm,
+        {L.grand_by_class_mha.rubber} Mha rubber, {L.grand_by_class_mha.wood_fibre} Mha wood fibre.
+        The share is not constant. It rose to <b>{pct(L.share_peak, 0)}</b> in {L.share_peak_year},
+        during the palm expansion boom, and has fallen to <b>{pct(L.share_last, 0)}</b> by
+        {L.years[L.years.length - 1]}.</p>
+        <p>That fall is itself the most interesting number in the figure, and it agrees with
+        <a href="#ref-austin">Austin et al.</a>'s finding that palm's share of deforestation collapsed
+        after 2012 and with <a href="#ref-gaveau">Gaveau et al.</a>'s finding that expansion had
+        returned to pre-2004 levels by 2019. Three independent methods — theirs, theirs, and a raster
+        crossing on this box — see the same turn.</p>
+        <p class="caveat"><b>What this measurement cannot do.</b> SDPT is a single 2023-vintage
+        extent, so loss inside today's plantation in 2004 is the <i>conversion</i> that created the
+        estate, while the same pixel class in 2024 is far more likely to be a rotation. The number
+        bounds the definitional gap; it does not partition it into conversion and harvest. Doing that
+        properly needs a plantation-establishment year, which no openly licensed Indonesian layer
+        supplies.</p>
+      </section>
+
+      <section id="s5">
+        <h2><span class="num">5</span> Finding two — half the country is already inside a catchment</h2>
+        <p>A {R.mill_radius_km} km circle drawn around each of {num(R.n_mills)} mills is a large object.
+        The question the page never asks is how much of Indonesia those circles already cover. We
+        answered it by sampling the instrument's own detection domain — the 2001 primary humid-tropical
+        forest mask, which is exactly where RADD is permitted to raise an alert — on a
+        {C.lattice_m} m lattice, and measuring the great-circle distance to the nearest mill at every
+        one of those samples.</p>
+        <figure>
+          <Fragment set:html={F2} />
+          <figcaption><b>Figure 2.</b> Cumulative share of area within a given distance of the nearest
+          mill. Blue-grey: all {mha(C.land_ha, 1)} of Indonesian land. Teal: the {mha(C.domain_ha, 1)}
+          where an alert is physically possible — the correct null. Amber and umber: alerted hectares,
+          with and without the event-size floor.</figcaption>
+        </figure>
+        <div class="stat-row">
+          <div class="stat"><span class="sv">{pct(H.land_base, 1)}</span><span class="sl">of all Indonesian land is within {R.mill_radius_km} km of a mill</span></div>
+          <div class="stat"><span class="sv teal">{pct(H.domain_base, 1)}</span><span class="sl">of the alert domain is — the base rate</span></div>
+          <div class="stat"><span class="sv loss">{pct(H.alert, 1)}</span><span class="sl">of alerted hectares are — the published number</span></div>
+          <div class="stat"><span class="sv">{H.lift}×</span><span class="sl">the lift, which is what the headline is worth</span></div>
+        </div>
+        <p>So the headline is not empty — alerted hectares really are {H.lift} times more likely to sit
+        inside a catchment than a random hectare of alertable forest. But the informative statement is
+        the lift, not the share. Quoting {pct(H.alert, 1)} without {pct(H.domain_base, 1)} beside it
+        invites a reader to conclude that three-quarters of Indonesian forest disturbance is
+        palm-related, which is roughly three times what the literature attributes to palm (§2) and is
+        not what the number says.</p>
+        <figure>
+          <Fragment set:html={F3} />
+          <figcaption><b>Figure 3.</b> Base rate against observed share, by province, ordered by lift.
+          Teal is the base rate, umber the alerted share, the number at the right is the ratio.
+          Provinces with at least 5,000 alerted hectares. Hover a row.</figcaption>
+        </figure>
+        <p class="pull">The signal is strongest exactly where mills are scarce, and vanishes where
+        they are dense. In {nkal.province} the lift is {nkal.lift_50}×; in {wpap.province},
+        {wpap.lift_50}×. In {jambi.province} it is {jambi.lift_50}× and in Riau {riau.lift_50}× — which
+        is to say, none.</p>
+        <p>This inverts the product. A mill-catchment flag in Riau distinguishes nothing, because
+        {pct(riau.domain_base_50, 1)} of Riau's alertable forest is inside a catchment already. The
+        same flag on the Kalimantan and Papua frontier is genuinely discriminating. The case's own
+        linkage check — Riau's linked share must exceed {pct(g4.floor, 0)}, and it reaches
+        {pct(g4.riau_linked_share, 1)} — is therefore <b>a check that could not have failed</b>. It
+        also compares a proximity share against a floor drawn from Gaveau et al.'s <i>direct
+        conversion</i> figure, which is a different quantity. Both problems are ours to fix, and §13
+        records what we changed.</p>
+      </section>
+
+      <section id="s6">
+        <h2><span class="num">6</span> Finding three — the published radius is near the bottom of the range</h2>
+        <p>If proximity to a mill carries information, it should carry more of it close in. The base
+        rate makes that testable at any radius, because both numerator and denominator are recomputed
+        together.</p>
+        <figure>
+          <Fragment set:html={F4} />
+          <figcaption><b>Figure 4.</b> Enrichment of alerted hectares over the base rate, by
+          catchment radius. Green marks the maximum, umber the radius the case publishes. Hover a bar
+          for the underlying shares.</figcaption>
+        </figure>
+        <p>The lift peaks at <b>{C.best_radius.lift}× at {C.best_radius.km} km</b> — where
+        {pct(C.best_radius.base, 1)} of the domain sits but {pct(C.best_radius.alert, 1)} of alerted
+        hectares do — and decays monotonically to {H.lift}× at {R.mill_radius_km} km and
+        {(C.national["100"] as any).lift_vs_domain}× at 100 km. Of the {(C.radii as number[]).length}
+        radii tested, only {worseThan50} discriminate less than the one the case publishes.</p>
+        <p>That is not an argument for abandoning {R.mill_radius_km} km, which is the industry's own
+        sourcing convention and the number a trader recognises. It is an argument for publishing the
+        {C.best_radius.km} km class alongside it. A hectare within {C.best_radius.km} km of a mill is
+        three times more surprising than chance; a hectare within {R.mill_radius_km} km is
+        {H.lift} times. Those are different signals and they should not share a colour.</p>
+      </section>
+
+      <section id="s7">
+        <h2><span class="num">7</span> Finding four — the headline is partly a product of the size floor</h2>
+        <p>The event table keeps only clusters of at least {R.min_cluster_ha} ha. The page states the
+        consequence for the reconciliation provinces — the floor keeps
+        {pct(F.gate_keeps_focus_provinces, 0)} of alerted hectares there. Nationally it keeps
+        <b>{pct(F.keeps, 1)}</b>: {num(F.event_table_ha)} ha survive out of {num(F.unfiltered_ha)} ha
+        of alert. That is a large filter, and filters are only harmless if they are random.</p>
+        <figure>
+          <Fragment set:html={F5} />
+          <figcaption><b>Figure 5.</b> Share of alerted hectares inside a catchment, by event size.
+          Bar height is the hectares in the band. The three dashed rules are the base rate, the
+          unfiltered share and the published share. Hover a band.</figcaption>
+        </figure>
+        <p>It is not random. Mill distance falls steadily with event size: the median for
+        {(F.by_size as any[])[0].band} ha events is {(F.by_size as any[])[0].median_mill_km} km, for
+        20–100 ha events {(F.by_size as any[])[4].median_mill_km} km. Small clearings — smallholder
+        plots, roadside encroachment, staged clearing — sit further from mills than large ones, and
+        the floor removes them preferentially.</p>
+        <p>Recomputing the catchment share on the unfiltered alert grid, with no size floor at all,
+        gives <b>{pct(F.unfiltered_within_50, 1)}</b> against the published
+        {pct(F.filtered_within_50, 1)} — a gap of <b>{F.gap_pp} percentage points</b>, and a lift over
+        the base rate of {H.unfiltered_lift}× rather than {H.lift}×. Roughly a third of the headline's
+        distance above chance is the size floor, not the landscape.</p>
+        <p class="caveat">The unfiltered comparator is coarse: the raw grid the pipeline writes for
+        its own alert-reconciliation check is {F.grid_deg ?? 0.05}° (about 5.5 km), so each cell's
+        mill distance is its centre's. Against a {R.mill_radius_km} km radius that blurs the boundary
+        symmetrically rather than shifting it, so the direction of the finding is safe even though the
+        second decimal is not.</p>
+      </section>
+
+      <section id="s8">
+        <h2><span class="num">8</span> Finding five — eight mills claim every hectare</h2>
+        <p>The case is careful in prose: "a mill cannot be blamed for a clearing inside its catchment
+        — a {R.mill_radius_km} km radius is a sourcing hypothesis, not a chain of custody." The
+        arithmetic underneath that sentence deserves the same care.</p>
+        <figure>
+          <Fragment set:html={F6} />
+          <figcaption><b>Figure 6.</b> Left: how many mills' catchments the average alerted hectare
+          falls inside. Right: the per-mill alert pressure the case ranks, summed, against the
+          hectares that actually exist in the same twelve months.</figcaption>
+        </figure>
+        <p>An alerted hectare inside a catchment is inside a mean of
+        <b>{ID.mills.mean_over_alert_ha_in_catchment.toFixed(2)}</b> catchments (median
+        {ID.mills.median}, 90th percentile {ID.mills.p90}, maximum {ID.mills.max}).
+        {pct(ID.mills.share_of_catchment_ha_with_2plus_mills, 1)} of in-catchment hectares are claimed
+        by two or more mills and {pct(ID.mills.share_of_catchment_ha_with_5plus_mills, 1)} by five or
+        more. "Linked to a mill" therefore names, on average, eight or nine suspects.</p>
+        <p>This propagates into the ranking. Summed over all {num(ID.n_mills)} mills, the alert pressure
+        the page publishes comes to {num(ID.pressure_sum_ha)} ha for the trailing twelve months,
+        against {num(ID.in_catchment_12m_ha)} ha of alert actually inside any catchment in that window
+        — an inflation of <b>{ID.double_count}×</b>. Each mill's number is a defensible statement about
+        <i>that</i> mill's neighbourhood; the column is not additive, and a reader who sums it, or who
+        compares two overlapping mills as though the hectares were disjoint, will be wrong.</p>
+      </section>
+
+      <section id="s9">
+        <h2><span class="num">9</span> Finding six — the sensor's domain decides most of the answer</h2>
+        <p>The case already publishes the most important structural fact about RADD in Indonesia:
+        {pct(A.domain.primary_share_of_alert_ha, 0)} of alerted hectares are inside 2001 primary
+        forest, because that mask <i>is</i> the detection domain. What it does not quantify is how
+        much of the palm system that excludes.</p>
+        <figure>
+          <Fragment set:html={F7} />
+          <figcaption><b>Figure 7.</b> Indonesian oil-palm extent in the layer this case stores,
+          against two published remote-sensed maps, and the fraction of it that lies inside the
+          detection domain. Alerts can only be raised inside the 2001 primary-forest mask, which
+          covers {pct(D.domain_share_of_land, 1)} of the country.</figcaption>
+        </figure>
+        <p>Only <b>{pct(D.palm_in_domain_share, 1)}</b> of the oil palm this case maps —
+        {mha(D.palm_in_domain_ha)} of {mha(D.sdpt_palm_ha)} — sits inside the domain. An estate that
+        was already plantation in 2001 cannot raise a RADD alert at all, so the
+        PALM-INTERNAL class ({pct(R.by_class_share["PALM-INTERNAL"], 1)} of hectares) is not a measure
+        of replanting; it is a measure of the small part of the estate that used to be primary forest
+        and still carries the mask.</p>
+        <p class="caveat"><b>A claim in the case's own notes that its data contradicts.</b> The
+        repository records a decision that SDPT v2 "under-maps smallholder palm relative to Descals'
+        10 m remote-sensed extent", and concludes the published palm-linked share is therefore
+        conservative. Measured on the same lattice, SDPT maps <b>{mha(D.sdpt_palm_ha)}</b> of
+        Indonesian oil palm against <a href="#ref-descals">Descals et al. (2021)</a>'s
+        {D.descals_mapped_mha} Mha mapped / {D.descals_estimate_mha} Mha estimated and
+        <a href="#ref-gaveau">Gaveau et al. (2022)</a>'s {D.gaveau_mapped_mha} Mha mapped /
+        {D.gaveau_adjusted_mha} Mha adjusted. It is <b>{D.sdpt_vs_descals}× Descals</b>, not a
+        fraction of it. Whatever else is true, the conservatism argument does not hold, and the note
+        has been corrected.</p>
+        <p class="caveat"><b>A claim on the page itself that its data contradicts.</b> The page states
+        that Java and Nusa Tenggara "return no alerts at all". They return
+        {num(DI.java_ha, 1)} ha and {num(DI.nusa_ha, 1)} ha respectively —
+        {pct(DI.java_share, 2)} and {pct(DI.nusa_share, 2)} of the national total, from
+        {DI.provinces_with_alerts} of {DI.provinces_total} provinces that produce any. Vanishingly
+        small, which is the point being made, but not zero. Corrected in §13.</p>
+      </section>
+
+      <section id="s10">
+        <h2><span class="num">10</span> Finding seven — what "two-sensor agreement" is measuring</h2>
+        <p>The case's two-sensor check reports that {pct(g3.agreement_share, 1)} of high-confidence
+        events of at least 5 ha carry a GLAD-L optical alert within ±{S.window_days} days, and passes
+        against a {pct(g3.threshold, 0)} threshold. That subset is {num(g3.n_clusters)} events —
+        {pct(S.gate_event_share, 1)} of the record and {pct(S.gate_ha_share, 1)} of its hectares.</p>
+        <figure>
+          <Fragment set:html={F8} />
+          <figcaption><b>Figure 8.</b> Optical confirmation rate by event size. Teal bars are inside
+          the published check's ≥5 ha subset; the dashed rules are the published figure and the
+          all-events figure. Hover a bar.</figcaption>
+        </figure>
+        <p>Confirmation rises monotonically with size, from {pct((S.by_size as any[])[0].agree, 1)} for
+        {(S.by_size as any[])[0].band} ha events to {pct((S.by_size as any[])[5].agree, 1)} for the
+        largest. Across all {num(R.events)} events it is {pct(S.agree_all_events, 1)} by count and
+        {pct(S.agree_all_ha, 1)} by hectare. Two things are tangled here and the check does not
+        separate them: a bigger clearing genuinely is easier for a 30 m optical sensor to see, and a
+        bigger footprint contains more GLAD pixels spanning more dates, so the interval-overlap rule
+        the check uses becomes easier to satisfy. The published {pct(g3.agreement_share, 1)} is
+        therefore partly a property of the ≥5 ha filter.</p>
+        <p>The check is also one-directional. It asks how many radar alerts optical confirms; it
+        cannot ask how many optical alerts radar missed, because GLAD is only sampled inside RADD
+        footprints. A shortfall here is evidence about optical, never about radar.</p>
+        <figure>
+          <Fragment set:html={F9} />
+          <figcaption><b>Figure 9.</b> Days between the radar detection and the optical one, for the
+          {num(S.lead.n_in_window)} events where both fired inside the agreement window. Hover a
+          bar.</figcaption>
+        </figure>
+        <p>Where both sensors do fire, the radar-first case is what the case is built on and it holds:
+        radar is first for <b>{pct(S.lead.share_radar_first, 0)}</b> of matched events, with a median
+        lead of <b>{S.lead.median} days</b> (interquartile range {S.lead.p25} to {S.lead.p75}). In the
+        wet tropics that is the difference between acting this month and acting next quarter, and it
+        is the strongest single justification for a radar-first monitor. The remaining
+        {pct(S.lead.out_of_window_share, 0)} of matched pairs sit outside the ±{S.window_days} day
+        window entirely — usually because the same ground was disturbed in an earlier episode that
+        GLAD recorded — so they are co-location, not concurrence, and are excluded from the lead
+        statistic.</p>
+      </section>
+
+      <section id="s11">
+        <h2><span class="num">11</span> Finding eight — what does reconcile, and what the checks are worth</h2>
+        <p>Adversarial review is only credible if it also reports what survives. The plumbing here
+        does.</p>
+        <figure>
+          <Fragment set:html={F10} />
+          <figcaption><b>Figure 10.</b> Hectares recomputed from the raw tiles on this machine against
+          Global Forest Watch's own published Indonesian totals. The primary-forest rows are computed
+          here for the first time — the Hansen loss year crossed with the 2001 primary mask at 30 m —
+          so they are an independent test of the geometry, the masking and the pixel-area
+          weighting.</figcaption>
+        </figure>
+        <p>The case's tree-cover-loss reconciliation lands within {tclDiff24}% of GFW's published
+        2024 figure, and this review's independent crossing reproduces the case's
+        own province-year loss table to the hectare. More usefully, the primary-forest loss computed
+        here for the first time — Hansen loss year crossed with the 2001 primary mask at 30 m — lands
+        within {L.primary_reconciliation_pct["2023"]}% and {L.primary_reconciliation_pct["2024"]}% of
+        GFW's published Indonesian primary-forest loss for 2023 and 2024. That is a genuinely
+        independent check on the geometry, the pixel-area weighting and the masking, and it passes.</p>
+        <p>The four published checks are a mixed set once the base rate is in hand. The alert
+        reconciliation (worst deviation {g2.max_abs_pct_diff.toFixed(2)}% against a ±{g2.tolerance_pct}%
+        tolerance) is a real test of the raster plumbing and it earned its keep — the repository
+        records that it is what caught a clustering bug that had back-dated most of the archive into
+        2020. The tree-cover-loss reconciliation is reported <b>failed</b>, on a single province-year
+        of {g1.worst.ours_ha.toFixed(2)} ha against {g1.worst.gfw_ha.toFixed(2)} ha in Jakarta;
+        {pct(g1.within_tolerance_share, 1)} of {num(g1.n_comparisons)} comparisons pass and every one
+        of the {num(g1.n_material)} above {num(g1.materiality_floor_ha)} ha does. Publishing that as a
+        failure rather than re-cutting the tolerance is the right call and we would not change it.</p>
+        <p class="caveat">The two remaining checks are weaker than they look. The two-sensor check
+        measures a filtered subset whose pass rate is partly the filter (§10). The linkage check
+        cannot fail, for the reason in §5. Neither is wrong; both need their denominator printed
+        beside them, which is what §13 does.</p>
+      </section>
+
+      <section id="s12">
+        <h2><span class="num">12</span> What follows for decisions</h2>
+        <p>Evidence is only worth gathering if it changes an action. Read strictly, this instrument
+        supports four uses and forbids a fifth.</p>
+        <ol class="uses">
+          <li><b>Weekly triage on the frontier.</b> Where the lift is {nkal.lift_50}× or
+          {wpap.lift_50}× — North Kalimantan, West Papua, Papua — a catchment flag genuinely narrows
+          the search. For a provincial forestry office in Kalimantan or an NGO monitoring team, the
+          ranked weekly list is the product, and the {S.lead.median}-day radar lead over optical is
+          what makes it a weekly list rather than a quarterly one.</li>
+          <li><b>Peat exposure, which is the highest-consequence flag on the page.</b>
+          {pct(R.peat_share, 1)} of alerted hectares are on peat and {pct(R.peat_in_catchment, 1)} of
+          those are inside a catchment — a higher rate than alerts as a whole. Indonesia's peat
+          moratorium and the EUDR both make peat clearing categorically different from other
+          clearing, and this is the one flag where a spatial coincidence maps onto a legal boundary
+          rather than a commercial hypothesis.</li>
+          <li><b>Due-diligence triage, explicitly labelled as triage.</b> Regulation (EU) 2023/1115
+          requires plot-level geolocation — a polygon for any plot over 4 ha — and a cut-off of
+          31 December 2020, which is almost exactly where this alert record begins. A
+          {R.mill_radius_km} km circle is the pre-EUDR proxy the regulation was written to replace.
+          It cannot discharge due diligence; it can tell an operator which of its declared plots to
+          check first, and which weeks to check them in.</li>
+          <li><b>The definitional argument, which this case wins.</b> Chapter 01 already refuses to
+          publish one headline hectare figure. §4 now puts a number on why:
+          {pct(L.grand_plantation_share, 1)} of the loss is inside land already mapped as plantation.
+          For KLHK, for a ministry press office, and for anyone arguing about whether Indonesian
+          deforestation is 175,400 ha or 1.1 Mha, that decomposition is more useful than either
+          number alone.</li>
+          <li class="no"><b>Not: attributing clearing to a named mill or group.</b> With
+          {ID.mills.mean_over_alert_ha_in_catchment.toFixed(2)} mills per hectare, a
+          {H.lift}× lift and a pressure column that sums to {ID.double_count}× the hectares that
+          exist, the ranking cannot support a statement about any individual mill's conduct. It is a
+          screening order. Naming groups next to it invites exactly the reading the page's own caveat
+          disclaims.</li>
+        </ol>
+        <p class="pull">The honest reframing is small and it makes the case stronger: this is not
+        "deforestation as a supply-chain question", it is <i>a weekly triage instrument whose value is
+        highest exactly where the supply chain is least mapped</i>. That is the gap between having
+        data and acting on it — which is the axis the work is meant to sit on.</p>
+      </section>
+
+      <section id="s13">
+        <h2><span class="num">13</span> Corrections applied to the case page</h2>
+        <p>Everything in this section has been changed on <a href={`${BASE}/`}>the instrument</a>
+        itself, not merely recommended.</p>
+        <ol class="next">
+          <li><b>The headline now carries its denominator.</b> The linkage tile reads
+          {pct(H.alert, 1)} against a base rate of {pct(H.domain_base, 1)} and a lift of {H.lift}×,
+          and the {C.best_radius.km} km class is published beside the {R.mill_radius_km} km one.</li>
+          <li><b>The linkage check is relabelled.</b> It was presented as a literature-floor test
+          against Gaveau et al.'s {pct(LIT.gaveau.palmShareOfLoss, 0)} direct-conversion figure. A
+          proximity share cannot be tested against a conversion share, and in Riau the check could not
+          fail at any threshold below {pct(riau.domain_base_50, 0)}. It is now stated as a lift test
+          with Riau's base rate printed beside it.</li>
+          <li><b>"Java and Nusa Tenggara return no alerts at all" is corrected</b> to the true figures
+          — {num(DI.java_ha, 1)} ha and {num(DI.nusa_ha, 1)} ha, together
+          {pct((DI.java_share as number) + (DI.nusa_share as number), 2)} of the national total.</li>
+          <li><b>The national event-floor share is published.</b> The page previously gave only the
+          three-province figure ({pct(F.gate_keeps_focus_provinces, 0)}); the national figure is
+          {pct(F.keeps, 1)}, and the unfiltered catchment share {pct(F.unfiltered_within_50, 1)} is
+          now stated next to the filtered one.</li>
+          <li><b>The mill ranking is relabelled a screening order</b> and carries the number of mills
+          sharing each hectare, so the column is not read as additive hectares.</li>
+          <li><b>The SDPT extent note is corrected</b> in the repository: SDPT maps
+          {D.sdpt_vs_descals}× Descals' Indonesian oil-palm extent, so the palm-linked share is not
+          conservative for the reason previously given.</li>
+        </ol>
+        <p>Two things we deliberately did <i>not</i> change. The failed tree-cover-loss reconciliation
+        stays failed and stays published. And the {R.mill_radius_km} km radius stays, because it is
+        the convention the industry and Trase use; it now simply travels with its base rate.</p>
+      </section>
+
+      <section id="refs">
+        <h2><span class="num">14</span> References and reproducibility</h2>
+        <ol class="refs">
+          <li id="ref-hansen">Hansen, M.C. et al. (2013). High-Resolution Global Maps of 21st-Century
+          Forest Cover Change. <i>Science</i> 342(6160), 850–853. doi:10.1126/science.1244693</li>
+          <li id="ref-austin">Austin, K.G., Schwantes, A., Gu, Y. &amp; Kasibhatla, P.S. (2019). What
+          causes deforestation in Indonesia? <i>Environmental Research Letters</i> 14(2), 024007.
+          doi:10.1088/1748-9326/aaf6db</li>
+          <li id="ref-gaveau">Gaveau, D.L.A. et al. (2022). Slowing deforestation in Indonesia follows
+          declining oil palm expansion and lower oil prices. <i>PLOS ONE</i> 17(3), e0266178.
+          doi:10.1371/journal.pone.0266178</li>
+          <li id="ref-curtis">Curtis, P.G., Slay, C.M., Harris, N.L., Tyukavina, A. &amp; Hansen, M.C.
+          (2018). Classifying drivers of global forest loss. <i>Science</i> 361(6407), 1108–1111.
+          doi:10.1126/science.aau3445</li>
+          <li id="ref-reiche">Reiche, J. et al. (2021). Forest disturbance alerts for the Congo Basin
+          using Sentinel-1. <i>Environmental Research Letters</i> 16, 024005.
+          doi:10.1088/1748-9326/abd0a8</li>
+          <li id="ref-descals">Descals, A. et al. (2021). High-resolution global map of smallholder and
+          industrial closed-canopy oil palm plantations. <i>Earth System Science Data</i> 13,
+          1211–1231. doi:10.5194/essd-13-1211-2021</li>
+          <li id="ref-turubanova">Turubanova, S., Potapov, P.V., Tyukavina, A. &amp; Hansen, M.C.
+          (2018). Ongoing primary forest loss in Brazil, Democratic Republic of the Congo, and
+          Indonesia. <i>Environmental Research Letters</i> 13, 074028. doi:10.1088/1748-9326/aacd1c</li>
+          <li id="ref-richter">Richter, J. et al. (2024). Spatial Database of Planted Trees (SDPT)
+          version 2. World Resources Institute. doi:10.46830/writn.23.00073</li>
+          <li id="ref-eudr">Regulation (EU) 2023/1115 of the European Parliament and of the Council of
+          31 May 2023 on the making available on the Union market and the export from the Union of
+          certain commodities and products associated with deforestation and forest degradation.
+          <i>OJ L 150</i>, 9.6.2023, 206–247.</li>
+          <li id="ref-uml">World Resources Institute et al. Universal Mill List, {A.vintages.mills}.
+          Accessed through Global Nature Watch.</li>
+        </ol>
+        <p class="repro">Every figure on this page is generated in the page's own frontmatter from
+        <code>web/src/data/article.json</code>, written by <code>pipeline/article.py</code> from
+        <code>data/stats.json</code>, <code>data/baserate.json</code> and the event table. The three
+        review tests are <code>pipeline/baserate.py</code>, run on the same host and the same
+        downloaded tiles as the case itself. Data vintages: alerts {A.vintages.radd}, optical
+        {A.vintages.glad}, loss {A.vintages.tcl30}, plantation {A.vintages.palm}, peat
+        {A.vintages.peat}, primary forest {A.vintages.primary}, mills {A.vintages.mills}. Case
+        statistics generated {A.stats_generated}; review computed {A.generated}. Every stored layer is
+        CC BY 4.0; no concession boundary is stored or redistributed anywhere in this case.</p>
+      </section>
+
+      <footer class="end">
+        <p>Part of the Demo Lab. Built end-to-end on public data — acquisition, pipeline, linkage,
+        validation, and this review.</p>
+        <a class="cta" href={`${BASE}/`}>← Back to the instrument</a>
+      </footer>
+    </article>
+
+    <div id="tip" hidden></div>
+
+    <style is:global>
+      body { margin: 0; background: var(--ground); color: var(--ink);
+        font-family: var(--font-body); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+      *, *::before, *::after { box-sizing: border-box; }
+      a { color: var(--accent); }
+
+      .bar { position: sticky; top: 0; z-index: 20; display: flex; justify-content: space-between;
+        align-items: center; gap: 16px; padding: 12px 20px; background: color-mix(in srgb, var(--ground) 92%, transparent);
+        backdrop-filter: blur(8px); border-bottom: 1px solid var(--hairline); }
+      .back { text-decoration: none; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.06em; }
+      .stamp { font-family: var(--font-data); font-size: 0.7rem; letter-spacing: 0.1em; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); text-align: right; }
+
+      article { max-width: 50rem; margin: 0 auto; padding: 0 24px 12vh; }
+      .masthead { padding: 9vh 0 4vh; border-bottom: 1px solid var(--hairline); }
+      .eyebrow { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--accent); }
+      h1 { font-family: var(--font-display); font-size: clamp(1.9rem, 5vw, 3.1rem); line-height: 1.1;
+        letter-spacing: -0.02em; margin: 18px 0 20px; }
+      .standfirst { font-size: 1.1rem; color: var(--ink); margin: 0 0 26px; max-width: 42rem; }
+      .byline { display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: var(--font-data);
+        font-size: 0.72rem; letter-spacing: 0.06em; color: var(--ink-muted); text-transform: uppercase; }
+
+      .abstract { margin: 5vh 0; padding: 26px 28px; border: 1px solid var(--hairline);
+        border-left: 3px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
+      .abstract h2 { font-family: var(--font-data); font-size: 0.76rem; letter-spacing: 0.16em;
+        color: var(--accent); margin: 0 0 14px; text-transform: uppercase; }
+      .abstract p { margin: 0 0 12px; font-size: 0.96rem; }
+      .abstract p:last-child { margin-bottom: 0; }
+
+      .toc { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 20px 0 8px; margin-bottom: 4vh;
+        border-bottom: 1px solid var(--hairline); font-family: var(--font-data); font-size: 0.73rem; }
+      .toc a { text-decoration: none; color: var(--ink-muted); }
+      .toc a:hover { color: var(--accent); }
+
+      section { margin: 6vh 0; }
+      h2 { font-family: var(--font-display); font-size: clamp(1.25rem, 3.4vw, 1.55rem); line-height: 1.25;
+        letter-spacing: -0.01em; margin: 0 0 20px; display: flex; gap: 14px; align-items: baseline; }
+      .num { font-family: var(--font-data); font-size: 0.9rem; color: var(--accent); flex: none; }
+      p { margin: 0 0 18px; }
+      b { color: #F3F7F0; font-weight: 600; }
+
+      .caveat { border-left: 2px solid var(--loss); padding: 2px 0 2px 18px; color: var(--ink-muted); }
+      .caveat b { color: var(--loss); }
+      .pull { font-size: 1.08rem; line-height: 1.6; border-left: 3px solid var(--accent);
+        padding: 8px 0 8px 20px; color: #F3F7F0; }
+
+      figure { margin: 34px 0; padding: 20px 16px 14px; border: 1px solid var(--hairline);
+        border-radius: var(--radius); background: var(--surface); }
+      .fig { display: block; width: 100%; height: auto; overflow: visible; }
+      figcaption { font-size: 0.84rem; color: var(--ink-muted); margin-top: 14px; line-height: 1.55; }
+      figcaption b { color: var(--ink); }
+
+      .yr, .lf, .pv, .sz, .ag, .ld { cursor: crosshair; }
+      .yr:hover rect, .lf:hover rect, .sz:hover rect, .ag:hover rect, .ld:hover rect { opacity: 1; }
+      .pv:hover text { fill: #F3F7F0; }
+
+      .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(146px, 1fr)); gap: 12px; margin: 26px 0; }
+      .stat { padding: 16px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
+      .sv { display: block; font-family: var(--font-display); font-size: 1.55rem; letter-spacing: -0.01em; }
+      .sv.teal { color: #4BB8A9; } .sv.loss { color: var(--loss); }
+      .sl { display: block; font-size: 0.8rem; color: var(--ink-muted); margin-top: 6px; line-height: 1.4; }
+
+      ol.uses, ol.next { padding-left: 22px; margin: 0 0 18px; }
+      ol.uses li, ol.next li { margin-bottom: 14px; }
+      ol.uses li.no { color: var(--ink-muted); }
+      ol.uses li.no b { color: var(--loss); }
+
+      ol.refs { padding-left: 22px; font-size: 0.88rem; color: var(--ink-muted); }
+      ol.refs li { margin-bottom: 12px; }
+      .repro { font-size: 0.85rem; color: var(--ink-muted); border-top: 1px solid var(--hairline); padding-top: 18px; }
+      code { font-family: var(--font-data); font-size: 0.88em; color: var(--accent); word-break: break-word; }
+
+      .end { margin-top: 8vh; padding-top: 26px; border-top: 1px solid var(--hairline); }
+      .end p { color: var(--ink-muted); font-size: 0.9rem; }
+      .cta { display: inline-block; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.08em;
+        color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 10px 18px; text-decoration: none; }
+      .cta:hover { background: var(--accent-ink); }
+
+      #tip { position: fixed; z-index: 60; pointer-events: none; background: var(--surface-raised);
+        border: 1px solid var(--hairline); border-radius: 5px; padding: 8px 11px; font-family: var(--font-data);
+        font-size: 0.72rem; line-height: 1.55; color: var(--ink); box-shadow: 0 8px 26px rgba(0,0,0,0.55); max-width: 260px; }
+
+      @media (max-width: 680px) {
+        article { padding: 0 16px 10vh; }
+        .masthead { padding-top: 5vh; }
+        figure { padding: 12px 8px 10px; }
+        .abstract { padding: 18px 16px; }
+        .bar { padding: 10px 14px; }
+        .stamp.dim { font-size: 0.6rem; }
+      }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+
+    <script>
+      /* Hover read-outs. Pure SVG + DOM, no GPU path anywhere on this page. */
+      const tip = document.getElementById("tip");
+      const show = (html, e) => {
+        tip.innerHTML = html; tip.hidden = false;
+        const r = tip.getBoundingClientRect();
+        let x = e.clientX + 14, y = e.clientY + 14;
+        if (x + r.width > innerWidth - 8) x = Math.max(8, e.clientX - r.width - 14);
+        if (y + r.height > innerHeight - 8) y = Math.max(8, e.clientY - r.height - 14);
+        tip.style.left = x + "px"; tip.style.top = y + "px";
+      };
+      const bind = (sel, fmt) => document.querySelectorAll(sel).forEach((el) => {
+        el.addEventListener("mousemove", (e) => show(fmt(el.dataset), e));
+        el.addEventListener("mouseleave", () => { tip.hidden = true; });
+      });
+      bind(".yr", (d) => `<b>${d.y}</b><br>total ${d.t} ha<br>oil palm ${d.p}<br>wood fibre ${d.w}` +
+        `<br>rubber ${d.r}<br>outside plantation ${d.o}<br>inside plantation ${d.s}`);
+      bind(".lf", (d) => `<b>${d.r} km catchment</b><br>base rate ${d.b}<br>alerted ${d.a}<br>lift ${d.l}×`);
+      bind(".pv", (d) => `<b>${d.n}</b><br>${d.h} alerted ha<br>base rate ${d.b}<br>alerted ${d.a}<br>lift ${d.l}×`);
+      bind(".sz", (d) => `<b>${d.b} ha events</b><br>${d.e} events · ${d.h} ha<br>inside a catchment ${d.w}<br>median mill ${d.m} km`);
+      bind(".ag", (d) => `<b>${d.b} ha events</b><br>${d.e} events<br>optical confirms ${d.a}`);
+      bind(".ld", (d) => `<b>${d.a} to ${d.b} days</b><br>${d.n} events`);
+    </script>
+  </body>
+</html>

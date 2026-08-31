@@ -3,7 +3,7 @@
 
 PY := uv run python pipeline
 
-.PHONY: rebuild ingest alerts loss link chips validate export refresh brief web help
+.PHONY: rebuild ingest alerts loss link chips validate baserate article export refresh brief web help
 
 help:
 	@echo "rebuild    full DAG: ingest → alerts → loss → link → validate → export"
@@ -15,7 +15,9 @@ help:
 	@echo "link       clusters × palm extent × mill catchments × peat/primary → linkage classes"
 	@echo "chips      Sentinel-2 before/after chips for the top clusters (NOT BUILT — see README)"
 	@echo "validate   gates G-H1..G-H4 → data/stats.json"
-	@echo "export     NaN-safe web view-models into web/public/data"
+	@echo "baserate   review tests → data/baserate.json (catchment base rate, loss split, controls)"
+	@echo "article    → web/src/data/article.json for the review article at /forest/article"
+	@echo "export     NaN-safe web view-models into web/public/data (incl. review.json)"
 	@echo "refresh    weekly: latest RADD version → alerts → link → validate → export"
 
 rebuild: ingest alerts loss link validate export
@@ -37,6 +39,12 @@ chips:           ## web/public/chips/*.png (small, pre-rendered)
 
 validate:        ## gates G-H1..G-H4
 	$(PY)/validate.py
+
+baserate:        ## review tests: catchment base rate, loss-vs-plantation split, event-floor controls
+	$(PY)/baserate.py
+
+article:         ## web/src/data/article.json for the review article at /forest/article
+	$(PY)/article.py
 
 export:
 	$(PY)/export_web.py
