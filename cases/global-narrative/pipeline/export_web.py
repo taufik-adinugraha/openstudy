@@ -154,6 +154,10 @@ def export_pulse(df: pd.DataFrame, stats: dict, allow_fetch: bool) -> dict:
         peak_day = sub["api_vol"].idxmax()
         eras.append({"label": label, "start": max(pd.Timestamp(start), sub.index.min()), "end": min(pd.Timestamp(end), sub.index.max()),
                      "vol_mean": sub["api_vol"].mean(), "tone_mean": sub["api_tone"].mean() if "api_tone" in sub else None,
+                     # the share's numerator and denominator, so an era card can never
+                     # imply a rise in attention that is really a fall in the crawl
+                     "idn_mean": float(sub["api_vol_raw"].mean()) if "api_vol_raw" in sub else None,
+                     "monitored_mean": float(sub["api_norm"].mean()) if "api_norm" in sub else None,
                      "peak_day": peak_day, "peak_vol": sub["api_vol"].max(),
                      "top_themes": [{"key": k, "label": THEME_LABELS.get(k, k), "share": v} for k, v in top],
                      "events": int(sub["n_events"].sum()) if "n_events" in sub and sub["n_events"].notna().any() else None,
@@ -234,9 +238,14 @@ def export_themes(df: pd.DataFrame) -> dict:
         sub = df.loc[start:end]
         if sub.empty or sub["api_vol"].notna().sum() == 0:
             continue
-        ranks = sorted(((k, float((sub[f"theme_{k}_vol"] / sub["api_vol"]).replace([np.inf], np.nan).mean())) for k in themes),
+        # A theme only enters an era's ranking if it actually covers that era. Without
+        # this, a curve holding one year of data outranks curves holding ten.
+        n_days = int(sub["api_vol"].notna().sum())
+        eligible = [k for k in themes if int(sub[f"theme_{k}_vol"].notna().sum()) >= 0.6 * n_days]
+        ranks = sorted(((k, float((sub[f"theme_{k}_vol"] / sub["api_vol"]).replace([np.inf], np.nan).mean())) for k in eligible),
                        key=lambda kv: -kv[1])
-        era_rank.append({"era": label, "themes": [{"key": k, "share": v} for k, v in ranks[:6]]})
+        era_rank.append({"era": label, "themes": [{"key": k, "share": v} for k, v in ranks[:6]],
+                         "excluded": sorted(set(themes) - set(eligible))})
     return {"months": months, "indonesia_vol": m["api_vol"], "order": order, "themes": themes, "era_rank": era_rank}
 
 
@@ -415,6 +424,20 @@ def main() -> int:
         "foreignShare": stats.get("gates", {}).get("G-D4", {}).get("api_foreign_share_mean"),
         "crawlDrift": stats.get("gates", {}).get("G-D1", {}).get("crawl_size_drift_max_over_min"),
     }
+    # The share's two halves, by year. The review of this case showed that reading the
+    # share as a decade trend reads the denominator, so the page states both.
+    by_year = df.groupby(df.index.year)[[c for c in ("api_vol", "api_vol_raw", "api_norm") if c in df]].mean()
+    if len(by_year) >= 2 and {"api_vol_raw", "api_norm"} <= set(by_year.columns):
+        y0, y1 = by_year.index[0], by_year.index[-1]
+        summary.update({
+            "firstYear": int(y0), "lastYear": int(y1),
+            "idnFirst": float(by_year.loc[y0, "api_vol_raw"]), "idnLast": float(by_year.loc[y1, "api_vol_raw"]),
+            "monitoredFirst": float(by_year.loc[y0, "api_norm"]), "monitoredLast": float(by_year.loc[y1, "api_norm"]),
+            "shareFirst": float(by_year.loc[y0, "api_vol"]), "shareLast": float(by_year.loc[y1, "api_vol"]),
+            "idnChange": float(by_year.loc[y1, "api_vol_raw"] / by_year.loc[y0, "api_vol_raw"] - 1),
+            "monitoredChange": float(by_year.loc[y1, "api_norm"] / by_year.loc[y0, "api_norm"] - 1),
+            "shareChange": float(by_year.loc[y1, "api_vol"] / by_year.loc[y0, "api_vol"] - 1),
+        })
     (SRC_DATA / "summary.json").write_text(json.dumps(clean(summary), indent=1, allow_nan=False))
     print(f"[export] summary.json -> {SRC_DATA} (verdict {summary['verdict']}, events complete: {summary['eventsComplete']})")
     return 0
