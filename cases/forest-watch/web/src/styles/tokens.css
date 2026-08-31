@@ -38,7 +38,7 @@
   --prose-width: 68ch;
 }
 
-/* ── Flagship A: city lights from orbit ─────────────────────────────── */
+/* ── Case: nighttime lights — city lights from orbit ─────────────────────────────── */
 [data-case="nightlights"] {
   --ground: #0A0E1A;          /* midnight indigo */
   --surface: #131A2E;
@@ -53,7 +53,7 @@
   --ramp-3: #E8A33D; --ramp-4: #FFEFC9;
 }
 
-/* ── Flagship B: smelter metal ──────────────────────────────────────── */
+/* ── Case: global trade — smelter metal ──────────────────────────────────────── */
 [data-case="trade"] {
   --ground: #0C0F14;          /* carbon ink */
   --surface: #161C25;
@@ -67,7 +67,7 @@
   --structure: #AEB6C2;       /* nickel silver — world structure, edges */
 }
 
-/* ── Phase 2: Jakarta Is Sinking — abyssal blue → cyan (water and depth) ── */
+/* ── Case: Jakarta is sinking — abyssal blue → cyan (water and depth) ───── */
 [data-case="sinking"] {
   --ground: #070D16;
   --surface: #0E1926;
@@ -135,6 +135,8 @@
 }
 
 /* ── Case: forest watch — canopy against burn ───────────────────────── */
+/* Note: `em` is styled as the canopy accent in running prose, but green must never read
+ * as "alert" — so inside stat tiles, flags and captions the emphasis reverts to muted ink. */
 [data-case="forest"] {
   --ground: #0C120D; --surface: #141C15; --surface-raised: #1B261C;
   --ink: #E7ECE6; --ink-muted: #93A394; --hairline: #243025;

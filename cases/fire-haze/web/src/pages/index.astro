@@ -260,7 +260,7 @@ const CHAPTERS = [
       nav.toc a:hover, nav.toc a[aria-current="true"] { color: var(--accent); }
 
       /* ── review hand-off — the article is a separate page, so it gets a real door ── */
-      .review-cta { padding-top: var(--space-6); display: flex; flex-direction: column;
+      .review-cta { padding-top: var(--space-6); padding-bottom: var(--space-6); display: flex; flex-direction: column;
                     align-items: flex-start; }
       .review-cta p { color: var(--ink-muted); max-width: var(--prose-width); }
       .cta.big { align-self: flex-start; margin-top: var(--space-2); font-family: var(--font-data);
@@ -301,7 +301,7 @@ const CHAPTERS = [
     <main>
       <!-- ══════════════════════════ HERO ══════════════════════════ -->
       <section class="hero wrap" id="top">
-        <span class="stamp">Case J · Indonesia → Singapore · {pending ? "pipeline not yet run" : "live"}</span>
+        <span class="stamp">Indonesia → Singapore · {pending ? "pipeline not yet run" : "live"}</span>
         <h1>The smoke that closed Singapore's schools — where was that air three days earlier, and what was burning under it?</h1>
         <p class="lede">
           Indonesia's haze is not weather. It is a land-use decision plus a wind, and the two
@@ -762,7 +762,7 @@ const CHAPTERS = [
 
       <footer class="wrap">
         <p class="muted" style="font-size: 13px">
-          Case J · Fire &amp; Haze Early Warning · demo-lab. Ignition risk and haze transport for
+          Fire &amp; Haze Early Warning · Demo Lab. Ignition risk and haze transport for
           Indonesia, built entirely from public data. Out of scope and named rather than
           half-built: a real chemistry-transport model, emissions inventories beyond GFAS,
           health-impact estimates, and concession-level attribution.
