@@ -9,6 +9,11 @@
 import "../styles/tokens.css";
 
 const S = (await import("../data/summary.json").catch(() => null))?.default ?? null;
+// The review's data layer (pipeline/article.py). This page quotes a handful of its
+// numbers — the honest denominators, the daily-basis exceedance, the reference-grade
+// subset, the strongest trivial baseline — so the corrections it demanded are applied
+// here from the same source the review page reads, not retyped.
+const R = (await import("../data/article.json").catch(() => null))?.default ?? null;
 
 const n0 = (v) => (v == null ? "—" : Math.round(v).toLocaleString("en-US"));
 const n1 = (v) => (v == null ? "—" : v.toFixed(1));
@@ -35,6 +40,17 @@ const ffSp = ff?.by_product?.find((p) => /_SP/.test(p.src)) ?? null;
 const maskCells = ff?.mask_cells
   ? ` (${n0(ff.mask_cells)} cells, ${n0(ff.mask_core_cells)} of them flagged directly)`
   : "";
+// Review-derived quantities, all read from article.json rather than typed.
+const rTh = R?.thresholds ?? null;
+const rAddr = R?.addresses ?? null;
+const rProv = R?.providers ?? null;
+const rGate = R?.gateRetest ?? null;
+const rEp = R?.episodes ?? null;
+const rCo = R?.colocation ?? null;
+const rVU = rEp?.ladder?.find((l) => l.threshold === 125.5) ?? null;
+const liveNoData = (net?.stations ?? []).filter(
+  (s) => s.status === "live" && !(s.n_hours > 0)).length;
+
 const maskEffect = ffNrt
   ? `It removes ${pct(ffNrt.share_removed, 1)} of otherwise-qualifying near-real-time ` +
     `detections against ${ffSp ? pct(ffSp.share_removed, 1) : "—"} of archive ones — the ` +
@@ -145,6 +161,21 @@ const maskEffect = ffNrt
         font-size: 1.02rem;
       }
       .footnote { font-size: 13.5px; color: var(--ink-muted); line-height: 1.55; }
+      .caution {
+        border-left: 2px solid var(--alert); padding: 2px 0 2px var(--space-3);
+        margin: 0 0 var(--space-4); color: var(--ink-muted); font-size: .96rem;
+      }
+      .caution b { color: var(--alert); }
+      .caution b.num, .caution > b:not(:first-child) { color: var(--ink); }
+
+      /* Review hand-off — the article is a separate page, so it gets a real door. */
+      .review-cta p { color: var(--ink-muted); }
+      .cta.big { display: inline-block; margin-top: var(--space-3); font-family: var(--font-data);
+        font-size: 0.82rem; letter-spacing: 0.08em; color: var(--accent);
+        border: 1px solid var(--accent); border-radius: 4px; padding: 13px 22px;
+        text-decoration: none; transition: background .18s ease, transform .18s ease; }
+      .cta.big:hover { background: var(--accent-ink); transform: translateY(-1px); }
+      @media (prefers-reduced-motion: reduce) { .cta.big { transition: none; } }
       .panel {
         margin-top: var(--space-4); padding: var(--space-4);
         border: 1px solid var(--hairline); border-radius: var(--radius);
@@ -352,8 +383,9 @@ const maskEffect = ffNrt
           <p>Greater Jakarta gets its air quality the way it gets its weather: after the
           fact. This case turns three open feeds — <b>ERA5 meteorology</b>, <b>NASA fire
           detections</b> and <b>the handful of ground sensors still reporting</b> — into a PM2.5 forecast with
-          a horizon and an error bar, graded against the only baseline that matters:
-          assuming tomorrow looks like today.</p>
+          a horizon and an error bar, graded against every trivial rule that could stand
+          in for it: carrying today forward, carrying yesterday's daily mean forward, and
+          the long-run average for this hour and season.</p>
         </div>
       </div>
       <div class="hud" id="hud">
@@ -373,10 +405,17 @@ const maskEffect = ffNrt
     <section class="chapter rv">
       <span class="eyebrow">01 · The air today</span>
       <h2>Jakarta's air is not occasionally bad. It is usually bad.</h2>
-      <p class="big-stat">Across every hour on record at the city's ground monitors,
-      <b>{pct(obs?.hours_above_who_daily_15, 1)}</b> sat above the WHO 24-hour guideline of
-      15&nbsp;µg/m³, at a mean of <b>{n1(obs?.mean_pm25)}&nbsp;µg/m³</b>. The 95th percentile
-      hour reaches <b>{n1(obs?.p95_pm25)}</b>.</p>
+      <p class="big-stat">Of the <b>{rTh ? n0(rTh.n_days) : "—"}</b> complete days on record at the
+      city's ground monitors, <b>{rTh ? pct(rTh.days_over_who15, 1) : "—"}</b> exceeded the WHO
+      24-hour guideline of 15&nbsp;µg/m³, at a mean of <b>{n1(obs?.mean_pm25)}&nbsp;µg/m³</b>. The
+      95th percentile hour reaches <b>{n1(obs?.p95_pm25)}</b>.</p>
+      {rProv?.reference_mean ? (
+        <p class="footnote" style="margin:-8px 0 18px">Read that mean carefully. It pools instrument
+        classes: across the <b>{n0(rProv.reference_n)}</b> hours from the two reference-grade
+        regulatory monitors the mean is <b>{n1(rProv.reference_mean)}&nbsp;µg/m³</b>, against
+        <b>{n1(rProv.consumer_mean)}</b> across the {n0(rProv.consumer_n)} hours from consumer-grade
+        units. The gap is instrument, not geography, and the review page quantifies it.</p>
+      ) : null}
       <p>Below, everything the most recently reporting sensor has actually sent in the last
       three weeks — not a smoothed line, the raw hours, gaps and all. It is a thin record,
       and that thinness is the operating condition this whole case is built around. Under it,
@@ -416,12 +455,23 @@ const maskEffect = ffNrt
       <b class="num">{n1(e24?.model_mae)}&nbsp;µg/m³</b> against persistence's
       <b class="num">{n1(e24?.persistence_mae)}</b> — a
       <b class="num">{e24 ? pct(e24.skill_mae_vs_persistence, 1) : "—"}</b> improvement on the
-      held-out future.</p>
+      held-out future{rGate ? `, and ${pct(rGate.skill_vs_best, 1)} against the strongest trivial rule available at that lead` : ""}.</p>
+      {rGate ? (
+        <p class="caution"><b>Which baseline matters.</b> Persistence is not the hardest trivial rule
+        at a 24-hour lead — a <b>{rGate.best_baseline.toLowerCase()}</b> reaches
+        {n1(rGate.best_baseline_mae)}&nbsp;µg/m³ where persistence reaches {n1(e24?.persistence_mae)},
+        because at a 24-hour lag persistence is handed the entire daily cycle for free. Measured
+        against that stronger rule the improvement is <b>{pct(rGate.skill_vs_best, 1)}</b>
+        [{pct(rGate.ci[0], 1)}, {pct(rGate.ci[1], 1)}], which is <b>below</b> the {pct(rGate.threshold, 0)}
+        this case registered in advance. The skill check below is reported against persistence, as it
+        was written; on the fairer ruler it would not pass, and the review page works through why.</p>
+      ) : null}
       <p>Every number here comes from a single <b>time-based</b> split: the model never sees
       an hour later than the cut, and is then asked about the months that follow. A random
       split would leak tomorrow into today's training set and inflate every figure on this
-      page. Two baselines are shown, because one is not enough: <b>persistence</b> (carry the
-      last reading forward) and <b>diurnal climatology</b> (the average for this hour of day).</p>
+      page. Two baselines are drawn below — <b>persistence</b> (carry the last reading forward) and
+      <b>diurnal climatology</b> (the average for this hour of day) — and the review page adds four
+      more.</p>
       <div class="panel">
         <div class="panel-head">
           <h3>Error by horizon · held-out period</h3>
@@ -435,9 +485,10 @@ const maskEffect = ffNrt
         <div class="cv-wrap"><svg id="s-skill" class="chart" height="330" role="img"
           aria-label="Forecast error by horizon, model versus persistence and climatology"></svg></div>
       </div>
-      <p class="sowhat" id="skill-sowhat"><b>So what:</b> skill is not a single number. It
-      decays with horizon, and where it crosses the baseline is exactly where an operational
-      warning stops being worth sending.</p>
+      <p class="sowhat" id="skill-sowhat"><b>So what:</b> skill is not a single number, and it is
+      not only a property of the model. The peak at 12&nbsp;hours is where persistence is at its
+      worst, not where the forecast is at its best — at a 12-hour lead the baseline is comparing
+      night to afternoon. Read the curve against the line it is drawn on.</p>
     </section>
 
     <!-- ══ 03 · what drives it ═════════════════════════════════════════ -->
@@ -514,18 +565,39 @@ const maskEffect = ffNrt
     <section class="chapter rv">
       <span class="eyebrow">05 · The finding nobody publishes</span>
       <h2>A metropolis of 32 million is watched by
-      {net?.n_live == null ? "almost no" : net.n_live} working public
-      {net?.n_live === 1 ? "sensor" : "sensors"}.</h2>
+      {rAddr ? (net.n_live - liveNoData) : (net?.n_live ?? "almost no")} working public
+      {rAddr && net.n_live - liveNoData === 1 ? "sensor" : "sensors"}.</h2>
       <p class="big-stat">The open record lists <b class="num">{net?.n_stations_total ?? "—"}</b>
-      PM2.5 stations inside Jabodetabek. <b class="num">{net?.n_live ?? "—"}</b> have reported in
-      the last fortnight. <b class="num">{net?.n_stale ?? "—"}</b> went quiet and stayed quiet;
-      <b class="num">{net?.n_silent ?? "—"}</b> are registered but have never returned a reading.</p>
+      PM2.5 stations inside Jabodetabek. Only
+      <b class="num">{rAddr?.n_ever_reported ?? net?.n_modelled ?? "—"}</b> have ever returned an
+      hour of data. <b class="num">{net?.n_live ?? "—"}</b> reported in the last fortnight — and
+      <b class="num">{liveNoData}</b> of those {liveNoData === 1 ? "has" : "have"} delivered no
+      hourly measurements at all.</p>
+      {rAddr ? (
+        <p class="caution"><b>The denominator is softer than it looks.</b> Those
+        {" "}{rAddr.n_registered} registrations resolve to <b>{rAddr.n_addresses} distinct
+        addresses</b> — {rAddr.largest_cluster.n} of them share one coordinate under six different
+        names, none of which ever reported — and <b>{rAddr.n_never_reported}</b> of the
+        {" "}{rAddr.n_registered} have never delivered an hour of data, including legacy
+        diplomatic-post entries that duplicate feeds registered separately. Told honestly it is
+        <b>{" "}{rAddr.n_ever_reported} instruments that ever worked</b>, which is a smaller number
+        and a worse one.</p>
+      ) : null}
       <p>Each line below is one station's life. The <b>solid bar</b> is the hours this build
       actually holds; the <b>faint rule</b> behind it is the lifetime the provider's metadata
       claims — the two diverge, and the gap is itself worth knowing before anyone budgets for
       an analysis. Read left to right and the network does not grow: it flickers. This is not
       an access problem a bigger API key would fix. The instruments are not there, and the ones
       that are there are mostly low-cost units run by embassies, NGOs and volunteers.</p>
+      {rCo ? (
+        <p>And a network this thin loses something a bigger one takes for granted: the ability to
+        catch itself. Two of these instruments sat <b>{rCo.m} metres</b> apart and tracked each
+        other to <b>{n1(rCo.mae)}&nbsp;µg/m³</b> across {n0(rCo.n)} shared hours — until, in the
+        last months both were alive, they diverged to
+        <b>{" "}{n1(rCo.monthly[rCo.monthly.length - 1].a)}</b> against
+        <b>{" "}{n1(rCo.monthly[rCo.monthly.length - 1].b)}</b>&nbsp;µg/m³. Then one of them went
+        dark. Nothing in Jabodetabek can now say which was right.</p>
+      ) : null}
       <div class="panel">
         <div class="panel-head"><h3>Station lifetimes · every PM2.5 station in the bbox</h3>
           <div class="ramp-legend">
@@ -544,8 +616,10 @@ const maskEffect = ffNrt
           aria-label="Map of PM2.5 station locations across Jabodetabek. Focus this map and use the arrow keys to step through stations."></canvas></div>
       </div>
       <p class="sowhat"><b>So what:</b> a dense city-wide nowcast grid cannot be honestly
-      validated here, so this case does not claim one. The forecast is scoped to the stations
-      that exist, and the station-coverage check is <b>published failed</b> rather than quietly relaxed.</p>
+      validated here, so this case does not claim one — and the deeper cost is not coverage but
+      corroboration. A single sensor cannot be shown to be wrong. The station-coverage check is
+      <b>published failed</b> rather than quietly relaxed, and on the review's reading it is the
+      most important output this pipeline has.</p>
     </section>
 
     <!-- ══ 06 · validation ═════════════════════════════════════════════ -->
@@ -568,6 +642,7 @@ const maskEffect = ffNrt
         </div>
         <div class="cv-wrap"><canvas id="c-bt" class="chart" height="330" role="img"
           aria-label="Backtest: 24-hour forecast versus observed PM2.5 over the held-out period"></canvas></div>
+        <p class="footnote" style="margin-top:12px" id="bt-note"></p>
       </div>
       <div class="panel">
         <div class="panel-head"><h3>Gates · thresholds fixed before the first model run</h3>
@@ -586,8 +661,35 @@ const maskEffect = ffNrt
           </ul>
         ) : (<div class="pending">Gates pending — run <code>make validate</code></div>)}
       </div>
+      {rVU && rEp ? (
+        <p class="caution"><b>One failure the checks above do not capture.</b> The episode check is
+        written at a single threshold. Above it the US index has two more categories, and at those
+        the forecast is not merely weak — it is silent. Across the held-out window
+        <b>{n0(rVU.n_observed)}</b> hours reached the &ldquo;very unhealthy&rdquo; level of
+        125.5&nbsp;µg/m³ and the model called <b>{rVU.n_predicted}</b> of them. Its highest
+        24-hour prediction anywhere in the record is
+        <b>{n1(rEp.ceiling.find((c) => c.horizon_h === 24)?.pred_max ?? 0)}&nbsp;µg/m³</b> against an
+        observed maximum of <b>{n1(rEp.ceiling.find((c) => c.horizon_h === 24)?.obs_max ?? 0)}</b>.
+        Training on log1p and scoring on absolute error pulls predictions toward the middle, and the
+        result is a hard ceiling below the categories a city would act on. No school advisory or
+        outdoor-work suspension should be triggered by this forecast in its current form.</p>
+      ) : null}
       <p class="sowhat"><b>So what:</b> a failed gate published with its diagnosis is worth
-      more to a client than six green ticks they cannot audit.</p>
+      more to a client than six green ticks they cannot audit — and a failure the gates were never
+      written to catch is worth publishing too.</p>
+    </section>
+
+    <!-- ══ 07 · review ═════════════════════════════════════════════════ -->
+    <section class="chapter rv review-cta">
+      <span class="eyebrow">07 · Review</span>
+      <h2>We had this forecast reviewed, adversarially.</h2>
+      <p>An independent read of the same data against the published literature. It re-derives the
+      headline against five baselines this page did not try and finds the skill check fails on the
+      strongest of them; it shows the skill curve's peak at 12 hours is the shape of the pollutant's
+      autocorrelation, not of the model; it dates the month the city's last two co-located
+      instruments stopped agreeing; and it argues the thin network is not this case's limitation but
+      its result.</p>
+      <a class="cta big" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/article`}>Read the review article →</a>
     </section>
 
     <!-- ══ methodology ═════════════════════════════════════════════════ -->
@@ -610,8 +712,11 @@ const maskEffect = ffNrt
           whole metropolitan area. ERA5 reanalysis publishes with roughly five days' latency,
           so the operational issue time is bounded by meteorology rather than by the sensor —
           both timestamps are shown. The hero curve is interpolated between the model's seven
-          discrete horizons. Low-cost sensors drift and are not reference-grade. Sentinel-5P
-          column data is not ingested in this build.</p>
+          discrete horizons. Sentinel-5P column data is not ingested in this build. Most of these
+          instruments are consumer-grade and uncorrected: two of them {rCo ? `${rCo.m} metres apart differ by ${n1(rCo.mae)} µg/m³ on the hours both report` : "differ materially where they overlap"},
+          which is the floor no forecast can be scored below. The held-out window is also not
+          evenly populated — the panel it is measured on shrinks from six stations to one across
+          it, and the review page works through what that does to every number here.</p>
         </div>
         <div>
           <h3>Sources &amp; attribution</h3>
@@ -1091,7 +1196,7 @@ const maskEffect = ffNrt
           const pc = (v) => (v == null || Number.isNaN(v) ? "—" : (v * 100).toFixed(0) + "%");
           const kpis = [
             [f1(o.mean_pm25), 'MEAN PM2.5 <span class="unit">µg/m³</span>'],
-            [pc(o.hours_above_who_daily_15), "HOURS ABOVE WHO 15"],
+            [pc(o.hours_above_who_daily_15), 'HOURS ABOVE 15 <span class="unit">µg/m³</span>'],
             [n.n_modelled ? f0(n.n_modelled) : "—", "STATIONS MODELLED"],
             [pc(ev?.skill_mae_vs_persistence), "24 H SKILL VS PERSISTENCE"],
           ];
@@ -1195,7 +1300,9 @@ const maskEffect = ffNrt
           if (!rows.length) {
             emptySvg(svg, w, h, "AWAITING MODEL EVALUATION", "run make model"); return;
           }
-          const m = { l: 54, r: 16, t: 18, b: 46 };
+          // t leaves two rows above the plot: the metric label, then the skill labels.
+          // At 390 px they were landing on each other.
+          const m = { l: 54, r: 16, t: 36, b: 46 };
           const iw = w - m.l - m.r, ih = h - m.t - m.b;
           const g = svg.append("g").attr("transform", `translate(${m.l},${m.t})`);
           const x = d3.scaleBand().domain(rows.map((d) => d.horizon_h)).range([0, iw]).padding(0.28);
@@ -1210,8 +1317,9 @@ const maskEffect = ffNrt
           g.append("g").attr("class", "axis").call(d3.axisLeft(y).ticks(5).tickSize(0)).select(".domain").remove();
           g.append("g").attr("class", "axis").attr("transform", `translate(0,${ih})`)
             .call(d3.axisBottom(x).tickFormat((d) => `${d} h`).tickSize(0)).select(".domain").remove();
-          g.append("text").attr("class", "lbl").attr("x", -m.l + 4).attr("y", -6)
-            .text(metric.toUpperCase() + " µg/m³");
+          g.append("text").attr("class", "lbl").attr("x", -m.l + 4).attr("y", -22)
+            .text(metric.toUpperCase() + " µg/m³" +
+                  (w > 620 ? " · skill vs persistence above each group" : " · skill vs persistence"));
 
           rows.forEach((r) => {
             keys.forEach(([k, c, label]) => {
@@ -1250,9 +1358,13 @@ const maskEffect = ffNrt
           lg.append("stop").attr("offset", "100%").attr("stop-color", ACCENT).attr("stop-opacity", 0.35);
 
           anim.seal();
-          const leg = svg.append("g").attr("transform", `translate(${m.l},${h - 12})`);
+          // Legend spacing follows the width. Fixed 130 px steps pushed "Climatology"
+          // off the right edge at 390 px, where it is the entry that matters most.
+          const legX = Math.min(m.l, 8);
+          const step = Math.min(130, (w - legX - 8) / keys.length);
+          const leg = svg.append("g").attr("transform", `translate(${legX},${h - 12})`);
           keys.forEach(([k, c, label], i) => {
-            const gx = i * 130;
+            const gx = i * step;
             leg.append("rect").attr("x", gx).attr("y", -10).attr("width", 11).attr("height", 11).attr("rx", 2)
                .attr("fill", k === "model" ? ACCENT : d3.color(c).copy({ opacity: 0.5 }) + "");
             leg.append("text").attr("class", "lbl").attr("x", gx + 17).attr("y", 0).text(label);
@@ -1342,9 +1454,12 @@ const maskEffect = ffNrt
             anim.t(bar, 750).attr("width", x(r.importance));
             g.append("text").attr("class", "lbl strong").attr("x", -10).attr("y", y(r.feature) + y.bandwidth() / 2 + 4)
               .attr("text-anchor", "end").text(niceName(r.feature));
-            g.append("text").attr("class", "lbl").attr("x", iw + 8)
-              .attr("y", y(r.feature) + y.bandwidth() / 2 + 4)
-              .attr("fill", col).style("font-size", "12px").text(fam);
+            // The family name needs a right gutter it does not have on a phone, where it
+            // ran off the edge. Below that width it lives in the hover read-out only.
+            if (m.r >= 112)
+              g.append("text").attr("class", "lbl").attr("x", iw + 8)
+                .attr("y", y(r.feature) + y.bandwidth() / 2 + 4)
+                .attr("fill", col).style("font-size", "12px").text(fam);
           });
           g.append("g").attr("class", "axis").attr("transform", `translate(0,${ih})`)
             .call(d3.axisBottom(x).ticks(4)).select(".domain").remove();
@@ -1670,8 +1785,15 @@ const maskEffect = ffNrt
             }
           });
 
-          svg.append("text").attr("class", "lbl").attr("x", m.l).attr("y", 14)
-            .text("solid = hours held here · faint rule = lifetime the provider claims · ● = still reporting");
+          // One line on a desktop, two on a phone — it used to run off the right edge.
+          const legend = ["solid = hours held here", "faint rule = lifetime the provider claims",
+                          "● = still reporting"];
+          if (w > 660) {
+            svg.append("text").attr("class", "lbl").attr("x", m.l).attr("y", 14).text(legend.join(" · "));
+          } else {
+            legend.forEach((t, i) =>
+              svg.append("text").attr("class", "lbl").attr("x", 2).attr("y", 9 + i * 13).text(t));
+          }
           anim.seal();
         };
 
@@ -1865,10 +1987,26 @@ const maskEffect = ffNrt
           rows = (B.rows ?? []).map((d) => ({ t: new Date(d.t), y: d.y, p: d.p, lo: d.lo, hi: d.hi, b: d.b }));
           const hd = document.querySelector("#c-bt").closest(".panel").querySelector("h3");
           if (hd && B.station_name)
-            hd.textContent = `${B.horizon_h}-hour forecast vs observation · ${B.station_name} · ` +
-              `${(B.n_test_hours_all_stations ?? 0).toLocaleString("en-US")} held-out hours across all stations`;
-          draw();
-        }).catch((e) => { draw(); console.warn(e); });
+            hd.textContent = `${B.horizon_h}-hour forecast vs observation · ${B.station_name}`;
+          /* Naming the station is not decoration. This is ONE station's curve, chosen
+             because it has the most held-out hours — and it has since stopped reporting,
+             like every other station that carries the evaluation. Say so under the chart. */
+          return load("network.json").then((nw) => {
+            const st = (nw.stations ?? []).find((s) => s.location_id === B.location_id);
+            const all = (B.n_test_hours_all_stations ?? 0).toLocaleString("en-US");
+            const span = rows.length
+              ? `${rows[0].t.toISOString().slice(0, 10)} → ${rows[rows.length - 1].t.toISOString().slice(0, 10)}`
+              : "—";
+            document.getElementById("bt-note").innerHTML =
+              `<b>One station, not the city.</b> This curve is ${B.station_name}` +
+              `${st ? ` (${st.provider})` : ""} over ${span} — the station with the most held-out ` +
+              `hours, out of ${all} scored across all stations. ` +
+              (st && st.status !== "live"
+                ? `It last reported ${String(st.last_utc ?? "").slice(0, 10)} and is no longer transmitting, `
+                : "") +
+              `so read it as a worked example of the model's behaviour, not as current performance.`;
+          });
+        }).catch((e) => console.warn(e)).finally(() => draw());
       });
     </script>
   </body>

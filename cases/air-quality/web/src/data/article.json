@@ -1,0 +1,8663 @@
+{
+ "generated": "2026-08-30T14:21:08+00:00",
+ "replicated": "2026-08-31T02:02:38+00:00",
+ "vintage": {
+  "ground_first": "2023-01-16",
+  "ground_last": "2026-08-30",
+  "fire_last": "2026-08-30",
+  "cut": "2025-04-07"
+ },
+ "gates": [
+  {
+   "id": "G-E1",
+   "name": "24 h forecast beats persistence by >= 15% MAE",
+   "status": "pass",
+   "value": 0.1768,
+   "threshold": 0.15,
+   "detail": "MAE 16.04 vs persistence 19.49 \u00b5g/m\u00b3 on the held-out future (+17.7%). On RMSE the same comparison is +20.8%."
+  },
+  {
+   "id": "G-E2",
+   "name": "Beats persistence at every horizon",
+   "status": "pass",
+   "value": 0.0438,
+   "threshold": 0.0,
+   "detail": "weakest horizon is h=1 at +4.4%; all horizons positive"
+  },
+  {
+   "id": "G-E3",
+   "name": "Episode recall at 24 h (PM2.5 \u2265 55.5 \u00b5g/m\u00b3)",
+   "status": "fail",
+   "value": {
+    "recall": 0.489,
+    "precision": 0.534,
+    "n_episode_hours": 6084
+   },
+   "threshold": {
+    "recall": 0.5,
+    "precision": 0.4
+   },
+   "detail": "6084 episode hours in the held-out window. Model recall 0.489 at precision 0.534; persistence recall 0.476 at precision 0.475. The threshold is not moved to meet a near miss."
+  },
+  {
+   "id": "G-E4",
+   "name": "3+ stations at 80%+ hourly completeness over 90 days",
+   "status": "fail",
+   "value": 0,
+   "threshold": 3,
+   "detail": "24 PM2.5 stations exist in the bbox; 2 have reported in the last 14 days; 0 clear 80% completeness over the trailing 90 days"
+  },
+  {
+   "id": "G-E5",
+   "name": "80% prediction interval is calibrated (72-88% coverage)",
+   "status": "fail",
+   "value": 0.6285,
+   "threshold": [
+    0.72,
+    0.88
+   ],
+   "detail": "empirical coverage 62.8% at h=24"
+  },
+  {
+   "id": "G-E6",
+   "name": "Meteorology drives the model, not autoregression alone",
+   "status": "fail",
+   "value": {
+    "top8": [
+     "station_idx",
+     "pm25",
+     "doy_cos",
+     "pm25_lag24",
+     "pm25_roll6",
+     "pm25_lag48",
+     "fire_region_3d",
+     "doy"
+    ]
+   },
+   "threshold": "mixing term + wind term in top 8",
+   "detail": "mixing term present: False; wind term present: False"
+  }
+ ],
+ "gates_passed": 2,
+ "gates_total": 6,
+ "network": {
+  "n_stations_total": 24,
+  "n_live": 2,
+  "n_stale": 15,
+  "n_silent": 7,
+  "n_modelled": 11
+ },
+ "stations": [
+  {
+   "location_id": 1894639,
+   "name": "Jakarta",
+   "lat": -6.0966,
+   "lon": 106.9613,
+   "provider": "Clarity",
+   "is_mobile": false,
+   "sensor_ids": [
+    7748548
+   ],
+   "first_utc": "2024-01-25T08:36:19Z",
+   "last_utc": "2026-08-30T07:11:27Z",
+   "days_stale": 0,
+   "status": "live",
+   "n_hours": 8343,
+   "obs_first_utc": "2024-01-25T08:00:00+00:00",
+   "obs_last_utc": "2026-08-30T06:00:00+00:00",
+   "completeness_span": 0.3667,
+   "mean_pm25": 39.51,
+   "p95_pm25": 95.89,
+   "completeness_90d": 0.0708
+  },
+  {
+   "location_id": 6455006,
+   "name": "BMKG 1",
+   "lat": -6.1558,
+   "lon": 106.8424,
+   "provider": "AirGradient",
+   "is_mobile": false,
+   "sensor_ids": [
+    17000275
+   ],
+   "first_utc": "2026-07-22T04:00:00Z",
+   "last_utc": "2026-08-26T06:00:00Z",
+   "days_stale": 4,
+   "status": "live",
+   "n_hours": 0,
+   "mean_pm25": null,
+   "completeness_90d": null
+  },
+  {
+   "location_id": 5599584,
+   "name": "Bogor Selatan",
+   "lat": -6.6285,
+   "lon": 106.795,
+   "provider": "AirGradient",
+   "is_mobile": false,
+   "sensor_ids": [
+    13986083
+   ],
+   "first_utc": "2025-08-29T08:00:00Z",
+   "last_utc": "2026-03-02T05:00:00Z",
+   "days_stale": 181,
+   "status": "stale",
+   "n_hours": 4386,
+   "obs_first_utc": "2025-08-29T07:00:00+00:00",
+   "obs_last_utc": "2026-03-02T04:00:00+00:00",
+   "completeness_span": 0.9885,
+   "mean_pm25": 28.43,
+   "p95_pm25": 64.6,
+   "completeness_90d": 0.0
+  },
+  {
+   "location_id": 1367443,
+   "name": "Depok",
+   "lat": -6.4095,
+   "lon": 106.8562,
+   "provider": "AirGradient",
+   "is_mobile": false,
+   "sensor_ids": [
+    6658670,
+    9870580
+   ],
+   "first_utc": "2023-08-01T07:00:00Z",
+   "last_utc": "2025-12-20T07:00:00Z",
+   "days_stale": 253,
+   "status": "stale",
+   "n_hours": 13369,
+   "obs_first_utc": "2023-08-01T06:00:00+00:00",
+   "obs_last_utc": "2025-12-20T06:00:00+00:00",
+   "completeness_span": 0.6388,
+   "mean_pm25": 54.99,
+   "p95_pm25": 107.0,
+   "completeness_90d": 0.0
+  },
+  {
+   "location_id": 6095641,
+   "name": "D'Mall Depok",
+   "lat": -6.3868,
+   "lon": 106.8266,
+   "provider": "AirGradient",
+   "is_mobile": false,
+   "sensor_ids": [
+    14378952
+   ],
+   "first_utc": "2025-10-14T23:00:00Z",
+   "last_utc": "2025-11-22T14:00:00Z",
+   "days_stale": 280,
+   "status": "stale",
+   "n_hours": 0,
+   "mean_pm25": null,
+   "completeness_90d": null
+  },
+  {
+   "location_id": 8320,
+   "name": "Jakarta South",
+   "lat": -6.2367,
+   "lon": 106.7932,
+   "provider": "AirNow",
+   "is_mobile": false,
+   "sensor_ids": [
+    5077558
+   ],
+   "first_utc": "2022-10-03T20:00:00Z",
+   "last_utc": "2025-11-04T21:00:00Z",
+   "days_stale": 298,
+   "status": "stale",
+   "n_hours": 12695,
+   "obs_first_utc": "2023-05-08T20:00:00+00:00",
+   "obs_last_utc": "2025-11-04T20:00:00+00:00",
+   "completeness_span": 0.5806,
+   "mean_pm25": 37.34,
+   "p95_pm25": 75.0,
+   "completeness_90d": 0.0
+  },
+  {
+   "location_id": 1563313,
+   "name": "Qoryah Darussalam",
+   "lat": -6.3612,
+   "lon": 106.8419,
+   "provider": "AirGradient",
+   "is_mobile": false,
+   "sensor_ids": [
+    6939684
+   ],
+   "first_utc": "2023-09-12T10:00:00Z",
+   "last_utc": "2025-10-17T17:00:00Z",
+   "days_stale": 316,
+   "status": "stale",
+   "n_hours": 16250,
+   "obs_first_utc": "2023-09-12T09:00:00+00:00",
+   "obs_last_utc": "2025-10-17T16:00:00+00:00",
+   "completeness_span": 0.8836,
+   "mean_pm25": 58.97,
+   "p95_pm25": 112.0,
+   "completeness_90d": 0.0
+  },
+  {
+   "location_id": 6051931,
+   "name": "West Jakarta Mayor Office",
+   "lat": -6.1859,
+   "lon": 106.7379,
+   "provider": "Clean Air Catalyst",
+   "is_mobile": false,
+   "sensor_ids": [
+    14313799
+   ],
+   "first_utc": "2023-09-30T17:00:00Z",
+   "last_utc": "2025-06-30T16:00:00Z",
+   "days_stale": 425,
+   "status": "stale",
+   "n_hours": 8883,
+   "obs_first_utc": "2023-09-30T16:00:00+00:00",
+   "obs_last_utc": "2025-06-30T15:00:00+00:00",
+   "completeness_span": 0.5793,
+   "mean_pm25": 36.9,
+   "p95_pm25": 77.7,
+   "completeness_90d": 0.0
+  },
+  {
+   "location_id": 6051932,
+   "name": "East Jakarta Mayor Office",
+   "lat": -6.2147,
+   "lon": 106.9441,
+   "provider": "Clean Air Catalyst",
+   "is_mobile": false,
+   "sensor_ids": [
+    14313802
+   ],
+   "first_utc": "2023-09-30T17:00:00Z",
+   "last_utc": "2025-06-30T16:00:00Z",
+   "days_stale": 425,
+   "status": "stale",
+   "n_hours": 8517,
+   "obs_first_utc": "2023-09-30T16:00:00+00:00",
+   "obs_last_utc": "2024-11-12T19:00:00+00:00",
+   "completeness_span": 0.8674,
+   "mean_pm25": 41.17,
+   "p95_pm25": 80.5,
+   "completeness_90d": 0.0
+  },
+  {
+   "location_id": 6051933,
+   "name": "Rusunawa Marunda",
+   "lat": -6.0967,
+   "lon": 106.961,
+   "provider": "Clean Air Catalyst",
+   "is_mobile": false,
+   "sensor_ids": [
+    14313805
+   ],
+   "first_utc": "2023-09-30T17:00:00Z",
+   "last_utc": "2025-06-30T16:00:00Z",
+   "days_stale": 425,
+   "status": "stale",
+   "n_hours": 13787,
+   "obs_first_utc": "2023-09-30T16:00:00+00:00",
+   "obs_last_utc": "2025-06-30T14:00:00+00:00",
+   "completeness_span": 0.8991,
+   "mean_pm25": 38.9,
+   "p95_pm25": 88.8,
+   "completeness_90d": 0.0
+  },
+  {
+   "location_id": 8637,
+   "name": "Jakarta Central",
+   "lat": -6.1825,
+   "lon": 106.8342,
+   "provider": "AirNow",
+   "is_mobile": false,
+   "sensor_ids": [
+    25072
+   ],
+   "first_utc": "2016-11-09T18:00:00Z",
+   "last_utc": "2025-04-09T14:00:00Z",
+   "days_stale": 507,
+   "status": "stale",
+   "n_hours": 3326,
+   "obs_first_utc": "2023-01-16T01:00:00+00:00",
+   "obs_last_utc": "2025-04-09T13:00:00+00:00",
+   "completeness_span": 0.1701,
+   "mean_pm25": 40.55,
+   "p95_pm25": 73.0,
+   "completeness_90d": 0.0
+  },
+  {
+   "location_id": 3084738,
+   "name": "Jaja",
+   "lat": -6.3966,
+   "lon": 106.8234,
+   "provider": "AirGradient",
+   "is_mobile": false,
+   "sensor_ids": [
+    10776462
+   ],
+   "first_utc": "2024-09-29T11:00:00Z",
+   "last_utc": "2024-10-01T09:00:00Z",
+   "days_stale": 697,
+   "status": "stale",
+   "n_hours": 0,
+   "mean_pm25": null,
+   "completeness_90d": null
+  },
+  {
+   "location_id": 2071976,
+   "name": "Krukut",
+   "lat": -6.1594,
+   "lon": 106.818,
+   "provider": "AirGradient",
+   "is_mobile": false,
+   "sensor_ids": [
+    7666066
+   ],
+   "first_utc": "2024-01-09T08:00:00Z",
+   "last_utc": "2024-09-10T08:00:00Z",
+   "days_stale": 719,
+   "status": "stale",
+   "n_hours": 4911,
+   "obs_first_utc": "2024-01-09T07:00:00+00:00",
+   "obs_last_utc": "2024-09-10T07:00:00+00:00",
+   "completeness_span": 0.8352,
+   "mean_pm25": 43.13,
+   "p95_pm25": 76.35,
+   "completeness_90d": 0.0
+  },
+  {
+   "location_id": 2849176,
+   "name": "Margonda Residence 3 ",
+   "lat": -6.3866,
+   "lon": 106.8267,
+   "provider": "AirGradient",
+   "is_mobile": false,
+   "sensor_ids": [
+    9238695
+   ],
+   "first_utc": "2024-05-16T10:00:00Z",
+   "last_utc": "2024-09-04T05:00:00Z",
+   "days_stale": 725,
+   "status": "stale",
+   "n_hours": 0,
+   "mean_pm25": null,
+   "completeness_90d": null
+  },
+  {
+   "location_id": 1776543,
+   "name": "Jihan Fauziah Hamdi ",
+   "lat": -6.2211,
+   "lon": 106.8255,
+   "provider": "AirGradient",
+   "is_mobile": false,
+   "sensor_ids": [
+    7325489
+   ],
+   "first_utc": "2023-10-30T13:00:00Z",
+   "last_utc": "2024-05-26T00:00:00Z",
+   "days_stale": 826,
+   "status": "stale",
+   "n_hours": 1774,
+   "obs_first_utc": "2023-10-30T12:00:00+00:00",
+   "obs_last_utc": "2024-05-25T23:00:00+00:00",
+   "completeness_span": 0.3546,
+   "mean_pm25": 67.43,
+   "p95_pm25": 187.35,
+   "completeness_90d": 0.0
+  },
+  {
+   "location_id": 2537,
+   "name": "US Diplomatic Post: Jakarta South",
+   "lat": -6.2366,
+   "lon": 106.7933,
+   "provider": "StateAir JakartaSouth",
+   "is_mobile": false,
+   "sensor_ids": [
+    5047
+   ],
+   "first_utc": "2016-01-30T01:00:00Z",
+   "last_utc": "2016-11-09T16:00:00Z",
+   "days_stale": 3580,
+   "status": "stale",
+   "n_hours": 0,
+   "mean_pm25": null,
+   "completeness_90d": null
+  },
+  {
+   "location_id": 2538,
+   "name": "US Diplomatic Post: Jakarta Central",
+   "lat": -6.1824,
+   "lon": 106.8341,
+   "provider": "StateAir JakartaCentral",
+   "is_mobile": false,
+   "sensor_ids": [
+    5048
+   ],
+   "first_utc": "2016-01-30T01:00:00Z",
+   "last_utc": "2016-11-09T16:00:00Z",
+   "days_stale": 3580,
+   "status": "stale",
+   "n_hours": 0,
+   "mean_pm25": null,
+   "completeness_90d": null
+  },
+  {
+   "location_id": 223262,
+   "name": "Cilandek",
+   "lat": -6.2741,
+   "lon": 106.7999,
+   "provider": "HabitatMap",
+   "is_mobile": false,
+   "sensor_ids": [
+    1294751
+   ],
+   "first_utc": null,
+   "last_utc": null,
+   "status": "silent",
+   "days_stale": null,
+   "n_hours": 0,
+   "mean_pm25": null,
+   "completeness_90d": null
+  },
+  {
+   "location_id": 223824,
+   "name": "Cilandek",
+   "lat": -6.2741,
+   "lon": 106.7999,
+   "provider": "HabitatMap",
+   "is_mobile": false,
+   "sensor_ids": [
+    1296386
+   ],
+   "first_utc": null,
+   "last_utc": null,
+   "status": "silent",
+   "days_stale": null,
+   "n_hours": 0,
+   "mean_pm25": null,
+   "completeness_90d": null
+  },
+  {
+   "location_id": 1489107,
+   "name": "Cipete",
+   "lat": -6.274,
+   "lon": 106.8,
+   "provider": "HabitatMap",
+   "is_mobile": false,
+   "sensor_ids": [
+    6836394
+   ],
+   "first_utc": null,
+   "last_utc": null,
+   "status": "silent",
+   "days_stale": null,
+   "n_hours": 0,
+   "mean_pm25": null,
+   "completeness_90d": null
+  },
+  {
+   "location_id": 3276989,
+   "name": "Cipete Jakarta",
+   "lat": -6.274,
+   "lon": 106.7999,
+   "provider": "HabitatMap",
+   "is_mobile": false,
+   "sensor_ids": [
+    11361991
+   ],
+   "first_utc": null,
+   "last_utc": null,
+   "status": "silent",
+   "days_stale": null,
+   "n_hours": 0,
+   "mean_pm25": null,
+   "completeness_90d": null
+  },
+  {
+   "location_id": 3280117,
+   "name": "Cipete Jakarta",
+   "lat": -6.274,
+   "lon": 106.7999,
+   "provider": "HabitatMap",
+   "is_mobile": false,
+   "sensor_ids": [
+    11385217
+   ],
+   "first_utc": null,
+   "last_utc": null,
+   "status": "silent",
+   "days_stale": null,
+   "n_hours": 0,
+   "mean_pm25": null,
+   "completeness_90d": null
+  },
+  {
+   "location_id": 3294802,
+   "name": "Cipete Dec",
+   "lat": -6.2741,
+   "lon": 106.7999,
+   "provider": "HabitatMap",
+   "is_mobile": false,
+   "sensor_ids": [
+    11494947
+   ],
+   "first_utc": null,
+   "last_utc": null,
+   "status": "silent",
+   "days_stale": null,
+   "n_hours": 0,
+   "mean_pm25": null,
+   "completeness_90d": null
+  },
+  {
+   "location_id": 6409860,
+   "name": "Jakarta home open storage room (19-07-2026 @ 17.01)",
+   "lat": -6.2165,
+   "lon": 106.8292,
+   "provider": "HabitatMap",
+   "is_mobile": false,
+   "sensor_ids": [
+    16668746
+   ],
+   "first_utc": null,
+   "last_utc": null,
+   "status": "silent",
+   "days_stale": null,
+   "n_hours": 0,
+   "mean_pm25": null,
+   "completeness_90d": null
+  }
+ ],
+ "addresses": {
+  "n_registered": 24,
+  "n_addresses": 16,
+  "n_ever_reported": 11,
+  "n_never_reported": 13,
+  "n_duplicate_registrations": 8,
+  "largest_cluster": {
+   "lat": -6.274,
+   "lon": 106.8,
+   "n": 6,
+   "reported": 0,
+   "names": [
+    "Cilandek",
+    "Cilandek",
+    "Cipete",
+    "Cipete Jakarta",
+    "Cipete Jakarta",
+    "Cipete Dec"
+   ]
+  },
+  "clusters": [
+   {
+    "lat": -6.274,
+    "lon": 106.8,
+    "n": 6,
+    "reported": 0,
+    "names": [
+     "Cilandek",
+     "Cilandek",
+     "Cipete",
+     "Cipete Jakarta",
+     "Cipete Jakarta",
+     "Cipete Dec"
+    ]
+   },
+   {
+    "lat": -6.097,
+    "lon": 106.961,
+    "n": 2,
+    "reported": 2,
+    "names": [
+     "Jakarta",
+     "Rusunawa Marunda"
+    ]
+   },
+   {
+    "lat": -6.387,
+    "lon": 106.827,
+    "n": 2,
+    "reported": 0,
+    "names": [
+     "D'Mall Depok",
+     "Margonda Residence 3 "
+    ]
+   },
+   {
+    "lat": -6.237,
+    "lon": 106.793,
+    "n": 2,
+    "reported": 1,
+    "names": [
+     "Jakarta South",
+     "US Diplomatic Post: Jakarta South"
+    ]
+   },
+   {
+    "lat": -6.156,
+    "lon": 106.842,
+    "n": 1,
+    "reported": 0,
+    "names": [
+     "BMKG 1"
+    ]
+   },
+   {
+    "lat": -6.628,
+    "lon": 106.795,
+    "n": 1,
+    "reported": 1,
+    "names": [
+     "Bogor Selatan"
+    ]
+   },
+   {
+    "lat": -6.41,
+    "lon": 106.856,
+    "n": 1,
+    "reported": 1,
+    "names": [
+     "Depok"
+    ]
+   },
+   {
+    "lat": -6.361,
+    "lon": 106.842,
+    "n": 1,
+    "reported": 1,
+    "names": [
+     "Qoryah Darussalam"
+    ]
+   },
+   {
+    "lat": -6.186,
+    "lon": 106.738,
+    "n": 1,
+    "reported": 1,
+    "names": [
+     "West Jakarta Mayor Office"
+    ]
+   },
+   {
+    "lat": -6.215,
+    "lon": 106.944,
+    "n": 1,
+    "reported": 1,
+    "names": [
+     "East Jakarta Mayor Office"
+    ]
+   },
+   {
+    "lat": -6.183,
+    "lon": 106.834,
+    "n": 1,
+    "reported": 1,
+    "names": [
+     "Jakarta Central"
+    ]
+   },
+   {
+    "lat": -6.397,
+    "lon": 106.823,
+    "n": 1,
+    "reported": 0,
+    "names": [
+     "Jaja"
+    ]
+   },
+   {
+    "lat": -6.159,
+    "lon": 106.818,
+    "n": 1,
+    "reported": 1,
+    "names": [
+     "Krukut"
+    ]
+   },
+   {
+    "lat": -6.221,
+    "lon": 106.826,
+    "n": 1,
+    "reported": 1,
+    "names": [
+     "Jihan Fauziah Hamdi "
+    ]
+   },
+   {
+    "lat": -6.182,
+    "lon": 106.834,
+    "n": 1,
+    "reported": 0,
+    "names": [
+     "US Diplomatic Post: Jakarta Central"
+    ]
+   },
+   {
+    "lat": -6.216,
+    "lon": 106.829,
+    "n": 1,
+    "reported": 0,
+    "names": [
+     "Jakarta home open storage room (19-07-2026 @ 17.01)"
+    ]
+   }
+  ]
+ },
+ "observed": {
+  "mean_pm25": 44.71,
+  "p95_pm25": 94.4,
+  "hours_above_who_daily_15": 0.8773,
+  "hours_above_episode": 0.2771,
+  "diurnal": [
+   {
+    "hour": 0,
+    "pm25": 52.0
+   },
+   {
+    "hour": 1,
+    "pm25": 51.9
+   },
+   {
+    "hour": 2,
+    "pm25": 51.09
+   },
+   {
+    "hour": 3,
+    "pm25": 50.29
+   },
+   {
+    "hour": 4,
+    "pm25": 49.42
+   },
+   {
+    "hour": 5,
+    "pm25": 49.62
+   },
+   {
+    "hour": 6,
+    "pm25": 52.65
+   },
+   {
+    "hour": 7,
+    "pm25": 52.65
+   },
+   {
+    "hour": 8,
+    "pm25": 46.88
+   },
+   {
+    "hour": 9,
+    "pm25": 42.46
+   },
+   {
+    "hour": 10,
+    "pm25": 41.34
+   },
+   {
+    "hour": 11,
+    "pm25": 39.64
+   },
+   {
+    "hour": 12,
+    "pm25": 38.4
+   },
+   {
+    "hour": 13,
+    "pm25": 36.7
+   },
+   {
+    "hour": 14,
+    "pm25": 35.77
+   },
+   {
+    "hour": 15,
+    "pm25": 34.83
+   },
+   {
+    "hour": 16,
+    "pm25": 35.37
+   },
+   {
+    "hour": 17,
+    "pm25": 36.82
+   },
+   {
+    "hour": 18,
+    "pm25": 40.11
+   },
+   {
+    "hour": 19,
+    "pm25": 41.99
+   },
+   {
+    "hour": 20,
+    "pm25": 44.72
+   },
+   {
+    "hour": 21,
+    "pm25": 47.2
+   },
+   {
+    "hour": 22,
+    "pm25": 49.58
+   },
+   {
+    "hour": 23,
+    "pm25": 51.21
+   }
+  ],
+  "monthly": [
+   {
+    "month": 1,
+    "pm25": 28.2
+   },
+   {
+    "month": 2,
+    "pm25": 34.49
+   },
+   {
+    "month": 3,
+    "pm25": 32.58
+   },
+   {
+    "month": 4,
+    "pm25": 39.69
+   },
+   {
+    "month": 5,
+    "pm25": 53.83
+   },
+   {
+    "month": 6,
+    "pm25": 54.99
+   },
+   {
+    "month": 7,
+    "pm25": 53.66
+   },
+   {
+    "month": 8,
+    "pm25": 54.16
+   },
+   {
+    "month": 9,
+    "pm25": 49.77
+   },
+   {
+    "month": 10,
+    "pm25": 51.55
+   },
+   {
+    "month": 11,
+    "pm25": 44.78
+   },
+   {
+    "month": 12,
+    "pm25": 33.11
+   }
+  ]
+ },
+ "drivers": [
+  {
+   "feature": "station_idx",
+   "importance": 0.0216,
+   "sd": 0.0019,
+   "horizon_h": 24
+  },
+  {
+   "feature": "pm25",
+   "importance": 0.0142,
+   "sd": 0.0012,
+   "horizon_h": 24
+  },
+  {
+   "feature": "doy_cos",
+   "importance": 0.0088,
+   "sd": 0.0011,
+   "horizon_h": 24
+  },
+  {
+   "feature": "pm25_lag24",
+   "importance": 0.008,
+   "sd": 0.001,
+   "horizon_h": 24
+  },
+  {
+   "feature": "pm25_roll6",
+   "importance": 0.0051,
+   "sd": 0.001,
+   "horizon_h": 24
+  },
+  {
+   "feature": "pm25_lag48",
+   "importance": 0.0041,
+   "sd": 0.0007,
+   "horizon_h": 24
+  },
+  {
+   "feature": "fire_region_3d",
+   "importance": 0.003,
+   "sd": 0.0009,
+   "horizon_h": 24
+  },
+  {
+   "feature": "doy",
+   "importance": 0.0028,
+   "sd": 0.0008,
+   "horizon_h": 24
+  },
+  {
+   "feature": "wind_from_sin",
+   "importance": 0.0025,
+   "sd": 0.0008,
+   "horizon_h": 24
+  },
+  {
+   "feature": "frp_up_mid_3d",
+   "importance": 0.0025,
+   "sd": 0.0004,
+   "horizon_h": 24
+  },
+  {
+   "feature": "hour_local",
+   "importance": 0.0023,
+   "sd": 0.0003,
+   "horizon_h": 24
+  },
+  {
+   "feature": "pm25_roll24",
+   "importance": 0.0022,
+   "sd": 0.0005,
+   "horizon_h": 24
+  },
+  {
+   "feature": "hour_cos",
+   "importance": 0.002,
+   "sd": 0.0004,
+   "horizon_h": 24
+  },
+  {
+   "feature": "wind_speed",
+   "importance": 0.002,
+   "sd": 0.0005,
+   "horizon_h": 24
+  },
+  {
+   "feature": "precip_mm_roll24",
+   "importance": 0.0019,
+   "sd": 0.0011,
+   "horizon_h": 24
+  }
+ ],
+ "model": {
+  "n_features": 49,
+  "train_rows": 122644,
+  "test_rows": 36538,
+  "h24": {
+   "horizon_h": 24,
+   "model_mae": 16.042,
+   "model_rmse": 22.4253,
+   "model_bias": -0.3289,
+   "model_n": 23232,
+   "persistence_mae": 19.4873,
+   "persistence_rmse": 28.3207,
+   "persistence_bias": 0.0706,
+   "persistence_n": 23232,
+   "climatology_mae": 18.305,
+   "climatology_rmse": 24.6399,
+   "climatology_bias": 3.7317,
+   "climatology_n": 23232,
+   "skill_mae_vs_persistence": 0.1768,
+   "skill_rmse_vs_persistence": 0.2082,
+   "skill_mae_vs_climatology": 0.1236,
+   "model_episode_recall": 0.4895,
+   "model_episode_precision": 0.5335,
+   "persistence_episode_recall": 0.4765,
+   "persistence_episode_precision": 0.475,
+   "episode_n_obs": 6084,
+   "pi80_coverage": 0.6285
+  }
+ },
+ "horizons": [
+  {
+   "horizon_h": 1,
+   "n": 23661,
+   "model_mae": 7.5661063831779245,
+   "model_rmse": 11.404420304084551,
+   "baselines": [
+    {
+     "key": "b_persist",
+     "name": "Persistence",
+     "spec": "carry the last reading forward",
+     "mae": 7.912830487299777,
+     "rmse": 12.07672642441058,
+     "skill_mae": 0.04381796181257147,
+     "skill_rmse": 0.0556695661306944
+    },
+    {
+     "key": "b_roll24",
+     "name": "Last 24 h mean",
+     "spec": "carry the trailing daily mean forward",
+     "mae": 15.072464075632977,
+     "rmse": 21.187426143236948,
+     "skill_mae": 0.4980179521270359,
+     "skill_rmse": 0.4617363984192645
+    },
+    {
+     "key": "b_clim_hour",
+     "name": "Diurnal climatology",
+     "spec": "station mean for this hour of day",
+     "mae": 18.4275501613355,
+     "rmse": 24.854624187679995,
+     "skill_mae": 0.5894133340061094,
+     "skill_rmse": 0.5411549891895961
+    },
+    {
+     "key": "b_clim_month",
+     "name": "Seasonal climatology",
+     "spec": "station mean for this month",
+     "mae": 21.118780537802316,
+     "rmse": 27.04508461528833,
+     "skill_mae": 0.6417356404819539,
+     "skill_rmse": 0.5783181873412317
+    },
+    {
+     "key": "b_clim_seas",
+     "name": "Seasonal-diurnal climatology",
+     "spec": "station mean for this month and hour",
+     "mae": 20.515132456707786,
+     "rmse": 26.611008752783675,
+     "skill_mae": 0.631193880948887,
+     "skill_rmse": 0.5714397597613965
+    },
+    {
+     "key": "b_anom",
+     "name": "Persist the anomaly",
+     "spec": "seasonal-diurnal norm plus today's departure",
+     "mae": 8.417506387389636,
+     "rmse": 12.509847009840323,
+     "skill_mae": 0.10114634489463581,
+     "skill_rmse": 0.08836452635162018
+    }
+   ],
+   "best_baseline": "b_persist",
+   "best_baseline_name": "Persistence",
+   "best_baseline_mae": 7.912830487299777,
+   "skill_vs_best": 0.04381796181257147,
+   "skill_vs_persistence": 0.04381796181257147
+  },
+  {
+   "horizon_h": 3,
+   "n": 23533,
+   "model_mae": 12.435193905880107,
+   "model_rmse": 17.931933926594052,
+   "baselines": [
+    {
+     "key": "b_persist",
+     "name": "Persistence",
+     "spec": "carry the last reading forward",
+     "mae": 14.392072262779926,
+     "rmse": 20.695172107120904,
+     "skill_mae": 0.13596918645000156,
+     "skill_rmse": 0.13352090846232012
+    },
+    {
+     "key": "b_roll24",
+     "name": "Last 24 h mean",
+     "spec": "carry the trailing daily mean forward",
+     "mae": 15.936789095697824,
+     "rmse": 22.443107691803494,
+     "skill_mae": 0.21971773415530615,
+     "skill_rmse": 0.20100486203419055
+    },
+    {
+     "key": "b_clim_hour",
+     "name": "Diurnal climatology",
+     "spec": "station mean for this hour of day",
+     "mae": 18.418034442363364,
+     "rmse": 24.856808546558238,
+     "skill_mae": 0.32483599459028656,
+     "skill_rmse": 0.27859065684130346
+    },
+    {
+     "key": "b_clim_month",
+     "name": "Seasonal climatology",
+     "spec": "station mean for this month",
+     "mae": 21.092917126310518,
+     "rmse": 27.026820938683986,
+     "skill_mae": 0.41045641854966997,
+     "skill_rmse": 0.33651338545231024
+    },
+    {
+     "key": "b_clim_seas",
+     "name": "Seasonal-diurnal climatology",
+     "spec": "station mean for this month and hour",
+     "mae": 20.498182723421117,
+     "rmse": 26.59926101683201,
+     "skill_mae": 0.3933513973572048,
+     "skill_rmse": 0.3258484167944844
+    },
+    {
+     "key": "b_anom",
+     "name": "Persist the anomaly",
+     "spec": "seasonal-diurnal norm plus today's departure",
+     "mae": 14.601716242191458,
+     "rmse": 20.642236659721235,
+     "skill_mae": 0.14837449929695345,
+     "skill_rmse": 0.13129888867206618
+    }
+   ],
+   "best_baseline": "b_persist",
+   "best_baseline_name": "Persistence",
+   "best_baseline_mae": 14.392072262779926,
+   "skill_vs_best": 0.13596918645000156,
+   "skill_vs_persistence": 0.13596918645000156
+  },
+  {
+   "horizon_h": 6,
+   "n": 23450,
+   "model_mae": 14.660079597226941,
+   "model_rmse": 20.703284793998606,
+   "baselines": [
+    {
+     "key": "b_persist",
+     "name": "Persistence",
+     "spec": "carry the last reading forward",
+     "mae": 18.674130275479744,
+     "rmse": 26.4279431118698,
+     "skill_mae": 0.21495248341088702,
+     "skill_rmse": 0.2166138429176515
+    },
+    {
+     "key": "b_roll24",
+     "name": "Last 24 h mean",
+     "spec": "carry the trailing daily mean forward",
+     "mae": 16.680725431731894,
+     "rmse": 23.516123841846355,
+     "skill_mae": 0.12113656823707797,
+     "skill_rmse": 0.11961320950531706
+    },
+    {
+     "key": "b_clim_hour",
+     "name": "Diurnal climatology",
+     "spec": "station mean for this hour of day",
+     "mae": 18.385233580693072,
+     "rmse": 24.77976801736724,
+     "skill_mae": 0.2026166252996663,
+     "skill_rmse": 0.16450853052827508
+    },
+    {
+     "key": "b_clim_month",
+     "name": "Seasonal climatology",
+     "spec": "station mean for this month",
+     "mae": 21.052362312587118,
+     "rmse": 26.948477349936084,
+     "skill_mae": 0.30363731254702275,
+     "skill_rmse": 0.23174565578757234
+    },
+    {
+     "key": "b_clim_seas",
+     "name": "Seasonal-diurnal climatology",
+     "spec": "station mean for this month and hour",
+     "mae": 20.476944476421615,
+     "rmse": 26.535042046738543,
+     "skill_mae": 0.28406898724038454,
+     "skill_rmse": 0.2197756929296717
+    },
+    {
+     "key": "b_anom",
+     "name": "Persist the anomaly",
+     "spec": "seasonal-diurnal norm plus today's departure",
+     "mae": 18.278082719975096,
+     "rmse": 25.593566287596865,
+     "skill_mae": 0.19794215718228703,
+     "skill_rmse": 0.19107464112839112
+    }
+   ],
+   "best_baseline": "b_roll24",
+   "best_baseline_name": "Last 24 h mean",
+   "best_baseline_mae": 16.680725431731894,
+   "skill_vs_best": 0.12113656823707797,
+   "skill_vs_persistence": 0.21495248341088702
+  },
+  {
+   "horizon_h": 12,
+   "n": 23369,
+   "model_mae": 15.460223386273544,
+   "model_rmse": 21.75869476678041,
+   "baselines": [
+    {
+     "key": "b_persist",
+     "name": "Persistence",
+     "spec": "carry the last reading forward",
+     "mae": 22.454625792288933,
+     "rmse": 31.42531904444975,
+     "skill_mae": 0.31149049067730683,
+     "skill_rmse": 0.3076062414512426
+    },
+    {
+     "key": "b_roll24",
+     "name": "Last 24 h mean",
+     "spec": "carry the trailing daily mean forward",
+     "mae": 17.49123092267196,
+     "rmse": 24.47748384441137,
+     "skill_mae": 0.11611575796908868,
+     "skill_rmse": 0.1110730618764848
+    },
+    {
+     "key": "b_clim_hour",
+     "name": "Diurnal climatology",
+     "spec": "station mean for this hour of day",
+     "mae": 18.37019271088877,
+     "rmse": 24.725470529921232,
+     "skill_mae": 0.15840712018716963,
+     "skill_rmse": 0.11998864731615988
+    },
+    {
+     "key": "b_clim_month",
+     "name": "Seasonal climatology",
+     "spec": "station mean for this month",
+     "mae": 21.047293978231725,
+     "rmse": 26.89638468623484,
+     "skill_mae": 0.26545315505815803,
+     "skill_rmse": 0.19101786278673438
+    },
+    {
+     "key": "b_clim_seas",
+     "name": "Seasonal-diurnal climatology",
+     "spec": "station mean for this month and hour",
+     "mae": 20.477188267084607,
+     "rmse": 26.51275871688031,
+     "skill_mae": 0.24500262513459525,
+     "skill_rmse": 0.17931230774084084
+    },
+    {
+     "key": "b_anom",
+     "name": "Persist the anomaly",
+     "spec": "seasonal-diurnal norm plus today's departure",
+     "mae": 21.336725240698158,
+     "rmse": 29.553615408801605,
+     "skill_mae": 0.27541723428184006,
+     "skill_rmse": 0.26375523042435367
+    }
+   ],
+   "best_baseline": "b_roll24",
+   "best_baseline_name": "Last 24 h mean",
+   "best_baseline_mae": 17.49123092267196,
+   "skill_vs_best": 0.11611575796908868,
+   "skill_vs_persistence": 0.31149049067730683
+  },
+  {
+   "horizon_h": 24,
+   "n": 23232,
+   "model_mae": 16.041966065310746,
+   "model_rmse": 22.425287973774456,
+   "baselines": [
+    {
+     "key": "b_persist",
+     "name": "Persistence",
+     "spec": "carry the last reading forward",
+     "mae": 19.487292202134984,
+     "rmse": 28.320686003723136,
+     "skill_mae": 0.17679860809224057,
+     "skill_rmse": 0.20816579192939222
+    },
+    {
+     "key": "b_roll24",
+     "name": "Last 24 h mean",
+     "spec": "carry the trailing daily mean forward",
+     "mae": 18.14667212629478,
+     "rmse": 25.177365748816115,
+     "skill_mae": 0.1159830323894091,
+     "skill_rmse": 0.10930761392982768
+    },
+    {
+     "key": "b_clim_hour",
+     "name": "Diurnal climatology",
+     "spec": "station mean for this hour of day",
+     "mae": 18.366652019053465,
+     "rmse": 24.70970710992509,
+     "skill_mae": 0.12657102401303744,
+     "skill_rmse": 0.09245027170852449
+    },
+    {
+     "key": "b_clim_month",
+     "name": "Seasonal climatology",
+     "spec": "station mean for this month",
+     "mae": 21.039460789315516,
+     "rmse": 26.881214209522167,
+     "skill_mae": 0.2375296008794413,
+     "skill_rmse": 0.16576357753100612
+    },
+    {
+     "key": "b_clim_seas",
+     "name": "Seasonal-diurnal climatology",
+     "spec": "station mean for this month and hour",
+     "mae": 20.455517825256443,
+     "rmse": 26.467081340338936,
+     "skill_mae": 0.21576338461088884,
+     "skill_rmse": 0.15271020308553307
+    },
+    {
+     "key": "b_anom",
+     "name": "Persist the anomaly",
+     "spec": "seasonal-diurnal norm plus today's departure",
+     "mae": 19.56603069409069,
+     "rmse": 28.395155504130347,
+     "skill_mae": 0.1801113717890812,
+     "skill_rmse": 0.2102424665181889
+    }
+   ],
+   "best_baseline": "b_roll24",
+   "best_baseline_name": "Last 24 h mean",
+   "best_baseline_mae": 18.14667212629478,
+   "skill_vs_best": 0.1159830323894091,
+   "skill_vs_persistence": 0.17679860809224057
+  },
+  {
+   "horizon_h": 48,
+   "n": 22997,
+   "model_mae": 16.726469410993385,
+   "model_rmse": 22.956119563118467,
+   "baselines": [
+    {
+     "key": "b_persist",
+     "name": "Persistence",
+     "spec": "carry the last reading forward",
+     "mae": 21.010788922033306,
+     "rmse": 29.76960178834163,
+     "skill_mae": 0.20391045414516062,
+     "skill_rmse": 0.22887381140218876
+    },
+    {
+     "key": "b_roll24",
+     "name": "Last 24 h mean",
+     "spec": "carry the trailing daily mean forward",
+     "mae": 18.87828372243937,
+     "rmse": 25.90825136493272,
+     "skill_mae": 0.11398357727234842,
+     "skill_rmse": 0.11394562142507292
+    },
+    {
+     "key": "b_clim_hour",
+     "name": "Diurnal climatology",
+     "spec": "station mean for this hour of day",
+     "mae": 18.39483666461164,
+     "rmse": 24.765993956864524,
+     "skill_mae": 0.09069758454707522,
+     "skill_rmse": 0.073079012976356
+    },
+    {
+     "key": "b_clim_month",
+     "name": "Seasonal climatology",
+     "spec": "station mean for this month",
+     "mae": 21.04975972675552,
+     "rmse": 26.911295432683282,
+     "skill_mae": 0.20538430708389377,
+     "skill_rmse": 0.14697084647814185
+    },
+    {
+     "key": "b_clim_seas",
+     "name": "Seasonal-diurnal climatology",
+     "spec": "station mean for this month and hour",
+     "mae": 20.47366422368993,
+     "rmse": 26.500739467237082,
+     "skill_mae": 0.18302511811054778,
+     "skill_rmse": 0.13375550929440427
+    },
+    {
+     "key": "b_anom",
+     "name": "Persist the anomaly",
+     "spec": "seasonal-diurnal norm plus today's departure",
+     "mae": 21.200903651996093,
+     "rmse": 30.033462459530853,
+     "skill_mae": 0.2110492229222236,
+     "skill_rmse": 0.2356485838404041
+    }
+   ],
+   "best_baseline": "b_clim_hour",
+   "best_baseline_name": "Diurnal climatology",
+   "best_baseline_mae": 18.39483666461164,
+   "skill_vs_best": 0.09069758454707522,
+   "skill_vs_persistence": 0.20391045414516062
+  },
+  {
+   "horizon_h": 72,
+   "n": 22779,
+   "model_mae": 17.562854380548046,
+   "model_rmse": 23.779744463595094,
+   "baselines": [
+    {
+     "key": "b_persist",
+     "name": "Persistence",
+     "spec": "carry the last reading forward",
+     "mae": 21.31894264629703,
+     "rmse": 30.12848478607607,
+     "skill_mae": 0.17618548574693949,
+     "skill_rmse": 0.2107221908954099
+    },
+    {
+     "key": "b_roll24",
+     "name": "Last 24 h mean",
+     "spec": "carry the trailing daily mean forward",
+     "mae": 19.17989048819132,
+     "rmse": 26.210140666084037,
+     "skill_mae": 0.08430893328816713,
+     "skill_rmse": 0.0927273238801759
+    },
+    {
+     "key": "b_clim_hour",
+     "name": "Diurnal climatology",
+     "spec": "station mean for this hour of day",
+     "mae": 18.3954232126356,
+     "rmse": 24.817007952314444,
+     "skill_mae": 0.04525956388519892,
+     "skill_rmse": 0.04179647646132201
+    },
+    {
+     "key": "b_clim_month",
+     "name": "Seasonal climatology",
+     "spec": "station mean for this month",
+     "mae": 21.02523006679563,
+     "rmse": 26.93466512312073,
+     "skill_mae": 0.16467718428040345,
+     "skill_rmse": 0.11713235138080302
+    },
+    {
+     "key": "b_clim_seas",
+     "name": "Seasonal-diurnal climatology",
+     "spec": "station mean for this month and hour",
+     "mae": 20.46887250424251,
+     "rmse": 26.55603276053497,
+     "skill_mae": 0.1419725548191354,
+     "skill_rmse": 0.10454454255176726
+    },
+    {
+     "key": "b_anom",
+     "name": "Persist the anomaly",
+     "spec": "seasonal-diurnal norm plus today's departure",
+     "mae": 21.61134079155841,
+     "rmse": 30.4883432083765,
+     "skill_mae": 0.18733157049616,
+     "skill_rmse": 0.22003815356349887
+    }
+   ],
+   "best_baseline": "b_clim_hour",
+   "best_baseline_name": "Diurnal climatology",
+   "best_baseline_mae": 18.3954232126356,
+   "skill_vs_best": 0.04525956388519892,
+   "skill_vs_persistence": 0.17618548574693949
+  }
+ ],
+ "echo": [
+  {
+   "h": 1,
+   "acf": 0.8495120255342125,
+   "persist_mae": 7.9128,
+   "model_mae": 7.5661,
+   "skill_persist": 0.04381796181257147,
+   "skill_best": 0.04381796181257147,
+   "best_name": "Persistence",
+   "best_mae": 7.912830487299777
+  },
+  {
+   "h": 3,
+   "acf": 0.6234821164337705,
+   "persist_mae": 14.3921,
+   "model_mae": 12.4352,
+   "skill_persist": 0.13596918645000156,
+   "skill_best": 0.13596918645000156,
+   "best_name": "Persistence",
+   "best_mae": 14.392072262779926
+  },
+  {
+   "h": 6,
+   "acf": 0.42757399120918216,
+   "persist_mae": 18.6741,
+   "model_mae": 14.6601,
+   "skill_persist": 0.21495248341088702,
+   "skill_best": 0.12113656823707797,
+   "best_name": "Last 24 h mean",
+   "best_mae": 16.680725431731894
+  },
+  {
+   "h": 12,
+   "acf": 0.26604051890479086,
+   "persist_mae": 22.4546,
+   "model_mae": 15.4602,
+   "skill_persist": 0.31149049067730683,
+   "skill_best": 0.11611575796908868,
+   "best_name": "Last 24 h mean",
+   "best_mae": 17.49123092267196
+  },
+  {
+   "h": 24,
+   "acf": 0.44303065212286147,
+   "persist_mae": 19.4873,
+   "model_mae": 16.042,
+   "skill_persist": 0.17679860809224057,
+   "skill_best": 0.1159830323894091,
+   "best_name": "Last 24 h mean",
+   "best_mae": 18.14667212629478
+  },
+  {
+   "h": 48,
+   "acf": 0.3788101878139716,
+   "persist_mae": 21.0108,
+   "model_mae": 16.7265,
+   "skill_persist": 0.20391045414516062,
+   "skill_best": 0.09069758454707522,
+   "best_name": "Diurnal climatology",
+   "best_mae": 18.39483666461164
+  },
+  {
+   "h": 72,
+   "acf": 0.3814201116368741,
+   "persist_mae": 21.3189,
+   "model_mae": 17.5629,
+   "skill_persist": 0.17618548574693949,
+   "skill_best": 0.04525956388519892,
+   "best_name": "Diurnal climatology",
+   "best_mae": 18.3954232126356
+  }
+ ],
+ "bootstrap24": {
+  "h": 24,
+  "n_blocks": 1031,
+  "b_persist": {
+   "skill": 0.17679860809224057,
+   "lo": 0.1569806874512501,
+   "hi": 0.1948104404985496,
+   "p_le_0": 0.0,
+   "p_lt_15": 0.006
+  },
+  "b_roll24": {
+   "skill": 0.1159830323894091,
+   "lo": 0.09390595146818717,
+   "hi": 0.13701763544515982,
+   "p_le_0": 0.0,
+   "p_lt_15": 0.9995
+  },
+  "b_clim_hour": {
+   "skill": 0.12657102401303744,
+   "lo": 0.10290582364740317,
+   "hi": 0.1511934946705386,
+   "p_le_0": 0.0,
+   "p_lt_15": 0.969
+  },
+  "b_clim_month": {
+   "skill": 0.2375296008794413,
+   "lo": 0.21725707931316238,
+   "hi": 0.2568865365512532,
+   "p_le_0": 0.0,
+   "p_lt_15": 0.0
+  },
+  "b_clim_seas": {
+   "skill": 0.21576338461088884,
+   "lo": 0.19362991014266637,
+   "hi": 0.23679386139174605,
+   "p_le_0": 0.0,
+   "p_lt_15": 0.0
+  },
+  "b_anom": {
+   "skill": 0.1801113717890812,
+   "lo": 0.16045296604617237,
+   "hi": 0.19845326544892025,
+   "p_le_0": 0.0,
+   "p_lt_15": 0.002
+  }
+ },
+ "gateRetest": {
+  "threshold": 0.15,
+  "published_skill": 0.1768,
+  "published_baseline": "Persistence",
+  "best_baseline": "Last 24 h mean",
+  "best_baseline_mae": 18.14667212629478,
+  "skill_vs_best": 0.1159830323894091,
+  "ci": [
+   0.09390595146818717,
+   0.13701763544515982
+  ],
+  "p_meets_threshold": 0.0004999999999999449,
+  "persistence_ci": [
+   0.1569806874512501,
+   0.1948104404985496
+  ],
+  "persistence_p_meets": 0.994,
+  "verdict": "fail"
+ },
+ "acf": [
+  {
+   "lag": 1,
+   "r": 0.8495120255342125,
+   "n": 91724
+  },
+  {
+   "lag": 2,
+   "r": 0.7274049119165164,
+   "n": 91163
+  },
+  {
+   "lag": 3,
+   "r": 0.6234821164337705,
+   "n": 90835
+  },
+  {
+   "lag": 4,
+   "r": 0.5497131219786273,
+   "n": 90636
+  },
+  {
+   "lag": 5,
+   "r": 0.4797019001930018,
+   "n": 90460
+  },
+  {
+   "lag": 6,
+   "r": 0.42757399120918216,
+   "n": 90197
+  },
+  {
+   "lag": 7,
+   "r": 0.384074226455852,
+   "n": 90029
+  },
+  {
+   "lag": 8,
+   "r": 0.33968840559096924,
+   "n": 89897
+  },
+  {
+   "lag": 9,
+   "r": 0.3130189203307177,
+   "n": 89766
+  },
+  {
+   "lag": 10,
+   "r": 0.28818856657005426,
+   "n": 89561
+  },
+  {
+   "lag": 11,
+   "r": 0.27333291581432145,
+   "n": 89478
+  },
+  {
+   "lag": 12,
+   "r": 0.26604051890479086,
+   "n": 89351
+  },
+  {
+   "lag": 13,
+   "r": 0.2636405336289658,
+   "n": 89224
+  },
+  {
+   "lag": 14,
+   "r": 0.2695887051069372,
+   "n": 89121
+  },
+  {
+   "lag": 15,
+   "r": 0.2800643822483728,
+   "n": 88980
+  },
+  {
+   "lag": 16,
+   "r": 0.29821350994592943,
+   "n": 88896
+  },
+  {
+   "lag": 17,
+   "r": 0.3168098723216311,
+   "n": 88768
+  },
+  {
+   "lag": 18,
+   "r": 0.3364617897944673,
+   "n": 88790
+  },
+  {
+   "lag": 19,
+   "r": 0.3577511226966334,
+   "n": 88679
+  },
+  {
+   "lag": 20,
+   "r": 0.3759540422905863,
+   "n": 88620
+  },
+  {
+   "lag": 21,
+   "r": 0.39531220750888413,
+   "n": 88587
+  },
+  {
+   "lag": 22,
+   "r": 0.41163348150516665,
+   "n": 88569
+  },
+  {
+   "lag": 23,
+   "r": 0.43485509517734716,
+   "n": 88434
+  },
+  {
+   "lag": 24,
+   "r": 0.44303065212286147,
+   "n": 88463
+  },
+  {
+   "lag": 25,
+   "r": 0.4323497353192728,
+   "n": 88292
+  },
+  {
+   "lag": 26,
+   "r": 0.40763192420106664,
+   "n": 88143
+  },
+  {
+   "lag": 27,
+   "r": 0.3717701793986525,
+   "n": 88127
+  },
+  {
+   "lag": 28,
+   "r": 0.3486548228336084,
+   "n": 87950
+  },
+  {
+   "lag": 29,
+   "r": 0.32125693360643376,
+   "n": 87930
+  },
+  {
+   "lag": 30,
+   "r": 0.29421736931393283,
+   "n": 87790
+  },
+  {
+   "lag": 31,
+   "r": 0.2732150982125475,
+   "n": 87688
+  },
+  {
+   "lag": 32,
+   "r": 0.2529346679153937,
+   "n": 87630
+  },
+  {
+   "lag": 33,
+   "r": 0.23930248769192353,
+   "n": 87468
+  },
+  {
+   "lag": 34,
+   "r": 0.22709907308793986,
+   "n": 87412
+  },
+  {
+   "lag": 35,
+   "r": 0.2199280993617208,
+   "n": 87311
+  },
+  {
+   "lag": 36,
+   "r": 0.22126991894141246,
+   "n": 87283
+  },
+  {
+   "lag": 37,
+   "r": 0.22295264186293592,
+   "n": 87123
+  },
+  {
+   "lag": 38,
+   "r": 0.23290797956602596,
+   "n": 87087
+  },
+  {
+   "lag": 39,
+   "r": 0.2401591347014832,
+   "n": 87008
+  },
+  {
+   "lag": 40,
+   "r": 0.2574334697111172,
+   "n": 87023
+  },
+  {
+   "lag": 41,
+   "r": 0.2776479394159216,
+   "n": 86984
+  },
+  {
+   "lag": 42,
+   "r": 0.2969669551298498,
+   "n": 86860
+  },
+  {
+   "lag": 43,
+   "r": 0.312957055906496,
+   "n": 86927
+  },
+  {
+   "lag": 44,
+   "r": 0.3277883277339492,
+   "n": 86808
+  },
+  {
+   "lag": 45,
+   "r": 0.3413275180261379,
+   "n": 86798
+  },
+  {
+   "lag": 46,
+   "r": 0.3599301215354057,
+   "n": 86765
+  },
+  {
+   "lag": 47,
+   "r": 0.37462673445690287,
+   "n": 86735
+  },
+  {
+   "lag": 48,
+   "r": 0.3788101878139716,
+   "n": 86686
+  },
+  {
+   "lag": 49,
+   "r": 0.37540083605991464,
+   "n": 86618
+  },
+  {
+   "lag": 50,
+   "r": 0.367358590337023,
+   "n": 86499
+  },
+  {
+   "lag": 51,
+   "r": 0.34860776431089413,
+   "n": 86437
+  },
+  {
+   "lag": 52,
+   "r": 0.3250426558003736,
+   "n": 86318
+  },
+  {
+   "lag": 53,
+   "r": 0.3064386467725023,
+   "n": 86265
+  },
+  {
+   "lag": 54,
+   "r": 0.2828987961627625,
+   "n": 86158
+  },
+  {
+   "lag": 55,
+   "r": 0.2654821646177566,
+   "n": 86043
+  },
+  {
+   "lag": 56,
+   "r": 0.24488501118865766,
+   "n": 85963
+  },
+  {
+   "lag": 57,
+   "r": 0.23011318182826074,
+   "n": 85807
+  },
+  {
+   "lag": 58,
+   "r": 0.21889574622794336,
+   "n": 85766
+  },
+  {
+   "lag": 59,
+   "r": 0.20920880545574225,
+   "n": 85684
+  },
+  {
+   "lag": 60,
+   "r": 0.20190166692165726,
+   "n": 85637
+  },
+  {
+   "lag": 61,
+   "r": 0.2048067804415075,
+   "n": 85599
+  },
+  {
+   "lag": 62,
+   "r": 0.21152735033441458,
+   "n": 85587
+  },
+  {
+   "lag": 63,
+   "r": 0.22449743302192773,
+   "n": 85500
+  },
+  {
+   "lag": 64,
+   "r": 0.2414422950172897,
+   "n": 85463
+  },
+  {
+   "lag": 65,
+   "r": 0.2598175379342065,
+   "n": 85408
+  },
+  {
+   "lag": 66,
+   "r": 0.2762678072187998,
+   "n": 85371
+  },
+  {
+   "lag": 67,
+   "r": 0.29974908774030756,
+   "n": 85421
+  },
+  {
+   "lag": 68,
+   "r": 0.31923091156353495,
+   "n": 85347
+  },
+  {
+   "lag": 69,
+   "r": 0.3399195228005191,
+   "n": 85280
+  },
+  {
+   "lag": 70,
+   "r": 0.36068052117664806,
+   "n": 85346
+  },
+  {
+   "lag": 71,
+   "r": 0.3768990558182785,
+   "n": 85300
+  },
+  {
+   "lag": 72,
+   "r": 0.3814201116368741,
+   "n": 85259
+  }
+ ],
+ "panel": {
+  "months": [
+   {
+    "ym": "2025-04",
+    "n_rows": 2793,
+    "n_stations": 6,
+    "stations": [
+     8320,
+     8637,
+     1367443,
+     1563313,
+     6051931,
+     6051933
+    ],
+    "model_mae": 14.05523572516556,
+    "persist_mae": 17.959634801288935,
+    "clim_seas_mae": 15.872858999186208
+   },
+   {
+    "ym": "2025-05",
+    "n_rows": 3246,
+    "n_stations": 6,
+    "stations": [
+     8320,
+     1367443,
+     1563313,
+     1894639,
+     6051931,
+     6051933
+    ],
+    "model_mae": 17.905054657188195,
+    "persist_mae": 23.610477510782502,
+    "clim_seas_mae": 21.449621691781346
+   },
+   {
+    "ym": "2025-06",
+    "n_rows": 3349,
+    "n_stations": 6,
+    "stations": [
+     8320,
+     1367443,
+     1563313,
+     1894639,
+     6051931,
+     6051933
+    ],
+    "model_mae": 20.016834988299813,
+    "persist_mae": 26.926240668856376,
+    "clim_seas_mae": 21.176121295452848
+   },
+   {
+    "ym": "2025-07",
+    "n_rows": 2234,
+    "n_stations": 4,
+    "stations": [
+     8320,
+     1367443,
+     1563313,
+     1894639
+    ],
+    "model_mae": 15.817606206424825,
+    "persist_mae": 18.278885407341093,
+    "clim_seas_mae": 19.588141618503872
+   },
+   {
+    "ym": "2025-08",
+    "n_rows": 2270,
+    "n_stations": 4,
+    "stations": [
+     8320,
+     1367443,
+     1563313,
+     5599584
+    ],
+    "model_mae": 16.020430653178767,
+    "persist_mae": 17.88412031718062,
+    "clim_seas_mae": 21.77851194538163
+   },
+   {
+    "ym": "2025-09",
+    "n_rows": 2803,
+    "n_stations": 5,
+    "stations": [
+     8320,
+     1367443,
+     1563313,
+     1894639,
+     5599584
+    ],
+    "model_mae": 14.623317179860498,
+    "persist_mae": 18.417434106314662,
+    "clim_seas_mae": 16.42423754757693
+   },
+   {
+    "ym": "2025-10",
+    "n_rows": 2536,
+    "n_stations": 4,
+    "stations": [
+     8320,
+     1367443,
+     1563313,
+     5599584
+    ],
+    "model_mae": 14.079487184803302,
+    "persist_mae": 15.716568927444795,
+    "clim_seas_mae": 19.918626143633904
+   },
+   {
+    "ym": "2025-11",
+    "n_rows": 1373,
+    "n_stations": 3,
+    "stations": [
+     8320,
+     1367443,
+     5599584
+    ],
+    "model_mae": 14.54968759674049,
+    "persist_mae": 14.14542243262928,
+    "clim_seas_mae": 30.42066956606602
+   },
+   {
+    "ym": "2025-12",
+    "n_rows": 1180,
+    "n_stations": 2,
+    "stations": [
+     1367443,
+     5599584
+    ],
+    "model_mae": 13.510747721020932,
+    "persist_mae": 15.595116203389829,
+    "clim_seas_mae": 22.310392915319646
+   },
+   {
+    "ym": "2026-01",
+    "n_rows": 742,
+    "n_stations": 1,
+    "stations": [
+     5599584
+    ],
+    "model_mae": 15.588040719857721,
+    "persist_mae": 16.4457102425876,
+    "clim_seas_mae": 23.256492821770888
+   },
+   {
+    "ym": "2026-02",
+    "n_rows": 672,
+    "n_stations": 1,
+    "stations": [
+     5599584
+    ],
+    "model_mae": 17.86725634054716,
+    "persist_mae": 18.68240119047619,
+    "clim_seas_mae": 21.55454753031985
+   },
+   {
+    "ym": "2026-03",
+    "n_rows": 12,
+    "n_stations": 1,
+    "stations": [
+     5599584
+    ],
+    "model_mae": 10.240181171933317,
+    "persist_mae": 10.566666666666666,
+    "clim_seas_mae": 15.260868007925616
+   },
+   {
+    "ym": "2026-06",
+    "n_rows": 5,
+    "n_stations": 1,
+    "stations": [
+     1894639
+    ],
+    "model_mae": 10.80538506566497,
+    "persist_mae": 6.593999999999999,
+    "clim_seas_mae": 26.600551724137933
+   },
+   {
+    "ym": "2026-07",
+    "n_rows": 10,
+    "n_stations": 1,
+    "stations": [
+     1894639
+    ],
+    "model_mae": 14.329976650317686,
+    "persist_mae": 5.791000000000001,
+    "clim_seas_mae": 28.075994791125225
+   },
+   {
+    "ym": "2026-08",
+    "n_rows": 7,
+    "n_stations": 1,
+    "stations": [
+     1894639
+    ],
+    "model_mae": 9.158904311100084,
+    "persist_mae": 5.682857142857142,
+    "clim_seas_mae": 23.682681818181816
+   }
+  ],
+  "by_station": [
+   {
+    "location_id": 1367443,
+    "name": "Depok",
+    "provider": "AirGradient",
+    "n": 5925,
+    "share": 0.2550361570247934,
+    "obs_mean": 50.704315611814344,
+    "model_mae": 16.64003799179228,
+    "persist_mae": 20.154690295358648,
+    "clim_seas_mae": 22.58167668232051,
+    "mqi_f": 0.7988155250449804,
+    "skill_persist": 0.17438384078646674,
+    "skill_clim": 0.2631176937884341,
+    "first": "2025-04-07",
+    "last": "2025-12-19"
+   },
+   {
+    "location_id": 8320,
+    "name": "Jakarta South",
+    "provider": "AirNow",
+    "n": 4906,
+    "share": 0.21117424242424243,
+    "obs_mean": 37.30819404810436,
+    "model_mae": 13.400961365616302,
+    "persist_mae": 16.57969832857725,
+    "clim_seas_mae": 17.00592833249538,
+    "mqi_f": 0.7796195200485335,
+    "skill_persist": 0.19172465626120505,
+    "skill_clim": 0.21198295655466282,
+    "first": "2025-04-07",
+    "last": "2025-11-03"
+   },
+   {
+    "location_id": 1563313,
+    "name": "Qoryah Darussalam",
+    "provider": "AirGradient",
+    "n": 4517,
+    "share": 0.1944300964187328,
+    "obs_mean": 61.17945096302855,
+    "model_mae": 19.34726295884598,
+    "persist_mae": 24.19651095860084,
+    "clim_seas_mae": 21.74854306937961,
+    "mqi_f": 0.7790063399472816,
+    "skill_persist": 0.20041104306532898,
+    "skill_clim": 0.11041107916394,
+    "first": "2025-04-07",
+    "last": "2025-10-16"
+   },
+   {
+    "location_id": 5599584,
+    "name": "Bogor Selatan",
+    "provider": "AirGradient",
+    "n": 4313,
+    "share": 0.1856491046831956,
+    "obs_mean": 28.505964859726408,
+    "model_mae": 15.373695092147173,
+    "persist_mae": 16.279949557152793,
+    "clim_seas_mae": 22.402021357864605,
+    "mqi_f": 0.8652561897930334,
+    "skill_persist": 0.05566690866111723,
+    "skill_clim": 0.31373625412824724,
+    "first": "2025-08-29",
+    "last": "2026-03-01"
+   },
+   {
+    "location_id": 6051933,
+    "name": "Rusunawa Marunda",
+    "provider": "Clean Air Catalyst",
+    "n": 1861,
+    "share": 0.08010502754820936,
+    "obs_mean": 43.43756045137023,
+    "model_mae": 16.478064707728887,
+    "persist_mae": 21.926598602901667,
+    "clim_seas_mae": 17.40265491114228,
+    "mqi_f": 0.7456211112371421,
+    "skill_persist": 0.2484896993759782,
+    "skill_clim": 0.053129261491096647,
+    "first": "2025-04-07",
+    "last": "2025-06-29"
+   },
+   {
+    "location_id": 6051931,
+    "name": "West Jakarta Mayor Office",
+    "provider": "Clean Air Catalyst",
+    "n": 1646,
+    "share": 0.07085055096418733,
+    "obs_mean": 39.98031591737546,
+    "model_mae": 14.177513565730852,
+    "persist_mae": 18.949270959902794,
+    "clim_seas_mae": 17.942650959691672,
+    "mqi_f": 0.7538999881626902,
+    "skill_persist": 0.251817465920938,
+    "skill_clim": 0.2098428711799185,
+    "first": "2025-04-08",
+    "last": "2025-06-29"
+   },
+   {
+    "location_id": 1894639,
+    "name": "Jakarta",
+    "provider": "Clarity",
+    "n": 35,
+    "share": 0.001506542699724518,
+    "obs_mean": 11.567142857142857,
+    "model_mae": 13.549818166665522,
+    "persist_mae": 5.236285714285714,
+    "clim_seas_mae": 26.697319273673834,
+    "mqi_f": 2.1267769571455637,
+    "skill_persist": -1.587677393099216,
+    "skill_clim": 0.49246521616022443,
+    "first": "2025-05-06",
+    "last": "2026-08-24"
+   },
+   {
+    "location_id": 8637,
+    "name": "Jakarta Central",
+    "provider": "AirNow",
+    "n": 29,
+    "share": 0.0012482782369146006,
+    "obs_mean": 27.517241379310345,
+    "model_mae": 6.040378088574733,
+    "persist_mae": 9.724137931034482,
+    "clim_seas_mae": 9.745992057300372,
+    "mqi_f": 0.7583839263539673,
+    "skill_persist": 0.3788263667777757,
+    "skill_clim": 0.38021926828371433,
+    "first": "2025-04-07",
+    "last": "2025-04-08"
+   }
+  ],
+  "balanced": null,
+  "coverage": [
+   {
+    "ym": "2023-01",
+    "n_any": 1,
+    "n_80": 0,
+    "n_50": 0,
+    "obs_hours": 35
+   },
+   {
+    "ym": "2023-02",
+    "n_any": 1,
+    "n_80": 0,
+    "n_50": 0,
+    "obs_hours": 2
+   },
+   {
+    "ym": "2023-03",
+    "n_any": 1,
+    "n_80": 0,
+    "n_50": 0,
+    "obs_hours": 5
+   },
+   {
+    "ym": "2023-04",
+    "n_any": 1,
+    "n_80": 0,
+    "n_50": 0,
+    "obs_hours": 145
+   },
+   {
+    "ym": "2023-05",
+    "n_any": 2,
+    "n_80": 0,
+    "n_50": 1,
+    "obs_hours": 501
+   },
+   {
+    "ym": "2023-06",
+    "n_any": 1,
+    "n_80": 0,
+    "n_50": 0,
+    "obs_hours": 292
+   },
+   {
+    "ym": "2023-07",
+    "n_any": 1,
+    "n_80": 0,
+    "n_50": 1,
+    "obs_hours": 430
+   },
+   {
+    "ym": "2023-08",
+    "n_any": 3,
+    "n_80": 0,
+    "n_50": 2,
+    "obs_hours": 949
+   },
+   {
+    "ym": "2023-09",
+    "n_any": 7,
+    "n_80": 5,
+    "n_50": 6,
+    "obs_hours": 1573
+   },
+   {
+    "ym": "2023-10",
+    "n_any": 8,
+    "n_80": 5,
+    "n_50": 6,
+    "obs_hours": 3785
+   },
+   {
+    "ym": "2023-11",
+    "n_any": 8,
+    "n_80": 4,
+    "n_50": 5,
+    "obs_hours": 3679
+   },
+   {
+    "ym": "2023-12",
+    "n_any": 6,
+    "n_80": 3,
+    "n_50": 4,
+    "obs_hours": 2725
+   },
+   {
+    "ym": "2024-01",
+    "n_any": 8,
+    "n_80": 5,
+    "n_50": 5,
+    "obs_hours": 3254
+   },
+   {
+    "ym": "2024-02",
+    "n_any": 8,
+    "n_80": 2,
+    "n_50": 7,
+    "obs_hours": 3849
+   },
+   {
+    "ym": "2024-03",
+    "n_any": 8,
+    "n_80": 4,
+    "n_50": 7,
+    "obs_hours": 4488
+   },
+   {
+    "ym": "2024-04",
+    "n_any": 8,
+    "n_80": 5,
+    "n_50": 5,
+    "obs_hours": 3572
+   },
+   {
+    "ym": "2024-05",
+    "n_any": 8,
+    "n_80": 5,
+    "n_50": 5,
+    "obs_hours": 3635
+   },
+   {
+    "ym": "2024-06",
+    "n_any": 8,
+    "n_80": 4,
+    "n_50": 5,
+    "obs_hours": 3660
+   },
+   {
+    "ym": "2024-07",
+    "n_any": 9,
+    "n_80": 6,
+    "n_50": 7,
+    "obs_hours": 4915
+   },
+   {
+    "ym": "2024-08",
+    "n_any": 9,
+    "n_80": 4,
+    "n_50": 7,
+    "obs_hours": 4713
+   },
+   {
+    "ym": "2024-09",
+    "n_any": 9,
+    "n_80": 6,
+    "n_50": 7,
+    "obs_hours": 4543
+   },
+   {
+    "ym": "2024-10",
+    "n_any": 8,
+    "n_80": 3,
+    "n_50": 7,
+    "obs_hours": 4085
+   },
+   {
+    "ym": "2024-11",
+    "n_any": 8,
+    "n_80": 6,
+    "n_50": 6,
+    "obs_hours": 3927
+   },
+   {
+    "ym": "2024-12",
+    "n_any": 7,
+    "n_80": 5,
+    "n_50": 5,
+    "obs_hours": 3947
+   },
+   {
+    "ym": "2025-01",
+    "n_any": 7,
+    "n_80": 2,
+    "n_50": 3,
+    "obs_hours": 2537
+   },
+   {
+    "ym": "2025-02",
+    "n_any": 6,
+    "n_80": 2,
+    "n_50": 4,
+    "obs_hours": 2119
+   },
+   {
+    "ym": "2025-03",
+    "n_any": 7,
+    "n_80": 4,
+    "n_50": 6,
+    "obs_hours": 3925
+   },
+   {
+    "ym": "2025-04",
+    "n_any": 7,
+    "n_80": 6,
+    "n_50": 6,
+    "obs_hours": 3716
+   },
+   {
+    "ym": "2025-05",
+    "n_any": 6,
+    "n_80": 4,
+    "n_50": 5,
+    "obs_hours": 3347
+   },
+   {
+    "ym": "2025-06",
+    "n_any": 6,
+    "n_80": 5,
+    "n_50": 5,
+    "obs_hours": 3496
+   },
+   {
+    "ym": "2025-07",
+    "n_any": 4,
+    "n_80": 3,
+    "n_50": 3,
+    "obs_hours": 2270
+   },
+   {
+    "ym": "2025-08",
+    "n_any": 5,
+    "n_80": 4,
+    "n_50": 4,
+    "obs_hours": 2324
+   },
+   {
+    "ym": "2025-09",
+    "n_any": 5,
+    "n_80": 4,
+    "n_50": 4,
+    "obs_hours": 2869
+   },
+   {
+    "ym": "2025-10",
+    "n_any": 5,
+    "n_80": 4,
+    "n_50": 4,
+    "obs_hours": 2612
+   },
+   {
+    "ym": "2025-11",
+    "n_any": 4,
+    "n_80": 3,
+    "n_50": 3,
+    "obs_hours": 1473
+   },
+   {
+    "ym": "2025-12",
+    "n_any": 3,
+    "n_80": 2,
+    "n_50": 2,
+    "obs_hours": 1219
+   },
+   {
+    "ym": "2026-01",
+    "n_any": 2,
+    "n_80": 1,
+    "n_50": 1,
+    "obs_hours": 745
+   },
+   {
+    "ym": "2026-02",
+    "n_any": 1,
+    "n_80": 1,
+    "n_50": 1,
+    "obs_hours": 672
+   },
+   {
+    "ym": "2026-03",
+    "n_any": 2,
+    "n_80": 1,
+    "n_50": 1,
+    "obs_hours": 38
+   },
+   {
+    "ym": "2026-04",
+    "n_any": 1,
+    "n_80": 0,
+    "n_50": 0,
+    "obs_hours": 8
+   },
+   {
+    "ym": "2026-05",
+    "n_any": 1,
+    "n_80": 0,
+    "n_50": 0,
+    "obs_hours": 8
+   },
+   {
+    "ym": "2026-06",
+    "n_any": 1,
+    "n_80": 0,
+    "n_50": 0,
+    "obs_hours": 35
+   },
+   {
+    "ym": "2026-07",
+    "n_any": 1,
+    "n_80": 0,
+    "n_50": 0,
+    "obs_hours": 66
+   },
+   {
+    "ym": "2026-08",
+    "n_any": 1,
+    "n_80": 0,
+    "n_50": 0,
+    "obs_hours": 44
+   }
+  ],
+  "fmqo": {
+   "n_stations": 8,
+   "n_pass": 7,
+   "share_pass": 0.875,
+   "threshold": 0.9,
+   "passes": false,
+   "worst": "Jakarta",
+   "worst_mqi": 2.1267769571455637
+  },
+  "n_test_rows": 23232,
+  "share_before_2026": 0.9379734848484849
+ },
+ "episodes": {
+  "ladder": [
+   {
+    "threshold": 35.5,
+    "label": "Unhealthy for sensitive groups",
+    "n_observed": 14303,
+    "n_predicted": 16081,
+    "hits": 12167,
+    "recall": 0.8506607005523317,
+    "precision": 0.7566071761706361
+   },
+   {
+    "threshold": 55.5,
+    "label": "Unhealthy",
+    "n_observed": 6084,
+    "n_predicted": 5582,
+    "hits": 2978,
+    "recall": 0.48948060486522027,
+    "precision": 0.5335005374417772
+   },
+   {
+    "threshold": 125.5,
+    "label": "Very unhealthy",
+    "n_observed": 247,
+    "n_predicted": 0,
+    "hits": 0,
+    "recall": 0.0,
+    "precision": null
+   },
+   {
+    "threshold": 225.5,
+    "label": "Hazardous",
+    "n_observed": 20,
+    "n_predicted": 0,
+    "hits": 0,
+    "recall": 0.0,
+    "precision": null
+   }
+  ],
+  "episode": {
+   "n": 6084,
+   "mae": 24.79913500779691,
+   "persist_mae": 28.3218372452334,
+   "bias": -23.041231708088016
+  },
+  "clean": {
+   "n": 17148,
+   "mae": 12.934978903770872,
+   "persist_mae": 16.352852498250527,
+   "bias": 7.729221755210758
+  },
+  "ceiling": [
+   {
+    "horizon_h": 1,
+    "pred_max": 187.84654634667476,
+    "obs_max": 338.0,
+    "pred_p99": 114.32437240612286,
+    "obs_p99": 127.0
+   },
+   {
+    "horizon_h": 3,
+    "pred_max": 127.58928613862163,
+    "obs_max": 338.0,
+    "pred_p99": 91.72583653123705,
+    "obs_p99": 127.0
+   },
+   {
+    "horizon_h": 6,
+    "pred_max": 105.90765193660924,
+    "obs_max": 338.0,
+    "pred_p99": 82.04997546947062,
+    "obs_p99": 127.0
+   },
+   {
+    "horizon_h": 12,
+    "pred_max": 98.72161351115051,
+    "obs_max": 338.0,
+    "pred_p99": 79.43154030964807,
+    "obs_p99": 126.0
+   },
+   {
+    "horizon_h": 24,
+    "pred_max": 99.13920809534483,
+    "obs_max": 338.0,
+    "pred_p99": 79.03263797184741,
+    "obs_p99": 126.68999999999869
+   },
+   {
+    "horizon_h": 48,
+    "pred_max": 95.80428726729964,
+    "obs_max": 338.0,
+    "pred_p99": 81.52557879222252,
+    "obs_p99": 127.0
+   },
+   {
+    "horizon_h": 72,
+    "pred_max": 111.81266080678668,
+    "obs_max": 338.0,
+    "pred_p99": 85.4563149680206,
+    "obs_p99": 127.0
+   }
+  ]
+ },
+ "unseen": {
+  "rows": [
+   {
+    "location_id": 1367443,
+    "name": "Depok",
+    "provider": "AirGradient",
+    "n_train": 7318,
+    "n_test": 5925,
+    "skill_persist": 0.17438384078646674,
+    "pi80": 0.6658227848101266,
+    "obs_mean": 50.704315611814344
+   },
+   {
+    "location_id": 8320,
+    "name": "Jakarta South",
+    "provider": "AirNow",
+    "n_train": 7693,
+    "n_test": 4906,
+    "skill_persist": 0.19172465626120505,
+    "pi80": 0.6328984916428863,
+    "obs_mean": 37.30819404810436
+   },
+   {
+    "location_id": 1563313,
+    "name": "Qoryah Darussalam",
+    "provider": "AirGradient",
+    "n_train": 11664,
+    "n_test": 4517,
+    "skill_persist": 0.20041104306532898,
+    "pi80": 0.6382554793004206,
+    "obs_mean": 61.17945096302855
+   },
+   {
+    "location_id": 5599584,
+    "name": "Bogor Selatan",
+    "provider": "AirGradient",
+    "n_train": 0,
+    "n_test": 4313,
+    "skill_persist": 0.05566690866111723,
+    "pi80": 0.5395316485045212,
+    "obs_mean": 28.505964859726408
+   },
+   {
+    "location_id": 6051933,
+    "name": "Rusunawa Marunda",
+    "provider": "Clean Air Catalyst",
+    "n_train": 11874,
+    "n_test": 1861,
+    "skill_persist": 0.2484896993759782,
+    "pi80": 0.6630843632455669,
+    "obs_mean": 43.43756045137023
+   },
+   {
+    "location_id": 6051931,
+    "name": "West Jakarta Mayor Office",
+    "provider": "Clean Air Catalyst",
+    "n_train": 7161,
+    "n_test": 1646,
+    "skill_persist": 0.251817465920938,
+    "pi80": 0.6506682867557716,
+    "obs_mean": 39.98031591737546
+   },
+   {
+    "location_id": 1894639,
+    "name": "Jakarta",
+    "provider": "Clarity",
+    "n_train": 7986,
+    "n_test": 35,
+    "skill_persist": -1.587677393099216,
+    "pi80": 0.22857142857142856,
+    "obs_mean": 11.567142857142857
+   },
+   {
+    "location_id": 8637,
+    "name": "Jakarta Central",
+    "provider": "AirNow",
+    "n_train": 3273,
+    "n_test": 29,
+    "skill_persist": 0.3788263667777757,
+    "pi80": 0.9655172413793104,
+    "obs_mean": 27.517241379310345
+   }
+  ],
+  "seen_mean_skill": 0.2133653410819834,
+  "seen_mean_pi80": 0.6501458811509544,
+  "fresh": [
+   {
+    "location_id": 5599584,
+    "name": "Bogor Selatan",
+    "provider": "AirGradient",
+    "n_train": 0,
+    "n_test": 4313,
+    "skill_persist": 0.05566690866111723,
+    "pi80": 0.5395316485045212,
+    "obs_mean": 28.505964859726408
+   }
+  ],
+  "min_rows": 1000
+ },
+ "providers": {
+  "rows": [
+   {
+    "provider": "AirGradient",
+    "n_stations": 5,
+    "n_hours": 40690,
+    "mean": 52.82712013565986,
+    "median": 48.6
+   },
+   {
+    "provider": "Clarity",
+    "n_stations": 1,
+    "n_hours": 8334,
+    "mean": 39.54724142068635,
+    "median": 33.3
+   },
+   {
+    "provider": "Clean Air Catalyst",
+    "n_stations": 3,
+    "n_hours": 31187,
+    "mean": 38.95118478853369,
+    "median": 34.9
+   },
+   {
+    "provider": "AirNow",
+    "n_stations": 2,
+    "n_hours": 16021,
+    "mean": 38.006928406466514,
+    "median": 35.0
+   }
+  ],
+  "panel_mean": 44.71279645357054,
+  "reference_mean": 38.006928406466514,
+  "reference_n": 16021,
+  "consumer_mean": 52.82712013565986,
+  "consumer_n": 40690
+ },
+ "colocation": {
+  "a": 1894639,
+  "b": 6051933,
+  "a_name": "Jakarta",
+  "b_name": "Rusunawa Marunda",
+  "a_provider": "Clarity",
+  "b_provider": "Clean Air Catalyst",
+  "km": 0.043,
+  "m": 43,
+  "n": 7297,
+  "a_mean": 40.71197752501028,
+  "b_mean": 38.879443606961765,
+  "mae": 6.851401946005208,
+  "rmse": 10.906543549735401,
+  "bias": 1.8325339180485132,
+  "r": 0.9313160150476795,
+  "first": "2024-01-25",
+  "last": "2025-06-28",
+  "monthly": [
+   {
+    "ym": "2024-01",
+    "a": 26.624228187919464,
+    "b": 20.71543624161074,
+    "n": 149
+   },
+   {
+    "ym": "2024-02",
+    "a": 29.250995934959345,
+    "b": 25.433943089430894,
+    "n": 492
+   },
+   {
+    "ym": "2024-03",
+    "a": 30.187320441988955,
+    "b": 28.43425414364641,
+    "n": 724
+   },
+   {
+    "ym": "2024-04",
+    "a": 41.70349013657056,
+    "b": 36.92655538694992,
+    "n": 659
+   },
+   {
+    "ym": "2024-05",
+    "a": 61.31361344537816,
+    "b": 57.22521008403361,
+    "n": 595
+   },
+   {
+    "ym": "2024-06",
+    "a": 56.74216216216216,
+    "b": 51.96606606606607,
+    "n": 666
+   },
+   {
+    "ym": "2024-07",
+    "a": 54.2993288590604,
+    "b": 51.04546979865772,
+    "n": 596
+   },
+   {
+    "ym": "2024-08",
+    "a": 55.23832599118943,
+    "b": 52.85947136563876,
+    "n": 454
+   },
+   {
+    "ym": "2024-09",
+    "a": 47.77026262626262,
+    "b": 44.77939393939395,
+    "n": 495
+   },
+   {
+    "ym": "2024-10",
+    "a": 46.101899441340784,
+    "b": 47.90893854748603,
+    "n": 537
+   },
+   {
+    "ym": "2024-11",
+    "a": 42.35798130841122,
+    "b": 43.64448598130841,
+    "n": 535
+   },
+   {
+    "ym": "2024-12",
+    "a": 19.687272727272724,
+    "b": 20.455151515151513,
+    "n": 660
+   },
+   {
+    "ym": "2025-01",
+    "a": 19.36946462715105,
+    "b": 19.33078393881453,
+    "n": 523
+   },
+   {
+    "ym": "2025-02",
+    "a": 17.53236994219653,
+    "b": 17.17630057803468,
+    "n": 173
+   },
+   {
+    "ym": "2025-03",
+    "a": 20.669999999999998,
+    "b": 64.16666666666667,
+    "n": 3
+   },
+   {
+    "ym": "2025-04",
+    "a": 15.922857142857143,
+    "b": 54.52857142857142,
+    "n": 7
+   },
+   {
+    "ym": "2025-05",
+    "a": 7.95125,
+    "b": 47.712500000000006,
+    "n": 8
+   },
+   {
+    "ym": "2025-06",
+    "a": 9.884285714285713,
+    "b": 62.95238095238094,
+    "n": 21
+   }
+  ],
+  "halves": [
+   {
+    "half": "first half",
+    "n": 3648,
+    "first": "2024-01-25",
+    "last": "2024-07-19",
+    "a_mean": 43.83763706140351,
+    "b_mean": 39.922478070175444,
+    "mae": 7.171387061403509,
+    "bias": 3.91515899122807,
+    "r": 0.9538773583722086
+   },
+   {
+    "half": "second half",
+    "n": 3649,
+    "first": "2024-07-19",
+    "last": "2025-06-28",
+    "a_mean": 37.5871745683749,
+    "b_mean": 37.83669498492737,
+    "mae": 6.531504521786791,
+    "bias": -0.24952041655248014,
+    "r": 0.90786135936865
+   }
+  ],
+  "scatter": [
+   [
+    9.8,
+    16.0
+   ],
+   [
+    43.8,
+    39.1
+   ],
+   [
+    33.3,
+    31.6
+   ],
+   [
+    9.6,
+    9.2
+   ],
+   [
+    10.7,
+    22.2
+   ],
+   [
+    14.0,
+    16.7
+   ],
+   [
+    44.5,
+    43.0
+   ],
+   [
+    39.8,
+    44.8
+   ],
+   [
+    17.0,
+    14.4
+   ],
+   [
+    9.9,
+    6.2
+   ],
+   [
+    30.3,
+    24.0
+   ],
+   [
+    49.9,
+    44.3
+   ],
+   [
+    22.2,
+    24.6
+   ],
+   [
+    50.9,
+    51.0
+   ],
+   [
+    48.8,
+    40.0
+   ],
+   [
+    29.7,
+    31.6
+   ],
+   [
+    6.9,
+    7.3
+   ],
+   [
+    115.0,
+    110.0
+   ],
+   [
+    12.6,
+    15.6
+   ],
+   [
+    14.9,
+    13.8
+   ],
+   [
+    14.3,
+    15.8
+   ],
+   [
+    69.4,
+    67.7
+   ],
+   [
+    5.2,
+    10.0
+   ],
+   [
+    30.2,
+    32.1
+   ],
+   [
+    40.8,
+    44.5
+   ],
+   [
+    29.3,
+    26.7
+   ],
+   [
+    57.1,
+    56.4
+   ],
+   [
+    49.4,
+    53.6
+   ],
+   [
+    19.4,
+    22.7
+   ],
+   [
+    85.9,
+    69.9
+   ],
+   [
+    10.4,
+    10.2
+   ],
+   [
+    23.6,
+    30.8
+   ],
+   [
+    48.8,
+    49.9
+   ],
+   [
+    72.4,
+    76.5
+   ],
+   [
+    67.0,
+    67.4
+   ],
+   [
+    107.0,
+    88.5
+   ],
+   [
+    63.6,
+    69.5
+   ],
+   [
+    17.7,
+    12.9
+   ],
+   [
+    9.7,
+    12.3
+   ],
+   [
+    36.1,
+    36.4
+   ],
+   [
+    15.2,
+    19.6
+   ],
+   [
+    13.9,
+    6.2
+   ],
+   [
+    48.1,
+    51.5
+   ],
+   [
+    54.3,
+    66.0
+   ],
+   [
+    67.7,
+    64.2
+   ],
+   [
+    9.6,
+    9.4
+   ],
+   [
+    16.0,
+    18.3
+   ],
+   [
+    38.8,
+    37.9
+   ],
+   [
+    87.8,
+    74.1
+   ],
+   [
+    26.9,
+    28.1
+   ],
+   [
+    17.8,
+    21.8
+   ],
+   [
+    124.0,
+    116.0
+   ],
+   [
+    84.2,
+    76.5
+   ],
+   [
+    48.7,
+    33.0
+   ],
+   [
+    26.6,
+    31.1
+   ],
+   [
+    57.5,
+    53.6
+   ],
+   [
+    13.6,
+    13.0
+   ],
+   [
+    61.0,
+    54.0
+   ],
+   [
+    85.8,
+    93.9
+   ],
+   [
+    61.3,
+    62.0
+   ],
+   [
+    11.9,
+    18.0
+   ],
+   [
+    10.7,
+    14.8
+   ],
+   [
+    89.0,
+    78.2
+   ],
+   [
+    70.9,
+    75.7
+   ],
+   [
+    65.4,
+    54.6
+   ],
+   [
+    43.8,
+    36.7
+   ],
+   [
+    38.2,
+    29.0
+   ],
+   [
+    55.6,
+    51.8
+   ],
+   [
+    83.1,
+    66.9
+   ],
+   [
+    30.3,
+    23.6
+   ],
+   [
+    18.3,
+    12.8
+   ],
+   [
+    87.0,
+    87.2
+   ],
+   [
+    57.4,
+    63.9
+   ],
+   [
+    14.3,
+    15.9
+   ],
+   [
+    79.2,
+    73.9
+   ],
+   [
+    22.8,
+    22.3
+   ],
+   [
+    23.9,
+    23.7
+   ],
+   [
+    25.6,
+    21.4
+   ],
+   [
+    35.7,
+    37.8
+   ],
+   [
+    34.2,
+    38.6
+   ],
+   [
+    45.1,
+    42.3
+   ],
+   [
+    39.1,
+    38.1
+   ],
+   [
+    20.5,
+    15.2
+   ],
+   [
+    73.5,
+    87.2
+   ],
+   [
+    172.0,
+    155.0
+   ],
+   [
+    30.2,
+    23.6
+   ],
+   [
+    25.2,
+    24.9
+   ],
+   [
+    53.5,
+    54.5
+   ],
+   [
+    5.7,
+    11.1
+   ],
+   [
+    37.1,
+    38.6
+   ],
+   [
+    10.0,
+    10.0
+   ],
+   [
+    4.3,
+    4.2
+   ],
+   [
+    22.6,
+    17.9
+   ],
+   [
+    19.5,
+    23.6
+   ],
+   [
+    101.0,
+    97.6
+   ],
+   [
+    19.6,
+    14.3
+   ],
+   [
+    47.0,
+    45.7
+   ],
+   [
+    38.3,
+    25.5
+   ],
+   [
+    72.7,
+    92.5
+   ],
+   [
+    60.0,
+    48.8
+   ],
+   [
+    43.5,
+    50.3
+   ],
+   [
+    40.9,
+    36.4
+   ],
+   [
+    80.4,
+    72.9
+   ],
+   [
+    21.8,
+    25.8
+   ],
+   [
+    84.5,
+    68.1
+   ],
+   [
+    47.1,
+    36.4
+   ],
+   [
+    38.0,
+    39.5
+   ],
+   [
+    21.4,
+    24.9
+   ],
+   [
+    87.6,
+    77.3
+   ],
+   [
+    23.2,
+    45.3
+   ],
+   [
+    41.7,
+    34.8
+   ],
+   [
+    27.6,
+    26.9
+   ],
+   [
+    110.0,
+    105.0
+   ],
+   [
+    65.3,
+    51.9
+   ],
+   [
+    8.7,
+    17.6
+   ],
+   [
+    17.0,
+    15.9
+   ],
+   [
+    18.5,
+    17.4
+   ],
+   [
+    15.6,
+    26.7
+   ],
+   [
+    46.5,
+    28.2
+   ],
+   [
+    11.0,
+    8.1
+   ],
+   [
+    25.6,
+    14.2
+   ],
+   [
+    12.5,
+    10.9
+   ],
+   [
+    81.9,
+    72.7
+   ],
+   [
+    79.3,
+    61.5
+   ],
+   [
+    45.5,
+    49.4
+   ],
+   [
+    39.0,
+    29.8
+   ],
+   [
+    48.1,
+    37.4
+   ],
+   [
+    27.1,
+    32.2
+   ],
+   [
+    70.4,
+    68.1
+   ],
+   [
+    64.9,
+    65.5
+   ],
+   [
+    21.3,
+    18.2
+   ],
+   [
+    10.4,
+    16.5
+   ],
+   [
+    56.4,
+    53.2
+   ],
+   [
+    63.5,
+    40.0
+   ],
+   [
+    27.7,
+    28.5
+   ],
+   [
+    80.1,
+    63.4
+   ],
+   [
+    42.8,
+    42.1
+   ],
+   [
+    98.5,
+    76.4
+   ],
+   [
+    15.5,
+    26.4
+   ],
+   [
+    37.4,
+    25.7
+   ],
+   [
+    36.3,
+    38.3
+   ],
+   [
+    62.6,
+    51.6
+   ],
+   [
+    73.2,
+    70.4
+   ],
+   [
+    23.1,
+    19.3
+   ],
+   [
+    75.8,
+    66.0
+   ],
+   [
+    65.8,
+    63.8
+   ],
+   [
+    24.3,
+    26.5
+   ],
+   [
+    113.0,
+    98.5
+   ],
+   [
+    22.9,
+    21.6
+   ],
+   [
+    30.3,
+    27.3
+   ],
+   [
+    16.3,
+    13.4
+   ],
+   [
+    17.7,
+    17.6
+   ],
+   [
+    83.9,
+    72.8
+   ],
+   [
+    69.4,
+    56.3
+   ],
+   [
+    21.1,
+    23.0
+   ],
+   [
+    73.0,
+    66.0
+   ],
+   [
+    69.6,
+    78.1
+   ],
+   [
+    18.9,
+    18.2
+   ],
+   [
+    89.5,
+    70.9
+   ],
+   [
+    16.6,
+    26.6
+   ],
+   [
+    9.0,
+    2.8
+   ],
+   [
+    16.6,
+    18.0
+   ],
+   [
+    66.7,
+    4.0
+   ],
+   [
+    31.0,
+    39.9
+   ],
+   [
+    16.5,
+    15.0
+   ],
+   [
+    43.5,
+    28.4
+   ],
+   [
+    40.8,
+    41.1
+   ],
+   [
+    58.1,
+    37.3
+   ],
+   [
+    8.3,
+    8.9
+   ],
+   [
+    23.6,
+    28.7
+   ],
+   [
+    65.4,
+    40.2
+   ],
+   [
+    56.5,
+    70.6
+   ],
+   [
+    66.5,
+    56.0
+   ],
+   [
+    8.3,
+    13.0
+   ],
+   [
+    14.8,
+    13.4
+   ],
+   [
+    9.6,
+    8.4
+   ],
+   [
+    56.9,
+    44.6
+   ],
+   [
+    54.8,
+    51.5
+   ],
+   [
+    9.3,
+    11.8
+   ],
+   [
+    73.2,
+    62.9
+   ],
+   [
+    10.9,
+    21.3
+   ],
+   [
+    26.2,
+    23.7
+   ],
+   [
+    19.3,
+    20.1
+   ],
+   [
+    19.4,
+    21.6
+   ],
+   [
+    73.3,
+    64.0
+   ],
+   [
+    17.7,
+    16.6
+   ],
+   [
+    9.8,
+    9.3
+   ],
+   [
+    55.5,
+    51.3
+   ],
+   [
+    12.2,
+    25.6
+   ],
+   [
+    41.8,
+    23.8
+   ],
+   [
+    10.5,
+    19.5
+   ],
+   [
+    72.1,
+    69.0
+   ],
+   [
+    30.8,
+    30.4
+   ],
+   [
+    138.0,
+    123.0
+   ],
+   [
+    79.7,
+    63.6
+   ],
+   [
+    35.9,
+    24.6
+   ],
+   [
+    65.3,
+    70.8
+   ],
+   [
+    11.3,
+    24.0
+   ],
+   [
+    17.8,
+    11.1
+   ],
+   [
+    32.7,
+    47.4
+   ],
+   [
+    65.3,
+    68.6
+   ],
+   [
+    8.6,
+    7.9
+   ],
+   [
+    21.0,
+    28.2
+   ],
+   [
+    97.6,
+    99.6
+   ],
+   [
+    62.4,
+    43.8
+   ],
+   [
+    27.4,
+    11.9
+   ],
+   [
+    34.4,
+    21.4
+   ],
+   [
+    16.9,
+    17.6
+   ],
+   [
+    49.6,
+    47.4
+   ],
+   [
+    84.8,
+    77.2
+   ],
+   [
+    35.6,
+    37.2
+   ],
+   [
+    40.7,
+    43.5
+   ],
+   [
+    56.3,
+    69.0
+   ],
+   [
+    20.4,
+    15.8
+   ],
+   [
+    12.2,
+    18.9
+   ],
+   [
+    81.0,
+    83.7
+   ],
+   [
+    8.6,
+    5.2
+   ],
+   [
+    70.8,
+    75.0
+   ],
+   [
+    21.3,
+    27.8
+   ],
+   [
+    28.1,
+    18.3
+   ],
+   [
+    24.7,
+    29.0
+   ],
+   [
+    33.6,
+    34.0
+   ],
+   [
+    33.0,
+    31.0
+   ],
+   [
+    19.5,
+    21.6
+   ],
+   [
+    80.3,
+    44.0
+   ],
+   [
+    87.4,
+    94.2
+   ],
+   [
+    31.0,
+    33.8
+   ],
+   [
+    6.2,
+    3.9
+   ],
+   [
+    35.2,
+    27.9
+   ],
+   [
+    18.1,
+    24.3
+   ],
+   [
+    50.5,
+    54.3
+   ],
+   [
+    95.4,
+    88.1
+   ],
+   [
+    23.1,
+    18.4
+   ],
+   [
+    6.1,
+    13.7
+   ],
+   [
+    39.7,
+    28.2
+   ],
+   [
+    77.3,
+    70.8
+   ],
+   [
+    66.2,
+    65.2
+   ],
+   [
+    8.5,
+    11.1
+   ],
+   [
+    22.4,
+    25.2
+   ],
+   [
+    21.1,
+    26.3
+   ],
+   [
+    10.7,
+    16.2
+   ],
+   [
+    60.2,
+    53.6
+   ],
+   [
+    14.1,
+    12.0
+   ],
+   [
+    69.3,
+    71.3
+   ],
+   [
+    4.0,
+    3.2
+   ],
+   [
+    37.7,
+    47.3
+   ],
+   [
+    29.4,
+    15.5
+   ],
+   [
+    146.0,
+    90.5
+   ],
+   [
+    101.0,
+    55.0
+   ],
+   [
+    57.7,
+    55.8
+   ],
+   [
+    23.6,
+    32.2
+   ],
+   [
+    40.4,
+    40.2
+   ],
+   [
+    8.4,
+    11.3
+   ],
+   [
+    29.8,
+    31.0
+   ],
+   [
+    92.0,
+    70.6
+   ],
+   [
+    19.5,
+    10.3
+   ],
+   [
+    21.1,
+    36.9
+   ],
+   [
+    33.5,
+    27.6
+   ],
+   [
+    88.5,
+    78.5
+   ],
+   [
+    38.5,
+    39.9
+   ],
+   [
+    51.2,
+    73.7
+   ],
+   [
+    83.8,
+    70.3
+   ],
+   [
+    79.0,
+    61.2
+   ],
+   [
+    36.4,
+    27.5
+   ],
+   [
+    5.7,
+    12.4
+   ],
+   [
+    12.6,
+    10.7
+   ],
+   [
+    20.8,
+    11.3
+   ],
+   [
+    42.1,
+    48.5
+   ],
+   [
+    22.8,
+    20.8
+   ],
+   [
+    56.6,
+    39.4
+   ],
+   [
+    40.6,
+    34.8
+   ],
+   [
+    43.7,
+    50.1
+   ],
+   [
+    140.0,
+    131.0
+   ],
+   [
+    12.3,
+    27.0
+   ],
+   [
+    14.2,
+    16.3
+   ],
+   [
+    17.7,
+    13.8
+   ],
+   [
+    73.0,
+    80.9
+   ],
+   [
+    106.0,
+    92.9
+   ],
+   [
+    54.9,
+    59.3
+   ],
+   [
+    6.7,
+    7.9
+   ],
+   [
+    54.7,
+    64.7
+   ],
+   [
+    103.0,
+    101.0
+   ],
+   [
+    41.7,
+    43.8
+   ],
+   [
+    11.8,
+    19.4
+   ],
+   [
+    41.4,
+    31.8
+   ],
+   [
+    48.7,
+    61.8
+   ],
+   [
+    21.5,
+    24.7
+   ],
+   [
+    32.8,
+    30.9
+   ],
+   [
+    37.7,
+    36.2
+   ],
+   [
+    33.5,
+    27.2
+   ],
+   [
+    52.5,
+    37.0
+   ],
+   [
+    24.1,
+    13.1
+   ],
+   [
+    29.6,
+    28.3
+   ],
+   [
+    37.8,
+    34.0
+   ],
+   [
+    121.0,
+    113.0
+   ],
+   [
+    21.9,
+    18.8
+   ],
+   [
+    44.6,
+    43.0
+   ],
+   [
+    74.4,
+    60.6
+   ],
+   [
+    57.8,
+    50.1
+   ],
+   [
+    51.6,
+    47.5
+   ],
+   [
+    9.3,
+    20.8
+   ],
+   [
+    22.0,
+    12.7
+   ],
+   [
+    42.2,
+    46.7
+   ],
+   [
+    54.0,
+    41.7
+   ],
+   [
+    38.5,
+    32.0
+   ],
+   [
+    37.3,
+    27.7
+   ],
+   [
+    12.1,
+    14.9
+   ],
+   [
+    52.5,
+    41.0
+   ],
+   [
+    67.7,
+    48.1
+   ],
+   [
+    88.1,
+    96.6
+   ],
+   [
+    46.0,
+    39.7
+   ],
+   [
+    20.2,
+    22.4
+   ],
+   [
+    31.1,
+    36.3
+   ],
+   [
+    105.0,
+    77.9
+   ],
+   [
+    66.0,
+    72.3
+   ],
+   [
+    85.4,
+    78.4
+   ],
+   [
+    48.0,
+    49.7
+   ],
+   [
+    11.3,
+    16.2
+   ],
+   [
+    32.2,
+    31.6
+   ],
+   [
+    62.7,
+    53.2
+   ],
+   [
+    40.8,
+    42.1
+   ],
+   [
+    63.8,
+    65.2
+   ],
+   [
+    16.7,
+    20.5
+   ],
+   [
+    18.6,
+    18.5
+   ],
+   [
+    56.3,
+    52.7
+   ],
+   [
+    57.9,
+    50.5
+   ],
+   [
+    54.8,
+    50.6
+   ],
+   [
+    18.6,
+    27.2
+   ],
+   [
+    34.0,
+    33.0
+   ],
+   [
+    51.6,
+    46.5
+   ],
+   [
+    5.4,
+    3.2
+   ],
+   [
+    23.8,
+    29.5
+   ],
+   [
+    7.9,
+    9.4
+   ],
+   [
+    42.7,
+    45.9
+   ],
+   [
+    20.3,
+    23.0
+   ],
+   [
+    109.0,
+    84.0
+   ],
+   [
+    14.5,
+    23.2
+   ],
+   [
+    11.7,
+    11.9
+   ],
+   [
+    12.6,
+    14.9
+   ],
+   [
+    49.1,
+    41.3
+   ],
+   [
+    18.0,
+    12.3
+   ],
+   [
+    29.1,
+    25.6
+   ],
+   [
+    51.5,
+    50.8
+   ],
+   [
+    55.6,
+    54.5
+   ],
+   [
+    12.7,
+    12.7
+   ],
+   [
+    73.9,
+    67.0
+   ],
+   [
+    62.9,
+    59.6
+   ],
+   [
+    21.2,
+    19.7
+   ],
+   [
+    9.8,
+    10.1
+   ],
+   [
+    62.0,
+    54.3
+   ],
+   [
+    21.2,
+    18.7
+   ],
+   [
+    28.6,
+    28.6
+   ],
+   [
+    79.7,
+    60.8
+   ],
+   [
+    113.0,
+    86.3
+   ],
+   [
+    87.2,
+    62.2
+   ],
+   [
+    61.2,
+    76.0
+   ],
+   [
+    33.8,
+    26.1
+   ],
+   [
+    104.0,
+    87.2
+   ],
+   [
+    51.3,
+    53.4
+   ],
+   [
+    13.2,
+    15.1
+   ],
+   [
+    50.4,
+    40.0
+   ],
+   [
+    50.2,
+    43.9
+   ],
+   [
+    53.1,
+    58.4
+   ],
+   [
+    47.4,
+    38.2
+   ],
+   [
+    10.0,
+    10.6
+   ],
+   [
+    19.7,
+    16.5
+   ],
+   [
+    44.2,
+    46.2
+   ],
+   [
+    74.9,
+    60.1
+   ],
+   [
+    23.9,
+    23.4
+   ],
+   [
+    38.3,
+    31.1
+   ],
+   [
+    94.3,
+    31.1
+   ],
+   [
+    27.7,
+    29.9
+   ],
+   [
+    68.8,
+    65.3
+   ],
+   [
+    38.7,
+    40.0
+   ],
+   [
+    51.6,
+    27.0
+   ],
+   [
+    40.8,
+    47.1
+   ],
+   [
+    10.3,
+    8.1
+   ],
+   [
+    23.8,
+    17.4
+   ],
+   [
+    47.9,
+    53.4
+   ],
+   [
+    36.3,
+    30.8
+   ],
+   [
+    32.9,
+    34.1
+   ],
+   [
+    49.3,
+    43.2
+   ],
+   [
+    47.1,
+    41.2
+   ],
+   [
+    11.7,
+    25.4
+   ],
+   [
+    15.5,
+    20.9
+   ],
+   [
+    68.3,
+    59.8
+   ],
+   [
+    22.2,
+    20.2
+   ],
+   [
+    10.0,
+    11.5
+   ],
+   [
+    26.7,
+    30.7
+   ],
+   [
+    47.8,
+    41.7
+   ],
+   [
+    53.9,
+    48.9
+   ],
+   [
+    10.8,
+    20.7
+   ],
+   [
+    47.2,
+    39.3
+   ],
+   [
+    37.4,
+    28.0
+   ],
+   [
+    83.4,
+    75.7
+   ],
+   [
+    93.2,
+    75.9
+   ],
+   [
+    14.4,
+    16.3
+   ],
+   [
+    15.0,
+    12.9
+   ],
+   [
+    36.3,
+    33.2
+   ],
+   [
+    64.4,
+    56.0
+   ],
+   [
+    49.9,
+    47.3
+   ],
+   [
+    13.7,
+    15.1
+   ],
+   [
+    48.0,
+    48.9
+   ],
+   [
+    12.3,
+    14.8
+   ],
+   [
+    27.0,
+    25.7
+   ],
+   [
+    19.5,
+    27.6
+   ],
+   [
+    21.9,
+    24.4
+   ],
+   [
+    75.1,
+    72.8
+   ],
+   [
+    80.4,
+    85.4
+   ],
+   [
+    43.0,
+    46.0
+   ],
+   [
+    47.0,
+    38.4
+   ],
+   [
+    97.8,
+    95.8
+   ],
+   [
+    20.6,
+    30.4
+   ],
+   [
+    20.1,
+    21.9
+   ],
+   [
+    66.4,
+    60.8
+   ],
+   [
+    18.9,
+    21.7
+   ],
+   [
+    67.7,
+    65.7
+   ],
+   [
+    52.8,
+    44.4
+   ],
+   [
+    37.5,
+    37.2
+   ],
+   [
+    84.2,
+    63.2
+   ],
+   [
+    20.0,
+    28.8
+   ],
+   [
+    8.7,
+    13.6
+   ],
+   [
+    74.1,
+    77.6
+   ],
+   [
+    37.4,
+    36.2
+   ],
+   [
+    8.1,
+    5.5
+   ],
+   [
+    5.8,
+    1.5
+   ],
+   [
+    44.2,
+    15.8
+   ],
+   [
+    70.0,
+    68.8
+   ],
+   [
+    35.5,
+    34.4
+   ],
+   [
+    31.4,
+    33.0
+   ],
+   [
+    25.8,
+    29.1
+   ],
+   [
+    23.3,
+    22.2
+   ],
+   [
+    42.3,
+    45.8
+   ],
+   [
+    69.4,
+    59.2
+   ],
+   [
+    65.9,
+    91.1
+   ],
+   [
+    11.0,
+    18.0
+   ],
+   [
+    32.4,
+    22.8
+   ],
+   [
+    35.3,
+    21.7
+   ],
+   [
+    78.4,
+    54.3
+   ],
+   [
+    43.6,
+    49.2
+   ],
+   [
+    44.4,
+    51.8
+   ],
+   [
+    113.0,
+    91.4
+   ],
+   [
+    25.1,
+    21.4
+   ],
+   [
+    25.4,
+    27.3
+   ],
+   [
+    55.8,
+    44.7
+   ],
+   [
+    22.0,
+    35.2
+   ],
+   [
+    37.6,
+    28.4
+   ],
+   [
+    50.4,
+    42.0
+   ],
+   [
+    18.4,
+    14.5
+   ],
+   [
+    51.7,
+    41.5
+   ],
+   [
+    20.2,
+    15.2
+   ],
+   [
+    39.6,
+    40.4
+   ],
+   [
+    27.4,
+    27.3
+   ],
+   [
+    12.0,
+    11.0
+   ],
+   [
+    7.3,
+    16.3
+   ],
+   [
+    38.5,
+    47.2
+   ],
+   [
+    40.0,
+    35.0
+   ],
+   [
+    74.9,
+    75.1
+   ],
+   [
+    6.1,
+    12.7
+   ],
+   [
+    44.3,
+    48.6
+   ],
+   [
+    40.3,
+    40.9
+   ],
+   [
+    49.4,
+    47.0
+   ],
+   [
+    47.0,
+    51.9
+   ],
+   [
+    79.3,
+    83.9
+   ],
+   [
+    55.0,
+    60.8
+   ],
+   [
+    11.5,
+    13.1
+   ],
+   [
+    18.6,
+    22.8
+   ],
+   [
+    9.2,
+    10.5
+   ],
+   [
+    9.3,
+    5.8
+   ],
+   [
+    13.4,
+    19.0
+   ],
+   [
+    44.3,
+    30.5
+   ],
+   [
+    42.5,
+    37.4
+   ],
+   [
+    8.3,
+    10.1
+   ],
+   [
+    16.9,
+    15.7
+   ],
+   [
+    28.1,
+    28.5
+   ],
+   [
+    21.6,
+    17.0
+   ],
+   [
+    41.7,
+    43.6
+   ],
+   [
+    112.0,
+    120.0
+   ],
+   [
+    87.8,
+    89.6
+   ],
+   [
+    54.8,
+    53.7
+   ],
+   [
+    88.6,
+    91.5
+   ],
+   [
+    60.6,
+    38.5
+   ],
+   [
+    104.0,
+    103.0
+   ],
+   [
+    39.6,
+    34.4
+   ],
+   [
+    91.5,
+    74.9
+   ],
+   [
+    129.0,
+    108.0
+   ],
+   [
+    6.3,
+    13.7
+   ],
+   [
+    8.3,
+    11.4
+   ],
+   [
+    39.0,
+    40.7
+   ],
+   [
+    22.3,
+    22.0
+   ],
+   [
+    5.3,
+    0.6
+   ],
+   [
+    76.4,
+    69.2
+   ],
+   [
+    39.5,
+    33.3
+   ],
+   [
+    51.6,
+    46.7
+   ],
+   [
+    51.9,
+    56.9
+   ],
+   [
+    24.5,
+    27.5
+   ],
+   [
+    9.6,
+    12.5
+   ],
+   [
+    76.0,
+    66.9
+   ],
+   [
+    37.4,
+    26.5
+   ],
+   [
+    22.3,
+    22.8
+   ],
+   [
+    15.8,
+    20.5
+   ],
+   [
+    37.3,
+    33.9
+   ],
+   [
+    86.1,
+    68.7
+   ],
+   [
+    11.5,
+    10.4
+   ],
+   [
+    16.3,
+    12.2
+   ],
+   [
+    96.0,
+    70.7
+   ],
+   [
+    6.9,
+    15.3
+   ],
+   [
+    35.2,
+    40.6
+   ],
+   [
+    61.4,
+    64.3
+   ],
+   [
+    117.0,
+    119.0
+   ],
+   [
+    7.0,
+    13.2
+   ],
+   [
+    10.4,
+    16.9
+   ],
+   [
+    65.7,
+    66.2
+   ],
+   [
+    55.9,
+    43.4
+   ],
+   [
+    40.4,
+    42.9
+   ],
+   [
+    35.4,
+    40.8
+   ],
+   [
+    79.5,
+    63.0
+   ],
+   [
+    40.5,
+    37.5
+   ],
+   [
+    59.2,
+    58.2
+   ],
+   [
+    26.8,
+    12.8
+   ],
+   [
+    8.6,
+    14.7
+   ],
+   [
+    60.2,
+    64.4
+   ],
+   [
+    30.6,
+    26.6
+   ],
+   [
+    20.3,
+    16.7
+   ],
+   [
+    18.0,
+    17.5
+   ],
+   [
+    61.0,
+    80.0
+   ],
+   [
+    51.9,
+    55.2
+   ],
+   [
+    61.7,
+    59.7
+   ],
+   [
+    25.5,
+    28.0
+   ],
+   [
+    15.4,
+    16.1
+   ],
+   [
+    58.8,
+    60.1
+   ],
+   [
+    40.7,
+    46.8
+   ],
+   [
+    35.9,
+    35.6
+   ],
+   [
+    44.6,
+    51.2
+   ],
+   [
+    24.2,
+    23.5
+   ],
+   [
+    43.5,
+    48.5
+   ],
+   [
+    13.8,
+    15.7
+   ],
+   [
+    20.9,
+    24.6
+   ],
+   [
+    43.8,
+    34.6
+   ],
+   [
+    14.0,
+    16.9
+   ],
+   [
+    33.3,
+    22.3
+   ],
+   [
+    43.0,
+    42.7
+   ],
+   [
+    69.6,
+    68.6
+   ],
+   [
+    34.5,
+    34.6
+   ],
+   [
+    36.8,
+    30.2
+   ],
+   [
+    9.2,
+    0.5
+   ],
+   [
+    21.0,
+    21.6
+   ],
+   [
+    21.7,
+    31.8
+   ],
+   [
+    13.3,
+    21.7
+   ],
+   [
+    32.6,
+    30.0
+   ],
+   [
+    18.5,
+    18.3
+   ],
+   [
+    64.8,
+    61.0
+   ],
+   [
+    75.8,
+    63.8
+   ],
+   [
+    13.4,
+    22.0
+   ],
+   [
+    44.0,
+    43.5
+   ],
+   [
+    35.0,
+    39.9
+   ],
+   [
+    13.7,
+    17.8
+   ],
+   [
+    14.0,
+    12.8
+   ],
+   [
+    36.8,
+    33.9
+   ],
+   [
+    37.1,
+    30.8
+   ],
+   [
+    110.0,
+    110.0
+   ],
+   [
+    72.1,
+    64.6
+   ],
+   [
+    17.1,
+    20.1
+   ],
+   [
+    79.0,
+    74.1
+   ],
+   [
+    54.8,
+    47.0
+   ],
+   [
+    64.2,
+    63.6
+   ],
+   [
+    90.0,
+    73.8
+   ],
+   [
+    28.0,
+    17.6
+   ],
+   [
+    16.3,
+    22.3
+   ],
+   [
+    45.4,
+    47.3
+   ],
+   [
+    61.1,
+    50.9
+   ],
+   [
+    13.8,
+    11.5
+   ],
+   [
+    53.5,
+    40.4
+   ],
+   [
+    13.1,
+    16.5
+   ],
+   [
+    56.4,
+    32.9
+   ],
+   [
+    64.1,
+    40.5
+   ],
+   [
+    23.2,
+    24.0
+   ],
+   [
+    11.6,
+    117.0
+   ],
+   [
+    34.4,
+    38.2
+   ],
+   [
+    83.4,
+    76.2
+   ],
+   [
+    6.9,
+    9.4
+   ],
+   [
+    34.3,
+    42.2
+   ],
+   [
+    33.7,
+    29.7
+   ],
+   [
+    66.6,
+    66.5
+   ],
+   [
+    74.3,
+    62.8
+   ],
+   [
+    28.7,
+    24.9
+   ],
+   [
+    6.8,
+    3.5
+   ],
+   [
+    47.1,
+    40.6
+   ],
+   [
+    37.0,
+    31.1
+   ],
+   [
+    15.2,
+    15.5
+   ],
+   [
+    6.7,
+    6.3
+   ],
+   [
+    34.1,
+    34.2
+   ],
+   [
+    86.2,
+    97.8
+   ],
+   [
+    30.9,
+    34.9
+   ],
+   [
+    10.6,
+    13.6
+   ],
+   [
+    18.2,
+    19.5
+   ],
+   [
+    54.8,
+    57.1
+   ],
+   [
+    10.4,
+    16.6
+   ],
+   [
+    62.9,
+    67.7
+   ],
+   [
+    175.0,
+    104.0
+   ],
+   [
+    11.1,
+    22.4
+   ],
+   [
+    57.5,
+    54.9
+   ],
+   [
+    10.3,
+    12.1
+   ],
+   [
+    9.7,
+    10.0
+   ],
+   [
+    32.6,
+    33.2
+   ],
+   [
+    13.0,
+    14.6
+   ],
+   [
+    93.2,
+    92.8
+   ],
+   [
+    16.6,
+    15.5
+   ],
+   [
+    39.6,
+    33.5
+   ],
+   [
+    28.1,
+    25.1
+   ],
+   [
+    33.2,
+    27.1
+   ],
+   [
+    23.4,
+    10.2
+   ],
+   [
+    41.0,
+    33.9
+   ],
+   [
+    10.3,
+    5.9
+   ],
+   [
+    57.5,
+    67.8
+   ],
+   [
+    15.4,
+    21.1
+   ],
+   [
+    18.2,
+    18.3
+   ],
+   [
+    36.2,
+    38.2
+   ],
+   [
+    10.7,
+    6.5
+   ],
+   [
+    38.0,
+    38.7
+   ],
+   [
+    58.1,
+    56.7
+   ],
+   [
+    38.7,
+    40.5
+   ],
+   [
+    24.4,
+    26.6
+   ],
+   [
+    37.6,
+    38.1
+   ],
+   [
+    65.7,
+    56.4
+   ],
+   [
+    17.3,
+    17.0
+   ],
+   [
+    28.9,
+    28.0
+   ],
+   [
+    54.9,
+    69.5
+   ],
+   [
+    34.7,
+    31.1
+   ],
+   [
+    61.5,
+    50.7
+   ],
+   [
+    59.1,
+    67.7
+   ],
+   [
+    70.9,
+    75.6
+   ],
+   [
+    32.7,
+    31.0
+   ],
+   [
+    73.6,
+    67.9
+   ],
+   [
+    71.7,
+    69.6
+   ],
+   [
+    80.7,
+    78.2
+   ],
+   [
+    74.7,
+    68.2
+   ],
+   [
+    88.7,
+    81.5
+   ],
+   [
+    95.4,
+    84.2
+   ],
+   [
+    20.9,
+    17.2
+   ],
+   [
+    48.7,
+    41.3
+   ],
+   [
+    40.0,
+    43.5
+   ],
+   [
+    69.0,
+    61.4
+   ],
+   [
+    36.1,
+    41.3
+   ],
+   [
+    57.4,
+    53.1
+   ],
+   [
+    6.1,
+    6.0
+   ],
+   [
+    50.1,
+    56.2
+   ],
+   [
+    19.2,
+    16.6
+   ],
+   [
+    49.2,
+    39.9
+   ],
+   [
+    50.3,
+    48.8
+   ],
+   [
+    12.6,
+    10.3
+   ],
+   [
+    8.7,
+    13.1
+   ],
+   [
+    37.1,
+    37.6
+   ],
+   [
+    11.8,
+    21.2
+   ],
+   [
+    25.3,
+    27.7
+   ],
+   [
+    27.9,
+    28.9
+   ],
+   [
+    47.1,
+    45.7
+   ],
+   [
+    20.9,
+    23.0
+   ],
+   [
+    37.3,
+    31.9
+   ],
+   [
+    46.1,
+    33.8
+   ],
+   [
+    15.1,
+    20.3
+   ],
+   [
+    40.2,
+    31.1
+   ],
+   [
+    31.6,
+    29.7
+   ],
+   [
+    22.5,
+    17.1
+   ],
+   [
+    19.8,
+    22.7
+   ],
+   [
+    37.7,
+    29.9
+   ],
+   [
+    25.3,
+    28.8
+   ],
+   [
+    39.7,
+    36.4
+   ],
+   [
+    17.9,
+    11.8
+   ],
+   [
+    7.0,
+    0.2
+   ],
+   [
+    50.6,
+    58.2
+   ],
+   [
+    12.6,
+    14.0
+   ],
+   [
+    45.0,
+    42.3
+   ],
+   [
+    57.7,
+    54.2
+   ],
+   [
+    84.2,
+    61.8
+   ],
+   [
+    25.9,
+    12.3
+   ],
+   [
+    111.0,
+    116.0
+   ],
+   [
+    61.1,
+    65.3
+   ],
+   [
+    20.0,
+    22.3
+   ],
+   [
+    38.2,
+    38.8
+   ],
+   [
+    8.0,
+    39.8
+   ],
+   [
+    15.7,
+    18.5
+   ],
+   [
+    86.7,
+    76.8
+   ],
+   [
+    15.3,
+    19.2
+   ],
+   [
+    43.4,
+    29.4
+   ],
+   [
+    59.8,
+    78.6
+   ],
+   [
+    14.2,
+    26.5
+   ],
+   [
+    37.2,
+    30.1
+   ],
+   [
+    91.3,
+    92.3
+   ],
+   [
+    6.2,
+    7.1
+   ],
+   [
+    82.2,
+    78.4
+   ],
+   [
+    37.7,
+    31.2
+   ],
+   [
+    16.7,
+    21.8
+   ],
+   [
+    22.8,
+    28.2
+   ],
+   [
+    7.6,
+    10.5
+   ],
+   [
+    37.8,
+    37.7
+   ],
+   [
+    27.2,
+    31.6
+   ],
+   [
+    65.7,
+    56.2
+   ],
+   [
+    90.5,
+    74.4
+   ],
+   [
+    20.5,
+    23.5
+   ],
+   [
+    101.0,
+    103.0
+   ],
+   [
+    31.0,
+    29.9
+   ],
+   [
+    28.2,
+    20.0
+   ],
+   [
+    123.0,
+    114.0
+   ],
+   [
+    88.7,
+    80.2
+   ],
+   [
+    32.4,
+    33.4
+   ],
+   [
+    10.0,
+    4.2
+   ],
+   [
+    80.6,
+    71.6
+   ],
+   [
+    26.6,
+    26.9
+   ],
+   [
+    10.9,
+    16.7
+   ],
+   [
+    69.5,
+    58.2
+   ],
+   [
+    7.0,
+    1.0
+   ],
+   [
+    26.5,
+    27.7
+   ],
+   [
+    8.5,
+    9.0
+   ],
+   [
+    83.6,
+    77.0
+   ],
+   [
+    21.1,
+    9.7
+   ],
+   [
+    28.6,
+    25.1
+   ],
+   [
+    44.4,
+    41.8
+   ],
+   [
+    72.4,
+    52.8
+   ],
+   [
+    35.4,
+    33.1
+   ],
+   [
+    44.9,
+    42.5
+   ],
+   [
+    27.1,
+    28.1
+   ],
+   [
+    23.9,
+    25.9
+   ],
+   [
+    147.0,
+    132.0
+   ],
+   [
+    16.7,
+    14.3
+   ],
+   [
+    73.2,
+    53.6
+   ],
+   [
+    27.3,
+    20.0
+   ],
+   [
+    85.9,
+    59.1
+   ],
+   [
+    7.3,
+    7.5
+   ],
+   [
+    10.2,
+    15.0
+   ],
+   [
+    4.5,
+    11.4
+   ],
+   [
+    7.8,
+    12.3
+   ],
+   [
+    30.6,
+    31.9
+   ],
+   [
+    33.3,
+    43.2
+   ],
+   [
+    46.3,
+    52.5
+   ],
+   [
+    94.0,
+    76.4
+   ],
+   [
+    44.4,
+    59.4
+   ],
+   [
+    31.8,
+    30.4
+   ],
+   [
+    19.5,
+    13.1
+   ],
+   [
+    19.1,
+    18.6
+   ],
+   [
+    53.9,
+    53.3
+   ],
+   [
+    85.6,
+    86.0
+   ],
+   [
+    13.9,
+    17.9
+   ],
+   [
+    47.1,
+    41.4
+   ],
+   [
+    15.7,
+    16.7
+   ],
+   [
+    8.2,
+    6.7
+   ],
+   [
+    63.9,
+    56.2
+   ],
+   [
+    41.3,
+    41.6
+   ],
+   [
+    60.8,
+    52.3
+   ],
+   [
+    70.0,
+    63.1
+   ],
+   [
+    138.0,
+    114.0
+   ],
+   [
+    18.1,
+    37.4
+   ],
+   [
+    24.7,
+    25.1
+   ],
+   [
+    30.0,
+    23.6
+   ],
+   [
+    15.9,
+    15.5
+   ],
+   [
+    83.9,
+    87.4
+   ],
+   [
+    16.6,
+    8.3
+   ],
+   [
+    54.7,
+    50.5
+   ],
+   [
+    115.0,
+    110.0
+   ],
+   [
+    18.8,
+    10.0
+   ],
+   [
+    77.5,
+    77.1
+   ],
+   [
+    15.7,
+    15.2
+   ],
+   [
+    40.8,
+    16.5
+   ],
+   [
+    17.8,
+    24.5
+   ],
+   [
+    39.4,
+    41.2
+   ],
+   [
+    15.0,
+    12.2
+   ],
+   [
+    52.4,
+    48.8
+   ],
+   [
+    30.3,
+    30.3
+   ],
+   [
+    113.0,
+    95.7
+   ],
+   [
+    62.6,
+    63.3
+   ],
+   [
+    85.8,
+    75.1
+   ],
+   [
+    22.8,
+    26.5
+   ],
+   [
+    51.9,
+    55.1
+   ],
+   [
+    4.2,
+    2.3
+   ],
+   [
+    38.9,
+    27.6
+   ],
+   [
+    78.2,
+    84.7
+   ],
+   [
+    50.6,
+    52.0
+   ],
+   [
+    14.9,
+    10.9
+   ],
+   [
+    9.9,
+    26.0
+   ],
+   [
+    38.8,
+    32.8
+   ],
+   [
+    75.3,
+    52.7
+   ],
+   [
+    24.9,
+    23.3
+   ],
+   [
+    18.8,
+    14.2
+   ],
+   [
+    39.6,
+    34.9
+   ],
+   [
+    30.0,
+    38.4
+   ],
+   [
+    65.2,
+    67.6
+   ],
+   [
+    61.7,
+    35.3
+   ],
+   [
+    82.6,
+    80.4
+   ],
+   [
+    80.7,
+    22.8
+   ],
+   [
+    40.0,
+    26.0
+   ],
+   [
+    69.3,
+    70.9
+   ],
+   [
+    7.3,
+    11.6
+   ],
+   [
+    61.8,
+    56.7
+   ],
+   [
+    13.4,
+    8.2
+   ],
+   [
+    47.2,
+    48.4
+   ],
+   [
+    37.1,
+    43.1
+   ],
+   [
+    49.6,
+    50.0
+   ],
+   [
+    21.4,
+    15.9
+   ],
+   [
+    14.9,
+    15.0
+   ],
+   [
+    33.3,
+    30.2
+   ],
+   [
+    27.0,
+    30.1
+   ],
+   [
+    30.0,
+    26.6
+   ],
+   [
+    24.3,
+    29.7
+   ],
+   [
+    24.4,
+    29.6
+   ],
+   [
+    46.2,
+    51.5
+   ],
+   [
+    144.0,
+    147.0
+   ],
+   [
+    57.0,
+    52.0
+   ],
+   [
+    5.7,
+    8.2
+   ],
+   [
+    71.0,
+    68.2
+   ],
+   [
+    45.4,
+    42.5
+   ],
+   [
+    11.1,
+    12.0
+   ],
+   [
+    56.8,
+    51.2
+   ],
+   [
+    71.4,
+    56.8
+   ],
+   [
+    18.9,
+    19.3
+   ],
+   [
+    106.0,
+    87.3
+   ],
+   [
+    73.7,
+    50.2
+   ],
+   [
+    27.7,
+    17.5
+   ],
+   [
+    56.9,
+    40.0
+   ],
+   [
+    32.4,
+    35.8
+   ],
+   [
+    65.2,
+    62.5
+   ],
+   [
+    21.3,
+    21.0
+   ],
+   [
+    60.4,
+    62.4
+   ],
+   [
+    8.3,
+    5.9
+   ],
+   [
+    41.7,
+    41.7
+   ],
+   [
+    108.0,
+    75.3
+   ],
+   [
+    30.2,
+    24.7
+   ],
+   [
+    23.3,
+    14.5
+   ],
+   [
+    3.7,
+    105.0
+   ],
+   [
+    20.3,
+    26.2
+   ],
+   [
+    122.0,
+    114.0
+   ],
+   [
+    21.0,
+    22.5
+   ],
+   [
+    61.4,
+    46.0
+   ],
+   [
+    9.1,
+    15.4
+   ],
+   [
+    106.0,
+    78.4
+   ],
+   [
+    98.1,
+    97.8
+   ],
+   [
+    26.3,
+    9.8
+   ],
+   [
+    46.1,
+    42.9
+   ],
+   [
+    81.4,
+    77.0
+   ],
+   [
+    47.8,
+    55.2
+   ],
+   [
+    9.5,
+    8.7
+   ],
+   [
+    91.4,
+    79.5
+   ],
+   [
+    10.1,
+    12.0
+   ],
+   [
+    13.5,
+    21.3
+   ],
+   [
+    94.5,
+    85.9
+   ],
+   [
+    31.2,
+    29.7
+   ],
+   [
+    10.3,
+    10.3
+   ],
+   [
+    87.4,
+    75.1
+   ],
+   [
+    29.1,
+    32.0
+   ],
+   [
+    21.0,
+    20.5
+   ],
+   [
+    53.2,
+    41.7
+   ],
+   [
+    10.3,
+    14.5
+   ],
+   [
+    50.6,
+    43.5
+   ],
+   [
+    48.1,
+    38.5
+   ],
+   [
+    91.8,
+    92.5
+   ],
+   [
+    79.0,
+    69.7
+   ],
+   [
+    19.6,
+    30.1
+   ],
+   [
+    14.1,
+    8.1
+   ],
+   [
+    9.9,
+    9.3
+   ],
+   [
+    51.8,
+    36.8
+   ],
+   [
+    32.1,
+    30.6
+   ],
+   [
+    41.7,
+    37.4
+   ],
+   [
+    65.9,
+    59.0
+   ],
+   [
+    37.9,
+    25.9
+   ],
+   [
+    14.1,
+    13.8
+   ],
+   [
+    20.2,
+    24.9
+   ],
+   [
+    11.2,
+    8.0
+   ],
+   [
+    24.1,
+    9.9
+   ],
+   [
+    13.3,
+    10.3
+   ],
+   [
+    35.2,
+    35.7
+   ],
+   [
+    72.8,
+    71.7
+   ],
+   [
+    39.2,
+    28.5
+   ],
+   [
+    161.0,
+    161.0
+   ],
+   [
+    27.4,
+    29.0
+   ],
+   [
+    43.6,
+    60.9
+   ],
+   [
+    10.6,
+    4.4
+   ],
+   [
+    74.9,
+    65.3
+   ],
+   [
+    11.0,
+    8.7
+   ],
+   [
+    8.6,
+    11.6
+   ],
+   [
+    61.2,
+    73.3
+   ],
+   [
+    13.2,
+    5.5
+   ],
+   [
+    40.1,
+    25.5
+   ],
+   [
+    21.1,
+    19.7
+   ],
+   [
+    36.3,
+    28.9
+   ],
+   [
+    24.9,
+    23.9
+   ],
+   [
+    8.6,
+    10.1
+   ],
+   [
+    106.0,
+    66.2
+   ],
+   [
+    7.2,
+    10.8
+   ],
+   [
+    49.0,
+    45.3
+   ],
+   [
+    64.6,
+    58.3
+   ],
+   [
+    8.2,
+    9.0
+   ],
+   [
+    36.8,
+    41.3
+   ],
+   [
+    80.1,
+    71.6
+   ],
+   [
+    14.1,
+    16.3
+   ],
+   [
+    77.4,
+    60.6
+   ],
+   [
+    10.1,
+    5.6
+   ],
+   [
+    11.0,
+    7.2
+   ],
+   [
+    63.7,
+    56.6
+   ],
+   [
+    55.4,
+    70.2
+   ],
+   [
+    57.2,
+    49.9
+   ],
+   [
+    7.7,
+    11.0
+   ]
+  ]
+ },
+ "thresholds": {
+  "hours_over_who15": 0.8808712278659905,
+  "days_over_who15": 0.9433712622386875,
+  "hours_over_ep": 0.27717391304347827,
+  "days_over_ep": 0.2744112198994443,
+  "n_days": 3779,
+  "station_hour_mean": 44.71279645357054,
+  "station_balanced_mean": 44.30463486799634,
+  "station_mean_min": 28.43187262197903,
+  "station_mean_max": 67.42730552423902,
+  "per_station": [
+   {
+    "location_id": 1776543,
+    "name": "Jihan Fauziah Hamdi ",
+    "provider": "AirGradient",
+    "n": 1774,
+    "mean": 67.42730552423902,
+    "median": 49.0,
+    "p95": 187.3499999999999
+   },
+   {
+    "location_id": 1563313,
+    "name": "Qoryah Darussalam",
+    "provider": "AirGradient",
+    "n": 16250,
+    "mean": 58.97092486153846,
+    "median": 53.7,
+    "p95": 112.0
+   },
+   {
+    "location_id": 1367443,
+    "name": "Depok",
+    "provider": "AirGradient",
+    "n": 13369,
+    "mean": 54.98878195826165,
+    "median": 50.5,
+    "p95": 107.0
+   },
+   {
+    "location_id": 2071976,
+    "name": "Krukut",
+    "provider": "AirGradient",
+    "n": 4911,
+    "mean": 43.12659947057625,
+    "median": 43.2,
+    "p95": 76.35
+   },
+   {
+    "location_id": 6051932,
+    "name": "East Jakarta Mayor Office",
+    "provider": "Clean Air Catalyst",
+    "n": 8517,
+    "mean": 41.16524597863098,
+    "median": 38.2,
+    "p95": 80.5
+   },
+   {
+    "location_id": 8637,
+    "name": "Jakarta Central",
+    "provider": "AirNow",
+    "n": 3326,
+    "mean": 40.546301864101025,
+    "median": 34.0,
+    "p95": 73.0
+   },
+   {
+    "location_id": 1894639,
+    "name": "Jakarta",
+    "provider": "Clarity",
+    "n": 8334,
+    "mean": 39.54724142068635,
+    "median": 33.3,
+    "p95": 95.9
+   },
+   {
+    "location_id": 6051933,
+    "name": "Rusunawa Marunda",
+    "provider": "Clean Air Catalyst",
+    "n": 13787,
+    "mean": 38.904910422862116,
+    "median": 32.9,
+    "p95": 88.8
+   },
+   {
+    "location_id": 8320,
+    "name": "Jakarta South",
+    "provider": "AirNow",
+    "n": 12695,
+    "mean": 37.34163056321386,
+    "median": 35.0,
+    "p95": 75.0
+   },
+   {
+    "location_id": 6051931,
+    "name": "West Jakarta Mayor Office",
+    "provider": "Clean Air Catalyst",
+    "n": 8883,
+    "mean": 36.90016886187099,
+    "median": 33.9,
+    "p95": 77.7
+   },
+   {
+    "location_id": 5599584,
+    "name": "Bogor Selatan",
+    "provider": "AirGradient",
+    "n": 4386,
+    "mean": 28.43187262197903,
+    "median": 27.5,
+    "p95": 64.6
+   }
+  ],
+  "episode_threshold": 55.5
+ },
+ "fire": {
+  "daily": [
+   {
+    "d": "2025-07-10",
+    "n": 122
+   },
+   {
+    "d": "2025-07-11",
+    "n": 116
+   },
+   {
+    "d": "2025-07-12",
+    "n": 92
+   },
+   {
+    "d": "2025-07-13",
+    "n": 158
+   },
+   {
+    "d": "2025-07-14",
+    "n": 33
+   },
+   {
+    "d": "2025-07-15",
+    "n": 44
+   },
+   {
+    "d": "2025-07-16",
+    "n": 246
+   },
+   {
+    "d": "2025-07-17",
+    "n": 202
+   },
+   {
+    "d": "2025-07-18",
+    "n": 755
+   },
+   {
+    "d": "2025-07-19",
+    "n": 1137
+   },
+   {
+    "d": "2025-07-20",
+    "n": 888
+   },
+   {
+    "d": "2025-07-21",
+    "n": 876
+   },
+   {
+    "d": "2025-07-22",
+    "n": 883
+   },
+   {
+    "d": "2025-07-23",
+    "n": 748
+   },
+   {
+    "d": "2025-07-24",
+    "n": 645
+   },
+   {
+    "d": "2025-07-25",
+    "n": 397
+   },
+   {
+    "d": "2025-07-26",
+    "n": 607
+   },
+   {
+    "d": "2025-07-27",
+    "n": 547
+   },
+   {
+    "d": "2025-07-28",
+    "n": 658
+   },
+   {
+    "d": "2025-07-29",
+    "n": 1120
+   },
+   {
+    "d": "2025-07-30",
+    "n": 882
+   },
+   {
+    "d": "2025-07-31",
+    "n": 558
+   },
+   {
+    "d": "2025-08-01",
+    "n": 657
+   },
+   {
+    "d": "2025-08-02",
+    "n": 531
+   },
+   {
+    "d": "2025-08-03",
+    "n": 166
+   },
+   {
+    "d": "2025-08-04",
+    "n": 30
+   },
+   {
+    "d": "2025-08-05",
+    "n": 57
+   },
+   {
+    "d": "2025-08-06",
+    "n": 207
+   },
+   {
+    "d": "2025-08-07",
+    "n": 832
+   },
+   {
+    "d": "2025-08-08",
+    "n": 303
+   },
+   {
+    "d": "2025-08-09",
+    "n": 102
+   },
+   {
+    "d": "2025-08-10",
+    "n": 186
+   },
+   {
+    "d": "2025-08-11",
+    "n": 71
+   },
+   {
+    "d": "2025-08-12",
+    "n": 58
+   },
+   {
+    "d": "2025-08-13",
+    "n": 43
+   },
+   {
+    "d": "2025-08-14",
+    "n": 64
+   },
+   {
+    "d": "2025-08-15",
+    "n": 104
+   },
+   {
+    "d": "2025-08-16",
+    "n": 148
+   },
+   {
+    "d": "2025-08-17",
+    "n": 380
+   },
+   {
+    "d": "2025-08-18",
+    "n": 229
+   },
+   {
+    "d": "2025-08-19",
+    "n": 47
+   },
+   {
+    "d": "2025-08-20",
+    "n": 81
+   },
+   {
+    "d": "2025-08-21",
+    "n": 179
+   },
+   {
+    "d": "2025-08-22",
+    "n": 445
+   },
+   {
+    "d": "2025-08-23",
+    "n": 792
+   },
+   {
+    "d": "2025-08-24",
+    "n": 288
+   },
+   {
+    "d": "2025-08-25",
+    "n": 97
+   },
+   {
+    "d": "2025-08-26",
+    "n": 548
+   },
+   {
+    "d": "2025-08-27",
+    "n": 1449
+   },
+   {
+    "d": "2025-08-28",
+    "n": 2760
+   },
+   {
+    "d": "2025-08-29",
+    "n": 387
+   },
+   {
+    "d": "2025-08-30",
+    "n": 558
+   },
+   {
+    "d": "2025-08-31",
+    "n": 81
+   },
+   {
+    "d": "2025-09-01",
+    "n": 431
+   },
+   {
+    "d": "2025-09-02",
+    "n": 203
+   },
+   {
+    "d": "2025-09-03",
+    "n": 94
+   },
+   {
+    "d": "2025-09-04",
+    "n": 119
+   },
+   {
+    "d": "2025-09-05",
+    "n": 64
+   },
+   {
+    "d": "2025-09-06",
+    "n": 90
+   },
+   {
+    "d": "2025-09-07",
+    "n": 104
+   },
+   {
+    "d": "2025-09-08",
+    "n": 57
+   },
+   {
+    "d": "2025-09-09",
+    "n": 22
+   },
+   {
+    "d": "2025-09-10",
+    "n": 23
+   },
+   {
+    "d": "2025-09-11",
+    "n": 55
+   },
+   {
+    "d": "2025-09-12",
+    "n": 51
+   },
+   {
+    "d": "2025-09-13",
+    "n": 73
+   },
+   {
+    "d": "2025-09-14",
+    "n": 68
+   },
+   {
+    "d": "2025-09-15",
+    "n": 50
+   },
+   {
+    "d": "2025-09-16",
+    "n": 12
+   },
+   {
+    "d": "2025-09-17",
+    "n": 23
+   },
+   {
+    "d": "2025-09-18",
+    "n": 32
+   },
+   {
+    "d": "2025-09-19",
+    "n": 357
+   },
+   {
+    "d": "2025-09-20",
+    "n": 78
+   },
+   {
+    "d": "2025-09-21",
+    "n": 198
+   },
+   {
+    "d": "2025-09-22",
+    "n": 1672
+   },
+   {
+    "d": "2025-09-23",
+    "n": 2390
+   },
+   {
+    "d": "2025-09-24",
+    "n": 2972
+   },
+   {
+    "d": "2025-09-25",
+    "n": 702
+   },
+   {
+    "d": "2025-09-26",
+    "n": 616
+   },
+   {
+    "d": "2025-09-27",
+    "n": 517
+   },
+   {
+    "d": "2025-09-28",
+    "n": 380
+   },
+   {
+    "d": "2025-09-29",
+    "n": 67
+   },
+   {
+    "d": "2025-09-30",
+    "n": 17
+   },
+   {
+    "d": "2025-10-01",
+    "n": 50
+   },
+   {
+    "d": "2025-10-02",
+    "n": 147
+   },
+   {
+    "d": "2025-10-03",
+    "n": 116
+   },
+   {
+    "d": "2025-10-04",
+    "n": 92
+   },
+   {
+    "d": "2025-10-05",
+    "n": 168
+   },
+   {
+    "d": "2025-10-06",
+    "n": 72
+   },
+   {
+    "d": "2025-10-07",
+    "n": 131
+   },
+   {
+    "d": "2025-10-08",
+    "n": 183
+   },
+   {
+    "d": "2025-10-09",
+    "n": 183
+   },
+   {
+    "d": "2025-10-10",
+    "n": 555
+   },
+   {
+    "d": "2025-10-11",
+    "n": 383
+   },
+   {
+    "d": "2025-10-12",
+    "n": 135
+   },
+   {
+    "d": "2025-10-13",
+    "n": 126
+   },
+   {
+    "d": "2025-10-14",
+    "n": 153
+   },
+   {
+    "d": "2025-10-15",
+    "n": 178
+   },
+   {
+    "d": "2025-10-16",
+    "n": 223
+   },
+   {
+    "d": "2025-10-17",
+    "n": 62
+   },
+   {
+    "d": "2025-10-18",
+    "n": 114
+   },
+   {
+    "d": "2025-10-19",
+    "n": 44
+   },
+   {
+    "d": "2025-10-20",
+    "n": 21
+   },
+   {
+    "d": "2025-10-21",
+    "n": 40
+   },
+   {
+    "d": "2025-10-22",
+    "n": 5
+   },
+   {
+    "d": "2025-10-23",
+    "n": 21
+   },
+   {
+    "d": "2025-10-24",
+    "n": 5
+   },
+   {
+    "d": "2025-10-25",
+    "n": 22
+   },
+   {
+    "d": "2025-10-26",
+    "n": 40
+   },
+   {
+    "d": "2025-10-27",
+    "n": 44
+   },
+   {
+    "d": "2025-10-28",
+    "n": 119
+   },
+   {
+    "d": "2025-10-29",
+    "n": 113
+   },
+   {
+    "d": "2025-10-30",
+    "n": 295
+   },
+   {
+    "d": "2025-10-31",
+    "n": 165
+   },
+   {
+    "d": "2025-11-01",
+    "n": 328
+   },
+   {
+    "d": "2025-11-02",
+    "n": 191
+   },
+   {
+    "d": "2025-11-03",
+    "n": 288
+   },
+   {
+    "d": "2025-11-04",
+    "n": 76
+   },
+   {
+    "d": "2025-11-05",
+    "n": 29
+   },
+   {
+    "d": "2025-11-06",
+    "n": 49
+   },
+   {
+    "d": "2025-11-07",
+    "n": 45
+   },
+   {
+    "d": "2025-11-08",
+    "n": 173
+   },
+   {
+    "d": "2025-11-09",
+    "n": 48
+   },
+   {
+    "d": "2025-11-10",
+    "n": 94
+   },
+   {
+    "d": "2025-11-11",
+    "n": 28
+   },
+   {
+    "d": "2025-11-13",
+    "n": 29
+   },
+   {
+    "d": "2025-11-14",
+    "n": 72
+   },
+   {
+    "d": "2025-11-15",
+    "n": 24
+   },
+   {
+    "d": "2025-11-16",
+    "n": 7
+   },
+   {
+    "d": "2025-11-17",
+    "n": 24
+   },
+   {
+    "d": "2025-11-18",
+    "n": 5
+   },
+   {
+    "d": "2025-11-19",
+    "n": 3
+   },
+   {
+    "d": "2025-11-20",
+    "n": 12
+   },
+   {
+    "d": "2025-11-21",
+    "n": 7
+   },
+   {
+    "d": "2025-11-22",
+    "n": 4
+   },
+   {
+    "d": "2025-11-23",
+    "n": 4
+   },
+   {
+    "d": "2025-11-24",
+    "n": 12
+   },
+   {
+    "d": "2025-11-25",
+    "n": 7
+   },
+   {
+    "d": "2025-11-26",
+    "n": 29
+   },
+   {
+    "d": "2025-11-27",
+    "n": 13
+   },
+   {
+    "d": "2025-11-28",
+    "n": 30
+   },
+   {
+    "d": "2025-11-29",
+    "n": 19
+   },
+   {
+    "d": "2025-11-30",
+    "n": 44
+   },
+   {
+    "d": "2025-12-01",
+    "n": 5
+   },
+   {
+    "d": "2025-12-02",
+    "n": 10
+   },
+   {
+    "d": "2025-12-03",
+    "n": 13
+   },
+   {
+    "d": "2025-12-04",
+    "n": 10
+   },
+   {
+    "d": "2025-12-05",
+    "n": 14
+   },
+   {
+    "d": "2025-12-06",
+    "n": 6
+   },
+   {
+    "d": "2025-12-07",
+    "n": 17
+   },
+   {
+    "d": "2025-12-08",
+    "n": 4
+   },
+   {
+    "d": "2025-12-09",
+    "n": 5
+   },
+   {
+    "d": "2025-12-10",
+    "n": 10
+   },
+   {
+    "d": "2025-12-11",
+    "n": 10
+   },
+   {
+    "d": "2025-12-12",
+    "n": 2
+   },
+   {
+    "d": "2025-12-13",
+    "n": 1
+   },
+   {
+    "d": "2025-12-15",
+    "n": 1
+   },
+   {
+    "d": "2025-12-16",
+    "n": 5
+   },
+   {
+    "d": "2025-12-17",
+    "n": 22
+   },
+   {
+    "d": "2025-12-18",
+    "n": 18
+   },
+   {
+    "d": "2025-12-19",
+    "n": 16
+   },
+   {
+    "d": "2025-12-20",
+    "n": 19
+   },
+   {
+    "d": "2025-12-21",
+    "n": 4
+   },
+   {
+    "d": "2025-12-22",
+    "n": 37
+   },
+   {
+    "d": "2025-12-23",
+    "n": 18
+   },
+   {
+    "d": "2025-12-24",
+    "n": 20
+   },
+   {
+    "d": "2025-12-25",
+    "n": 17
+   },
+   {
+    "d": "2025-12-26",
+    "n": 10
+   },
+   {
+    "d": "2025-12-28",
+    "n": 3
+   },
+   {
+    "d": "2025-12-29",
+    "n": 3
+   },
+   {
+    "d": "2025-12-30",
+    "n": 8
+   },
+   {
+    "d": "2026-01-01",
+    "n": 4
+   },
+   {
+    "d": "2026-01-02",
+    "n": 1
+   },
+   {
+    "d": "2026-01-03",
+    "n": 1
+   },
+   {
+    "d": "2026-01-04",
+    "n": 3
+   },
+   {
+    "d": "2026-01-05",
+    "n": 2
+   },
+   {
+    "d": "2026-01-06",
+    "n": 30
+   },
+   {
+    "d": "2026-01-07",
+    "n": 51
+   },
+   {
+    "d": "2026-01-08",
+    "n": 1
+   },
+   {
+    "d": "2026-01-09",
+    "n": 5
+   },
+   {
+    "d": "2026-01-10",
+    "n": 13
+   },
+   {
+    "d": "2026-01-11",
+    "n": 3
+   },
+   {
+    "d": "2026-01-12",
+    "n": 29
+   },
+   {
+    "d": "2026-01-13",
+    "n": 36
+   },
+   {
+    "d": "2026-01-14",
+    "n": 43
+   },
+   {
+    "d": "2026-01-15",
+    "n": 56
+   },
+   {
+    "d": "2026-01-16",
+    "n": 70
+   },
+   {
+    "d": "2026-01-17",
+    "n": 81
+   },
+   {
+    "d": "2026-01-18",
+    "n": 179
+   },
+   {
+    "d": "2026-01-19",
+    "n": 143
+   },
+   {
+    "d": "2026-01-20",
+    "n": 176
+   },
+   {
+    "d": "2026-01-21",
+    "n": 111
+   },
+   {
+    "d": "2026-01-22",
+    "n": 205
+   },
+   {
+    "d": "2026-01-23",
+    "n": 168
+   },
+   {
+    "d": "2026-01-24",
+    "n": 185
+   },
+   {
+    "d": "2026-01-25",
+    "n": 222
+   },
+   {
+    "d": "2026-01-26",
+    "n": 102
+   },
+   {
+    "d": "2026-01-27",
+    "n": 107
+   },
+   {
+    "d": "2026-01-28",
+    "n": 47
+   },
+   {
+    "d": "2026-01-29",
+    "n": 118
+   },
+   {
+    "d": "2026-01-30",
+    "n": 175
+   },
+   {
+    "d": "2026-01-31",
+    "n": 166
+   },
+   {
+    "d": "2026-02-01",
+    "n": 159
+   },
+   {
+    "d": "2026-02-02",
+    "n": 99
+   },
+   {
+    "d": "2026-02-03",
+    "n": 144
+   },
+   {
+    "d": "2026-02-04",
+    "n": 65
+   },
+   {
+    "d": "2026-02-05",
+    "n": 127
+   },
+   {
+    "d": "2026-02-06",
+    "n": 52
+   },
+   {
+    "d": "2026-02-07",
+    "n": 110
+   },
+   {
+    "d": "2026-02-08",
+    "n": 99
+   },
+   {
+    "d": "2026-02-09",
+    "n": 170
+   },
+   {
+    "d": "2026-02-10",
+    "n": 245
+   },
+   {
+    "d": "2026-02-11",
+    "n": 154
+   },
+   {
+    "d": "2026-02-12",
+    "n": 15
+   },
+   {
+    "d": "2026-02-13",
+    "n": 86
+   },
+   {
+    "d": "2026-02-14",
+    "n": 95
+   },
+   {
+    "d": "2026-02-15",
+    "n": 81
+   },
+   {
+    "d": "2026-02-16",
+    "n": 52
+   },
+   {
+    "d": "2026-02-17",
+    "n": 2
+   },
+   {
+    "d": "2026-02-18",
+    "n": 4
+   },
+   {
+    "d": "2026-02-19",
+    "n": 1
+   },
+   {
+    "d": "2026-02-20",
+    "n": 8
+   },
+   {
+    "d": "2026-02-21",
+    "n": 18
+   },
+   {
+    "d": "2026-02-22",
+    "n": 16
+   },
+   {
+    "d": "2026-02-23",
+    "n": 15
+   },
+   {
+    "d": "2026-02-24",
+    "n": 7
+   },
+   {
+    "d": "2026-02-25",
+    "n": 46
+   },
+   {
+    "d": "2026-02-26",
+    "n": 26
+   },
+   {
+    "d": "2026-02-27",
+    "n": 21
+   },
+   {
+    "d": "2026-02-28",
+    "n": 195
+   },
+   {
+    "d": "2026-03-01",
+    "n": 193
+   },
+   {
+    "d": "2026-03-02",
+    "n": 135
+   },
+   {
+    "d": "2026-03-03",
+    "n": 115
+   },
+   {
+    "d": "2026-03-04",
+    "n": 90
+   },
+   {
+    "d": "2026-03-05",
+    "n": 61
+   },
+   {
+    "d": "2026-03-06",
+    "n": 23
+   },
+   {
+    "d": "2026-03-07",
+    "n": 73
+   },
+   {
+    "d": "2026-03-08",
+    "n": 44
+   },
+   {
+    "d": "2026-03-09",
+    "n": 7
+   },
+   {
+    "d": "2026-03-13",
+    "n": 217
+   },
+   {
+    "d": "2026-03-14",
+    "n": 172
+   },
+   {
+    "d": "2026-03-15",
+    "n": 157
+   },
+   {
+    "d": "2026-03-16",
+    "n": 150
+   },
+   {
+    "d": "2026-03-17",
+    "n": 122
+   },
+   {
+    "d": "2026-03-18",
+    "n": 132
+   },
+   {
+    "d": "2026-03-19",
+    "n": 177
+   },
+   {
+    "d": "2026-03-20",
+    "n": 136
+   },
+   {
+    "d": "2026-03-21",
+    "n": 217
+   },
+   {
+    "d": "2026-03-22",
+    "n": 279
+   },
+   {
+    "d": "2026-03-23",
+    "n": 484
+   },
+   {
+    "d": "2026-03-24",
+    "n": 608
+   },
+   {
+    "d": "2026-03-25",
+    "n": 418
+   },
+   {
+    "d": "2026-03-26",
+    "n": 539
+   },
+   {
+    "d": "2026-03-27",
+    "n": 154
+   },
+   {
+    "d": "2026-03-28",
+    "n": 132
+   },
+   {
+    "d": "2026-03-29",
+    "n": 64
+   },
+   {
+    "d": "2026-03-30",
+    "n": 32
+   },
+   {
+    "d": "2026-03-31",
+    "n": 141
+   },
+   {
+    "d": "2026-04-01",
+    "n": 108
+   },
+   {
+    "d": "2026-04-02",
+    "n": 190
+   },
+   {
+    "d": "2026-04-03",
+    "n": 146
+   },
+   {
+    "d": "2026-04-04",
+    "n": 103
+   },
+   {
+    "d": "2026-04-05",
+    "n": 50
+   },
+   {
+    "d": "2026-04-06",
+    "n": 76
+   },
+   {
+    "d": "2026-04-07",
+    "n": 25
+   },
+   {
+    "d": "2026-04-08",
+    "n": 17
+   },
+   {
+    "d": "2026-04-09",
+    "n": 43
+   },
+   {
+    "d": "2026-04-10",
+    "n": 19
+   },
+   {
+    "d": "2026-04-11",
+    "n": 20
+   },
+   {
+    "d": "2026-04-12",
+    "n": 30
+   },
+   {
+    "d": "2026-04-13",
+    "n": 41
+   },
+   {
+    "d": "2026-04-14",
+    "n": 29
+   },
+   {
+    "d": "2026-04-15",
+    "n": 17
+   },
+   {
+    "d": "2026-04-16",
+    "n": 35
+   },
+   {
+    "d": "2026-04-17",
+    "n": 49
+   },
+   {
+    "d": "2026-04-18",
+    "n": 88
+   },
+   {
+    "d": "2026-04-19",
+    "n": 70
+   },
+   {
+    "d": "2026-04-20",
+    "n": 49
+   },
+   {
+    "d": "2026-04-21",
+    "n": 32
+   },
+   {
+    "d": "2026-04-22",
+    "n": 30
+   },
+   {
+    "d": "2026-04-23",
+    "n": 50
+   },
+   {
+    "d": "2026-04-24",
+    "n": 77
+   },
+   {
+    "d": "2026-04-25",
+    "n": 44
+   },
+   {
+    "d": "2026-04-26",
+    "n": 98
+   },
+   {
+    "d": "2026-04-27",
+    "n": 39
+   },
+   {
+    "d": "2026-04-30",
+    "n": 8
+   },
+   {
+    "d": "2026-05-01",
+    "n": 14
+   },
+   {
+    "d": "2026-05-02",
+    "n": 17
+   },
+   {
+    "d": "2026-05-03",
+    "n": 17
+   },
+   {
+    "d": "2026-05-04",
+    "n": 17
+   },
+   {
+    "d": "2026-05-05",
+    "n": 25
+   },
+   {
+    "d": "2026-05-06",
+    "n": 53
+   },
+   {
+    "d": "2026-05-07",
+    "n": 29
+   },
+   {
+    "d": "2026-05-08",
+    "n": 8
+   },
+   {
+    "d": "2026-05-09",
+    "n": 15
+   },
+   {
+    "d": "2026-05-10",
+    "n": 34
+   },
+   {
+    "d": "2026-05-11",
+    "n": 31
+   },
+   {
+    "d": "2026-05-12",
+    "n": 28
+   },
+   {
+    "d": "2026-05-13",
+    "n": 29
+   },
+   {
+    "d": "2026-05-14",
+    "n": 23
+   },
+   {
+    "d": "2026-05-15",
+    "n": 10
+   },
+   {
+    "d": "2026-05-16",
+    "n": 3
+   },
+   {
+    "d": "2026-05-17",
+    "n": 5
+   },
+   {
+    "d": "2026-05-18",
+    "n": 29
+   },
+   {
+    "d": "2026-05-19",
+    "n": 44
+   },
+   {
+    "d": "2026-05-20",
+    "n": 78
+   },
+   {
+    "d": "2026-05-21",
+    "n": 90
+   },
+   {
+    "d": "2026-05-22",
+    "n": 23
+   },
+   {
+    "d": "2026-05-23",
+    "n": 30
+   },
+   {
+    "d": "2026-05-24",
+    "n": 22
+   },
+   {
+    "d": "2026-05-25",
+    "n": 40
+   },
+   {
+    "d": "2026-05-26",
+    "n": 70
+   },
+   {
+    "d": "2026-05-27",
+    "n": 32
+   },
+   {
+    "d": "2026-05-28",
+    "n": 90
+   },
+   {
+    "d": "2026-05-29",
+    "n": 83
+   },
+   {
+    "d": "2026-05-30",
+    "n": 181
+   },
+   {
+    "d": "2026-05-31",
+    "n": 242
+   },
+   {
+    "d": "2026-06-02",
+    "n": 61
+   },
+   {
+    "d": "2026-06-03",
+    "n": 72
+   },
+   {
+    "d": "2026-06-04",
+    "n": 115
+   },
+   {
+    "d": "2026-06-05",
+    "n": 145
+   },
+   {
+    "d": "2026-06-06",
+    "n": 163
+   },
+   {
+    "d": "2026-06-07",
+    "n": 62
+   },
+   {
+    "d": "2026-06-08",
+    "n": 35
+   },
+   {
+    "d": "2026-06-09",
+    "n": 50
+   },
+   {
+    "d": "2026-06-10",
+    "n": 41
+   },
+   {
+    "d": "2026-06-11",
+    "n": 60
+   },
+   {
+    "d": "2026-06-12",
+    "n": 34
+   },
+   {
+    "d": "2026-06-13",
+    "n": 38
+   },
+   {
+    "d": "2026-06-14",
+    "n": 48
+   },
+   {
+    "d": "2026-06-15",
+    "n": 18
+   },
+   {
+    "d": "2026-06-16",
+    "n": 54
+   },
+   {
+    "d": "2026-06-17",
+    "n": 59
+   },
+   {
+    "d": "2026-06-18",
+    "n": 55
+   },
+   {
+    "d": "2026-06-19",
+    "n": 43
+   },
+   {
+    "d": "2026-06-20",
+    "n": 62
+   },
+   {
+    "d": "2026-06-21",
+    "n": 75
+   },
+   {
+    "d": "2026-06-22",
+    "n": 61
+   },
+   {
+    "d": "2026-06-23",
+    "n": 64
+   },
+   {
+    "d": "2026-06-24",
+    "n": 66
+   },
+   {
+    "d": "2026-06-25",
+    "n": 68
+   },
+   {
+    "d": "2026-06-26",
+    "n": 99
+   },
+   {
+    "d": "2026-06-27",
+    "n": 160
+   },
+   {
+    "d": "2026-06-28",
+    "n": 113
+   },
+   {
+    "d": "2026-06-29",
+    "n": 130
+   },
+   {
+    "d": "2026-06-30",
+    "n": 87
+   },
+   {
+    "d": "2026-07-01",
+    "n": 83
+   },
+   {
+    "d": "2026-07-02",
+    "n": 123
+   },
+   {
+    "d": "2026-07-03",
+    "n": 145
+   },
+   {
+    "d": "2026-07-04",
+    "n": 227
+   },
+   {
+    "d": "2026-07-05",
+    "n": 119
+   },
+   {
+    "d": "2026-07-06",
+    "n": 115
+   },
+   {
+    "d": "2026-07-07",
+    "n": 181
+   },
+   {
+    "d": "2026-07-08",
+    "n": 321
+   },
+   {
+    "d": "2026-07-09",
+    "n": 371
+   },
+   {
+    "d": "2026-07-10",
+    "n": 258
+   },
+   {
+    "d": "2026-07-17",
+    "n": 343
+   },
+   {
+    "d": "2026-07-18",
+    "n": 417
+   },
+   {
+    "d": "2026-07-19",
+    "n": 519
+   },
+   {
+    "d": "2026-07-20",
+    "n": 529
+   },
+   {
+    "d": "2026-07-21",
+    "n": 286
+   },
+   {
+    "d": "2026-07-22",
+    "n": 400
+   },
+   {
+    "d": "2026-07-23",
+    "n": 590
+   },
+   {
+    "d": "2026-07-24",
+    "n": 659
+   },
+   {
+    "d": "2026-07-25",
+    "n": 1218
+   },
+   {
+    "d": "2026-07-26",
+    "n": 769
+   },
+   {
+    "d": "2026-07-27",
+    "n": 213
+   },
+   {
+    "d": "2026-07-28",
+    "n": 365
+   },
+   {
+    "d": "2026-07-29",
+    "n": 323
+   },
+   {
+    "d": "2026-07-30",
+    "n": 405
+   },
+   {
+    "d": "2026-07-31",
+    "n": 534
+   },
+   {
+    "d": "2026-08-01",
+    "n": 693
+   },
+   {
+    "d": "2026-08-02",
+    "n": 945
+   },
+   {
+    "d": "2026-08-04",
+    "n": 342
+   },
+   {
+    "d": "2026-08-05",
+    "n": 1771
+   },
+   {
+    "d": "2026-08-06",
+    "n": 1833
+   },
+   {
+    "d": "2026-08-07",
+    "n": 2069
+   },
+   {
+    "d": "2026-08-08",
+    "n": 2953
+   },
+   {
+    "d": "2026-08-09",
+    "n": 2738
+   },
+   {
+    "d": "2026-08-10",
+    "n": 2785
+   },
+   {
+    "d": "2026-08-11",
+    "n": 1965
+   },
+   {
+    "d": "2026-08-12",
+    "n": 1833
+   },
+   {
+    "d": "2026-08-13",
+    "n": 834
+   },
+   {
+    "d": "2026-08-14",
+    "n": 1331
+   },
+   {
+    "d": "2026-08-15",
+    "n": 2129
+   },
+   {
+    "d": "2026-08-16",
+    "n": 2420
+   },
+   {
+    "d": "2026-08-17",
+    "n": 2551
+   },
+   {
+    "d": "2026-08-18",
+    "n": 4842
+   },
+   {
+    "d": "2026-08-19",
+    "n": 3316
+   },
+   {
+    "d": "2026-08-20",
+    "n": 3371
+   },
+   {
+    "d": "2026-08-21",
+    "n": 3490
+   },
+   {
+    "d": "2026-08-22",
+    "n": 3112
+   },
+   {
+    "d": "2026-08-23",
+    "n": 2731
+   },
+   {
+    "d": "2026-08-24",
+    "n": 3695
+   },
+   {
+    "d": "2026-08-25",
+    "n": 3634
+   },
+   {
+    "d": "2026-08-26",
+    "n": 4448
+   },
+   {
+    "d": "2026-08-27",
+    "n": 4317
+   },
+   {
+    "d": "2026-08-28",
+    "n": 9096
+   },
+   {
+    "d": "2026-08-29",
+    "n": 9453
+   },
+   {
+    "d": "2026-08-30",
+    "n": 2844
+   }
+  ],
+  "monthly": [
+   {
+    "m": "2023-01",
+    "n": 603
+   },
+   {
+    "m": "2023-02",
+    "n": 840
+   },
+   {
+    "m": "2023-03",
+    "n": 625
+   },
+   {
+    "m": "2023-04",
+    "n": 1756
+   },
+   {
+    "m": "2023-05",
+    "n": 2192
+   },
+   {
+    "m": "2023-06",
+    "n": 3075
+   },
+   {
+    "m": "2023-07",
+    "n": 8461
+   },
+   {
+    "m": "2023-08",
+    "n": 24835
+   },
+   {
+    "m": "2023-09",
+    "n": 42426
+   },
+   {
+    "m": "2023-10",
+    "n": 42090
+   },
+   {
+    "m": "2023-11",
+    "n": 4616
+   },
+   {
+    "m": "2023-12",
+    "n": 1285
+   },
+   {
+    "m": "2024-01",
+    "n": 528
+   },
+   {
+    "m": "2024-02",
+    "n": 686
+   },
+   {
+    "m": "2024-03",
+    "n": 2075
+   },
+   {
+    "m": "2024-04",
+    "n": 888
+   },
+   {
+    "m": "2024-05",
+    "n": 684
+   },
+   {
+    "m": "2024-06",
+    "n": 1053
+   },
+   {
+    "m": "2024-07",
+    "n": 2981
+   },
+   {
+    "m": "2024-08",
+    "n": 8696
+   },
+   {
+    "m": "2024-09",
+    "n": 19882
+   },
+   {
+    "m": "2024-10",
+    "n": 7527
+   },
+   {
+    "m": "2024-11",
+    "n": 594
+   },
+   {
+    "m": "2024-12",
+    "n": 513
+   },
+   {
+    "m": "2025-01",
+    "n": 220
+   },
+   {
+    "m": "2025-02",
+    "n": 556
+   },
+   {
+    "m": "2025-03",
+    "n": 473
+   },
+   {
+    "m": "2025-04",
+    "n": 612
+   },
+   {
+    "m": "2025-05",
+    "n": 1751
+   },
+   {
+    "m": "2025-06",
+    "n": 2095
+   },
+   {
+    "m": "2025-07",
+    "n": 12602
+   },
+   {
+    "m": "2025-08",
+    "n": 11880
+   },
+   {
+    "m": "2025-09",
+    "n": 11537
+   },
+   {
+    "m": "2025-10",
+    "n": 4005
+   },
+   {
+    "m": "2025-11",
+    "n": 1694
+   },
+   {
+    "m": "2025-12",
+    "n": 308
+   },
+   {
+    "m": "2026-01",
+    "n": 2533
+   },
+   {
+    "m": "2026-02",
+    "n": 2112
+   },
+   {
+    "m": "2026-03",
+    "n": 5072
+   },
+   {
+    "m": "2026-04",
+    "n": 1583
+   },
+   {
+    "m": "2026-05",
+    "n": 1412
+   },
+   {
+    "m": "2026-06",
+    "n": 2138
+   },
+   {
+    "m": "2026-07",
+    "n": 9513
+   },
+   {
+    "m": "2026-08",
+    "n": 87541
+   }
+  ],
+  "median_month": 2085.0,
+  "peak_month": "2026-08",
+  "peak_n": 87541,
+  "ratio_to_median": 41.98609112709832,
+  "prev_max_month": "2023-09",
+  "prev_max_n": 42426
+ },
+ "lit": {
+  "beijing": {
+   "ref": "wangdu",
+   "city": "Beijing",
+   "n_stations": 12,
+   "years": "2013\u20132017",
+   "obs_mean": 79.79,
+   "source": "Table 3, primary test set",
+   "rows": [
+    {
+     "h": 1,
+     "persist_mae": 10.721,
+     "best_mae": 10.544,
+     "best": "Ridge",
+     "persist_rmse": 21.369,
+     "best_rmse": 20.147,
+     "best_r": "Ridge",
+     "skill_mae": 0.016509653950191217,
+     "skill_rmse": 0.05718564275352156
+    },
+    {
+     "h": 6,
+     "persist_mae": 35.056,
+     "best_mae": 31.876,
+     "best": "XGBoost ensemble",
+     "persist_rmse": 61.341,
+     "best_rmse": 54.131,
+     "best_r": "XGBoost ensemble",
+     "skill_mae": 0.09071200365130072,
+     "skill_rmse": 0.11753965536916577
+    },
+    {
+     "h": 24,
+     "persist_mae": 65.172,
+     "best_mae": 56.365,
+     "best": "XGBoost ensemble",
+     "persist_rmse": 98.151,
+     "best_rmse": 80.829,
+     "best_r": "Elastic Net",
+     "skill_mae": 0.1351347204320873,
+     "skill_rmse": 0.17648317388513624
+    }
+   ],
+   "extreme_note": "Table 4: on rows above 242 \u00b5g/m\u00b3 persistence beats every machine-learning model at h=6 and h=24.",
+   "persistence_r2_24h": -0.117
+  },
+  "trondheim": {
+   "ref": "murad",
+   "city": "Trondheim",
+   "source": "\u00a73.3 and Figures 4\u20135",
+   "baseline": "the value observed 24 hours earlier",
+   "persist_rmse": 7.52,
+   "model_rmse": 4.63,
+   "h": 24,
+   "picp_qgb": 0.61,
+   "picp_nominal_qgb": 0.9,
+   "picp_bnn_lo": 0.9,
+   "picp_bnn_hi": 0.99
+  },
+  "elche": {
+   "ref": "rolling",
+   "pollutant": "PM10",
+   "city": "Elche",
+   "static_lo": 0.231,
+   "static_hi": 0.299,
+   "rolling_h1": -0.192,
+   "folds_nonpositive": 34,
+   "folds": 47,
+   "source": "\u00a73.1.2\u20133.1.4"
+  },
+  "fmqo": {
+   "ref": "vitali",
+   "indicator": "RMSE(forecast) / RMSE(persistence)",
+   "threshold": 1.0,
+   "station_share": 0.9,
+   "source": "Eq. 1\u20132 and \u00a72.1"
+  },
+  "accra": {
+   "ref": "raheja",
+   "city": "Accra",
+   "reference_instrument": "Teledyne T640",
+   "clarity_mae_raw": 13.68,
+   "clarity_rmse_raw": 17.51,
+   "clarity_r2_raw": 0.69,
+   "clarity_slope_raw": 1.8,
+   "clarity_mae_corrected": 2.27,
+   "rh_lo": 48.0,
+   "rh_hi": 89.9,
+   "source": "Tables 2\u20133"
+  },
+  "lubbock": {
+   "ref": "lubbock",
+   "city": "Lubbock",
+   "clarity_mae_raw": 3.4,
+   "clarity_r2_raw": 0.66,
+   "source": "\u00a73"
+  },
+  "smoke": {
+   "ref": "berlinghieri",
+   "persistence_precision": 0.908,
+   "n_forecasts": 6,
+   "best_ai_precision": 0.781,
+   "source": "Table 1"
+  },
+  "standards": {
+   "who_annual": 5.0,
+   "who_daily": 15.0,
+   "id_annual": 15.0,
+   "id_daily": 55.0,
+   "id_ref": "PP 22/2021, Lampiran VII",
+   "us_unhealthy": 55.5,
+   "us_very_unhealthy": 125.5,
+   "us_hazardous": 225.5,
+   "eu_points_per_million": 1.0,
+   "eu_ref": "2008/50/EC, Annex V \u00a7B",
+   "epa_min_large_msa": 3,
+   "epa_ref": "40 CFR 58, Appendix D, Table D-5",
+   "jabodetabek_millions": 32.0
+  },
+  "jakarta_level": {
+   "iqair_2023": 37.3,
+   "iqair_2024": 41.7,
+   "ref": "iqair",
+   "peer_jabodetabek": 42.5,
+   "peer_ref": "aogh"
+  }
+ }
+}

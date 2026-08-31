@@ -3,7 +3,7 @@
 
 PY := uv run python pipeline
 
-.PHONY: ingest ground era5 fire firemask features model validate export all refresh
+.PHONY: ingest ground era5 fire firemask features model validate export all refresh replicate article review
 
 ## --- Stage 1 · acquisition (each resumable, safe to rerun) -------------
 ground:          ## OpenAQ v3 PM2.5 ground sensors -> data/ground_hourly.parquet + stations.json
@@ -38,6 +38,15 @@ validate:        ## gates G-E1..G-E5 -> data/stats.json
 
 export:          ## NaN-safe view-models -> web/src/data/*.json
 	$(PY)/export_web.py
+
+## --- Stage 5 · the review article (/airquality/article) -----------------
+replicate:       ## re-derive the headline against 5 more baselines, bootstrap, co-location
+	$(PY)/replicate.py
+
+article:         ## fold summary + replication into web/src/data/article.json
+	$(PY)/article.py
+
+review: replicate article
 
 all: ingest features model validate export
 

@@ -55,6 +55,11 @@ features.py       lagged PM2.5 + meteorology + upwind fire   → features.parque
 model.py          direct GBM per horizon vs persistence      → model_eval / predictions / forecast
 validate.py       gates G-E1…G-E6                            → stats.json
 export_web.py     NaN-safe view models                       → web/public/data/*.json
+        ↓  (review layer — nothing is refitted)
+replicate.py      5 more baselines on the same scored rows,  → replication.json
+                  day-block bootstrap, panel decomposition,
+                  co-location, AQI ladder
+article.py        + summary.json + published benchmarks      → web/src/data/article.json
 ```
 
 Every ingest stage is resumable and idempotent: work is keyed by
@@ -166,10 +171,57 @@ and nothing was tuned to keep one green.
   network, and the dashboard's chapter 03 headline is generated from it rather
   than asserted ahead of it.
 
-**What this adds up to.** The forecast is genuinely better than the baseline
-that matters, at every horizon a client would ask about, and it is honest about
-the two places it is not yet trustworthy: the width of its error bars, and its
-ability to call an episode before it happens.
+**What this adds up to.** The forecast beats persistence at every horizon a client
+would ask about, and it is honest about the two places it is not yet trustworthy:
+the width of its error bars, and its ability to call an episode before it happens.
+
+### E5c · What the adversarial review changed
+
+`pipeline/replicate.py` re-derives the headline on the *same scored rows* — no
+model was refitted — against five further trivial baselines, with a day-block
+bootstrap. `pipeline/article.py` folds that and `summary.json` into
+`web/src/data/article.json`, which the review page at **`/airquality/article`**
+reads. `make review` runs both. Findings that changed what the dashboard says:
+
+1. **Persistence is not the strongest trivial baseline at 24 h.** A trailing
+   24-hour mean reaches MAE 18.15 against persistence's 19.49, and against it the
+   model scores **+11.6% [+9.4, +13.7]** — an interval lying entirely below
+   G-E1's registered 15% threshold. G-E1 stays recorded as passed against the
+   baseline it was written against, because thresholds are not moved after the
+   fact; the fairer comparison is now published next to it on the dashboard.
+2. **The skill curve is largely the baseline's diurnal phase.** Hourly PM2.5
+   autocorrelation troughs at 0.27 (12 h) and rebounds to 0.44 (24 h), so the
+   "+31.1% at 12 h" peak marks where persistence is worst, not where the model is
+   best. Against the best trivial rule at each lead, skill is flat near 11–12%
+   from 6 to 24 h.
+3. **The held-out panel dissolves.** 93.8% of the 23,232 scored 24 h hours fall
+   before 2026; the panel goes 6 stations → 1; no station spans the window. Four
+   stations that have all since stopped reporting carry 84.6% of the evaluation.
+   One station (Bogor Selatan) has **zero** training hours yet 18.6% of the
+   evaluation — an accidental unseen-station test, and it scores +5.6% against
+   +21.3% for stations the model trained on.
+4. **The forecast cannot make the calls it exists for.** 247 held-out hours
+   reached "very unhealthy" (≥125.5 µg/m³) and 20 reached "hazardous"; the model
+   predicted **zero** of either. Its highest 24 h prediction anywhere is
+   99.1 µg/m³ against an observed maximum of 338.
+5. **The error floor is the instrument.** Two OpenAQ registrations 43 m apart
+   agree to MAE 6.85 µg/m³ over 7,297 shared hours — against the model's 7.57 at
+   a *one-hour* lead. Consumer-grade stations read 39% above the two
+   reference-grade ones (52.8 vs 38.0 µg/m³); the reference subset matches
+   published Jakarta means, the pooled panel mean does not.
+6. **The network finding is the result, not the caveat.** 24 registrations are
+   16 distinct addresses and 11 instruments that ever reported; 13 never
+   returned an hour. The two co-located instruments diverged to 9.9 vs
+   63.0 µg/m³ before one went silent — so the surviving sensor is unverifiable,
+   and the case now says so.
+
+Applied to the dashboard: the hero no longer calls persistence "the only baseline
+that matters"; chapter 01 reports exceedance on a daily basis (94.3% of complete
+days) rather than an hourly one against a 24-hour guideline, and states the
+reference-grade subset mean; chapter 02 publishes the fairer baseline and its
+interval; chapter 05 publishes the honest denominators and the co-location
+divergence; chapter 06 names the backtest station and its death date, and adds
+the AQI-ceiling failure the gates were never written to catch.
 
 **What the fix changed in the data.** The static-source mask holds 3,908 cells
 (708 flagged directly, the rest buffer) and removes **5.94%** of otherwise-
@@ -189,7 +241,8 @@ platforms.
 Hero (the 72 h forecast unrolling as a breathing haze band with a widening
 uncertainty cone) → 01 the air today → 02 the forecast → 03 what drives it →
 04 the airshed and the fire season → 05 the one-live-sensor finding →
-06 validation against persistence → methodology footer.
+06 validation against persistence → 07 the review, with a door to
+`/airquality/article` → methodology footer.
 
 No WebGL anywhere: every canvas is 2-D with its own hit-testing. This is a
 deliberate choice, not a fallback — see Decisions.
