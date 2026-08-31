@@ -1154,11 +1154,34 @@ const maskEffect = ffNrt
             const gap = prev && d.t - prev.t > 3 * 3600e3;
             if (!open || gap) { ctx.moveTo(x(d.t), y(d.v)); open = true; } else ctx.lineTo(x(d.t), y(d.v));
           }
-          ctx.strokeStyle = d3.color(ACCENT).copy({ opacity: 0.9 }) + "";
-          ctx.shadowColor = d3.color(ACCENT).copy({ opacity: 0.45 }) + ""; ctx.shadowBlur = 9;
+          /* When hours are sparse the dots are the reading and the line is only a hint at
+             which of them were consecutive, so it steps back. At full coverage the line is
+             the signal and leads. */
+          const sparse = data.length > 1 && (iw / data.length) > 9;
+          ctx.strokeStyle = d3.color(ACCENT).copy({ opacity: sparse ? 0.4 : 0.9 }) + "";
+          if (!sparse) { ctx.shadowColor = d3.color(ACCENT).copy({ opacity: 0.45 }) + ""; ctx.shadowBlur = 9; }
           ctx.stroke(); ctx.shadowBlur = 0;
-          // colour the points by AQI band — the ramp does the data work
-          data.forEach((d) => { ctx.fillStyle = aqiColor(d.v); ctx.fillRect(x(d.t) - 1, y(d.v) - 1, 2.2, 2.2); });
+
+          /* The AQI band colour is the data channel, so the marker has to be big enough to
+             read it. Size it to how much room the hours actually have: at this station only
+             37 of 504 hours reported, so most points have no neighbour to join and the dot
+             is the entire reading. At full coverage the same rule keeps them from merging
+             into a band. */
+          const spanPx = iw;
+          const r = data.length > 1
+            ? Math.max(2.2, Math.min(5, (spanPx / data.length) * 0.42))
+            : 5;
+          data.forEach((d) => {
+            const cx = x(d.t), cy = y(d.v);
+            ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7);
+            ctx.fillStyle = aqiColor(d.v); ctx.fill();
+            if (r >= 3) {                       // outline only when there is room for one
+              ctx.lineWidth = 1;
+              ctx.strokeStyle = d3.color(GROUND).copy({ opacity: 0.75 }) + "";
+              ctx.stroke();
+            }
+          });
+          ctx.lineWidth = 1.7;
           cv._hit = { x, y, m, iw, ih };
         };
 
