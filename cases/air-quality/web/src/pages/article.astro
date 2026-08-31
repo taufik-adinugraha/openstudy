@@ -1,0 +1,1218 @@
+---
+/* Review article — the case, stress-tested against the published literature.
+ *
+ * Every figure is built in frontmatter from data/article.json, which pipeline/article.py
+ * derives from the case's own published output and from pipeline/replicate.py's
+ * independent re-derivation. Nothing here is drawn by hand, so the prose cannot drift
+ * from the numbers. SVG only: no WebGL, no canvas.
+ */
+import "../styles/tokens.css";
+import A from "../data/article.json";
+
+const CYAN = "#6FC7D6", CORAL = "#E08B54", TEAL = "#4BB8A9", AMBER = "#E0A63F", SLATE = "#6B7CA6";
+const INK = "#E9EBEE", MUTED = "#97A1AC", GRID = "#262E3A";
+
+const pct = (x: number, d = 1) => `${(x * 100).toFixed(d)}%`;
+const spct = (x: number, d = 1) => `${x >= 0 ? "+" : ""}${(x * 100).toFixed(d)}%`;
+const n1 = (x: number) => x.toFixed(1);
+const n2 = (x: number) => x.toFixed(2);
+const n0 = (x: number) => Math.round(x).toLocaleString("en-US");
+const esc = (s: any) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+const L = A.lit;
+const G = Object.fromEntries(A.gates.map((g: any) => [g.id, g]));
+const H = Object.fromEntries(A.horizons.map((r: any) => [r.horizon_h, r]));
+const h24 = H[24], e24 = A.model.h24, GR = A.gateRetest, BT = A.bootstrap24;
+const CO = A.colocation, FM = A.panel.fmqo, EP = A.episodes;
+const ceil24 = EP.ceiling.find((c: any) => c.horizon_h === 24);
+const rung = (t: number) => EP.ladder.find((r: any) => r.threshold === t);
+const bl24 = Object.fromEntries(h24.baselines.map((b: any) => [b.key, b]));
+const prov = Object.fromEntries(A.providers.rows.map((p: any) => [p.provider, p]));
+const bjs = L.beijing.rows.find((r: any) => r.h === 24);
+const fresh = A.unseen.fresh[0];
+const acfAt = (l: number) => A.acf.find((a: any) => a.lag === l).r;
+const peakCov = Math.max(...A.panel.coverage.map((c: any) => c.n_80));
+const euPoints = Math.round(L.standards.jabodetabek_millions * L.standards.eu_points_per_million);
+const lastMonths = A.panel.months.filter((m: any) => m.ym >= "2026-03");
+const lastMonthRows = lastMonths.reduce((s: number, m: any) => s + m.n_rows, 0);
+const fireAug = A.fire.monthly[A.fire.monthly.length - 1];
+const augObsHours = A.panel.coverage[A.panel.coverage.length - 1];
+const seenSkill = A.unseen.seen_mean_skill, seenPI = A.unseen.seen_mean_pi80;
+/* Where the co-located pair stops agreeing, and on how much evidence. Stated so the
+   reader can weigh it: the divergence is large but the shared hours behind it are few,
+   because the surviving instrument's own reporting collapsed at the same time. */
+const coBreak = CO.monthly.findIndex((m: any) => Math.abs(m.a - m.b) > 3 * CO.mae);
+const coAfter = CO.monthly.slice(Math.max(0, coBreak));
+const coAfterHours = coAfter.reduce((s: number, m: any) => s + m.n, 0);
+const coBefore = CO.monthly.slice(0, Math.max(0, coBreak));
+const coBeforeHours = coBefore.reduce((s: number, m: any) => s + m.n, 0);
+const coLast = CO.monthly[CO.monthly.length - 1];
+const nGates = A.gates_total, nPass = A.gates_passed;
+
+/* ── Figure 1 · the observing system, month by month ───────────────────────── */
+function fig1() {
+  const W = 720, Ht = 330, ML = 46, MR = 122, MT = 22, MB = 54;
+  const rows = A.panel.coverage;
+  const n = rows.length;
+  const ymax = Math.max(...rows.map((r: any) => r.n_any), 10);
+  const sx = (i: number) => ML + (i / (n - 1)) * (W - ML - MR);
+  const sy = (v: number) => Ht - MB - (v / ymax) * (Ht - MT - MB);
+  const cutIdx = rows.findIndex((r: any) => r.ym >= A.vintage.cut.slice(0, 7));
+  const line = (key: string, col: string, w = 2.2) =>
+    `<path fill="none" stroke="${col}" stroke-width="${w}" stroke-linejoin="round" d="${rows.map((r: any, i: number) =>
+      `${i ? "L" : "M"}${sx(i).toFixed(1)} ${sy(r[key]).toFixed(1)}`).join("")}"/>`;
+  const area = `<path fill="${CYAN}" opacity="0.1" d="M${sx(0).toFixed(1)} ${sy(0)} ${rows.map((r: any, i: number) =>
+    `L${sx(i).toFixed(1)} ${sy(r.n_any).toFixed(1)}`).join("")} L${sx(n - 1).toFixed(1)} ${sy(0)} Z"/>`;
+  const grid = [0, 3, 6, 9].filter((v) => v <= ymax).map((v) =>
+    `<line x1="${ML}" y1="${sy(v).toFixed(1)}" x2="${W - MR}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.6"/>
+     <text x="${ML - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">${v}</text>`).join("");
+  const epa = `<line x1="${ML}" y1="${sy(3).toFixed(1)}" x2="${W - MR}" y2="${sy(3).toFixed(1)}" stroke="${CORAL}" stroke-dasharray="4 4" stroke-width="1.4"/>
+    <text x="${ML + 4}" y="${(sy(3) - 9).toFixed(1)}" fill="${CORAL}" font-size="10" font-family="var(--font-data)">US minimum · 3</text>`;
+  const ticks = rows.map((r: any, i: number) => (r.ym.endsWith("-01") || r.ym.endsWith("-07"))
+    ? `<text x="${sx(i).toFixed(1)}" y="${Ht - MB + 18}" fill="${MUTED}" font-size="9.5" text-anchor="middle" font-family="var(--font-data)">${r.ym.slice(2).replace("-", "·")}</text>` : "").join("");
+  const cut = cutIdx > 0
+    ? `<line x1="${sx(cutIdx).toFixed(1)}" y1="${MT}" x2="${sx(cutIdx).toFixed(1)}" y2="${Ht - MB}" stroke="${MUTED}" stroke-dasharray="3 4" opacity="0.65"/>
+       <text x="${(sx(cutIdx) + 5).toFixed(1)}" y="${MT + 10}" fill="${MUTED}" font-size="9.5" font-family="var(--font-data)">training cut</text>` : "";
+  const dots = rows.map((r: any, i: number) =>
+    `<circle class="hv" cx="${sx(i).toFixed(1)}" cy="${sy(r.n_any).toFixed(1)}" r="7" fill="transparent"
+      data-t="${r.ym}" data-b="${r.n_any} reporting · ${r.n_80} at 80% completeness · ${n0(r.obs_hours)} observed hours"/>`).join("");
+  const key = [["reporting at all", CYAN], ["≥50% complete", TEAL], ["≥80% complete", AMBER]]
+    .map(([t, c], i) => `<line x1="${W - MR + 8}" y1="${MT + 16 + i * 20}" x2="${W - MR + 22}" y2="${MT + 16 + i * 20}" stroke="${c}" stroke-width="2.4"/>
+      <text x="${W - MR + 28}" y="${MT + 20 + i * 20}" fill="${MUTED}" font-size="10">${t}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Ht}" class="fig" role="img" aria-label="Number of Jabodetabek PM2.5 stations reporting each month, rising to nine in 2024 and falling to one by 2026">
+    ${grid}${area}${epa}${cut}
+    ${line("n_any", CYAN)}${line("n_50", TEAL, 1.8)}${line("n_80", AMBER, 1.8)}
+    ${dots}${ticks}${key}
+    <text x="${((ML + W - MR) / 2).toFixed(1)}" y="${Ht - 12}" fill="${MUTED}" font-size="11" text-anchor="middle">stations returning PM2.5 in each calendar month</text>
+  </svg>`;
+}
+
+/* ── Figure 2 · the diurnal echo, and what it does to persistence ──────────── */
+function fig2() {
+  const W = 720, Ht = 400, ML = 52, MR = 22, MT = 24, GAP = 46;
+  const topH = 168, botY = MT + topH + GAP, botH = 118;
+  const maxLag = 72;
+  const sx = (l: number) => ML + ((l - 1) / (maxLag - 1)) * (W - ML - MR);
+  const a0 = 0, a1 = 0.9;
+  const say = (v: number) => MT + topH - ((v - a0) / (a1 - a0)) * topH;
+  const acfPath = A.acf.map((a: any, i: number) => `${i ? "L" : "M"}${sx(a.lag).toFixed(1)} ${say(a.r).toFixed(1)}`).join("");
+  const peaks = [24, 48, 72], troughs = [12, 36, 60];
+  const mark = (l: number, col: string, lab: string) => {
+    const r = acfAt(l);
+    return `<circle cx="${sx(l).toFixed(1)}" cy="${say(r).toFixed(1)}" r="4" fill="${col}"/>
+      <text x="${sx(l).toFixed(1)}" y="${(say(r) + (col === AMBER ? -11 : 16)).toFixed(1)}" fill="${col}" font-size="10" text-anchor="middle" font-family="var(--font-data)">${lab}</text>`;
+  };
+  const agrid = [0, 0.3, 0.6, 0.9].map((v) =>
+    `<line x1="${ML}" y1="${say(v).toFixed(1)}" x2="${W - MR}" y2="${say(v).toFixed(1)}" stroke="${GRID}" opacity="0.6"/>
+     <text x="${ML - 8}" y="${(say(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10" text-anchor="end">${v.toFixed(1)}</text>`).join("");
+  // lower panel — MAE by horizon, model vs persistence, on the same lag axis
+  const hs = A.echo;
+  const m0 = 0, m1 = Math.max(...hs.map((r: any) => r.persist_mae)) * 1.12;
+  const my = (v: number) => botY + botH - ((v - m0) / (m1 - m0)) * botH;
+  const mgrid = [0, 10, 20].map((v) =>
+    `<line x1="${ML}" y1="${my(v).toFixed(1)}" x2="${W - MR}" y2="${my(v).toFixed(1)}" stroke="${GRID}" opacity="0.6"/>
+     <text x="${ML - 8}" y="${(my(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10" text-anchor="end">${v}</text>`).join("");
+  const mpath = (key: string, col: string) =>
+    `<path fill="none" stroke="${col}" stroke-width="2.2" d="${hs.map((r: any, i: number) =>
+      `${i ? "L" : "M"}${sx(r.h).toFixed(1)} ${my(r[key]).toFixed(1)}`).join("")}"/>` +
+    hs.map((r: any) => `<circle class="hv" cx="${sx(r.h).toFixed(1)}" cy="${my(r[key]).toFixed(1)}" r="4.5" fill="${col}"
+      data-t="${key === "persist_mae" ? "Persistence" : "Model"} at ${r.h} h" data-b="MAE ${n2(r[key])} µg/m³ · lag-${r.h} autocorrelation ${r.acf ? r.acf.toFixed(2) : "—"}"/>`).join("");
+  const guides = [...peaks, ...troughs].map((l) =>
+    `<line x1="${sx(l).toFixed(1)}" y1="${MT}" x2="${sx(l).toFixed(1)}" y2="${botY + botH}" stroke="${peaks.includes(l) ? AMBER : SLATE}" stroke-dasharray="2 5" opacity="0.35"/>`).join("");
+  const xt = [1, 12, 24, 36, 48, 60, 72].map((l) =>
+    `<text x="${sx(l).toFixed(1)}" y="${botY + botH + 18}" fill="${MUTED}" font-size="10" text-anchor="middle" font-family="var(--font-data)">${l}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Ht}" class="fig" role="img" aria-label="Hourly PM2.5 autocorrelation peaks at 24, 48 and 72 hours and troughs at 12, 36 and 60, and persistence error mirrors it exactly">
+    ${guides}${agrid}
+    <path fill="none" stroke="${CYAN}" stroke-width="2" d="${acfPath}"/>
+    ${peaks.map((l) => mark(l, AMBER, `${l}h`)).join("")}
+    ${troughs.map((l) => mark(l, SLATE, `${l}h`)).join("")}
+    <text x="${ML}" y="${MT - 8}" fill="${INK}" font-size="11.5">Autocorrelation of hourly PM2.5, by lag</text>
+    ${mgrid}${mpath("persist_mae", CORAL)}${mpath("model_mae", CYAN)}
+    <text x="${ML}" y="${botY - 10}" fill="${INK}" font-size="11.5">Mean absolute error at that lead, µg/m³</text>
+    <text x="${(W - MR - 6).toFixed(1)}" y="${botY - 10}" fill="${CORAL}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">persistence</text>
+    <text x="${(W - MR - 92).toFixed(1)}" y="${botY - 10}" fill="${CYAN}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">model</text>
+    ${xt}
+    <text x="${((ML + W - MR) / 2).toFixed(1)}" y="${Ht - 8}" fill="${MUTED}" font-size="11" text-anchor="middle">lead time / lag, hours →</text>
+  </svg>`;
+}
+
+/* ── Figure 3 · skill by horizon under two rulers ──────────────────────────── */
+function fig3() {
+  const W = 720, Ht = 322, ML = 50, MR = 162, MT = 26, MB = 52;
+  const hs = A.echo, n = hs.length;
+  const sx = (i: number) => ML + (i / (n - 1)) * (W - ML - MR);
+  const y0 = 0, y1 = 0.34;
+  const sy = (v: number) => Ht - MB - ((v - y0) / (y1 - y0)) * (Ht - MT - MB);
+  const grid = [0, 0.1, 0.2, 0.3].map((v) =>
+    `<line x1="${ML}" y1="${sy(v).toFixed(1)}" x2="${W - MR}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.6"/>
+     <text x="${ML - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10" text-anchor="end">${(v * 100).toFixed(0)}%</text>`).join("");
+  const gate = `<line x1="${ML}" y1="${sy(GR.threshold).toFixed(1)}" x2="${W - MR}" y2="${sy(GR.threshold).toFixed(1)}" stroke="${AMBER}" stroke-dasharray="5 4" stroke-width="1.5"/>
+    <text x="${ML + 4}" y="${(sy(GR.threshold) - 7).toFixed(1)}" fill="${AMBER}" font-size="10" font-family="var(--font-data)">the case's own threshold · ${pct(GR.threshold, 0)}</text>`;
+  const path = (key: string, col: string) =>
+    `<path fill="none" stroke="${col}" stroke-width="2.4" d="${hs.map((r: any, i: number) =>
+      `${i ? "L" : "M"}${sx(i).toFixed(1)} ${sy(r[key]).toFixed(1)}`).join("")}"/>`;
+  const dots = (key: string, col: string, nameKey: string | null) => hs.map((r: any, i: number) =>
+    `<circle class="hv" cx="${sx(i).toFixed(1)}" cy="${sy(r[key]).toFixed(1)}" r="4.6" fill="${col}"
+      data-t="${r.h} hours ahead" data-b="${spct(r[key])} against ${nameKey ? esc(r[nameKey]) : "persistence"}${nameKey ? ` (MAE ${n2(r.best_mae)})` : ` (MAE ${n2(r.persist_mae)})`}"/>`).join("");
+  const xt = hs.map((r: any, i: number) =>
+    `<text x="${sx(i).toFixed(1)}" y="${Ht - MB + 19}" fill="${MUTED}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">${r.h}h</text>`).join("");
+  const key = [["vs persistence,", "as published", CORAL], ["vs the best", "trivial rule", CYAN]]
+    .map(([t1, t2, c], i) => `<line x1="${W - MR + 8}" y1="${MT + 16 + i * 34}" x2="${W - MR + 22}" y2="${MT + 16 + i * 34}" stroke="${c}" stroke-width="2.4"/>
+      <text x="${W - MR + 28}" y="${MT + 20 + i * 34}" fill="${MUTED}" font-size="10">${t1}</text>
+      <text x="${W - MR + 28}" y="${MT + 32 + i * 34}" fill="${MUTED}" font-size="10">${t2}</text>`).join("");
+  const shortName = (s: string) => s.replace("Last 24 h mean", "last 24 h mean")
+    .replace("Diurnal climatology", "diurnal clim.").replace("Persistence", "persistence");
+  const note = `<text x="${W - MR + 8}" y="${MT + 92}" fill="${MUTED}" font-size="9.5" font-family="var(--font-data)">best trivial rule:</text>` +
+    hs.map((r: any, i: number) => `<text x="${W - MR + 8}" y="${MT + 108 + i * 15}" fill="${MUTED}" font-size="9" font-family="var(--font-data)">${r.h}h · ${esc(shortName(r.best_name))}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Ht}" class="fig" role="img" aria-label="Skill against persistence peaks at 31 percent at 12 hours; against the best trivial baseline it is flat near 11 percent">
+    ${grid}${gate}${path("skill_persist", CORAL)}${path("skill_best", CYAN)}
+    ${dots("skill_persist", CORAL, null)}${dots("skill_best", CYAN, "best_name")}
+    ${xt}${key}${note}
+    <text x="${((ML + W - MR) / 2).toFixed(1)}" y="${Ht - 12}" fill="${MUTED}" font-size="11" text-anchor="middle">forecast lead time →</text>
+  </svg>`;
+}
+
+/* ── Figure 4 · the 24-hour baseline ladder, with intervals ────────────────── */
+function fig4() {
+  const rows = [{ key: "model", name: "The model", mae: h24.model_mae, skill: null as any, lo: null as any, hi: null as any }]
+    .concat(h24.baselines.map((b: any) => ({
+      key: b.key, name: b.name, mae: b.mae, skill: b.skill_mae,
+      lo: BT[b.key]?.lo ?? null, hi: BT[b.key]?.hi ?? null,
+    })).sort((x: any, y: any) => x.mae - y.mae));
+  const W = 720, rh = 34, MT = 34, Ht = MT + rows.length * rh + 70;
+  const NL = 198, BW = 214, SL = NL + BW + 62, SW = W - SL - 24;
+  const mmax = Math.max(...rows.map((r: any) => r.mae)) * 1.03;
+  const smax = 0.30;
+  const ssx = (v: number) => SL + (v / smax) * SW;
+  const body = rows.map((r: any, i: number) => {
+    const y = MT + i * rh;
+    const isM = r.key === "model";
+    const col = isM ? CYAN : (r.mae === Math.min(...rows.filter((q: any) => q.key !== "model").map((q: any) => q.mae)) ? AMBER : SLATE);
+    const w = (r.mae / mmax) * BW;
+    const bar = `<rect x="${NL}" y="${y + 7}" width="${w.toFixed(1)}" height="16" rx="2" fill="${col}" opacity="${isM ? 1 : 0.72}"/>
+      <text x="${(NL + w + 7).toFixed(1)}" y="${y + 20}" fill="${col}" font-size="10.5" font-family="var(--font-data)">${n2(r.mae)}</text>`;
+    const sk = r.skill === null ? "" :
+      `<line x1="${ssx(Math.max(0, r.lo)).toFixed(1)}" y1="${y + 15}" x2="${ssx(Math.min(smax, r.hi)).toFixed(1)}" y2="${y + 15}" stroke="${col}" stroke-width="1.6" opacity="0.6"/>
+       <line x1="${ssx(Math.max(0, r.lo)).toFixed(1)}" y1="${y + 10}" x2="${ssx(Math.max(0, r.lo)).toFixed(1)}" y2="${y + 20}" stroke="${col}" stroke-width="1.6" opacity="0.6"/>
+       <line x1="${ssx(Math.min(smax, r.hi)).toFixed(1)}" y1="${y + 10}" x2="${ssx(Math.min(smax, r.hi)).toFixed(1)}" y2="${y + 20}" stroke="${col}" stroke-width="1.6" opacity="0.6"/>
+       <circle cx="${ssx(Math.min(smax, r.skill)).toFixed(1)}" cy="${y + 15}" r="4.2" fill="${col}"/>`;
+    return `<text x="${NL - 12}" y="${y + 20}" fill="${isM ? INK : MUTED}" font-size="12" text-anchor="end"${isM ? ' font-weight="600"' : ""}>${esc(r.name)}</text>${bar}${sk}`;
+  }).join("");
+  const gate = `<line x1="${ssx(GR.threshold).toFixed(1)}" y1="${MT - 4}" x2="${ssx(GR.threshold).toFixed(1)}" y2="${MT + rows.length * rh + 4}" stroke="${AMBER}" stroke-dasharray="4 4" stroke-width="1.5"/>
+    <text x="${ssx(GR.threshold).toFixed(1)}" y="${MT + rows.length * rh + 31}" fill="${AMBER}" font-size="9.5" text-anchor="middle" font-family="var(--font-data)">↑ ${pct(GR.threshold, 0)} gate</text>`;
+  const sticks = [0, 0.1, 0.2, 0.3].map((v) =>
+    `<text x="${ssx(v).toFixed(1)}" y="${MT + rows.length * rh + 18}" fill="${MUTED}" font-size="9.5" text-anchor="middle">${(v * 100).toFixed(0)}%</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Ht}" class="fig" role="img" aria-label="At 24 hours the model beats the best trivial baseline by 11.6 percent, whose interval lies entirely below the 15 percent gate">
+    <text x="${NL}" y="${MT - 12}" fill="${MUTED}" font-size="10.5" font-family="var(--font-data)">MAE, µg/m³</text>
+    <text x="${SL}" y="${MT - 12}" fill="${MUTED}" font-size="10.5" font-family="var(--font-data)">model's skill · 95% interval</text>
+    ${gate}${body}${sticks}
+    <text x="16" y="${Ht - 12}" fill="${MUTED}" font-size="10.5">Held-out 24-hour forecasts, ${n0(h24.n)} station-hours.</text>
+    <text x="${SL}" y="${Ht - 12}" fill="${MUTED}" font-size="10.5">Intervals: day-block bootstrap, ${n0(BT.n_blocks)} blocks.</text>
+  </svg>`;
+}
+
+/* ── Figure 5 · the held-out window is a shrinking panel ───────────────────── */
+function fig5() {
+  const months = A.panel.months;
+  const ids = A.panel.by_station.map((s: any) => s.location_id);
+  const names = Object.fromEntries(A.panel.by_station.map((s: any) => [s.location_id, s.name]));
+  const PAL = [CYAN, AMBER, TEAL, CORAL, SLATE, "#B58BD1", "#8FBF6E", "#D97B9B"];
+  const W = 720, Ht = 344, ML = 62, MR = 128, MT = 38, MB = 56;
+  const n = months.length;
+  const bw = (W - ML - MR) / n * 0.7;
+  const step = (W - ML - MR) / n;
+  const ymax = Math.max(...months.map((m: any) => m.n_rows)) * 1.06;
+  const sy = (v: number) => Ht - MB - (v / ymax) * (Ht - MT - MB);
+  const bars = months.map((m: any, i: number) => {
+    const x = ML + i * step + (step - bw) / 2;
+    let acc = 0;
+    const segs = ids.map((id: number, k: number) => {
+      if (!m.stations.includes(id)) return "";
+      // rows are not published per station per month, so each present station is
+      // drawn as an equal share of that month's scored hours — the count of bands
+      // is the honest signal here, and the total height is exact.
+      const v = m.n_rows / m.stations.length;
+      const y0 = sy(acc + v), y1 = sy(acc); acc += v;
+      return `<rect class="hv" x="${x.toFixed(1)}" y="${y0.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(0.6, y1 - y0).toFixed(1)}"
+        fill="${PAL[k % PAL.length]}" opacity="0.85" data-t="${m.ym} · ${esc(names[id])}" data-b="${m.n_stations} station${m.n_stations === 1 ? "" : "s"} scored · ${n0(m.n_rows)} hours that month"/>`;
+    }).join("");
+    return segs;
+  }).join("");
+  // Station count sits on its own rule above the bars, so it never crosses them.
+  const cnt = months.map((m: any, i: number) =>
+    `<text x="${(ML + i * step + step / 2).toFixed(1)}" y="${MT - 6}" fill="${m.n_stations === 1 ? CORAL : INK}" font-size="9.5" text-anchor="middle" font-family="var(--font-data)">${m.n_stations}</text>`).join("") +
+    `<text x="${ML - 8}" y="${MT - 6}" fill="${MUTED}" font-size="9" text-anchor="end" font-family="var(--font-data)">stations</text>`;
+  const grid = [0, 1000, 2000, 3000].filter((v) => v <= ymax).map((v) =>
+    `<line x1="${ML}" y1="${sy(v).toFixed(1)}" x2="${W - MR}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.55"/>
+     <text x="${ML - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="9.5" text-anchor="end">${v ? v / 1000 + "k" : "0"}</text>`).join("");
+  const xt = months.map((m: any, i: number) => i % 2 === 0
+    ? `<text x="${(ML + i * step + step / 2).toFixed(1)}" y="${Ht - MB + 17}" fill="${MUTED}" font-size="9" text-anchor="middle" font-family="var(--font-data)">${m.ym.slice(2)}</text>` : "").join("");
+  const key = A.panel.by_station.slice(0, 8).map((s: any, k: number) =>
+    `<rect x="${W - MR + 6}" y="${MT + 6 + k * 17}" width="9" height="9" rx="2" fill="${PAL[k % PAL.length]}"/>
+     <text x="${W - MR + 19}" y="${MT + 14 + k * 17}" fill="${MUTED}" font-size="9">${esc(s.name.length > 18 ? s.name.slice(0, 17) + "…" : s.name)}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${Ht}" class="fig" role="img" aria-label="Scored hours per month in the held-out window fall from six stations to one, with almost nothing after early 2026">
+    ${grid}${bars}${cnt}${xt}${key}
+    <text x="${((ML + W - MR) / 2).toFixed(1)}" y="${Ht - 14}" fill="${MUTED}" font-size="11" text-anchor="middle">held-out 24-hour forecasts scored, by month</text>
+  </svg>`;
+}
+
+/* ── Figure 6 · station by station: what transfers, and what does not ──────── */
+function fig6() {
+  const rows = A.unseen.rows.slice().sort((a: any, b: any) => b.n_test - a.n_test);
+  const W = 720, rh = 33, MT = 46, Ht = MT + rows.length * rh + 44;
+  const NL = 206, TW = 60, MW = 150, PR = 706;
+  const TX = NL + 12, MX = TX + TW + 58;
+  const maxTrain = Math.max(...rows.map((r: any) => r.n_train));
+  const mqiMax = 1.2;
+  const short = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + "…" : s);
+  const body = rows.map((r: any, i: number) => {
+    const y = MT + i * rh;
+    const st = A.panel.by_station.find((s: any) => s.location_id === r.location_id);
+    const mqi = st ? st.mqi_f : 1;
+    const fail = mqi > 1;
+    const thin = r.n_test < 1000;
+    const col = fail ? CORAL : (r.n_train === 0 ? AMBER : CYAN);
+    const tw = (r.n_train / maxTrain) * TW;
+    const mw = Math.min(mqi, mqiMax) / mqiMax * MW;
+    return `<text x="${NL - 12}" y="${y + 17}" fill="${thin ? MUTED : INK}" font-size="11.5" text-anchor="end">${esc(short(r.name, 24))}</text>
+      <text x="${NL - 12}" y="${y + 29}" fill="${MUTED}" font-size="8.5" text-anchor="end" font-family="var(--font-data)">${esc(short(r.provider, 18))} · ${n0(r.n_test)} h scored</text>
+      <rect x="${TX}" y="${y + 8}" width="${Math.max(1.5, tw).toFixed(1)}" height="12" rx="2" fill="${r.n_train ? SLATE : AMBER}" opacity="0.8"/>
+      <text x="${(TX + Math.max(1.5, tw) + 6).toFixed(1)}" y="${y + 18}" fill="${r.n_train ? MUTED : AMBER}" font-size="9" font-family="var(--font-data)">${r.n_train ? n0(r.n_train) : "never seen"}</text>
+      <rect class="hv" x="${MX}" y="${y + 8}" width="${mw.toFixed(1)}" height="12" rx="2" fill="${col}" opacity="0.9"
+        data-t="${esc(r.name)}" data-b="MQI ${mqi.toFixed(2)} · skill vs persistence ${spct(r.skill_persist)} · 80% interval covers ${pct(r.pi80, 0)}"/>
+      <text x="${(MX + mw - 6).toFixed(1)}" y="${y + 18}" fill="#10131A" font-size="9.5" font-weight="600" text-anchor="end" font-family="var(--font-data)">${mqi.toFixed(2)}</text>
+      <text x="${PR}" y="${y + 18}" fill="${r.pi80 < 0.72 ? CORAL : TEAL}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">${pct(r.pi80, 0)}</text>`;
+  }).join("");
+  const one = MX + (1 / mqiMax) * MW;
+  return `<svg viewBox="0 0 ${W} ${Ht}" class="fig" role="img" aria-label="Per-station forecast quality: seven of eight stations meet Europe's acceptance threshold, and the one that fails is the only one still reporting">
+    <text x="${TX}" y="${MT - 26}" fill="${MUTED}" font-size="9" font-family="var(--font-data)">TRAINING HOURS</text>
+    <text x="${MX}" y="${MT - 26}" fill="${MUTED}" font-size="9" font-family="var(--font-data)">MQI · MODEL RMSE ÷ PERSISTENCE RMSE</text>
+    <text x="${PR}" y="${MT - 26}" fill="${MUTED}" font-size="9" text-anchor="end" font-family="var(--font-data)">80% BAND COVERS</text>
+    <line x1="${one.toFixed(1)}" y1="${MT - 14}" x2="${one.toFixed(1)}" y2="${MT + rows.length * rh}" stroke="${CORAL}" stroke-dasharray="4 4" stroke-width="1.4"/>
+    <text x="${(one + 5).toFixed(1)}" y="${MT - 6}" fill="${CORAL}" font-size="9" font-family="var(--font-data)">1.00 — must be at or below</text>
+    ${body}
+    <text x="${TX}" y="${Ht - 14}" fill="${MUTED}" font-size="10.5">Europe requires MQI ≤ 1.00 at ${pct(FM.threshold, 0)} of stations. This panel reaches
+      <tspan fill="${FM.passes ? TEAL : CORAL}">${pct(FM.share_pass, 1)}</tspan>.</text>
+  </svg>`;
+}
+
+/* ── Figure 7 · what the forecast can and cannot say ───────────────────────── */
+function fig7() {
+  const W = 720, Ht = 336, ML = 56, MR = 26, MT = 30;
+  const reachY = MT + 16, reachH = 22;
+  const cmax = 350;
+  const sx = (v: number) => ML + (v / cmax) * (W - ML - MR);
+  const bands = [
+    { t: 0, c: "#3D9970" }, { t: 9, c: "#C8B02E" }, { t: 35.5, c: "#D98A2B" },
+    { t: 55.5, c: "#C6483C" }, { t: 125.5, c: "#8E4FA8" }, { t: 225.5, c: "#7A3040" },
+  ];
+  const strip = bands.map((b, i) => {
+    const x0 = sx(b.t), x1 = sx(i + 1 < bands.length ? bands[i + 1].t : cmax);
+    return `<rect x="${x0.toFixed(1)}" y="${MT - 12}" width="${(x1 - x0).toFixed(1)}" height="7" fill="${b.c}" opacity="0.55"/>`;
+  }).join("");
+  const rows = [
+    { k: "What the air did", p99: ceil24.obs_p99, max: ceil24.obs_max, col: CORAL },
+    { k: "What the forecast said", p99: ceil24.pred_p99, max: ceil24.pred_max, col: CYAN },
+  ];
+  const reach = rows.map((r, i) => {
+    const y = reachY + i * (reachH + 16);
+    const mx = sx(r.max), near = mx > W - 96;
+    return `<rect x="${ML}" y="${y}" width="${(mx - ML).toFixed(1)}" height="${reachH}" rx="3" fill="${r.col}" opacity="0.2"/>
+      <rect x="${ML}" y="${y}" width="${(sx(r.p99) - ML).toFixed(1)}" height="${reachH}" rx="3" fill="${r.col}" opacity="0.55"/>
+      <text x="${ML + 8}" y="${y + 15}" fill="#10131A" font-size="10.5" font-weight="600">${r.k}</text>
+      <line x1="${mx.toFixed(1)}" y1="${y - 3}" x2="${mx.toFixed(1)}" y2="${y + reachH + 3}" stroke="${r.col}" stroke-width="2"/>
+      <text x="${(near ? mx - 6 : mx + 6).toFixed(1)}" y="${y + (near ? -6 : 15)}" fill="${r.col}" font-size="10"
+        text-anchor="${near ? "end" : "start"}" font-family="var(--font-data)">max ${n1(r.max)}</text>`;
+  }).join("");
+  const thr = bands.slice(2).map((b) =>
+    `<line x1="${sx(b.t).toFixed(1)}" y1="${MT - 12}" x2="${sx(b.t).toFixed(1)}" y2="${reachY + 2 * (reachH + 16) + 4}" stroke="${MUTED}" stroke-dasharray="2 4" opacity="0.5"/>
+     <text x="${sx(b.t).toFixed(1)}" y="${MT - 18}" fill="${MUTED}" font-size="9" text-anchor="middle" font-family="var(--font-data)">${b.t}</text>`).join("");
+  // lower half: the ladder
+  const LY = 176, lrh = 34;
+  const lmax = Math.max(...EP.ladder.map((r: any) => Math.max(r.n_observed, r.n_predicted)));
+  const lw = 214, LX = 250;
+  const ladder = EP.ladder.map((r: any, i: number) => {
+    const y = LY + i * lrh;
+    const wo = Math.max(1.5, (r.n_observed / lmax) * lw);
+    const wp = Math.max(0, (r.n_predicted / lmax) * lw);
+    const ok = (r.recall ?? 0) > 0;
+    return `<text x="${LX - 12}" y="${y + 13}" fill="${INK}" font-size="11.5" text-anchor="end">${esc(r.label)}</text>
+      <text x="${LX - 12}" y="${y + 25}" fill="${MUTED}" font-size="9" text-anchor="end" font-family="var(--font-data)">≥ ${r.threshold} µg/m³</text>
+      <rect x="${LX}" y="${y + 3}" width="${wo.toFixed(1)}" height="10" rx="2" fill="${CORAL}" opacity="0.85"/>
+      <text x="${(LX + wo + 6).toFixed(1)}" y="${y + 12}" fill="${CORAL}" font-size="9.5" font-family="var(--font-data)">${n0(r.n_observed)} h happened</text>
+      <rect x="${LX}" y="${y + 16}" width="${Math.max(wp, 0).toFixed(1)}" height="10" rx="2" fill="${CYAN}" opacity="0.85"/>
+      <text x="${(LX + Math.max(wp, 0) + 6).toFixed(1)}" y="${y + 25}" fill="${ok ? CYAN : CORAL}" font-size="9.5" font-family="var(--font-data)">${n0(r.n_predicted)} h forecast${ok ? ` · caught ${pct(r.recall, 0)}` : " · caught none"}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${Ht}" class="fig" role="img" aria-label="The model never predicts above 99 micrograms while the air reached 338, and it forecast zero of the 247 very unhealthy hours">
+    ${strip}${thr}${reach}
+    <text x="${ML}" y="${reachY + 2 * (reachH + 16) + 20}" fill="${MUTED}" font-size="10">solid to the 99th percentile, faint to the maximum · concentration µg/m³ →</text>
+    ${ladder}
+    <text x="${ML}" y="${Ht - 10}" fill="${MUTED}" font-size="10.5">Held-out 24-hour forecasts. The ${L.standards.us_unhealthy} µg/m³ rung is, to within ${(L.standards.us_unhealthy - L.standards.id_daily).toFixed(1)} µg/m³, Indonesia's own daily limit.</text>
+  </svg>`;
+}
+
+/* ── Figure 8 · the noise floor, measured at 43 metres ─────────────────────── */
+function fig8() {
+  const W = 720, Ht = 356, ML = 56, MR = 190, MT = 20, MB = 48;
+  const pts = CO.scatter;
+  const lim = Math.max(...pts.map((p: number[]) => Math.max(p[0], p[1]))) * 1.02;
+  const sx = (v: number) => ML + (v / lim) * (W - ML - MR);
+  const sy = (v: number) => Ht - MB - (v / lim) * (Ht - MT - MB);
+  const dots = pts.map((p: number[]) =>
+    `<circle class="cp" cx="${sx(p[0]).toFixed(1)}" cy="${sy(p[1]).toFixed(1)}" r="2.1" data-a="${p[0]}" data-b="${p[1]}"/>`).join("");
+  const diag = `<line x1="${sx(0)}" y1="${sy(0)}" x2="${sx(lim).toFixed(1)}" y2="${sy(lim).toFixed(1)}" stroke="${MUTED}" stroke-dasharray="4 4" opacity="0.65"/>`;
+  const ticks = [0, 50, 100, 150].filter((v) => v < lim).map((v) =>
+    `<text x="${sx(v).toFixed(1)}" y="${Ht - MB + 17}" fill="${MUTED}" font-size="10" text-anchor="middle">${v}</text>
+     <text x="${ML - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10" text-anchor="end">${v}</text>
+     <line x1="${ML}" y1="${sy(v).toFixed(1)}" x2="${W - MR}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.4"/>`).join("");
+  const scale = [
+    { k: "these two, same hour", v: CO.mae, c: TEAL },
+    { k: "the model, 1 h ahead", v: H[1].model_mae, c: CYAN },
+    { k: "the model, 24 h ahead", v: H[24].model_mae, c: CYAN },
+    { k: "raw vs reference, Accra", v: L.accra.clarity_mae_raw, c: CORAL },
+  ];
+  const bmax = Math.max(...scale.map((s) => s.v)) * 1.4, bw = 116, BX = W - MR + 10;
+  const bars = scale.map((s, i) => {
+    const y = MT + 142 + i * 40;
+    return `<text x="${BX}" y="${y}" fill="${MUTED}" font-size="9.5">${s.k}</text>
+      <rect x="${BX}" y="${y + 5}" width="${((s.v / bmax) * bw).toFixed(1)}" height="10" rx="2" fill="${s.c}" opacity="0.85"/>
+      <text x="${(BX + (s.v / bmax) * bw + 6).toFixed(1)}" y="${y + 14}" fill="${s.c}" font-size="9.5" font-family="var(--font-data)">${n2(s.v)}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${Ht}" class="fig" role="img" aria-label="Two co-located sensors 43 metres apart agree to 6.85 micrograms, close to the model's one-hour forecast error">
+    ${ticks}${diag}<g class="cloud">${dots}</g>
+    <text x="${((ML + W - MR) / 2).toFixed(1)}" y="${Ht - 12}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${esc(CO.a_name)} · ${esc(CO.a_provider)}, µg/m³ →</text>
+    <text x="14" y="${((MT + Ht - MB) / 2).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="middle" transform="rotate(-90 14 ${((MT + Ht - MB) / 2).toFixed(1)})">${esc(CO.b_name)} · ${esc(CO.b_provider)} →</text>
+    <text x="${BX}" y="${MT + 16}" fill="${INK}" font-size="11.5">${n0(CO.n)} hours both reported</text>
+    <text x="${BX}" y="${MT + 36}" fill="${MUTED}" font-size="10" font-family="var(--font-data)">separation ${CO.m} m</text>
+    <text x="${BX}" y="${MT + 54}" fill="${MUTED}" font-size="10" font-family="var(--font-data)">MAE ${n2(CO.mae)} · RMSE ${n2(CO.rmse)}</text>
+    <text x="${BX}" y="${MT + 72}" fill="${MUTED}" font-size="10" font-family="var(--font-data)">bias ${CO.bias >= 0 ? "+" : ""}${n2(CO.bias)} · r ${CO.r.toFixed(3)}</text>
+    <text x="${BX}" y="${MT + 90}" fill="${MUTED}" font-size="10" font-family="var(--font-data)">${CO.first} → ${CO.last}</text>
+    <text x="${BX}" y="${MT + 122}" fill="${INK}" font-size="10.5">Mean absolute error, µg/m³</text>
+    ${bars}
+  </svg>`;
+}
+
+/* ── Figure 9 · the last witness ───────────────────────────────────────────── */
+function fig9() {
+  const m = CO.monthly;
+  const W = 720, Ht = 316, ML = 48, MR = 152, MT = 26, MB = 62;
+  const n = m.length;
+  const sx = (i: number) => ML + (i / (n - 1)) * (W - ML - MR);
+  const ymax = Math.max(...m.map((r: any) => Math.max(r.a, r.b))) * 1.14;
+  const sy = (v: number) => Ht - MB - (v / ymax) * (Ht - MT - MB);
+  // the month agreement breaks: first month where the two differ by more than 3x the pooled MAE
+  const breakIdx = m.findIndex((r: any) => Math.abs(r.a - r.b) > 3 * CO.mae);
+  const shade = breakIdx > 0
+    ? `<rect x="${sx(breakIdx - 0.5).toFixed(1)}" y="${MT}" width="${(sx(n - 1) - sx(breakIdx - 0.5)).toFixed(1)}" height="${Ht - MT - MB}" fill="${CORAL}" opacity="0.09"/>` : "";
+  const path = (k: string, col: string) =>
+    `<path fill="none" stroke="${col}" stroke-width="2.3" d="${m.map((r: any, i: number) =>
+      `${i ? "L" : "M"}${sx(i).toFixed(1)} ${sy(r[k]).toFixed(1)}`).join("")}"/>`;
+  const dots = (k: string, col: string, who: string) => m.map((r: any, i: number) =>
+    `<circle class="hv" cx="${sx(i).toFixed(1)}" cy="${sy(r[k]).toFixed(1)}" r="4" fill="${col}"
+      data-t="${r.ym} · ${who}" data-b="${n1(r[k])} µg/m³ over ${r.n} hour${r.n === 1 ? "" : "s"} both reported"/>`).join("");
+  const grid = [0, 20, 40, 60].filter((v) => v < ymax).map((v) =>
+    `<line x1="${ML}" y1="${sy(v).toFixed(1)}" x2="${W - MR}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.55"/>
+     <text x="${ML - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10" text-anchor="end">${v}</text>`).join("");
+  const xt = m.map((r: any, i: number) => i % 3 === 0
+    ? `<text x="${sx(i).toFixed(1)}" y="${Ht - MB + 17}" fill="${MUTED}" font-size="9" text-anchor="middle" font-family="var(--font-data)">${r.ym.slice(2)}</text>` : "").join("") +
+    m.map((r: any, i: number) => i >= Math.max(0, breakIdx)
+      ? `<text x="${sx(i).toFixed(1)}" y="${Ht - MB + 31}" fill="${MUTED}" font-size="8" text-anchor="middle" font-family="var(--font-data)">${r.n}h</text>` : "").join("");
+  const brk = breakIdx > 0
+    ? `<line x1="${sx(breakIdx - 0.5).toFixed(1)}" y1="${MT}" x2="${sx(breakIdx - 0.5).toFixed(1)}" y2="${Ht - MB}" stroke="${CORAL}" stroke-dasharray="4 4"/>
+       <text x="${(sx(breakIdx - 0.5) - 6).toFixed(1)}" y="${MT + 12}" fill="${CORAL}" font-size="9.5" text-anchor="end" font-family="var(--font-data)">they stop agreeing</text>` : "";
+  return `<svg viewBox="0 0 ${W} ${Ht}" class="fig" role="img" aria-label="For fourteen months the two co-located sensors agree; from March 2025 one reads a fifth of the other, and then the second one dies">
+    ${shade}${grid}${brk}${path("b", CYAN)}${path("a", AMBER)}${dots("b", CYAN, esc(CO.b_name))}${dots("a", AMBER, esc(CO.a_name))}${xt}
+    <text x="${sx(Math.max(0, breakIdx)).toFixed(1)}" y="${Ht - MB + 42}" fill="${MUTED}" font-size="8" font-family="var(--font-data)">hours both reported</text>
+    <line x1="${W - MR + 6}" y1="${MT + 12}" x2="${W - MR + 20}" y2="${MT + 12}" stroke="${AMBER}" stroke-width="2.4"/>
+    <text x="${W - MR + 26}" y="${MT + 16}" fill="${MUTED}" font-size="10">${esc(CO.a_name)}</text>
+    <text x="${W - MR + 26}" y="${MT + 28}" fill="${MUTED}" font-size="9">still reporting</text>
+    <line x1="${W - MR + 6}" y1="${MT + 50}" x2="${W - MR + 20}" y2="${MT + 50}" stroke="${CYAN}" stroke-width="2.4"/>
+    <text x="${W - MR + 26}" y="${MT + 54}" fill="${MUTED}" font-size="10">${esc(CO.b_name)}</text>
+    <text x="${W - MR + 26}" y="${MT + 66}" fill="${MUTED}" font-size="9">silent since ${CO.last}</text>
+    <text x="${W - MR + 6}" y="${MT + 96}" fill="${CORAL}" font-size="9" font-family="var(--font-data)">last shared month:</text>
+    <text x="${W - MR + 6}" y="${MT + 110}" fill="${CORAL}" font-size="9" font-family="var(--font-data)">${n1(m[n - 1].a)} vs ${n1(m[n - 1].b)} µg/m³</text>
+    <text x="${((ML + W - MR) / 2).toFixed(1)}" y="${Ht - 12}" fill="${MUTED}" font-size="10.5" text-anchor="middle">monthly mean over the hours both instruments reported</text>
+  </svg>`;
+}
+
+/* ── Figure 10 · the record smoke month, and the missing witness ───────────── */
+function fig10() {
+  const fm = A.fire.monthly, cov = A.panel.coverage;
+  const covBy = Object.fromEntries(cov.map((c: any) => [c.ym, c]));
+  const W = 720, Ht = 300, ML = 52, MR = 56, MT = 26, MB = 54;
+  const n = fm.length;
+  const step = (W - ML - MR) / n, bw = step * 0.68;
+  const fmax = Math.max(...fm.map((r: any) => r.n)) * 1.06;
+  const sy = (v: number) => Ht - MB - (v / fmax) * (Ht - MT - MB);
+  const omax = Math.max(...cov.map((c: any) => c.obs_hours)) * 1.06;
+  const oy = (v: number) => Ht - MB - (v / omax) * (Ht - MT - MB);
+  const bars = fm.map((r: any, i: number) => {
+    const peak = r.n === A.fire.peak_n;
+    const c = covBy[r.m];
+    return `<rect class="hv" x="${(ML + i * step + (step - bw) / 2).toFixed(1)}" y="${sy(r.n).toFixed(1)}"
+      width="${bw.toFixed(1)}" height="${(Ht - MB - sy(r.n)).toFixed(1)}" rx="1.5"
+      fill="${peak ? CORAL : "#8695B0"}" opacity="${peak ? 0.98 : 0.9}"
+      data-t="${r.m}" data-b="${n0(r.n)} hotspots · ${c ? n0(c.obs_hours) : 0} observed station-hours"/>`;
+  }).join("");
+  const obs = `<path fill="none" stroke="${CYAN}" stroke-width="1.4" stroke-dasharray="5 3" opacity="0.6" d="${fm.map((r: any, i: number) => {
+    const c = covBy[r.m];
+    return `${i ? "L" : "M"}${(ML + i * step + step / 2).toFixed(1)} ${oy(c ? c.obs_hours : 0).toFixed(1)}`;
+  }).join("")}"/>`;
+  const yl = [0, 30000, 60000].map((v) =>
+    `<line x1="${ML}" y1="${sy(v).toFixed(1)}" x2="${W - MR}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.5"/>
+     <text x="${ML - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="#8695B0" font-size="9.5" text-anchor="end">${v ? v / 1000 + "k" : "0"}</text>`).join("");
+  const yr = [0, 2500, 5000].map((v) =>
+    `<text x="${W - MR + 8}" y="${(oy(v) + 4).toFixed(1)}" fill="${CYAN}" font-size="9.5">${v ? v / 1000 + "k" : "0"}</text>`).join("");
+  const xt = fm.map((r: any, i: number) => r.m.endsWith("-01")
+    ? `<text x="${(ML + i * step + step / 2).toFixed(1)}" y="${Ht - MB + 17}" fill="${MUTED}" font-size="9.5" text-anchor="middle" font-family="var(--font-data)">${r.m.slice(0, 4)}</text>` : "").join("");
+  const pi = fm.findIndex((r: any) => r.n === A.fire.peak_n);
+  const px = ML + pi * step + step / 2;
+  return `<svg viewBox="0 0 ${W} ${Ht}" class="fig" role="img" aria-label="Fire hotspots peak at 87,541 in August 2026, the largest month on record, when only 44 station-hours of ground PM2.5 were observed">
+    ${yl}${bars}${obs}${yr}${xt}
+    <text x="${(px - 8).toFixed(1)}" y="${(sy(A.fire.peak_n) + 14).toFixed(1)}" fill="${CORAL}" font-size="10" text-anchor="end" font-family="var(--font-data)">${A.fire.peak_month} · ${n0(A.fire.peak_n)}</text>
+    <text x="${(px - 8).toFixed(1)}" y="${(sy(A.fire.peak_n) + 28).toFixed(1)}" fill="${CORAL}" font-size="10" text-anchor="end" font-family="var(--font-data)">${A.fire.ratio_to_median.toFixed(0)}× the median month</text>
+    <text x="${ML}" y="${MT - 8}" fill="#8695B0" font-size="10">▮ VIIRS hotspots in the airshed, per month</text>
+    <text x="${(W - MR).toFixed(1)}" y="${MT - 8}" fill="${CYAN}" font-size="10" text-anchor="end">- - ground PM2.5 hours observed</text>
+    <text x="${((ML + W - MR) / 2).toFixed(1)}" y="${Ht - 12}" fill="${MUTED}" font-size="10.5" text-anchor="middle">the smoke signal and the capacity to check it, on the same calendar</text>
+  </svg>`;
+}
+
+const F1 = fig1(), F2 = fig2(), F3 = fig3(), F4 = fig4(), F5 = fig5();
+const F6 = fig6(), F7 = fig7(), F8 = fig8(), F9 = fig9(), F10 = fig10();
+---
+<html lang="en" data-case="airquality" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Can Jakarta Forecast Air It Can No Longer Measure?</title>
+    <meta name="description" content="An adversarial review of a Jabodetabek PM2.5 nowcast: the baseline is doing the work, the held-out panel collapses to one sensor, and the forecast cannot call the episodes it exists for." />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="back" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/`}>← The instrument</a>
+      <span class="stamp dim">REVIEW ARTICLE · GROUND DATA THROUGH {A.vintage.ground_last}</span>
+    </header>
+
+    <article>
+      <div class="masthead">
+        <span class="eyebrow">METHODS &amp; VALIDATION · JABODETABEK AIR-QUALITY NOWCAST</span>
+        <h1>Can Jakarta forecast air it can no longer measure?</h1>
+        <p class="standfirst">A stress test of a 24–72 hour PM2.5 nowcast for Greater Jakarta,
+        {A.vintage.ground_first}–{A.vintage.ground_last}. The headline skill number survives its own
+        baseline and fails a better one; the held-out panel shrinks from six sensors to one across the
+        window it is measured on; and the last two instruments in the city disagreed by a factor of six
+        before one of them went dark. The sparsity the case reports as context turns out to be the
+        result.</p>
+        <div class="byline">
+          <span>Demo Lab · FMV</span>
+          <span>{n0(A.panel.n_test_rows)} held-out station-hours</span>
+          <span>{A.network.n_stations_total} registrations · {A.addresses.n_ever_reported} instruments</span>
+        </div>
+      </div>
+
+      <section class="abstract">
+        <h2>Abstract</h2>
+        <p><b>Question.</b> A machine-learning PM2.5 nowcast for Jabodetabek reports
+        <b>{spct(e24.skill_mae_vs_persistence)}</b> lower mean absolute error than persistence at
+        24 hours, and separately reports that only {A.network.n_live} of {A.network.n_stations_total}
+        registered stations still transmit. We ask whether the first number means what it appears to
+        mean, and whether the second is being told as the limitation it is presented as or the finding
+        it actually is.</p>
+        <p><b>Method.</b> No model was refitted. Every alternative baseline is scored on exactly the
+        rows the published model was scored on — {n0(h24.n)} held-out station-hours at 24 hours —
+        fitted on the training period alone. Uncertainty is a day-block bootstrap over
+        {n0(BT.n_blocks)} station-days. Results are read against published tables from Beijing,
+        Trondheim, Accra and the European forecast-validation standard.</p>
+        <p><b>Findings.</b> The skill curve is a property of the baseline, not the model. Hourly PM2.5
+        autocorrelation troughs at 12 hours ({acfAt(12).toFixed(2)}) and rebounds at 24
+        ({acfAt(24).toFixed(2)}), so persistence is worst exactly where the case reports its best skill
+        (<b>{spct(H[12].skill_vs_persistence)}</b> at 12 h). Measured against the strongest trivial
+        baseline at each lead, skill is flat near <b>{pct(h24.skill_vs_best)}</b> from 6 to 24 hours and
+        decays to {spct(H[72].skill_vs_best)} at 72. At 24 hours the model beats a
+        {GR.best_baseline.toLowerCase()} by <b>{spct(GR.skill_vs_best)}</b>
+        [{spct(GR.ci[0])}, {spct(GR.ci[1])}] — an interval lying entirely below the case's own
+        {pct(GR.threshold, 0)} threshold, so the gate the case publishes as passed
+        <b>fails on a fairer ruler</b>. {pct(A.panel.share_before_2026, 1)} of the held-out hours fall
+        before 2026 and the panel falls from {A.panel.months[0].n_stations} stations to
+        {A.panel.months[A.panel.months.length - 1].n_stations}; no station spans the window. The one
+        station never seen in training scores {spct(fresh.skill_persist)} against
+        {spct(seenSkill)} for the rest. At the two air-quality categories a city acts on, the forecast
+        issued <b>zero warnings in {n0(EP.ladder[2].n_observed + EP.ladder[3].n_observed)} qualifying
+        hours</b>. And two instruments {CO.m} metres apart agree only to {n2(CO.mae)} µg/m³ — within
+        {n2(H[1].model_mae - CO.mae)} of the model's entire one-hour error.</p>
+        <p><b>Conclusion.</b> The forecast is a competent interpolator of a measurement system that has
+        stopped functioning. Its remaining value is not the number it predicts but the fact that nothing
+        in Jabodetabek can now contradict it — and that is the finding worth publishing.</p>
+      </section>
+
+      <nav class="toc">
+        <a href="#s1">1 · The claim under test</a><a href="#s2">2 · Prior art</a>
+        <a href="#s3">3 · Data and method</a><a href="#s4">4 · The baseline's phase</a>
+        <a href="#s5">5 · The gate on a fairer ruler</a><a href="#s6">6 · A panel that dissolves</a>
+        <a href="#s7">7 · What does not transfer</a><a href="#s8">8 · The calls it cannot make</a>
+        <a href="#s9">9 · The error floor is the instrument</a>
+        <a href="#s10">10 · The last witness</a><a href="#s11">11 · What follows for decisions</a>
+        <a href="#s12">12 · What remains open</a><a href="#refs">References</a>
+      </nav>
+
+      <section id="s1">
+        <h2><span class="num">1</span> The claim under test</h2>
+        <p>Greater Jakarta is a metropolitan region of roughly {L.standards.jabodetabek_millions} million
+        people whose air, on this case's own record, sits above the WHO 24-hour guideline of
+        {L.standards.who_daily}&nbsp;µg/m³ on <b>{pct(A.thresholds.days_over_who15, 1)}</b> of complete
+        days. A forecast with a horizon is worth more than a dial, because only a horizon lets anyone
+        move a training session, reschedule an outdoor shift, or send a school advisory the night
+        before.</p>
+        <p>The case ships one. It reports a 24-hour mean absolute error of
+        <b>{n2(e24.model_mae)}&nbsp;µg/m³</b> against persistence's {n2(e24.persistence_mae)}, an
+        improvement of <b>{spct(e24.skill_mae_vs_persistence)}</b>, and it registered a threshold of
+        {pct(GR.threshold, 0)} in advance. {nPass} of its {nGates} checks pass and the failures are
+        published in red, which is more discipline than most dashboards manage.</p>
+        <p>This review asks three questions of it. Is <b>{spct(e24.skill_mae_vs_persistence)}</b> a
+        measurement of the model or of the baseline? Is the held-out period a held-out period? And is
+        the network finding — {A.network.n_live} live stations of {A.network.n_stations_total} —
+        being reported as the caveat it is written as, or the headline it deserves to be?</p>
+      </section>
+
+      <section id="s2">
+        <h2><span class="num">2</span> Prior art, and where this result would sit in it</h2>
+        <p>The nearest published comparator is <a href="#ref-wangdu">Wang &amp; Du (2026)</a>, who run
+        exactly this design — direct multi-horizon regression on hourly station PM2.5 with a persistence
+        reference — over {L.beijing.n_stations} Beijing stations, {L.beijing.years}. Their Table 3 gives
+        24-hour persistence MAE {n2(bjs.persist_mae)}&nbsp;µg/m³ against a best model of
+        {n2(bjs.best_mae)}: an improvement of <b>{pct(bjs.skill_mae)}</b>. On RMSE the best model
+        ({bjs.best_r}) reaches {pct(bjs.skill_rmse)}.</p>
+        <p class="pull">This case's {spct(e24.skill_mae_vs_persistence)} on MAE would therefore be
+        <i>better</i> than the best published MAE-basis figure for Beijing — produced from a panel that
+        by the end of its own evaluation window contains one sensor. A result above the state of the art
+        on thinner data is a reason to check the ruler, not to celebrate.</p>
+        <p>Three further results frame what follows.
+        <a href="#ref-murad">Murad et al. (2021)</a> obtain {pct(1 - L.trondheim.model_rmse / L.trondheim.persist_rmse)}
+        RMSE improvement at 24 hours in Trondheim against a <i>harder</i> baseline — "{L.trondheim.baseline}"
+        — which is what a 24-hour reference should be.
+        <a href="#ref-rolling">A rolling-origin re-evaluation of PM10 forecasting</a> found gradient
+        boosting scoring +{pct(L.elche.static_lo, 1)}–{pct(L.elche.static_hi, 1)} skill under a single
+        chronological split and <b>{pct(L.elche.rolling_h1, 1)}</b> — negative — under
+        {L.elche.folds} rolling folds, of which {L.elche.folds_nonpositive} gave no positive skill at
+        all. And <a href="#ref-berlinghieri">Berlinghieri et al.</a>, comparing
+        {L.smoke.n_forecasts} operational smoke forecasts across the 2023 US fire season, found
+        persistence had the <i>highest precision of all of them</i> ({L.smoke.persistence_precision}) at
+        identifying high-PM2.5 days, concluding that none offered substantially more than checking the
+        morning's readings.</p>
+        <p>Europe has settled this into a standard. <a href="#ref-vitali">Vitali et al. (2023)</a> define
+        the forecast quality indicator as <code>{L.fmqo.indicator}</code>, required to be at or below
+        {L.fmqo.threshold.toFixed(2)} at <b>{pct(L.fmqo.station_share, 0)} or more of monitoring
+        stations</b> — a per-station test, written that way precisely so a good average cannot hide a
+        bad site. We apply it in §7.</p>
+      </section>
+
+      <section id="s3">
+        <h2><span class="num">3</span> Data, method, and what was re-run</h2>
+        <p><b>The case.</b> OpenAQ v3 hourly PM2.5 for the Jabodetabek box is the target; ERA5 single
+        levels supply boundary-layer height, wind, temperature, humidity, precipitation and radiation;
+        NASA FIRMS VIIRS supplies upwind hotspot counts in three distance rings, lagged a day, with
+        volcanoes and gas flares masked out of both products. {A.model.n_features} features feed one
+        gradient-boosting model per horizon, trained on log1p PM2.5, with 10th/90th-percentile quantile
+        models for the interval. One time-based split at <b>{A.vintage.cut}</b> placed at the 75th
+        percentile of observed hours: {n0(A.model.train_rows)} rows before, {n0(A.model.test_rows)}
+        after.</p>
+        <p><b>This review.</b> Nothing was refitted. The published predictions were joined back to the
+        feature table on station, issue time and horizon, and five additional trivial baselines were
+        attached to those same rows — a trailing 24-hour mean, a diurnal climatology, a seasonal
+        climatology, a seasonal-diurnal climatology, and the meteorological standard of persisting the
+        <i>anomaly</i> from the seasonal-diurnal norm. All are fitted on the training period only.
+        Intervals are a bootstrap over whole station-days, because hourly PM2.5 is autocorrelated for
+        days and resampling hours independently would understate them badly.</p>
+        <p class="caveat"><b>What we did not do.</b> We did not re-run the pipeline from source, retrain
+        any model, or refit hyperparameters, so every model number quoted here is the case's own. We did
+        not obtain reference-grade co-located data for these specific instruments; §9 uses the network's
+        own accidental co-location instead. Data vintage is pinned at ground observations through
+        {A.vintage.ground_last} and fire detections through {A.vintage.fire_last}.</p>
+      </section>
+
+      <section id="s4">
+        <h2><span class="num">4</span> Finding one — the skill curve is the baseline's diurnal phase</h2>
+        <p>PM2.5 in Jakarta has a large daily cycle: on the case's own archive the mean hour runs from
+        {n1(Math.min(...A.observed.diurnal.map((d: any) => d.pm25)))}&nbsp;µg/m³ in mid-afternoon to
+        {n1(Math.max(...A.observed.diurnal.map((d: any) => d.pm25)))} before dawn, as the nocturnal
+        boundary layer collapses and lifts. A persistence forecast at a 24-hour lead is therefore
+        handed that entire cycle for free — it compares an hour to the same hour — and at a 12-hour lead
+        it is handed the cycle inverted.</p>
+        <p>The autocorrelation function says this precisely. It decays from
+        {acfAt(1).toFixed(2)} at one hour to a trough of <b>{acfAt(12).toFixed(2)}</b> at twelve, then
+        <i>rebounds</i> to <b>{acfAt(24).toFixed(2)}</b> at twenty-four, troughs again at
+        {acfAt(36).toFixed(2)}, rebounds to {acfAt(48).toFixed(2)}, and so on for three full days.</p>
+        <figure>
+          <Fragment set:html={F2} />
+          <figcaption><b>Figure 1.</b> Above: the autocorrelation of hourly PM2.5 across all stations,
+          {A.acf[A.acf.length - 1].lag} lags, on the case's own complete hourly grid. Amber marks the
+          diurnal echoes, slate the anti-phase troughs. Below: mean absolute error at the same leads.
+          The model's error (cyan) rises monotonically the way a forecast's should. Persistence's
+          (coral) does not — it peaks at 12 hours and falls back at 24, tracing the inverse of the
+          curve above. Hover any point.</figcaption>
+        </figure>
+        <p>Persistence MAE at 12 hours is {n2(H[12].baselines.find((b: any) => b.key === "b_persist").mae)}&nbsp;µg/m³
+        and at 24 hours it is <i>lower</i>, {n2(H[24].baselines.find((b: any) => b.key === "b_persist").mae)}.
+        No forecast gets easier further out. The baseline simply got better at 24 hours because it was
+        allowed to be in phase.</p>
+        <p>So the published skill curve — {spct(H[6].skill_vs_persistence)} at 6 hours, peaking at
+        <b>{spct(H[12].skill_vs_persistence)} at 12</b>, back to {spct(H[24].skill_vs_persistence)} at
+        24 — is not describing where the model is strong. It is describing where persistence is weak.
+        Replacing persistence at each lead with whichever trivial rule is actually best there removes
+        the shape entirely.</p>
+        <figure>
+          <Fragment set:html={F3} />
+          <figcaption><b>Figure 2.</b> The same model, two rulers. Coral is skill against persistence,
+          as the case publishes it. Cyan is skill against the strongest trivial baseline available at
+          each lead — named in the panel at right, and never the model's own machinery. The peak at
+          12 hours disappears; what remains is a flat band near {pct(h24.skill_vs_best, 0)} from
+          6 to 24 hours, decaying at 48 and 72.</figcaption>
+        </figure>
+        <p>The case's own dashboard already says the important half of this — that persistence "gets
+        this cycle for free, which is exactly why it is a hard baseline to beat." It does not draw the
+        conclusion, which is that a curve measured against a baseline with a phase cannot be read as a
+        statement about the model.</p>
+      </section>
+
+      <section id="s5">
+        <h2><span class="num">5</span> Finding two — the registered gate does not survive a fairer baseline</h2>
+        <p>The case's first check requires the 24-hour forecast to beat persistence by
+        {pct(GR.threshold, 0)} on MAE. It reports {spct(GR.published_skill)} and passes. The threshold
+        was fixed before the run and has not been moved, which is the right discipline. The question is
+        whether the comparison it is applied to is the right comparison.</p>
+        <figure>
+          <Fragment set:html={F4} />
+          <figcaption><b>Figure 3.</b> The 24-hour horizon against every trivial baseline, on the
+          identical {n0(h24.n)} held-out station-hours. Left: mean absolute error. Right: the model's
+          skill over each, with 95% intervals from a bootstrap over whole station-days. Amber marks the
+          best-performing trivial rule and the case's own {pct(GR.threshold, 0)} threshold.</figcaption>
+        </figure>
+        <p>Persistence is not the hardest trivial baseline at this lead. A <b>{GR.best_baseline.toLowerCase()}</b>
+        — carrying forward the mean of the sensor's last 24 reported hours, which requires no model,
+        no meteorology and no fire data — reaches MAE {n2(GR.best_baseline_mae)}&nbsp;µg/m³ against
+        persistence's {n2(bl24.b_persist.mae)}. Against it the model's skill is
+        <b>{spct(GR.skill_vs_best)}</b>, with a 95% interval of
+        [{spct(GR.ci[0])},&nbsp;{spct(GR.ci[1])}].</p>
+        <p class="caveat"><b>The gate fails on this ruler, and not marginally.</b> The whole interval
+        lies below the {pct(GR.threshold, 0)} threshold; the bootstrap puts the probability of clearing
+        it at <b>{(GR.p_meets_threshold * 100).toFixed(2)}%</b>. On the case's chosen baseline the
+        result is {spct(GR.published_skill)} [{spct(GR.persistence_ci[0])},&nbsp;{spct(GR.persistence_ci[1])}],
+        which does clear the bar — but by {((BT.b_persist.lo - GR.threshold) * 100).toFixed(1)}
+        percentage points at the lower bound, on an interval the case does not publish. A pass this
+        narrow, resting this heavily on the choice of comparator, should be reported as a pass with an
+        interval and a named baseline, not as a headline percentage.</p>
+        <p>Two baselines are worth noting for what they say about the data rather than the model. The
+        seasonal-diurnal climatology is <i>worse</i> ({n2(bl24.b_clim_seas.mae)}) than the plain diurnal
+        one ({n2(bl24.b_clim_hour.mae)}), which it should not be if the seasonal cycle were stable and
+        the panel were stationary — a first sign of §6. And persisting the anomaly, the meteorological
+        standard, lands at {n2(bl24.b_anom.mae)}: statistically indistinguishable from plain
+        persistence, because at a 24-hour lead the two are nearly the same estimator.</p>
+      </section>
+
+      <section id="s6">
+        <h2><span class="num">6</span> Finding three — the held-out future is a panel that dissolves</h2>
+        <p>The split is placed at the 75th percentile of <i>observed</i> hours rather than of the
+        calendar, and the reasoning given for that is sound: splitting the calendar would have handed
+        the test set whichever months the network happened to be dead in. But it has a consequence the
+        case does not follow through. Because observations are concentrated where the network was alive,
+        the "final 25%" of observed hours is not the final 25% of the timeline.</p>
+        <figure>
+          <Fragment set:html={F5} />
+          <figcaption><b>Figure 4.</b> Every scored 24-hour forecast in the held-out window, by month
+          and station; the numerals above each bar are the count of stations scored that month. Band
+          heights within a month are drawn as equal shares — the count of bands and the total height
+          are the exact figures; the split between them is not published per month.</figcaption>
+        </figure>
+        <p><b>{pct(A.panel.share_before_2026, 1)}</b> of the {n0(A.panel.n_test_rows)} scored hours fall
+        before 2026. The final {lastMonths.length} months of the record — the months the dashboard's
+        live panel actually describes — contribute <b>{lastMonthRows} scored hours between them</b>.
+        The panel falls from {A.panel.months[0].n_stations} stations in
+        {A.panel.months[0].ym} to {A.panel.months[A.panel.months.length - 1].n_stations} at the end, and
+        the intersection of the first month's stations and the last month's is <b>empty</b>: not one
+        station is present throughout, so there is no sub-panel on which a like-for-like comparison over
+        the window can be made at all.</p>
+        <p>Four stations — {A.panel.by_station.slice(0, 4).map((s: any) => s.name).join(", ")} — carry
+        <b>{pct(A.panel.by_station.slice(0, 4).reduce((s: number, r: any) => s + r.share, 0), 1)}</b> of
+        the evaluation. Every one of them has since stopped reporting. The headline skill number is
+        therefore a weighted average over a set of instruments that no longer exists, and the weights
+        are set by which of them happened to survive longest, not by any sampling design.</p>
+        <p class="caveat">This is the condition that <a href="#ref-rolling">the rolling-origin study</a>
+        was written about. A single chronological split turned {pct(L.elche.rolling_h1, 1)} skill into
+        +{pct(L.elche.static_lo, 1)} in that paper's PM10 case. We cannot rerun this case's model
+        across rolling folds without refitting it, so we do not claim the same reversal here — but the
+        monthly error in Figure 4 moves between {n2(Math.min(...A.panel.months.filter((m: any) => m.n_rows > 500).map((m: any) => m.model_mae)))}
+        and {n2(Math.max(...A.panel.months.filter((m: any) => m.n_rows > 500).map((m: any) => m.model_mae)))}&nbsp;µg/m³
+        as the panel changes shape, which is the variability a single split averages away.</p>
+      </section>
+
+      <section id="s7">
+        <h2><span class="num">7</span> Finding four — what the model learned, and what it cannot carry</h2>
+        <p>The case's own driver check reports that the single strongest feature at 24 hours is
+        <b>station identity</b>, ahead of the sensor's current reading and every meteorological term.
+        The case publishes this as a failed check and reads it correctly, as "a real result about a
+        sparse, heterogeneous network." It has a sharper consequence than that, and the panel contains
+        an accidental experiment for it.</p>
+        <p>{fresh.name} first reported on {A.panel.by_station.find((s: any) => s.location_id === fresh.location_id)?.first},
+        which is <i>after</i> the training cut. It contributes {n0(fresh.n_test)} scored hours —
+        {pct(A.panel.by_station.find((s: any) => s.location_id === fresh.location_id)?.share ?? 0, 1)} of
+        the evaluation — and the model has <b>never seen it</b>. It is, unintentionally, the only honest
+        estimate on offer of what this forecast would do at a newly installed sensor.</p>
+        <figure>
+          <Fragment set:html={F6} />
+          <figcaption><b>Figure 5.</b> Every station in the held-out window. Left: hours available in
+          training. Centre: Europe's forecast quality indicator — the model's RMSE divided by
+          persistence's, which must sit at or below 1.00. Right: how much of the observations the
+          model's nominal 80% prediction interval actually contains. Amber is the station the model
+          never trained on; coral is the station that fails the indicator.</figcaption>
+        </figure>
+        <p>At the station it never saw, skill against persistence is <b>{spct(fresh.skill_persist)}</b>
+        against a mean of {spct(seenSkill)} across the stations it trained on, and its 80% interval
+        covers <b>{pct(fresh.pi80, 0)}</b> against {pct(seenPI, 0)}. Because station identity is the
+        model's strongest lever, most of what looks like forecasting skill is per-sensor calibration
+        that cannot leave the sensor it was learned on. That matters directly: the operational proposal
+        implied by any city nowcast is that new monitors get forecasts, and this is the number that
+        would apply to them.</p>
+        <p>Applying the European criterion to the panel as a whole: <b>{FM.n_pass} of
+        {FM.n_stations}</b> stations reach MQI ≤ {L.fmqo.threshold.toFixed(2)}, which is
+        {pct(FM.share_pass, 1)} against the {pct(L.fmqo.station_share, 0)} required. <b>The case does
+        not meet Europe's acceptance criterion for an operational air-quality forecast</b>, and the one
+        station that fails it — MQI {FM.worst_mqi.toFixed(2)}, more than twice persistence's error — is
+        {FM.worst}, the only station in Jabodetabek still reporting. §10 explains why.</p>
+      </section>
+
+      <section id="s8">
+        <h2><span class="num">8</span> Finding five — the forecast cannot make the calls it exists to make</h2>
+        <p>A nowcast earns its keep on bad days. The case tests this at one threshold,
+        {L.standards.us_unhealthy}&nbsp;µg/m³, reports recall {rung(55.5).recall.toFixed(3)} at
+        precision {rung(55.5).precision.toFixed(3)}, and publishes the check as failed against its
+        {(0.5).toFixed(2)} target. That is honest, and it understates the problem, because the US air
+        quality index has two rungs above that one and Indonesia's own daily limit sits just below it —
+        <b>{L.standards.id_daily}&nbsp;µg/m³</b> under {L.standards.id_ref}, within
+        {(L.standards.us_unhealthy - L.standards.id_daily).toFixed(1)}&nbsp;µg/m³ of the threshold
+        already tested.</p>
+        <figure>
+          <Fragment set:html={F7} />
+          <figcaption><b>Figure 6.</b> Above: how far the observations reach against how far the
+          forecast reaches, on the same concentration axis, with the US AQI categories behind them.
+          Solid to the 99th percentile, faint to the maximum. Below: at each category, the hours that
+          happened and the hours the forecast called.</figcaption>
+        </figure>
+        <p>Across {n0(h24.n)} held-out hours the model's highest 24-hour prediction is
+        <b>{n1(ceil24.pred_max)}&nbsp;µg/m³</b>. The observed maximum is <b>{n1(ceil24.obs_max)}</b>.
+        There were <b>{n0(rung(125.5).n_observed)}</b> hours at or above the "very unhealthy" line and
+        <b>{n0(rung(225.5).n_observed)}</b> at or above "hazardous"; the forecast issued
+        <b>{rung(125.5).n_predicted}</b> and <b>{rung(225.5).n_predicted}</b> respectively. Recall at
+        both is <b>exactly zero</b>, not by bad luck but by construction: a model trained on log1p and
+        optimised for absolute error shrinks towards the middle of its conditional distribution, and
+        this one has drawn a ceiling at roughly {n1(ceil24.pred_max)}&nbsp;µg/m³ that no input
+        combination crosses.</p>
+        <p>The same shrinkage shows up as sign-flipped bias. On the {n0(EP.episode.n)} episode hours
+        the model runs <b>{n1(EP.episode.bias)}&nbsp;µg/m³</b> low; on the {n0(EP.clean.n)} clean hours
+        it runs <b>+{n1(EP.clean.bias)}</b> high. It is systematically optimistic exactly when being
+        optimistic costs something.</p>
+        <p>This is not peculiar to this implementation. <a href="#ref-wangdu">Wang &amp; Du</a> report
+        that on their extreme-concentration subset, <i>persistence beat every machine-learning model
+        they tested at 6 and 24 hours</i>. {L.beijing.extreme_note} A pooled error metric averages the
+        episode failure into a large majority of ordinary hours and reports the average as skill.</p>
+        <p class="caveat">The 80% prediction interval is the other half of this. It covers
+        {pct(G["G-E5"].value, 1)} of observations against a 72–88% requirement, and the case publishes
+        the failure. <a href="#ref-murad">Murad et al.</a> document precisely this failure mode for
+        precisely this estimator: quantile-regression gradient boosting delivering
+        {pct(L.trondheim.picp_qgb, 0)} coverage on a nominal {pct(L.trondheim.picp_nominal_qgb, 0)}
+        interval for PM2.5, where Bayesian neural networks on the same data reached
+        {pct(L.trondheim.picp_bnn_lo, 0)}–{pct(L.trondheim.picp_bnn_hi, 0)}. The band is not
+        irreparable; it is the wrong estimator for the job.</p>
+      </section>
+
+      <section id="s9">
+        <h2><span class="num">9</span> Finding six — the error floor belongs to the instrument, not the model</h2>
+        <p>Every error figure above is measured against readings from sensors, and OpenAQ pools
+        regulatory-grade monitors with consumer hardware under one field name. In this bbox that
+        distinction is large and it is measurable.</p>
+        <div class="stat-row">
+          <div class="stat"><span class="sv">{n1(prov["AirGradient"].mean)}</span><span class="sl">µg/m³ mean across {prov["AirGradient"].n_stations} consumer-grade stations ({n0(prov["AirGradient"].n_hours)} h)</span></div>
+          <div class="stat"><span class="sv">{n1(prov["AirNow"].mean)}</span><span class="sl">µg/m³ mean across the {prov["AirNow"].n_stations} regulatory monitors ({n0(prov["AirNow"].n_hours)} h)</span></div>
+          <div class="stat"><span class="sv accent">+{pct(prov["AirGradient"].mean / prov["AirNow"].mean - 1, 0)}</span><span class="sl">what the consumer units read above the regulatory ones</span></div>
+        </div>
+        <p>The case's headline air-quality figure — a mean of
+        {n1(A.thresholds.station_hour_mean)}&nbsp;µg/m³ — is a station-hour average over that mixed
+        panel. Restricted to the regulatory-grade subset it is
+        <b>{n1(A.providers.reference_mean)}</b>, which lands inside the published range for the city:
+        <a href="#ref-iqair">IQAir</a> reports Jakarta at {n1(L.jakarta_level.iqair_2023)} for 2023 and
+        {n1(L.jakarta_level.iqair_2024)} for 2024, and a
+        <a href="#ref-aogh">peer-reviewed Jabodetabek study</a> reports {n1(L.jakarta_level.peer_jabodetabek)}.
+        The published number is roughly
+        {pct(A.thresholds.station_hour_mean / A.providers.reference_mean - 1, 0)} above its own
+        reference-grade subset, and the difference is instrument class, not geography. (We checked the
+        obvious alternative explanation and it is not that: weighting stations equally rather than by
+        hour moves the mean only from {n1(A.thresholds.station_hour_mean)} to
+        {n1(A.thresholds.station_balanced_mean)}.)</p>
+        <p>Two of these instruments happen to sit at the same address.</p>
+        <figure>
+          <Fragment set:html={F8} />
+          <figcaption><b>Figure 7.</b> {CO.a_name} ({CO.a_provider}) against {CO.b_name}
+          ({CO.b_provider}), {CO.m} metres apart, every hour both reported. Dashed line is exact
+          agreement. Inset compares that disagreement with the model's own forecast error and with the
+          published uncorrected error of this sensor model against a reference instrument in a
+          comparable tropical climate. Hover any point.</figcaption>
+        </figure>
+        <p>Over {n0(CO.n)} shared hours the two disagree by <b>{n2(CO.mae)}&nbsp;µg/m³</b> on average
+        (RMSE {n2(CO.rmse)}, correlation {CO.r.toFixed(3)}). That is the observing system's own error at
+        zero distance and zero lead time, and no forecast can be scored below it. The model's entire
+        <i>one-hour</i> error is {n2(H[1].model_mae)}&nbsp;µg/m³ — only
+        <b>{n2(H[1].model_mae - CO.mae)}</b> above the floor. At 24 hours,
+        {n2(CO.rmse)}²⁄{n2(H[24].model_rmse)}² of the mean squared error —
+        about {pct((CO.rmse / H[24].model_rmse) ** 2, 0)} — is target noise rather than anything a
+        model could predict.</p>
+        <p>The literature makes the floor worse, not better. <a href="#ref-raheja">Raheja et al. (2023)</a>
+        co-located this exact sensor family against a {L.accra.reference_instrument} reference in Accra,
+        a tropical high-humidity city, and found uncorrected MAE of
+        <b>{n1(L.accra.clarity_mae_raw)}&nbsp;µg/m³</b> (R² {L.accra.clarity_r2_raw}, slope
+        {L.accra.clarity_slope_raw}, over {L.accra.rh_lo}–{L.accra.rh_hi}% relative humidity), falling
+        to {n1(L.accra.clarity_mae_corrected)} after calibration. The same hardware in semi-arid
+        Lubbock gives {n1(L.lubbock.clarity_mae_raw)}: the {(L.accra.clarity_mae_raw / L.lubbock.clarity_mae_raw).toFixed(1)}×
+        degradation is the humidity regime, and Jakarta's regime is Accra's. Uncorrected, that error is
+        <b>{pct(L.accra.clarity_mae_raw / e24.model_mae, 0)}</b> of the model's entire 24-hour forecast
+        error.</p>
+        <p class="caveat">None of this makes the model bad. It makes the reported error only weakly
+        attributable to the model. Before the next tenth of a µg/m³ of forecast skill is worth chasing,
+        the sensors need a correction function — and a correction function needs a reference monitor,
+        which brings us to the real finding.</p>
+      </section>
+
+      <section id="s10">
+        <h2><span class="num">10</span> Finding seven — the last witness, and why sparsity is the result</h2>
+        <p>Start with the denominator. The case reports {A.network.n_stations_total} PM2.5 stations in
+        the box, {A.network.n_live} of them live. The registry is noisier than that. Those
+        {A.network.n_stations_total} registrations resolve to <b>{A.addresses.n_addresses} distinct
+        addresses</b> — {A.addresses.largest_cluster.n} of them are the same coordinate carrying
+        {A.addresses.largest_cluster.names.slice(0, 2).map((s: string) => `"${s}"`).join(" and ")} and
+        four more names, none of which ever returned a reading. <b>{A.addresses.n_never_reported} of the
+        {A.addresses.n_registered} have never delivered an hour of data</b>, including two legacy
+        diplomatic-post entries duplicating feeds that are separately registered. The honest count is
+        <b>{A.addresses.n_ever_reported} instruments that ever reported</b>, of which
+        {A.network.n_live === 2 ? "two are flagged live and one of those has delivered no hours at all" : "few remain"}.</p>
+        <p class="pull">Told as "{A.network.n_live} of {A.network.n_stations_total}", this reads as an
+        access problem. Told as "{A.addresses.n_ever_reported} instruments ever worked and
+        {A.panel.months[A.panel.months.length - 1].n_stations} is reporting now", it is a
+        capability problem — and told properly, it is not about measurement at all.</p>
+        <p>The two co-located instruments of §9 were tracking each other closely — monthly means within
+        a few µg/m³, both catching the December wet-season drop together — for fourteen months. Then
+        they stopped.</p>
+        <figure>
+          <Fragment set:html={F9} />
+          <figcaption><b>Figure 8.</b> Monthly mean PM2.5 at the two co-located instruments, computed
+          only on the hours <i>both</i> reported, so the comparison is never confounded by different
+          sampling. The shaded region is where they cease to agree; the small figures under it are how
+          many shared hours each of those months rests on. {CO.b_name} went silent on {CO.last};
+          {CO.a_name} is the station the dashboard's live panel now describes.</figcaption>
+        </figure>
+        <p>From <b>{coAfter[0]?.ym}</b> the two diverge and never reconverge. In the last month both
+        were alive, on the hours both reported, one read <b>{n1(coLast.a)}</b> and the other
+        <b>{n1(coLast.b)}</b>&nbsp;µg/m³ — a factor of {(coLast.b / coLast.a).toFixed(1)}, at
+        {CO.m} metres. Then the second instrument went dark. It is the surviving one that reads low,
+        and its held-out quality indicator is {FM.worst_mqi.toFixed(2)} — the worst in the panel, and
+        the reason the network as a whole fails the European criterion.</p>
+        <p class="caveat"><b>How much this rests on.</b> The {coBefore.length} months of agreement are
+        built on {n0(coBeforeHours)} shared hours; the {coAfter.length} months of divergence on only
+        <b>{coAfterHours}</b>, because the surviving instrument's own reporting collapsed at the same
+        time. That is thin, and we say so. But the divergence is not a sampling artefact: the two
+        readings are drawn from identical hours by construction, the gap is
+        {n1(coLast.b - coLast.a)}&nbsp;µg/m³ against a pooled agreement of {n2(CO.mae)}, and it holds
+        in the same direction in every one of those months. It is enough to say the surviving
+        instrument needs checking; it is not enough to say which of the two was right — and there is
+        no longer anything in Jabodetabek that could settle it.</p>
+        <p>We cannot say which of the two is right. That is the point. <b>A network of one cannot be
+        wrong, because nothing can contradict it.</b> The value of a monitoring network is not that it
+        measures more places; it is that instruments check each other, and a single number that no other
+        number can dispute is not evidence. What Jabodetabek has lost is not coverage. It is
+        falsifiability.</p>
+        <p>For scale: the European framework directive requires
+        <b>{L.standards.eu_points_per_million} PM2.5 urban-background sampling point per million
+        inhabitants</b> summed over agglomerations ({L.standards.eu_ref}), which for
+        {L.standards.jabodetabek_millions} million is roughly <b>{euPoints}</b>. The US federal minimum
+        is flatter and does not scale with size — {L.standards.epa_min_large_msa} sites for any
+        metropolitan area above a million ({L.standards.epa_ref}) — and Jabodetabek does not currently
+        meet that either: the case's own coverage check finds <b>{G["G-E4"].value}</b> stations at 80%
+        completeness over the trailing 90 days, against a peak of {peakCov} reached in 2024.</p>
+        <figure>
+          <Fragment set:html={F1} />
+          <figcaption><b>Figure 9.</b> The observing system across the whole record. Cyan is stations
+          returning any PM2.5 that month; teal and amber are those clearing 50% and 80% hourly
+          completeness. The coral rule is the {L.standards.epa_min_large_msa}-site US federal minimum
+          for any metropolitan area above a million people ({L.standards.epa_ref}); the European
+          per-million rule would put the requirement near {euPoints}. The network peaks at
+          {Math.max(...A.panel.coverage.map((c: any) => c.n_any))} in 2024 and ends at
+          {A.panel.coverage[A.panel.coverage.length - 1].n_any}. It does not decline for a reason
+          anyone published; it simply stops.</figcaption>
+        </figure>
+      </section>
+
+      <section id="s11">
+        <h2><span class="num">11</span> What follows for decisions</h2>
+        <p>Evidence is only worth gathering if it changes an action. Read strictly, this work supports
+        three uses and forbids a fourth.</p>
+        <ol class="uses">
+          <li><b>An instrumentation case, addressed to the people who fund instruments.</b> The
+          arithmetic in §10 is the product: {A.addresses.n_ever_reported} instruments ever worked, one
+          reports now, and the last independent check available said the survivor and its neighbour
+          differed by a factor of {(coLast.b / coLast.a).toFixed(1)}.
+          For the Ministry of Environment and the DKI Jakarta environment agency, that converts an
+          abstract "we need more monitors" into a costed, falsifiable claim with a European benchmark
+          ({euPoints} points) and a US floor ({L.standards.epa_min_large_msa}) attached to it. A
+          reference-grade monitor is the cheapest thing on this list and it unlocks everything
+          else.</li>
+          <li><b>Sensor audit and correction.</b> The co-location result is a working method, not a
+          finding to file. Two instruments at one address, {n0(CO.n)} shared hours, and the divergence
+          is dated to the month. Run deliberately against one reference monitor, the same procedure
+          yields the correction functions the consumer network needs — and
+          <a href="#ref-raheja">the published Accra result</a> says correction takes this hardware from
+          {n1(L.accra.clarity_mae_raw)} to {n1(L.accra.clarity_mae_corrected)}&nbsp;µg/m³, which is a
+          larger improvement than any forecasting gain in this entire review.</li>
+          <li><b>Climatological planning, not next-day operations.</b> The seasonal shape is robust and
+          is the part of this that survives every test here: {n1(Math.min(...A.observed.monthly.map((m: any) => m.pm25)))}&nbsp;µg/m³
+          in the wet-season trough against {n1(Math.max(...A.observed.monthly.map((m: any) => m.pm25)))}
+          at the peak, and a daily cycle worth
+          {(Math.max(...A.observed.diurnal.map((d: any) => d.pm25)) / Math.min(...A.observed.diurnal.map((d: any) => d.pm25))).toFixed(1)}×.
+          For BMKG, for school-calendar planning, and for scheduling outdoor work, a defensible seasonal
+          and diurnal climatology is available now and needs no model.</li>
+          <li class="no"><b>Not: next-day episode warnings.</b> The forecast called
+          {rung(125.5).n_predicted} of {n0(rung(125.5).n_observed)} "very unhealthy" hours and
+          {rung(225.5).n_predicted} of {n0(rung(225.5).n_observed)} "hazardous" ones. Its interval
+          covers {pct(G["G-E5"].value, 0)} where it claims 80%. Its skill over a trivial rule is
+          {spct(GR.skill_vs_best)} at 24 hours, on a panel that no longer exists. No school advisory or
+          outdoor-work suspension should be triggered by it in its current form, and the page should say
+          so in those words.</li>
+        </ol>
+        <p class="pull">The most valuable output of this pipeline is not the forecast. It is the
+        evidence that Greater Jakarta can no longer check its own air — produced, unavoidably, by
+        trying to forecast it.</p>
+      </section>
+
+      <section id="s12">
+        <h2><span class="num">12</span> What remains open</h2>
+        <p>Three things this review could not settle, stated as work not done rather than as caveats.</p>
+        <ol class="next">
+          <li><b>A rolling-origin re-evaluation.</b> Everything in §5 and §6 points the same way, but
+          settling it requires refitting the model across expanding folds rather than one cut, which is
+          the single highest-value next experiment and the one the
+          <a href="#ref-rolling">PM10 study</a> shows can reverse a sign.</li>
+          <li><b>The fire tail is unexplained and unverifiable.</b> {A.fire.peak_month} carries
+          {n0(A.fire.peak_n)} hotspots across the airshed — <b>{A.fire.ratio_to_median.toFixed(0)}×</b>
+          the median month and {(A.fire.peak_n / A.fire.prev_max_n).toFixed(1)}× the previous record
+          ({A.fire.prev_max_month}, the strong El Niño season). It is geographically coherent rather
+          than scattered, which argues against a simple processing fault, but it sits entirely in the
+          near-real-time product, it feeds the model as a live input, and it arrives in the one month
+          the ground network delivered {augObsHours.obs_hours} observed hours. We decline to adjudicate
+          it and recommend the case does not present it as an established fire season either.</li>
+          <li><b>Recalibrate the interval before anything else.</b> The point forecast is defensible for
+          climatological use; the band is not, at {pct(G["G-E5"].value, 1)} coverage. The literature
+          names both the failure mode and estimators that do not have it.</li>
+        </ol>
+        <figure>
+          <Fragment set:html={F10} />
+          <figcaption><b>Figure 10.</b> Monthly VIIRS hotspot counts across the airshed (bars, left
+          axis) against ground PM2.5 hours actually observed (cyan, right axis). The largest smoke
+          signal in the record arrives at the moment the city has almost no capacity to measure whether
+          it reached the ground.</figcaption>
+        </figure>
+      </section>
+
+      <section id="refs">
+        <h2><span class="num">13</span> References and reproducibility</h2>
+        <ol class="refs">
+          <li id="ref-wangdu">Wang, Y. &amp; Du, R. (2026). Same-Hour Estimation and Multi-Horizon
+          Forecasting of PM2.5 in Beijing: Model Comparison and Feature-Group Contributions.
+          arXiv:2607.07279. Skill figures read from Table 3; the extreme-concentration result from
+          Table 4.</li>
+          <li id="ref-murad">Murad, A., Kraemer, F.A., Bach, K. &amp; Taylor, G. (2021). Probabilistic
+          Deep Learning to Quantify Uncertainty in Air Quality Forecasting. <i>Sensors</i> 21(23), 8009.
+          doi:10.3390/s21238009</li>
+          <li id="ref-vitali">Vitali, L., Cuvelier, K., Piersanti, A., <i>et al.</i> (2023). A
+          standardized methodology for the validation of air quality forecast applications (F-MQO).
+          <i>Geoscientific Model Development</i> 16, 6029–6047. doi:10.5194/gmd-16-6029-2023</li>
+          <li id="ref-raheja">Raheja, G., Nimo, J., Appoh, E.K.-E., <i>et al.</i> (2023). Low-Cost
+          Sensor Performance Intercomparison, Correction Factor Development, and 2+ Years of Ambient
+          PM2.5 Monitoring in Accra, Ghana. <i>Environmental Science &amp; Technology</i> 57(29),
+          10708–10720. doi:10.1021/acs.est.2c09264</li>
+          <li id="ref-lubbock">Evaluation and Calibration of Clarity Node S Low-Cost Sensors in
+          Lubbock, Texas. EGUsphere preprint egusphere-2025-4300. doi:10.5194/egusphere-2025-4300</li>
+          <li id="ref-berlinghieri">Berlinghieri, R., Burt, D.R., Giani, P., Fiore, A.M. &amp;
+          Broderick, T. (2026). Are Hourly PM2.5 Forecasts Sufficiently Accurate to Plan Your Day?
+          <i>Bulletin of the American Meteorological Society</i> 107(3).
+          doi:10.1175/BAMS-D-24-0291.1</li>
+          <li id="ref-rolling">Rolling-Origin Validation Reverses Model Rankings in Multi-Step PM10
+          Forecasting: XGBoost, SARIMA, and Persistence. arXiv:2603.20315. Skill scores read from
+          §3.1.2–3.1.4.</li>
+          <li id="ref-who">World Health Organization (2021). <i>WHO global air quality guidelines:
+          particulate matter (PM2.5 and PM10), ozone, nitrogen dioxide, sulfur dioxide and carbon
+          monoxide.</i> Annual {L.standards.who_annual} µg/m³, 24-hour {L.standards.who_daily} µg/m³.</li>
+          <li id="ref-pp22">Republic of Indonesia (2021). Peraturan Pemerintah No. 22 Tahun 2021,
+          Lampiran VII — Baku Mutu Udara Ambien Nasional. PM2.5: {L.standards.id_daily} µg/m³ over 24
+          hours, {L.standards.id_annual} µg/m³ annual.</li>
+          <li id="ref-eu">Directive 2008/50/EC of the European Parliament and of the Council on ambient
+          air quality and cleaner air for Europe, Annex V §B (recast as Directive (EU) 2024/2881,
+          Annex III).</li>
+          <li id="ref-epa">US Environmental Protection Agency. 40 CFR Part 58, Appendix D, Table D-5 —
+          PM2.5 minimum monitoring requirements.</li>
+          <li id="ref-iqair">IQAir. <i>World Air Quality Report</i>, 2023 and 2024 editions. Jakarta
+          annual mean PM2.5. Note that IQAir aggregates reference monitors and low-cost sensors
+          together.</li>
+          <li id="ref-aogh">Jabodetabek ambient PM2.5 and childhood respiratory outcomes.
+          <i>Annals of Global Health</i>. doi:10.5334/aogh.4623. Exposure from a low-cost sensor
+          network, not reference monitors.</li>
+          <li id="ref-openaq">OpenAQ. Platform documentation: <code>sensorType</code> distinguishes
+          reference-grade from low-cost instruments, and both are served under the same measurement
+          field.</li>
+        </ol>
+        <p class="repro">Every figure and every statistic on this page is generated in the page's own
+        frontmatter from <code>web/src/data/article.json</code>, written by
+        <code>pipeline/article.py</code> from two sources: the case's published
+        <code>summary.json</code>, and <code>pipeline/replicate.py</code>, which re-derives the
+        headline independently and attaches the additional baselines to the published predictions
+        without refitting anything. Benchmark values transcribed from the literature are held in a
+        single documented block in <code>article.py</code>, each labelled with the table it was read
+        from. Data vintage: ground observations {A.vintage.ground_first} → {A.vintage.ground_last},
+        fire detections through {A.vintage.fire_last}, training cut {A.vintage.cut}. Case output
+        generated {String(A.generated).slice(0, 16).replace("T", " ")} UTC; this review's re-derivation
+        {String(A.replicated).slice(0, 16).replace("T", " ")} UTC. Gate thresholds were committed to
+        version control before the corresponding results were computed and have not been moved.</p>
+      </section>
+
+      <footer class="end">
+        <p>Part of the Demo Lab. Built end-to-end on public data — acquisition, pipeline, model,
+        validation, and this review.</p>
+        <a class="cta" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/`}>← Back to the instrument</a>
+      </footer>
+    </article>
+
+    <div id="tip" hidden></div>
+
+    <style is:global>
+      body { margin: 0; background: var(--ground); color: var(--ink);
+        font-family: var(--font-body); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+      *, *::before, *::after { box-sizing: border-box; }
+      a { color: var(--accent); }
+
+      .bar { position: sticky; top: 0; z-index: 20; display: flex; justify-content: space-between;
+        align-items: center; gap: 16px; padding: 12px 24px;
+        background: color-mix(in srgb, var(--ground) 92%, transparent);
+        backdrop-filter: blur(8px); border-bottom: 1px solid var(--hairline); }
+      .back { text-decoration: none; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.06em; }
+      .stamp { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); text-align: right; }
+
+      article { max-width: 50rem; margin: 0 auto; padding: 0 24px 12vh; }
+      .masthead { padding: 9vh 0 4vh; border-bottom: 1px solid var(--hairline); }
+      .eyebrow { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--accent); }
+      h1 { font-family: var(--font-display); font-size: clamp(1.9rem, 5vw, 3.05rem); line-height: 1.1;
+        letter-spacing: -0.02em; margin: 18px 0 20px; }
+      .standfirst { font-size: 1.1rem; color: var(--ink); margin: 0 0 26px; max-width: 42rem; }
+      .byline { display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: var(--font-data);
+        font-size: 0.74rem; letter-spacing: 0.08em; color: var(--ink-muted); text-transform: uppercase; }
+
+      .abstract { margin: 5vh 0; padding: 26px 28px; border: 1px solid var(--hairline);
+        border-left: 3px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
+      .abstract h2 { font-family: var(--font-data); font-size: 0.76rem; letter-spacing: 0.16em;
+        color: var(--accent); margin: 0 0 14px; text-transform: uppercase; }
+      .abstract p { margin: 0 0 12px; font-size: 0.96rem; }
+      .abstract p:last-child { margin-bottom: 0; }
+
+      .toc { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 20px 0 8px; margin-bottom: 4vh;
+        border-bottom: 1px solid var(--hairline); font-family: var(--font-data); font-size: 0.74rem; }
+      .toc a { text-decoration: none; color: var(--ink-muted); }
+      .toc a:hover { color: var(--accent); }
+
+      section { margin: 6vh 0; }
+      h2 { font-family: var(--font-display); font-size: clamp(1.3rem, 3.4vw, 1.55rem); line-height: 1.25;
+        letter-spacing: -0.01em; margin: 0 0 20px; display: flex; gap: 14px; align-items: baseline; }
+      .num { font-family: var(--font-data); font-size: 0.9rem; color: var(--accent); flex: none; }
+      p { margin: 0 0 18px; }
+      b { color: #F2FAFC; font-weight: 600; }
+
+      .caveat { border-left: 2px solid var(--alert); padding: 2px 0 2px 18px; color: var(--ink-muted); }
+      .caveat b { color: var(--alert); }
+      .pull { font-size: 1.08rem; line-height: 1.6; border-left: 3px solid var(--accent);
+        padding: 8px 0 8px 20px; color: #F2FAFC; }
+
+      figure { margin: 34px 0; padding: 20px 18px 14px; border: 1px solid var(--hairline);
+        border-radius: var(--radius); background: var(--surface); }
+      .fig { display: block; width: 100%; height: auto; overflow: visible; }
+      figcaption { font-size: 0.85rem; color: var(--ink-muted); margin-top: 14px; line-height: 1.55; }
+      figcaption b { color: var(--ink); }
+
+      .hv { cursor: crosshair; }
+      .cp { fill: var(--accent); opacity: 0.42; cursor: crosshair; transition: opacity 0.12s; }
+      .cp:hover { opacity: 1; }
+
+      .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin: 26px 0; }
+      .stat { padding: 18px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
+      .sv { display: block; font-family: var(--font-display); font-size: 1.65rem; letter-spacing: -0.01em; }
+      .sv.accent { color: var(--accent); }
+      .sl { display: block; font-size: 0.8rem; color: var(--ink-muted); margin-top: 6px; line-height: 1.45; }
+
+      ol.uses, ol.next { padding-left: 22px; margin: 0 0 18px; }
+      ol.uses li, ol.next li { margin-bottom: 14px; }
+      ol.uses li.no { color: var(--ink-muted); }
+      ol.uses li.no b { color: var(--alert); }
+
+      ol.refs { padding-left: 22px; font-size: 0.9rem; color: var(--ink-muted); }
+      ol.refs li { margin-bottom: 12px; }
+      .repro { font-size: 0.86rem; color: var(--ink-muted); border-top: 1px solid var(--hairline); padding-top: 18px; }
+      code { font-family: var(--font-data); font-size: 0.88em; color: var(--accent); overflow-wrap: anywhere; }
+
+      .end { margin-top: 8vh; padding-top: 26px; border-top: 1px solid var(--hairline); }
+      .end p { color: var(--ink-muted); font-size: 0.9rem; }
+      .cta { display: inline-block; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.08em;
+        color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 10px 18px; text-decoration: none; }
+      .cta:hover { background: var(--accent-ink); }
+
+      #tip { position: fixed; z-index: 60; pointer-events: none; background: var(--surface-raised);
+        border: 1px solid var(--hairline); border-radius: 5px; padding: 8px 11px; font-family: var(--font-data);
+        font-size: 0.72rem; line-height: 1.5; color: var(--ink); max-width: 17rem;
+        box-shadow: 0 8px 26px rgba(0,0,0,0.55); }
+
+      @media (max-width: 680px) {
+        article { padding: 0 16px 10vh; }
+        .masthead { padding-top: 5vh; }
+        figure { padding: 12px 8px 10px; }
+        .bar { padding: 10px 14px; gap: 10px; }
+        .stamp.dim { font-size: 0.62rem; }
+      }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+
+    <script>
+      /* Hover read-outs. Pure SVG and DOM — no GPU path anywhere on this page. */
+      const tip = document.getElementById("tip");
+      const show = (html, e) => {
+        tip.innerHTML = html;
+        tip.hidden = false;
+        const r = tip.getBoundingClientRect();
+        let x = e.clientX + 14, y = e.clientY + 14;
+        if (x + r.width > innerWidth - 8) x = Math.max(8, e.clientX - r.width - 14);
+        if (y + r.height > innerHeight - 8) y = Math.max(8, e.clientY - r.height - 14);
+        tip.style.left = x + "px";
+        tip.style.top = y + "px";
+      };
+      const hide = () => { tip.hidden = true; };
+      document.querySelectorAll(".hv").forEach((el) => {
+        el.addEventListener("pointermove", (e) => {
+          const d = el.dataset;
+          show(`<b>${d.t}</b><br>${d.b}`, e);
+        });
+        el.addEventListener("pointerleave", hide);
+      });
+      document.querySelectorAll(".cp").forEach((el) => {
+        el.addEventListener("pointermove", (e) => {
+          const d = el.dataset;
+          show(`${d.a} vs ${d.b} µg/m³<br>difference ${(Number(d.a) - Number(d.b)).toFixed(1)}`, e);
+        });
+        el.addEventListener("pointerleave", hide);
+      });
+      addEventListener("scroll", hide, { passive: true });
+    </script>
+  </body>
+</html>
