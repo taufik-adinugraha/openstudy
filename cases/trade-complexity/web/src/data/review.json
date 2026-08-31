@@ -1,0 +1,1868 @@
+{
+ "nickel": {
+  "base": [
+   2013,
+   2014,
+   2015
+  ],
+  "peak": [
+   2021,
+   2022,
+   2023,
+   2024
+  ],
+  "processed": {
+   "label": "Processed nickel, as the case defines it",
+   "vBase": 1939827.5010000009,
+   "vPeak": 28413367.85975001,
+   "vRatio": 14.64736830728641,
+   "qBase": 355701.0533333332,
+   "qPeak": 12315054.059750006,
+   "qRatio": 34.62192181986419,
+   "uvBase": 5.453533192610923,
+   "uvPeak": 2.307206100914737,
+   "uvRatio": 0.4230662983844687,
+   "qMissingShareBase": 1.2769176634123814e-06,
+   "qMissingSharePeak": 1.3393053293730457e-05,
+   "shareVolume": 1.3204705058435846,
+   "shareUnitValue": -0.3204705058435846
+  },
+  "ore": {
+   "label": "Nickel ore (HS 2604)",
+   "vBase": 808812.5743333333,
+   "vPeak": 25923.963,
+   "vRatio": 0.032051879289052745,
+   "qBase": 22020686.817333337,
+   "qPeak": 438964.06500000006,
+   "qRatio": 0.019934167750593246,
+   "uvBase": 0.036729670652083636,
+   "uvPeak": 0.05905714172753525,
+   "uvRatio": 1.6078865037191667,
+   "qMissingShareBase": 9.066789471439487e-09,
+   "qMissingSharePeak": 0.0013951377727240235,
+   "shareVolume": 1.138042280078703,
+   "shareUnitValue": -0.1380422800787029
+  },
+  "series": {
+   "1995": {
+    "v": 419154,
+    "q": 128870
+   },
+   "1996": {
+    "v": 365437,
+    "q": 125776
+   },
+   "1997": {
+    "v": 279548,
+    "q": 99212
+   },
+   "1998": {
+    "v": 208788,
+    "q": 107527
+   },
+   "1999": {
+    "v": 263632,
+    "q": 110881
+   },
+   "2000": {
+    "v": 537233,
+    "q": 191390
+   },
+   "2001": {
+    "v": 392953,
+    "q": 142280
+   },
+   "2002": {
+    "v": 365418,
+    "q": 125720
+   },
+   "2003": {
+    "v": 640023,
+    "q": 164017
+   },
+   "2004": {
+    "v": 956491,
+    "q": 165038
+   },
+   "2005": {
+    "v": 1038319,
+    "q": 167272
+   },
+   "2006": {
+    "v": 1756314,
+    "q": 231715
+   },
+   "2007": {
+    "v": 3391706,
+    "q": 262549
+   },
+   "2008": {
+    "v": 2861364,
+    "q": 282488
+   },
+   "2009": {
+    "v": 1546931,
+    "q": 251854
+   },
+   "2010": {
+    "v": 2626647,
+    "q": 325061
+   },
+   "2011": {
+    "v": 2665904,
+    "q": 320049
+   },
+   "2012": {
+    "v": 1984638,
+    "q": 316109
+   },
+   "2013": {
+    "v": 1988885,
+    "q": 311659
+   },
+   "2014": {
+    "v": 2099431,
+    "q": 323231
+   },
+   "2015": {
+    "v": 1731166,
+    "q": 432214
+   },
+   "2016": {
+    "v": 1940742,
+    "q": 641471
+   },
+   "2017": {
+    "v": 3399119,
+    "q": 1793309
+   },
+   "2018": {
+    "v": 6170122,
+    "q": 2949178
+   },
+   "2019": {
+    "v": 7930081,
+    "q": 3996797
+   },
+   "2020": {
+    "v": 10673817,
+    "q": 5892112
+   },
+   "2021": {
+    "v": 19323853,
+    "q": 8380535
+   },
+   "2022": {
+    "v": 32500830,
+    "q": 11338985
+   },
+   "2023": {
+    "v": 31297347,
+    "q": 13806068
+   },
+   "2024": {
+    "v": 30531441,
+    "q": 15734628
+   }
+  },
+  "composition": {
+   "peakTotal": 28413367.859750003,
+   "baseTotal": 1939827.501,
+   "top": [
+    {
+     "hs6": "720260",
+     "label": "Ferro-nickel",
+     "vBase": 357605,
+     "vPeak": 12229823
+    },
+    {
+     "hs6": "721890",
+     "label": "Stainless semi-finished",
+     "vBase": 307,
+     "vPeak": 3391319
+    },
+    {
+     "hs6": "750110",
+     "label": "Nickel mattes",
+     "vBase": 955356,
+     "vPeak": 3125890
+    },
+    {
+     "hs6": "750120",
+     "label": "Nickel oxide sinters",
+     "vBase": 484811,
+     "vPeak": 2643875
+    },
+    {
+     "hs6": "721913",
+     "label": "Stainless hot-rolled 3-4.75mm",
+     "vBase": 542,
+     "vPeak": 2221706
+    },
+    {
+     "hs6": "721933",
+     "label": "Stainless cold-rolled 1-3mm",
+     "vBase": 24115,
+     "vPeak": 1555684
+    },
+    {
+     "hs6": "721912",
+     "label": "Stainless hot-rolled 4.75-10mm",
+     "vBase": 184,
+     "vPeak": 1236906
+    },
+    {
+     "hs6": "721914",
+     "label": "Stainless hot-rolled <3mm",
+     "vBase": 750,
+     "vPeak": 645077
+    },
+    {
+     "hs6": "721934",
+     "label": "Stainless cold-rolled 0.5-1mm",
+     "vBase": 41499,
+     "vPeak": 455204
+    },
+    {
+     "hs6": "721932",
+     "label": "Stainless cold-rolled 3-4.75mm",
+     "vBase": 1022,
+     "vPeak": 397781
+    },
+    {
+     "hs6": "750210",
+     "label": "Unwrought nickel, not alloyed",
+     "vBase": 635,
+     "vPeak": 244002
+    },
+    {
+     "hs6": "721935",
+     "label": "Stainless cold-rolled <0.5mm",
+     "vBase": 12950,
+     "vPeak": 69072
+    }
+   ],
+   "groups": {
+    "Ferro-nickel (720260)": {
+     "vBase": 357605.25333333336,
+     "vPeak": 12229822.551500004
+    },
+    "Nickel mattes & unwrought (HS 75)": {
+     "vBase": 1445253.3366666667,
+     "vPeak": 6020943.788249999
+    },
+    "Stainless steel (7218/19/20)": {
+     "vBase": 109548.12066666668,
+     "vPeak": 10115118.1665
+    },
+    "Ferro-alloys with no nickel in them": {
+     "vBase": 27420.79033333333,
+     "vPeak": 47483.3535
+    }
+   },
+   "nonNickelPeakShare": 0.0016711624519268721,
+   "nonNickelBaseShare": 0.014135684909713698
+  },
+  "narrow": {
+   "label": "Ferro-nickel + HS 75 only",
+   "vBase": 1821185.1093333336,
+   "vPeak": 18272103.883250006,
+   "vRatio": 10.033084385331223,
+   "qBase": 280492.1149999999,
+   "qPeak": 7745004.367250004,
+   "qRatio": 27.612199962376867,
+   "uvBase": 6.492821052503862,
+   "uvPeak": 2.3592115661695656,
+   "uvRatio": 0.36335693639050315,
+   "qMissingShareBase": 0.0,
+   "qMissingSharePeak": 0.0,
+   "shareVolume": 1.4390367619592792,
+   "shareUnitValue": -0.4390367619592792
+  },
+  "narrowSeries": {
+   "1995": 418386,
+   "1996": 366465,
+   "1997": 278670,
+   "1998": 206914,
+   "1999": 262064,
+   "2000": 530516,
+   "2001": 389514,
+   "2002": 357889,
+   "2003": 626446,
+   "2004": 932015,
+   "2005": 985956,
+   "2006": 1714131,
+   "2007": 3252861,
+   "2008": 2814274,
+   "2009": 1481664,
+   "2010": 2458456,
+   "2011": 2464462,
+   "2012": 1816184,
+   "2013": 1864025,
+   "2014": 1968346,
+   "2015": 1631184,
+   "2016": 1823553,
+   "2017": 2477812,
+   "2018": 2525309,
+   "2019": 3847089,
+   "2020": 5887004,
+   "2021": 9069595,
+   "2022": 19632301,
+   "2023": 22393717,
+   "2024": 21992803
+  }
+ },
+ "panel": {
+  "panelSizeExp": 140,
+  "panelSizeImp": 112,
+  "rows": [
+   {
+    "year": 1995,
+    "nExp": 151,
+    "nImp": 131,
+    "hhiExpAll": 1097.1,
+    "hhiImpAll": 846.1,
+    "hhiExpPanel": 1122.7,
+    "hhiImpPanel": 872.1,
+    "top5ExpAll": 0.58437,
+    "top5ExpPanel": 0.59136,
+    "coverExp": 0.98818,
+    "coverImp": 0.98425
+   },
+   {
+    "year": 1996,
+    "nExp": 156,
+    "nImp": 136,
+    "hhiExpAll": 1023.1,
+    "hhiImpAll": 772.7,
+    "hhiExpPanel": 1053.4,
+    "hhiImpPanel": 797.1,
+    "top5ExpAll": 0.57613,
+    "top5ExpPanel": 0.58497,
+    "coverExp": 0.9849,
+    "coverImp": 0.98385
+   },
+   {
+    "year": 1997,
+    "nExp": 192,
+    "nImp": 193,
+    "hhiExpAll": 953.6,
+    "hhiImpAll": 776.2,
+    "hhiExpPanel": 992.0,
+    "hhiImpPanel": 809.4,
+    "top5ExpAll": 0.5651,
+    "top5ExpPanel": 0.57703,
+    "coverExp": 0.97933,
+    "coverImp": 0.97854
+   },
+   {
+    "year": 1998,
+    "nExp": 201,
+    "nImp": 183,
+    "hhiExpAll": 803.4,
+    "hhiImpAll": 695.8,
+    "hhiExpPanel": 843.3,
+    "hhiImpPanel": 726.1,
+    "top5ExpAll": 0.51611,
+    "top5ExpPanel": 0.52978,
+    "coverExp": 0.97419,
+    "coverImp": 0.9777
+   },
+   {
+    "year": 1999,
+    "nExp": 209,
+    "nImp": 189,
+    "hhiExpAll": 860.4,
+    "hhiImpAll": 594.2,
+    "hhiExpPanel": 902.2,
+    "hhiImpPanel": 625.4,
+    "top5ExpAll": 0.54356,
+    "top5ExpPanel": 0.55758,
+    "coverExp": 0.97484,
+    "coverImp": 0.97356
+   },
+   {
+    "year": 2000,
+    "nExp": 218,
+    "nImp": 200,
+    "hhiExpAll": 885.3,
+    "hhiImpAll": 679.1,
+    "hhiExpPanel": 927.9,
+    "hhiImpPanel": 707.7,
+    "top5ExpAll": 0.56181,
+    "top5ExpPanel": 0.5761,
+    "coverExp": 0.97518,
+    "coverImp": 0.97894
+   },
+   {
+    "year": 2001,
+    "nExp": 217,
+    "nImp": 201,
+    "hhiExpAll": 837.9,
+    "hhiImpAll": 653.2,
+    "hhiExpPanel": 876.1,
+    "hhiImpPanel": 681.1,
+    "top5ExpAll": 0.53737,
+    "top5ExpPanel": 0.55023,
+    "coverExp": 0.97663,
+    "coverImp": 0.97858
+   },
+   {
+    "year": 2002,
+    "nExp": 216,
+    "nImp": 205,
+    "hhiExpAll": 805.6,
+    "hhiImpAll": 638.2,
+    "hhiExpPanel": 846.2,
+    "hhiImpPanel": 670.7,
+    "top5ExpAll": 0.53406,
+    "top5ExpPanel": 0.54831,
+    "coverExp": 0.97401,
+    "coverImp": 0.97473
+   },
+   {
+    "year": 2003,
+    "nExp": 216,
+    "nImp": 199,
+    "hhiExpAll": 807.1,
+    "hhiImpAll": 640.7,
+    "hhiExpPanel": 845.4,
+    "hhiImpPanel": 680.0,
+    "top5ExpAll": 0.54817,
+    "top5ExpPanel": 0.56182,
+    "coverExp": 0.97571,
+    "coverImp": 0.96963
+   },
+   {
+    "year": 2004,
+    "nExp": 217,
+    "nImp": 196,
+    "hhiExpAll": 777.6,
+    "hhiImpAll": 630.8,
+    "hhiExpPanel": 811.3,
+    "hhiImpPanel": 684.0,
+    "top5ExpAll": 0.54123,
+    "top5ExpPanel": 0.55346,
+    "coverExp": 0.97791,
+    "coverImp": 0.9588
+   },
+   {
+    "year": 2005,
+    "nExp": 212,
+    "nImp": 197,
+    "hhiExpAll": 770.2,
+    "hhiImpAll": 705.0,
+    "hhiExpPanel": 803.5,
+    "hhiImpPanel": 756.3,
+    "top5ExpAll": 0.54294,
+    "top5ExpPanel": 0.55513,
+    "coverExp": 0.97804,
+    "coverImp": 0.96253
+   },
+   {
+    "year": 2006,
+    "nExp": 217,
+    "nImp": 198,
+    "hhiExpAll": 751.4,
+    "hhiImpAll": 691.5,
+    "hhiExpPanel": 784.1,
+    "hhiImpPanel": 754.6,
+    "top5ExpAll": 0.54158,
+    "top5ExpPanel": 0.55375,
+    "coverExp": 0.97803,
+    "coverImp": 0.95262
+   },
+   {
+    "year": 2007,
+    "nExp": 216,
+    "nImp": 200,
+    "hhiExpAll": 715.1,
+    "hhiImpAll": 638.0,
+    "hhiExpPanel": 749.4,
+    "hhiImpPanel": 706.4,
+    "top5ExpAll": 0.52238,
+    "top5ExpPanel": 0.53546,
+    "coverExp": 0.97557,
+    "coverImp": 0.94576
+   },
+   {
+    "year": 2008,
+    "nExp": 215,
+    "nImp": 205,
+    "hhiExpAll": 722.7,
+    "hhiImpAll": 762.0,
+    "hhiExpPanel": 753.6,
+    "hhiImpPanel": 834.4,
+    "top5ExpAll": 0.50853,
+    "top5ExpPanel": 0.51979,
+    "coverExp": 0.97833,
+    "coverImp": 0.95278
+   },
+   {
+    "year": 2009,
+    "nExp": 216,
+    "nImp": 208,
+    "hhiExpAll": 655.4,
+    "hhiImpAll": 753.4,
+    "hhiExpPanel": 684.8,
+    "hhiImpPanel": 808.0,
+    "top5ExpAll": 0.49493,
+    "top5ExpPanel": 0.5064,
+    "coverExp": 0.97737,
+    "coverImp": 0.96451
+   },
+   {
+    "year": 2010,
+    "nExp": 214,
+    "nImp": 210,
+    "hhiExpAll": 690.4,
+    "hhiImpAll": 790.9,
+    "hhiExpPanel": 712.0,
+    "hhiImpPanel": 834.7,
+    "top5ExpAll": 0.51157,
+    "top5ExpPanel": 0.51964,
+    "coverExp": 0.98446,
+    "coverImp": 0.9727
+   },
+   {
+    "year": 2011,
+    "nExp": 214,
+    "nImp": 209,
+    "hhiExpAll": 690.1,
+    "hhiImpAll": 763.5,
+    "hhiExpPanel": 716.3,
+    "hhiImpPanel": 806.6,
+    "top5ExpAll": 0.50554,
+    "top5ExpPanel": 0.51527,
+    "coverExp": 0.98112,
+    "coverImp": 0.97215
+   },
+   {
+    "year": 2012,
+    "nExp": 215,
+    "nImp": 212,
+    "hhiExpAll": 680.8,
+    "hhiImpAll": 740.8,
+    "hhiExpPanel": 707.3,
+    "hhiImpPanel": 782.5,
+    "top5ExpAll": 0.50689,
+    "top5ExpPanel": 0.51692,
+    "coverExp": 0.9806,
+    "coverImp": 0.97219
+   },
+   {
+    "year": 2013,
+    "nExp": 214,
+    "nImp": 212,
+    "hhiExpAll": 669.4,
+    "hhiImpAll": 754.0,
+    "hhiExpPanel": 696.8,
+    "hhiImpPanel": 802.1,
+    "top5ExpAll": 0.51287,
+    "top5ExpPanel": 0.52352,
+    "coverExp": 0.97965,
+    "coverImp": 0.96824
+   },
+   {
+    "year": 2014,
+    "nExp": 211,
+    "nImp": 211,
+    "hhiExpAll": 611.1,
+    "hhiImpAll": 775.9,
+    "hhiExpPanel": 632.6,
+    "hhiImpPanel": 816.9,
+    "top5ExpAll": 0.49267,
+    "top5ExpPanel": 0.50142,
+    "coverExp": 0.98254,
+    "coverImp": 0.97356
+   },
+   {
+    "year": 2015,
+    "nExp": 214,
+    "nImp": 205,
+    "hhiExpAll": 587.5,
+    "hhiImpAll": 865.4,
+    "hhiExpPanel": 607.5,
+    "hhiImpPanel": 901.9,
+    "top5ExpAll": 0.48453,
+    "top5ExpPanel": 0.49286,
+    "coverExp": 0.98311,
+    "coverImp": 0.97923
+   },
+   {
+    "year": 2016,
+    "nExp": 218,
+    "nImp": 209,
+    "hhiExpAll": 591.9,
+    "hhiImpAll": 892.9,
+    "hhiExpPanel": 613.4,
+    "hhiImpPanel": 927.5,
+    "top5ExpAll": 0.48316,
+    "top5ExpPanel": 0.49202,
+    "coverExp": 0.98201,
+    "coverImp": 0.98098
+   },
+   {
+    "year": 2017,
+    "nExp": 209,
+    "nImp": 218,
+    "hhiExpAll": 618.3,
+    "hhiImpAll": 907.3,
+    "hhiExpPanel": 638.3,
+    "hhiImpPanel": 947.8,
+    "top5ExpAll": 0.49386,
+    "top5ExpPanel": 0.50193,
+    "coverExp": 0.98392,
+    "coverImp": 0.97814
+   },
+   {
+    "year": 2018,
+    "nExp": 211,
+    "nImp": 217,
+    "hhiExpAll": 640.9,
+    "hhiImpAll": 950.4,
+    "hhiExpPanel": 662.7,
+    "hhiImpPanel": 1002.9,
+    "top5ExpAll": 0.49241,
+    "top5ExpPanel": 0.50085,
+    "coverExp": 0.98316,
+    "coverImp": 0.97302
+   },
+   {
+    "year": 2019,
+    "nExp": 212,
+    "nImp": 220,
+    "hhiExpAll": 649.5,
+    "hhiImpAll": 1011.7,
+    "hhiExpPanel": 672.8,
+    "hhiImpPanel": 1052.1,
+    "top5ExpAll": 0.49709,
+    "top5ExpPanel": 0.50602,
+    "coverExp": 0.98234,
+    "coverImp": 0.98024
+   },
+   {
+    "year": 2020,
+    "nExp": 211,
+    "nImp": 219,
+    "hhiExpAll": 717.1,
+    "hhiImpAll": 1062.8,
+    "hhiExpPanel": 741.1,
+    "hhiImpPanel": 1108.0,
+    "top5ExpAll": 0.50873,
+    "top5ExpPanel": 0.51725,
+    "coverExp": 0.98353,
+    "coverImp": 0.97899
+   },
+   {
+    "year": 2021,
+    "nExp": 210,
+    "nImp": 215,
+    "hhiExpAll": 842.2,
+    "hhiImpAll": 1128.0,
+    "hhiExpPanel": 872.4,
+    "hhiImpPanel": 1188.3,
+    "top5ExpAll": 0.52072,
+    "top5ExpPanel": 0.53011,
+    "coverExp": 0.9823,
+    "coverImp": 0.97374
+   },
+   {
+    "year": 2022,
+    "nExp": 212,
+    "nImp": 217,
+    "hhiExpAll": 819.6,
+    "hhiImpAll": 1103.0,
+    "hhiExpPanel": 846.0,
+    "hhiImpPanel": 1162.7,
+    "top5ExpAll": 0.52945,
+    "top5ExpPanel": 0.53803,
+    "coverExp": 0.98405,
+    "coverImp": 0.97359
+   },
+   {
+    "year": 2023,
+    "nExp": 213,
+    "nImp": 218,
+    "hhiExpAll": 866.0,
+    "hhiImpAll": 1094.9,
+    "hhiExpPanel": 893.8,
+    "hhiImpPanel": 1145.0,
+    "top5ExpAll": 0.53176,
+    "top5ExpPanel": 0.5403,
+    "coverExp": 0.98419,
+    "coverImp": 0.9775
+   },
+   {
+    "year": 2024,
+    "nExp": 216,
+    "nImp": 222,
+    "hhiExpAll": 844.3,
+    "hhiImpAll": 1306.7,
+    "hhiExpPanel": 870.5,
+    "hhiImpPanel": 1375.1,
+    "top5ExpAll": 0.52785,
+    "top5ExpPanel": 0.53607,
+    "coverExp": 0.98468,
+    "coverImp": 0.97436
+   }
+  ],
+  "fallAll": 509.5999999999999,
+  "fallPanel": 515.2,
+  "troughAll": 2015,
+  "troughPanel": 2015,
+  "survivingShare": 1.0109890109890112,
+  "entryYears": [
+   1997
+  ]
+ },
+ "gap": {
+  "year": 2023,
+  "baci": 305042535743.99774,
+  "bps": 258820000000.0,
+  "comtrade": 259500000000.0,
+  "excess": 46222535743.99774,
+  "deviation": 0.17858950523142625,
+  "nPartners": 213,
+  "chapters": [
+   {
+    "hs2": "27",
+    "name": "Mineral fuels",
+    "v": 68971986,
+    "share": 0.22610612623179763,
+    "excessIfProportional": 10451198501.686132
+   },
+   {
+    "hs2": "15",
+    "name": "Animal/veg fats (palm)",
+    "v": 37874015,
+    "share": 0.12415978190262995,
+    "excessIfProportional": 5738979956.961277
+   },
+   {
+    "hs2": "72",
+    "name": "Iron & steel",
+    "v": 27077343,
+    "share": 0.08876579599615002,
+    "excessIfProportional": 4102980178.276456
+   },
+   {
+    "hs2": "85",
+    "name": "Electrical machinery",
+    "v": 20945686,
+    "share": 0.06866480570296071,
+    "excessIfProportional": 3173861435.9597616
+   },
+   {
+    "hs2": "87",
+    "name": "Vehicles",
+    "v": 13625835,
+    "share": 0.044668639249823436,
+    "excessIfProportional": 2064697774.3607047
+   },
+   {
+    "hs2": "64",
+    "name": "Footwear",
+    "v": 9637063,
+    "share": 0.03159252088727636,
+    "excessIfProportional": 1460286425.9551272
+   },
+   {
+    "hs2": "26",
+    "name": "Ores",
+    "v": 9435481,
+    "share": 0.030931688002090906,
+    "excessIfProportional": 1429741054.2988331
+   },
+   {
+    "hs2": "84",
+    "name": "Machinery",
+    "v": 8541299,
+    "share": 0.02800035322669937,
+    "excessIfProportional": 1294247327.8656743
+   },
+   {
+    "hs2": "71",
+    "name": "Gems & gold",
+    "v": 8408795,
+    "share": 0.027565973818998637,
+    "excessIfProportional": 1274169210.1667705
+   },
+   {
+    "hs2": "75",
+    "name": "Nickel",
+    "v": 7639736,
+    "share": 0.02504482112426292,
+    "excessIfProportional": 1157635139.6182728
+   },
+   {
+    "hs2": "40",
+    "name": "Rubber",
+    "v": 6160332,
+    "share": 0.020194993694813645,
+    "excessIfProportional": 933463817.9083328
+   },
+   {
+    "hs2": "48",
+    "name": "Paper",
+    "v": 5550459,
+    "share": 0.018195687642257628,
+    "excessIfProportional": 841050822.4308712
+   }
+  ],
+  "partners": [
+   {
+    "code": 156,
+    "name": "China",
+    "v": 70803388,
+    "share": 0.23210988522735226
+   },
+   {
+    "code": 842,
+    "name": "USA",
+    "v": 27884755,
+    "share": 0.09141267926779183
+   },
+   {
+    "code": 699,
+    "name": "India",
+    "v": 23998697,
+    "share": 0.07867327935911396
+   },
+   {
+    "code": 392,
+    "name": "Japan",
+    "v": 23717346,
+    "share": 0.07775094587760843
+   },
+   {
+    "code": 702,
+    "name": "Singapore",
+    "v": 15804670,
+    "share": 0.05181136528862268
+   },
+   {
+    "code": 458,
+    "name": "Malaysia",
+    "v": 14355810,
+    "share": 0.04706166582632896
+   },
+   {
+    "code": 608,
+    "name": "Philippines",
+    "v": 12102393,
+    "share": 0.0396744429149276
+   },
+   {
+    "code": 410,
+    "name": "Rep. of Korea",
+    "v": 12085948,
+    "share": 0.03962053256449116
+   },
+   {
+    "code": 704,
+    "name": "Viet Nam",
+    "v": 8716719,
+    "share": 0.028575420692527227
+   },
+   {
+    "code": 764,
+    "name": "Thailand",
+    "v": 8226091,
+    "share": 0.026967029224093574
+   },
+   {
+    "code": 490,
+    "name": "Other Asia, nes",
+    "v": 7434474,
+    "share": 0.024371924465771133
+   },
+   {
+    "code": 276,
+    "name": "Germany",
+    "v": 4561880,
+    "share": 0.014954898771325723
+   }
+  ],
+  "aggregateCodes": [],
+  "byYear": [
+   {
+    "year": 2022,
+    "baci": 347451196429.0015,
+    "bps": 291900000000.0,
+    "deviation": 0.1903089977012728,
+    "excess": 55551196429.001526
+   },
+   {
+    "year": 2023,
+    "baci": 305042535743.99774,
+    "bps": 258820000000.0,
+    "deviation": 0.17858950523142625,
+    "excess": 46222535743.99774
+   },
+   {
+    "year": 2024,
+    "baci": 302633802134.9988,
+    "bps": 264700000000.0,
+    "deviation": 0.14330865936909248,
+    "excess": 37933802134.99878
+   }
+  ]
+ },
+ "eci": {
+  "rows": [
+   {
+    "year": 1995,
+    "rank": 82,
+    "n": 104,
+    "pct": 0.7884615384615384,
+    "eci": -0.7804612487994369,
+    "kc": 259,
+    "spearman": 0.9527852216315951,
+    "nCommon": 103,
+    "atlasRank": 78,
+    "atlasN": 140,
+    "atlasPct": 0.5571428571428572,
+    "onAtlasSample": 82,
+    "onAtlasSampleN": 103,
+    "publishedRank": 84,
+    "publishedN": 125
+   },
+   {
+    "year": 1996,
+    "rank": 81,
+    "n": 108,
+    "pct": 0.75,
+    "eci": -0.7064324749972678,
+    "kc": 267,
+    "spearman": 0.9688375555947413,
+    "nCommon": 107,
+    "atlasRank": 75,
+    "atlasN": 140,
+    "atlasPct": 0.5357142857142857,
+    "onAtlasSample": 81,
+    "onAtlasSampleN": 107,
+    "publishedRank": 84,
+    "publishedN": 130
+   },
+   {
+    "year": 1997,
+    "rank": 81,
+    "n": 110,
+    "pct": 0.7363636363636363,
+    "eci": -0.7082652487463644,
+    "kc": 259,
+    "spearman": 0.9462116665237645,
+    "nCommon": 108,
+    "atlasRank": 76,
+    "atlasN": 140,
+    "atlasPct": 0.5428571428571428,
+    "onAtlasSample": 80,
+    "onAtlasSampleN": 108,
+    "publishedRank": 91,
+    "publishedN": 135
+   },
+   {
+    "year": 1998,
+    "rank": 79,
+    "n": 107,
+    "pct": 0.7383177570093458,
+    "eci": -0.6628588658843205,
+    "kc": 277,
+    "spearman": 0.9497896566491171,
+    "nCommon": 106,
+    "atlasRank": 73,
+    "atlasN": 140,
+    "atlasPct": 0.5214285714285715,
+    "onAtlasSample": 79,
+    "onAtlasSampleN": 106,
+    "publishedRank": 87,
+    "publishedN": 135
+   },
+   {
+    "year": 1999,
+    "rank": 79,
+    "n": 109,
+    "pct": 0.7247706422018348,
+    "eci": -0.5616577413356235,
+    "kc": 299,
+    "spearman": 0.9483456705440757,
+    "nCommon": 108,
+    "atlasRank": 69,
+    "atlasN": 140,
+    "atlasPct": 0.4928571428571429,
+    "onAtlasSample": 79,
+    "onAtlasSampleN": 108,
+    "publishedRank": 79,
+    "publishedN": 136
+   },
+   {
+    "year": 2000,
+    "rank": 77,
+    "n": 117,
+    "pct": 0.6581196581196581,
+    "eci": -0.4098478675150626,
+    "kc": 304,
+    "spearman": 0.9683737078829006,
+    "nCommon": 115,
+    "atlasRank": 63,
+    "atlasN": 144,
+    "atlasPct": 0.4375,
+    "onAtlasSample": 76,
+    "onAtlasSampleN": 115,
+    "publishedRank": 79,
+    "publishedN": 141
+   },
+   {
+    "year": 2001,
+    "rank": 70,
+    "n": 119,
+    "pct": 0.5882352941176471,
+    "eci": -0.3451192169206297,
+    "kc": 303,
+    "spearman": 0.9817470664928293,
+    "nCommon": 118,
+    "atlasRank": 65,
+    "atlasN": 144,
+    "atlasPct": 0.4513888888888889,
+    "onAtlasSample": 70,
+    "onAtlasSampleN": 118,
+    "publishedRank": 76,
+    "publishedN": 141
+   },
+   {
+    "year": 2002,
+    "rank": 72,
+    "n": 120,
+    "pct": 0.6,
+    "eci": -0.36549051375696257,
+    "kc": 304,
+    "spearman": 0.9804942315909417,
+    "nCommon": 119,
+    "atlasRank": 64,
+    "atlasN": 144,
+    "atlasPct": 0.4444444444444444,
+    "onAtlasSample": 72,
+    "onAtlasSampleN": 119,
+    "publishedRank": 81,
+    "publishedN": 141
+   },
+   {
+    "year": 2003,
+    "rank": 75,
+    "n": 124,
+    "pct": 0.6048387096774194,
+    "eci": -0.35443769603109004,
+    "kc": 304,
+    "spearman": 0.9757258386967794,
+    "nCommon": 123,
+    "atlasRank": 59,
+    "atlasN": 144,
+    "atlasPct": 0.4097222222222222,
+    "onAtlasSample": 75,
+    "onAtlasSampleN": 123,
+    "publishedRank": 77,
+    "publishedN": 145
+   },
+   {
+    "year": 2004,
+    "rank": 83,
+    "n": 129,
+    "pct": 0.6434108527131783,
+    "eci": -0.41881624117373956,
+    "kc": 303,
+    "spearman": 0.9681679790026247,
+    "nCommon": 126,
+    "atlasRank": 64,
+    "atlasN": 144,
+    "atlasPct": 0.4444444444444444,
+    "onAtlasSample": 82,
+    "onAtlasSampleN": 126,
+    "publishedRank": 83,
+    "publishedN": 146
+   },
+   {
+    "year": 2005,
+    "rank": 83,
+    "n": 132,
+    "pct": 0.6287878787878788,
+    "eci": -0.3174362063202136,
+    "kc": 284,
+    "spearman": 0.9817121632140272,
+    "nCommon": 130,
+    "atlasRank": 68,
+    "atlasN": 144,
+    "atlasPct": 0.4722222222222222,
+    "onAtlasSample": 82,
+    "onAtlasSampleN": 130,
+    "publishedRank": 83,
+    "publishedN": 147
+   },
+   {
+    "year": 2006,
+    "rank": 83,
+    "n": 134,
+    "pct": 0.6194029850746269,
+    "eci": -0.27177215638472846,
+    "kc": 287,
+    "spearman": 0.9874930212415145,
+    "nCommon": 132,
+    "atlasRank": 68,
+    "atlasN": 145,
+    "atlasPct": 0.4689655172413793,
+    "onAtlasSample": 82,
+    "onAtlasSampleN": 132,
+    "publishedRank": 81,
+    "publishedN": 148
+   },
+   {
+    "year": 2007,
+    "rank": 79,
+    "n": 140,
+    "pct": 0.5642857142857143,
+    "eci": -0.16400353978533028,
+    "kc": 287,
+    "spearman": 0.9842827102963773,
+    "nCommon": 138,
+    "atlasRank": 67,
+    "atlasN": 145,
+    "atlasPct": 0.46206896551724136,
+    "onAtlasSample": 78,
+    "onAtlasSampleN": 138,
+    "publishedRank": 79,
+    "publishedN": 151
+   },
+   {
+    "year": 2008,
+    "rank": 77,
+    "n": 140,
+    "pct": 0.55,
+    "eci": -0.18447177688325736,
+    "kc": 273,
+    "spearman": 0.9802780435125081,
+    "nCommon": 138,
+    "atlasRank": 69,
+    "atlasN": 145,
+    "atlasPct": 0.47586206896551725,
+    "onAtlasSample": 76,
+    "onAtlasSampleN": 138,
+    "publishedRank": 77,
+    "publishedN": 152
+   },
+   {
+    "year": 2009,
+    "rank": 87,
+    "n": 139,
+    "pct": 0.6258992805755396,
+    "eci": -0.3468585119914763,
+    "kc": 266,
+    "spearman": 0.970690910448597,
+    "nCommon": 137,
+    "atlasRank": 72,
+    "atlasN": 145,
+    "atlasPct": 0.496551724137931,
+    "onAtlasSample": 85,
+    "onAtlasSampleN": 137,
+    "publishedRank": 91,
+    "publishedN": 150
+   },
+   {
+    "year": 2010,
+    "rank": 83,
+    "n": 142,
+    "pct": 0.5845070422535211,
+    "eci": -0.30660280911847676,
+    "kc": 250,
+    "spearman": 0.9790339157245632,
+    "nCommon": 140,
+    "atlasRank": 69,
+    "atlasN": 145,
+    "atlasPct": 0.47586206896551725,
+    "onAtlasSample": 82,
+    "onAtlasSampleN": 140,
+    "publishedRank": 87,
+    "publishedN": 151
+   },
+   {
+    "year": 2011,
+    "rank": 84,
+    "n": 144,
+    "pct": 0.5833333333333334,
+    "eci": -0.29989376742117074,
+    "kc": 249,
+    "spearman": 0.9833896999015367,
+    "nCommon": 141,
+    "atlasRank": 68,
+    "atlasN": 145,
+    "atlasPct": 0.4689655172413793,
+    "onAtlasSample": 83,
+    "onAtlasSampleN": 141,
+    "publishedRank": 85,
+    "publishedN": 154
+   },
+   {
+    "year": 2012,
+    "rank": 81,
+    "n": 144,
+    "pct": 0.5625,
+    "eci": -0.13378308183748097,
+    "kc": 261,
+    "spearman": 0.9867417269574895,
+    "nCommon": 141,
+    "atlasRank": 66,
+    "atlasN": 145,
+    "atlasPct": 0.45517241379310347,
+    "onAtlasSample": 79,
+    "onAtlasSampleN": 141,
+    "publishedRank": 80,
+    "publishedN": 156
+   },
+   {
+    "year": 2013,
+    "rank": 77,
+    "n": 145,
+    "pct": 0.5310344827586206,
+    "eci": -0.1456476309083847,
+    "kc": 267,
+    "spearman": 0.9854146153516845,
+    "nCommon": 141,
+    "atlasRank": 65,
+    "atlasN": 145,
+    "atlasPct": 0.4482758620689655,
+    "onAtlasSample": 76,
+    "onAtlasSampleN": 141,
+    "publishedRank": 80,
+    "publishedN": 156
+   },
+   {
+    "year": 2014,
+    "rank": 74,
+    "n": 147,
+    "pct": 0.5034013605442177,
+    "eci": -0.10586938122445236,
+    "kc": 257,
+    "spearman": 0.9861522954121097,
+    "nCommon": 142,
+    "atlasRank": 63,
+    "atlasN": 145,
+    "atlasPct": 0.43448275862068964,
+    "onAtlasSample": 74,
+    "onAtlasSampleN": 142,
+    "publishedRank": 76,
+    "publishedN": 156
+   },
+   {
+    "year": 2015,
+    "rank": 72,
+    "n": 145,
+    "pct": 0.496551724137931,
+    "eci": -0.07353298627093581,
+    "kc": 259,
+    "spearman": 0.9843542732365028,
+    "nCommon": 142,
+    "atlasRank": 61,
+    "atlasN": 145,
+    "atlasPct": 0.4206896551724138,
+    "onAtlasSample": 72,
+    "onAtlasSampleN": 142,
+    "publishedRank": 74,
+    "publishedN": 154
+   },
+   {
+    "year": 2016,
+    "rank": 71,
+    "n": 143,
+    "pct": 0.4965034965034965,
+    "eci": -0.053790869132563285,
+    "kc": 267,
+    "spearman": 0.9838477674557986,
+    "nCommon": 141,
+    "atlasRank": 60,
+    "atlasN": 145,
+    "atlasPct": 0.41379310344827586,
+    "onAtlasSample": 71,
+    "onAtlasSampleN": 141,
+    "publishedRank": 72,
+    "publishedN": 154
+   },
+   {
+    "year": 2017,
+    "rank": 72,
+    "n": 147,
+    "pct": 0.4897959183673469,
+    "eci": -0.04344271693801311,
+    "kc": 263,
+    "spearman": 0.9842287993696442,
+    "nCommon": 143,
+    "atlasRank": 60,
+    "atlasN": 145,
+    "atlasPct": 0.41379310344827586,
+    "onAtlasSample": 71,
+    "onAtlasSampleN": 143,
+    "publishedRank": 71,
+    "publishedN": 155
+   },
+   {
+    "year": 2018,
+    "rank": 73,
+    "n": 146,
+    "pct": 0.5,
+    "eci": -0.06973426703645524,
+    "kc": 259,
+    "spearman": 0.9840236055024787,
+    "nCommon": 143,
+    "atlasRank": 60,
+    "atlasN": 145,
+    "atlasPct": 0.41379310344827586,
+    "onAtlasSample": 72,
+    "onAtlasSampleN": 143,
+    "publishedRank": 73,
+    "publishedN": 155
+   },
+   {
+    "year": 2019,
+    "rank": 74,
+    "n": 148,
+    "pct": 0.5,
+    "eci": -0.04253107452624255,
+    "kc": 267,
+    "spearman": 0.9735907731065973,
+    "nCommon": 145,
+    "atlasRank": 60,
+    "atlasN": 145,
+    "atlasPct": 0.41379310344827586,
+    "onAtlasSample": 73,
+    "onAtlasSampleN": 145,
+    "publishedRank": 74,
+    "publishedN": 155
+   },
+   {
+    "year": 2020,
+    "rank": 82,
+    "n": 145,
+    "pct": 0.5655172413793104,
+    "eci": -0.19799229699412785,
+    "kc": 258,
+    "spearman": 0.9716180371352785,
+    "nCommon": 144,
+    "atlasRank": 62,
+    "atlasN": 145,
+    "atlasPct": 0.42758620689655175,
+    "onAtlasSample": 81,
+    "onAtlasSampleN": 144,
+    "publishedRank": 84,
+    "publishedN": 155
+   },
+   {
+    "year": 2021,
+    "rank": 76,
+    "n": 149,
+    "pct": 0.5100671140939598,
+    "eci": -0.04617548205233942,
+    "kc": 250,
+    "spearman": 0.979833884427649,
+    "nCommon": 145,
+    "atlasRank": 59,
+    "atlasN": 145,
+    "atlasPct": 0.4068965517241379,
+    "onAtlasSample": 74,
+    "onAtlasSampleN": 145,
+    "publishedRank": 76,
+    "publishedN": 156
+   },
+   {
+    "year": 2022,
+    "rank": 84,
+    "n": 150,
+    "pct": 0.56,
+    "eci": -0.19168722404345337,
+    "kc": 228,
+    "spearman": 0.9738466383246732,
+    "nCommon": 145,
+    "atlasRank": 63,
+    "atlasN": 145,
+    "atlasPct": 0.43448275862068964,
+    "onAtlasSample": 82,
+    "onAtlasSampleN": 145,
+    "publishedRank": 84,
+    "publishedN": 158
+   },
+   {
+    "year": 2023,
+    "rank": 69,
+    "n": 150,
+    "pct": 0.46,
+    "eci": -0.03196227719321474,
+    "kc": 239,
+    "spearman": 0.966787235752753,
+    "nCommon": 144,
+    "atlasRank": 60,
+    "atlasN": 145,
+    "atlasPct": 0.41379310344827586,
+    "onAtlasSample": 67,
+    "onAtlasSampleN": 144,
+    "publishedRank": 71,
+    "publishedN": 158
+   },
+   {
+    "year": 2024,
+    "rank": 73,
+    "n": 143,
+    "pct": 0.5104895104895105,
+    "eci": -0.09572379329735939,
+    "kc": 241,
+    "spearman": 0.9784697469987538,
+    "nCommon": 140,
+    "atlasRank": 69,
+    "atlasN": 145,
+    "atlasPct": 0.47586206896551725,
+    "onAtlasSample": 73,
+    "onAtlasSampleN": 140,
+    "publishedRank": 78,
+    "publishedN": 156
+   }
+  ],
+  "detail": {
+   "2014": {
+    "sd": 1.0,
+    "within005": 8,
+    "eciTenPlaces": 0.1351455972163023,
+    "top5": [
+     "JPN",
+     "CHE",
+     "DEU",
+     "TWN",
+     "KOR"
+    ],
+    "neighbours": [
+     {
+      "iso3": "ARM",
+      "rank": 69,
+      "eci": -0.0203
+     },
+     {
+      "iso3": "IRN",
+      "rank": 70,
+      "eci": -0.0298
+     },
+     {
+      "iso3": "MUS",
+      "rank": 71,
+      "eci": -0.0502
+     },
+     {
+      "iso3": "VNM",
+      "rank": 72,
+      "eci": -0.0568
+     },
+     {
+      "iso3": "KAZ",
+      "rank": 73,
+      "eci": -0.0764
+     },
+     {
+      "iso3": "IDN",
+      "rank": 74,
+      "eci": -0.1059
+     },
+     {
+      "iso3": "CHL",
+      "rank": 75,
+      "eci": -0.1116
+     },
+     {
+      "iso3": "QAT",
+      "rank": 76,
+      "eci": -0.1263
+     },
+     {
+      "iso3": "MDA",
+      "rank": 77,
+      "eci": -0.1548
+     },
+     {
+      "iso3": "NPL",
+      "rank": 78,
+      "eci": -0.1549
+     },
+     {
+      "iso3": "PRK",
+      "rank": 79,
+      "eci": -0.1554
+     }
+    ]
+   },
+   "2023": {
+    "sd": 1.0,
+    "within005": 5,
+    "eciTenPlaces": 0.23180006168908868,
+    "top5": [
+     "JPN",
+     "CHE",
+     "TWN",
+     "KOR",
+     "DEU"
+    ],
+    "neighbours": [
+     {
+      "iso3": "ARM",
+      "rank": 64,
+      "eci": 0.1497
+     },
+     {
+      "iso3": "QAT",
+      "rank": 65,
+      "eci": 0.1071
+     },
+     {
+      "iso3": "KWT",
+      "rank": 66,
+      "eci": 0.0961
+     },
+     {
+      "iso3": "DOM",
+      "rank": 67,
+      "eci": 0.0344
+     },
+     {
+      "iso3": "GEO",
+      "rank": 68,
+      "eci": 0.0251
+     },
+     {
+      "iso3": "IDN",
+      "rank": 69,
+      "eci": -0.032
+     },
+     {
+      "iso3": "BRA",
+      "rank": 70,
+      "eci": -0.0381
+     },
+     {
+      "iso3": "NPL",
+      "rank": 71,
+      "eci": -0.0561
+     },
+     {
+      "iso3": "JOR",
+      "rank": 72,
+      "eci": -0.0607
+     },
+     {
+      "iso3": "MDA",
+      "rank": 73,
+      "eci": -0.0747
+     },
+     {
+      "iso3": "EGY",
+      "rank": 74,
+      "eci": -0.0821
+     }
+    ]
+   },
+   "2024": {
+    "sd": 1.0,
+    "within005": 11,
+    "eciTenPlaces": 0.09477333944630989,
+    "top5": [
+     "TWN",
+     "JPN",
+     "CHE",
+     "KOR",
+     "DEU"
+    ],
+    "neighbours": [
+     {
+      "iso3": "JOR",
+      "rank": 68,
+      "eci": -0.0362
+     },
+     {
+      "iso3": "EGY",
+      "rank": 69,
+      "eci": -0.0655
+     },
+     {
+      "iso3": "DOM",
+      "rank": 70,
+      "eci": -0.0688
+     },
+     {
+      "iso3": "KAZ",
+      "rank": 71,
+      "eci": -0.0784
+     },
+     {
+      "iso3": "QAT",
+      "rank": 72,
+      "eci": -0.0955
+     },
+     {
+      "iso3": "IDN",
+      "rank": 73,
+      "eci": -0.0957
+     },
+     {
+      "iso3": "RUS",
+      "rank": 74,
+      "eci": -0.1018
+     },
+     {
+      "iso3": "IRN",
+      "rank": 75,
+      "eci": -0.1068
+     },
+     {
+      "iso3": "MDA",
+      "rank": 76,
+      "eci": -0.1082
+     },
+     {
+      "iso3": "ARM",
+      "rank": 77,
+      "eci": -0.1094
+     },
+     {
+      "iso3": "CHL",
+      "rank": 78,
+      "eci": -0.131
+     }
+    ]
+   }
+  },
+  "atlasPeers": {
+   "IDN": {
+    "1995": 78,
+    "1996": 75,
+    "1997": 76,
+    "1998": 73,
+    "1999": 69,
+    "2000": 63,
+    "2001": 65,
+    "2002": 64,
+    "2003": 59,
+    "2004": 64,
+    "2005": 68,
+    "2006": 68,
+    "2007": 67,
+    "2008": 69,
+    "2009": 72,
+    "2010": 69,
+    "2011": 68,
+    "2012": 66,
+    "2013": 65,
+    "2014": 63,
+    "2015": 61,
+    "2016": 60,
+    "2017": 60,
+    "2018": 60,
+    "2019": 60,
+    "2020": 62,
+    "2021": 59,
+    "2022": 63,
+    "2023": 60,
+    "2024": 69
+   },
+   "VNM": {
+    "1995": 119,
+    "1996": 106,
+    "1997": 106,
+    "1998": 101,
+    "1999": 98,
+    "2000": 98,
+    "2001": 84,
+    "2002": 86,
+    "2003": 87,
+    "2004": 82,
+    "2005": 81,
+    "2006": 77,
+    "2007": 73,
+    "2008": 75,
+    "2009": 74,
+    "2010": 70,
+    "2011": 67,
+    "2012": 64,
+    "2013": 64,
+    "2014": 62,
+    "2015": 65,
+    "2016": 59,
+    "2017": 56,
+    "2018": 56,
+    "2019": 55,
+    "2020": 52,
+    "2021": 49,
+    "2022": 51,
+    "2023": 48,
+    "2024": 44
+   },
+   "THA": {
+    "1995": 53,
+    "1996": 57,
+    "1997": 59,
+    "1998": 57,
+    "1999": 50,
+    "2000": 46,
+    "2001": 45,
+    "2002": 45,
+    "2003": 43,
+    "2004": 42,
+    "2005": 41,
+    "2006": 40,
+    "2007": 42,
+    "2008": 40,
+    "2009": 38,
+    "2010": 37,
+    "2011": 40,
+    "2012": 36,
+    "2013": 34,
+    "2014": 31,
+    "2015": 31,
+    "2016": 32,
+    "2017": 28,
+    "2018": 29,
+    "2019": 30,
+    "2020": 30,
+    "2021": 29,
+    "2022": 32,
+    "2023": 31,
+    "2024": 33
+   },
+   "MYS": {
+    "1995": 46,
+    "1996": 40,
+    "1997": 41,
+    "1998": 42,
+    "1999": 36,
+    "2000": 34,
+    "2001": 32,
+    "2002": 32,
+    "2003": 33,
+    "2004": 33,
+    "2005": 33,
+    "2006": 32,
+    "2007": 33,
+    "2008": 37,
+    "2009": 32,
+    "2010": 33,
+    "2011": 32,
+    "2012": 31,
+    "2013": 28,
+    "2014": 28,
+    "2015": 29,
+    "2016": 29,
+    "2017": 29,
+    "2018": 28,
+    "2019": 26,
+    "2020": 25,
+    "2021": 23,
+    "2022": 22,
+    "2023": 28,
+    "2024": 29
+   },
+   "PHL": {
+    "1995": 69,
+    "1996": 73,
+    "1997": 72,
+    "1998": 74,
+    "1999": 71,
+    "2000": 66,
+    "2001": 63,
+    "2002": 61,
+    "2003": 63,
+    "2004": 61,
+    "2005": 65,
+    "2006": 59,
+    "2007": 61,
+    "2008": 61,
+    "2009": 56,
+    "2010": 51,
+    "2011": 55,
+    "2012": 47,
+    "2013": 47,
+    "2014": 47,
+    "2015": 49,
+    "2016": 45,
+    "2017": 39,
+    "2018": 39,
+    "2019": 38,
+    "2020": 44,
+    "2021": 38,
+    "2022": 36,
+    "2023": 39,
+    "2024": 38
+   },
+   "IND": {
+    "1995": 57,
+    "1996": 55,
+    "1997": 52,
+    "1998": 54,
+    "1999": 48,
+    "2000": 47,
+    "2001": 46,
+    "2002": 47,
+    "2003": 44,
+    "2004": 47,
+    "2005": 51,
+    "2006": 51,
+    "2007": 53,
+    "2008": 51,
+    "2009": 50,
+    "2010": 53,
+    "2011": 53,
+    "2012": 52,
+    "2013": 48,
+    "2014": 48,
+    "2015": 46,
+    "2016": 46,
+    "2017": 46,
+    "2018": 45,
+    "2019": 45,
+    "2020": 45,
+    "2021": 44,
+    "2022": 41,
+    "2023": 42,
+    "2024": 42
+   }
+  },
+  "atlasSource": "Growth Lab, Harvard University \u2014 Growth Projections and Complexity Rankings, doi:10.7910/DVN/XTAQMC, column eci_rank_hs92",
+  "gateSpearman": 0.9,
+  "spearmanMin": 0.9462116665237645,
+  "spearmanMax": 0.9874930212415145,
+  "spearmanMean": 0.9748756152659969,
+  "yearsBelowGate": [],
+  "atlasBenchmarkInConfig": [
+   69,
+   133
+  ],
+  "reproduction": {
+   "corrWithPublished": 0.846496106785317,
+   "meanAbsRankDiff": 2.4
+  },
+  "counterfactual": {
+   "baseRank": 69,
+   "n": 150,
+   "excessShare": 0.15152816518280354,
+   "cases": [
+    {
+     "label": "proportional: every product scaled down",
+     "rank": 70,
+     "shift": 1
+    },
+    {
+     "label": "all of it in mineral fuels (HS 27)",
+     "rank": 67,
+     "shift": -2
+    },
+    {
+     "label": "spread over fuels, palm oil and ores",
+     "rank": 67,
+     "shift": -2
+    }
+   ],
+   "mcpProducts": 239,
+   "nearBoundary": 43,
+   "nearBoundaryShare": 0.1799163179916318
+  }
+ }
+}
