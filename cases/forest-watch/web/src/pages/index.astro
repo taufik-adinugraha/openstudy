@@ -948,7 +948,11 @@ import "../styles/tokens.css";
         }));
         if (!data.some((d) => d.gfw)) { pendingBox(host, "Divergence panel pending", "Loss totals are not exported yet."); return; }
 
-        const W = 760, H = 260, m = { t: 16, r: 20, b: 34, l: 92 };
+        // r must hold the value label drawn beyond each bar ('1,405,151 ha'), or the
+        // longest bar's label runs past the viewBox and out of the card.
+        // l must hold the longest row label ('2023 · our count'), r the value label drawn
+        // beyond the longest bar ('1,405,151 ha'). Too small and each clips its own side.
+        const W = 760, H = 260, m = { t: 16, r: 104, b: 34, l: 132 };
         const svg = d3.select(host).append("svg").attr("viewBox", `0 0 ${W} ${H}`);
         const ourNumber = dv?.gfw_tree_cover_loss_ha?.["2024"] != null;
         const series = [
