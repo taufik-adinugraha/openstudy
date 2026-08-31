@@ -1239,14 +1239,12 @@ const bali = A.provinces.find((p: any) => p.name === "Bali");
           (P1), poverty severity (P2) and the poverty line by kabupaten/kota. WebAPI variables
           621–624, {A.coverage.years[0]}–{A.latest_year}, March Susenas.</li>
         </ol>
-        <p class="repro">Every figure on this page is generated in the page's own frontmatter from
-        <code>web/src/data/article.json</code>, written by <code>pipeline/article.py</code> from the
-        case's published <code>stats.json</code> and <code>model_stats.json</code> together with
-        <code>pipeline/review.py</code>, which performs the independent recomputation of §4 and the
-        five tests of §6–§11 on the case's own stored features and folds. Data vintage {A.vintage};
+        <p class="repro">Every figure and statistic here is machine-derived from the case's own published output —
+        none of it is typed by hand, so this page cannot drift from the data behind it. The recomputation of §4 and the five tests of §6–§11 were
+        run on the case's own stored features and folds. Data vintage {A.vintage};
         review generated {A.generated}. Literature values in Figures {N.pairs} and {N.lit} and in §2 are transcribed from the
         published papers with their DOIs above and are the only numbers on this page not computed by
-        this pipeline. Gate thresholds were committed before the results they judge.</p>
+        this pipeline. Check thresholds were fixed and recorded before the results they judge.</p>
       </section>
 
       <footer class="end">

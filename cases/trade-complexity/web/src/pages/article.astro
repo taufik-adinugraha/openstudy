@@ -918,16 +918,13 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
           <li id="ref-bps">BPS-Statistics Indonesia. Total goods exports and imports, annual, current
           US$ — the national benchmark against which BACI is reconciled in Figure 9.</li>
         </ol>
-        <p class="repro">Every figure on this page is generated in the page's own frontmatter from
-        <code>web/src/data/article.json</code>, which <code>pipeline/article.py</code> derives from the
-        case's published view-models and from <code>web/src/data/review.json</code>, written by
-        <code>pipeline/review.py</code>. Sections 4–6 and 9 use an ECI re-implementation independent of
+        <p class="repro">Every figure and statistic here is machine-derived from the case's own published output —
+        none of it is typed by hand, so this page cannot drift from the data behind it. Sections 4–6 and 9 use an ECI re-implementation independent of
         the case's own; it reproduces the case's published rank to a mean of
         {sig(A.reproduction.meanAbsRankDiff, 1)} places over {A.nYears} years. Data vintage: BACI
         release {A.release}, trade through {A.vintage}. The rank-correlation threshold, the rank
-        acceptance window, the export tolerance and the nickel-import hypotheses were all committed to
-        version control before the corresponding results were computed; this review changed none of
-        them.</p>
+        acceptance window, the export tolerance and the nickel-import hypotheses were all fixed and
+        recorded in advance of the results they judge; this review changed none of them.</p>
       </section>
 
       <footer class="end">

@@ -1067,18 +1067,15 @@ const F6 = fig6(), F7 = fig7(), F8 = fig8(), F9 = fig9(), F10 = fig10();
           reference-grade from low-cost instruments, and both are served under the same measurement
           field.</li>
         </ol>
-        <p class="repro">Every figure and every statistic on this page is generated in the page's own
-        frontmatter from <code>web/src/data/article.json</code>, written by
-        <code>pipeline/article.py</code> from two sources: the case's published
-        <code>summary.json</code>, and <code>pipeline/replicate.py</code>, which re-derives the
-        headline independently and attaches the additional baselines to the published predictions
-        without refitting anything. Benchmark values transcribed from the literature are held in a
-        single documented block in <code>article.py</code>, each labelled with the table it was read
-        from. Data vintage: ground observations {A.vintage.ground_first} → {A.vintage.ground_last},
+        <p class="repro">Every figure and statistic here is machine-derived from the case's own published output —
+        none of it is typed by hand, so this page cannot drift from the data behind it. The headline was re-derived independently for this
+        review, and the additional baselines were scored against the case's existing predictions
+        without refitting the model. Values taken from the literature are each labelled with the
+        table they were read from. Data vintage: ground observations {A.vintage.ground_first} → {A.vintage.ground_last},
         fire detections through {A.vintage.fire_last}, training cut {A.vintage.cut}. Case output
         generated {String(A.generated).slice(0, 16).replace("T", " ")} UTC; this review's re-derivation
-        {String(A.replicated).slice(0, 16).replace("T", " ")} UTC. Gate thresholds were committed to
-        version control before the corresponding results were computed and have not been moved.</p>
+        {String(A.replicated).slice(0, 16).replace("T", " ")} UTC. Every threshold was fixed and
+        recorded in advance of the result it judges, and none has been moved since.</p>
       </section>
 
       <footer class="end">

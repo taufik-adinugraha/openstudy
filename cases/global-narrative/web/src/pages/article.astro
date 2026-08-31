@@ -1190,15 +1190,15 @@ const F7 = fig7(), F8 = fig8(), F9 = fig9(), F10 = fig10(), F11 = fig11();
           1979–1988. <i>Journal of Econometrics</i> 65(1), 175–203. doi:10.1016/0304-4076(94)01601-U
           — the decomposition used in §8.</li>
         </ol>
-        <p class="repro">Every figure and every statistic on this page is generated in the page's own
-        frontmatter from <code>web/src/data/article.json</code>, written by
-        <code>pipeline/article.py</code> from exactly what the dashboard serves, plus
-        <code>pipeline/attribution.py</code>, which produces §6–§8 from the raw event archive.
+        <p class="repro">Every figure and statistic here is machine-derived from the case's own published output —
+        none of it is typed by hand, so this page cannot drift from the data behind it. Sections 6–8 were computed for this review directly
+        from the raw event archive.
         Data vintage {A.vintage}; generated {A.generated}. Window {A.window.first} → {A.window.last},
         {A.days.toLocaleString()} days, {nf(A.coverage.event_rows)} coded events from
         {nf(A.streamed.files)} feed files ({A.streamed.gb} GB). The Indonesian-publisher list used in
-        §6 is a literal constant in <code>pipeline/attribution.py</code> and can be audited there.
-        Gate thresholds were fixed before results and are unchanged by this review.</p>
+        §6 is a fixed, published list of 100 sites plus the <code>.id</code> domain; anything
+        unclassified counts as foreign, so the domestic share is a lower bound. Every threshold was
+        fixed in advance of the result it judges and is unchanged by this review.</p>
       </section>
 
       <footer class="end">

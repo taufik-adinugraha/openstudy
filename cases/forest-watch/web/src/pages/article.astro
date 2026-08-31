@@ -535,9 +535,8 @@ const worseThan50 = liftRank.filter((r0) => r0.lift < (C.national as any)["50"].
         {num(R.n_mills)} Universal Mill List points with a KD-tree on the unit sphere. The
         {R.mill_radius_km} km radius is the industry convention: fresh fruit bunches must reach a mill
         within roughly a day of cutting, which historically bounded sourcing at about that distance.</p>
-        <p class="caveat"><b>What this review adds.</b> Three tests, all in
-        <code>pipeline/baserate.py</code>, all run on the same machine and the same tiles as the case
-        itself: (a) a {C.lattice_m} m lattice over the instrument's entire detection domain with the
+        <p class="caveat"><b>What this review adds.</b> Three tests, all run on the
+        same machine and the same tiles as the case itself: (a) a {C.lattice_m} m lattice over the instrument's entire detection domain with the
         mill distance at every sample; (b) {lossYears} Hansen loss crossed with plantation extent and
         the primary-forest mask at native 30 m; (c) the catchment share recomputed on unfiltered alert
         hectares. Nothing here uses data the case did not already have on disk.</p>
@@ -916,11 +915,9 @@ const worseThan50 = liftRank.filter((r0) => r0.lift < (C.national as any)["50"].
           <li id="ref-uml">World Resources Institute et al. Universal Mill List, {A.vintages.mills}.
           Accessed through Global Nature Watch.</li>
         </ol>
-        <p class="repro">Every figure on this page is generated in the page's own frontmatter from
-        <code>web/src/data/article.json</code>, written by <code>pipeline/article.py</code> from
-        <code>data/stats.json</code>, <code>data/baserate.json</code> and the event table. The three
-        review tests are <code>pipeline/baserate.py</code>, run on the same host and the same
-        downloaded tiles as the case itself. Data vintages: alerts {A.vintages.radd}, optical
+        <p class="repro">Every figure and statistic here is machine-derived from the case's own published output —
+        none of it is typed by hand, so this page cannot drift from the data behind it. The three review tests were run on the same host and the
+        same downloaded tiles as the case itself. Data vintages: alerts {A.vintages.radd}, optical
         {A.vintages.glad}, loss {A.vintages.tcl30}, plantation {A.vintages.palm}, peat
         {A.vintages.peat}, primary forest {A.vintages.primary}, mills {A.vintages.mills}. Case
         statistics generated {A.stats_generated}; review computed {A.generated}. Every stored layer is

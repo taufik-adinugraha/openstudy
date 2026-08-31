@@ -1054,12 +1054,10 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
           <code>sentinel-1-rtc</code>, CC BY 4.0), produced by Catalyst from ESA Sentinel-1 GRD.
           Contains modified Copernicus Sentinel data {A.sar_window[0].slice(0, 4)}–{A.sar_window[1].slice(0, 4)}.</li>
         </ol>
-        <p class="repro">Every figure on this page is generated in the page's own frontmatter from
-        <code>web/src/data/article.json</code>, written by <code>pipeline/article.py</code> from the
-        case's published summary and from <code>pipeline/audit.py</code>, which recomputes each test
-        independently from the stored cell, cycle and benchmark tables. The controlled thinning
-        experiment of §8 is <code>audit.py</code>'s test E and re-uses the case's own
-        <code>phenology.detect_cycles</code> unmodified. No threshold was changed to produce any result
+        <p class="repro">Every figure and statistic here is machine-derived from the case's own published output —
+        none of it is typed by hand, so this page cannot drift from the data behind it. Each test was recomputed independently from the stored
+        cell, cycle and benchmark tables, and the controlled thinning experiment of §8 re-uses the
+        case's own detector unmodified. No threshold was changed to produce any result
         here. Data vintage {A.vintage}; radar record {A.sar_window[0]} to {A.sar_window[1]};
         {A.seasons.length} seasons; benchmark years {A.full_years.join(", ")}.</p>
       </section>

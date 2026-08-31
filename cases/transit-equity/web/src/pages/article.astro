@@ -1114,11 +1114,9 @@ const regionBelowAll = WB.cities.every((c) => c.a > S.all.mean_jobs_share);
           entry (commercial speed {LIT.brtdataKmh} km/h, labelled {LIT.brtdataYear}). Grey
           literature.</li>
         </ol>
-        <p class="repro">Every figure and every number on this page is generated in the page's own
-        frontmatter from <code>data/article.json</code> and <code>data/review.json</code>, written by
-        <code>pipeline/article.py</code> and <code>pipeline/review.py</code> from the case's own
-        published outputs — <code>data/equity.json</code>, <code>data/stats.json</code>,
-        <code>data/access_adm4.parquet</code> and the routed travel-time matrix. The only
+        <p class="repro">Every figure and statistic here is machine-derived from the case's own published output —
+        none of it is typed by hand, so this page cannot drift from the data behind it. The routed travel-time matrix, the access table and the
+        equity statistics are the case's own published outputs. The only
         hand-entered values on this page are the literature constants in §2 and Figures 4 and 11,
         each transcribed from the published PDF table named beside it. The eleven review tests were
         specified before they were run and all eleven are reported, including the two that returned

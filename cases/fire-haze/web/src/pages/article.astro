@@ -684,9 +684,8 @@ const bestComp = FW1.like_for_like.best_component;
         <a href="#ref-hansen">Hansen et al. (2019)</a> is the decisive comparator, and §11 shows
         this case reproducing its most uncomfortable finding.</p>
         <p class="caveat"><b>What this review is not.</b> We did not re-run any external study, and
-        we do not re-derive the case's inputs. Every number below is computed from the artefacts
-        the case itself published, by <code>pipeline/review.py</code>, on the same machine that
-        produced them.</p>
+        we do not re-derive the case's inputs. Every number below is computed from the artefacts the
+        case itself published, on the same machine that produced them.</p>
       </section>
 
       <section id="s3">
@@ -1416,15 +1415,12 @@ const bestComp = FW1.like_for_like.best_component;
           data from the Copernicus Emergency Management Service (CEMS), <span class="mono">cems-fire-historical-v1</span>,
           via the CEMS Early Warning Data Store. doi:10.24381/cds.0e89c522</li>
         </ol>
-        <p class="repro">Every figure on this page is generated in the page's own frontmatter from
-        <code>web/src/data/article.json</code>, which <code>pipeline/article.py</code> derives from
-        the case's published <code>data/stats.json</code> and from
-        <code>data/review.json</code> — the output of <code>pipeline/review.py</code>, which
-        performs the re-scoring, the FWI audit, the spatially blocked refit and the trajectory
-        replay described above. Data vintage {A.vintage}; the case's calibration was generated
-        {A.generated.slice(0, 19)}Z and the review {(A.review_generated ?? "").slice(0, 19)}Z. Gate
-        thresholds were committed to version control before the corresponding results were
-        computed, and none were moved for this review.</p>
+        <p class="repro">Every figure and statistic here is machine-derived from the case's own published output —
+        none of it is typed by hand, so this page cannot drift from the data behind it. The re-scoring, the fire-weather audit, the spatially
+        blocked refit and the trajectory replay described above were all run for this review. Data vintage {A.vintage}; the case's calibration was generated
+        {A.generated.slice(0, 19)}Z and the review {(A.review_generated ?? "").slice(0, 19)}Z. Every
+        threshold was fixed and recorded in advance of the result it judges, and none was moved for
+        this review.</p>
       </section>
 
       <footer class="end">

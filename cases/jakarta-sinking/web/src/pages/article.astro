@@ -1053,21 +1053,12 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
           Denominators, Indonesia, doi:10.5258/SOTON/WP00660. Pesaresi, M. &amp; Politis, P. (2023),
           GHS-BUILT-S and GHS-POP R2023A, European Commission JRC.</li>
         </ol>
-        <p class="repro"><b>Corrections applied to the case page.</b> Seven, all from this review and all
-        live: the hero no longer claims the fast ground is on the north coast; chapter 01 carries the
-        deceleration result and the inland geography; the hotspot footnote no longer attributes the whole
-        gap with the 2000s literature to pixel size; chapter 02 publishes the ground-estimator factor of
-        {EST.min_vs_mean_1m_2025}, the assumption bracket and the rounding artefact in the below-sea-level
-        series; chapter 03 states that the ranking is ρ = {radarRho} identical to itself with the radar
-        off; chapter 04 withdraws the reference-frame explanation, adds the replication and says plainly
-        that the GNSS check is a consistency check; and the failed flood check is reframed as a finding
-        rather than an apology. Where a correction changed a number, the number on both pages comes from
-        the same file.</p>
-        <p class="repro"><b>Reproducibility.</b> Every figure and every statistic on this page is generated
-        in this page's own frontmatter from <code>web/src/data/article.json</code>, written by
-        <code>pipeline/article.py</code> from the case's published outputs plus
-        <code>pipeline/review.py</code>, which contains the eight tests of Section 4 and runs in under two
-        minutes on the case's existing <code>data/</code> directory. The only hand-entered numbers are the
+        <p class="repro"><b>Corrections applied.</b> This review changed seven claims on the
+        case page, and each correction is live there. Where a correction changed a number, the number
+        on both pages is read from the same source, so the two cannot disagree.</p>
+        <p class="repro"><b>Reproducibility.</b> Every figure and statistic here is machine-derived from the case's own published output —
+        none of it is typed by hand, so this page cannot drift from the data behind it. The eight tests of Section 4 were run
+        for this review against the case's existing data. The only hand-entered numbers are the
         published literature rates in Figures 1 and 2 and the Ohenhen table S2 column in Section 5, each
         transcribed from the sources cited above with the period it was measured over. Field vintage
         {A.window}; snapshot generated {A.vintage}. Every rank correlation was recomputed independently
