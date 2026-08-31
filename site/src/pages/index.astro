@@ -202,30 +202,6 @@ const DEMOS = {
         </div>
       </a>
 
-      <div class="case live" data-case="knowledge">
-        <div class="case-visual pustaka-live">
-          <div class="try-chips" id="try-chips"></div>
-          <div class="try-answer" id="try-answer" hidden></div>
-          <div class="try-sources stamp dim" id="try-sources"></div>
-          <form id="try-form">
-            <input id="try-q" type="text" autocomplete="off"
-                   placeholder="Coba tanya di sini — try it right here…" />
-            <button type="submit">Ask</button>
-          </form>
-          <span class="stamp dim" id="try-status">LIVE — ANSWERS FROM REAL DOCUMENTS, CITED &amp; VERIFIED</span>
-        </div>
-        <div class="case-body">
-          <span class="badge">PLATFORM · LIVE — TRY IT HERE</span>
-          <h2>Pustaka — Knowledge Assistant</h2>
-          <p>Upload your organization’s documents; ask in Bahasa Indonesia or
-          English; every answer cites the exact pasal, page, and verbatim quote —
-          verified against the source, never invented. Runs on your
-          infrastructure; only the final question leaves it.</p>
-          <a class="cta" href={DEMOS.knowledge} target="_blank" rel="noopener">Open the full demo →</a>
-          <span class="meta">RAG · VERIFIED CITATIONS · LOCAL EMBEDDINGS · UU PDP–AWARE</span>
-        </div>
-      </div>
-
       <a class="case live" data-case="sinking" href={DEMOS.jakarta} target="_blank" rel="noopener">
         <div class="case-visual sinking-visual" aria-hidden="true">
           <svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice">
@@ -3794,6 +3770,35 @@ const DEMOS = {
       </a>
     </section>
 
+    <section class="platform">
+      <p class="kicker">NOT A CASE STUDY · A PRODUCT THAT RUNS ON YOUR OWN DOCUMENTS</p>
+      <h2>Every case above reads public data. This one reads yours.</h2>
+
+      <div class="case live" data-case="knowledge">
+        <div class="case-visual pustaka-live">
+          <div class="try-chips" id="try-chips"></div>
+          <div class="try-answer" id="try-answer" hidden></div>
+          <div class="try-sources stamp dim" id="try-sources"></div>
+          <form id="try-form">
+            <input id="try-q" type="text" autocomplete="off"
+                   placeholder="Coba tanya di sini — try it right here…" />
+            <button type="submit">Ask</button>
+          </form>
+          <span class="stamp dim" id="try-status">LIVE — ANSWERS FROM REAL DOCUMENTS, CITED &amp; VERIFIED</span>
+        </div>
+        <div class="case-body">
+          <span class="badge">PLATFORM · LIVE — TRY IT HERE</span>
+          <h2>Pustaka — Knowledge Assistant</h2>
+          <p>Upload your organization’s documents; ask in Bahasa Indonesia or
+          English; every answer cites the exact pasal, page, and verbatim quote —
+          verified against the source, never invented. Runs on your
+          infrastructure; only the final question leaves it.</p>
+          <a class="cta" href={DEMOS.knowledge} target="_blank" rel="noopener">Open the full demo →</a>
+          <span class="meta">RAG · VERIFIED CITATIONS · LOCAL EMBEDDINGS · UU PDP–AWARE</span>
+        </div>
+      </div>
+    </section>
+
     <footer id="contact" class="foot">
       <h2>Built end-to-end, in the open.</h2>
       <p>Acquisition → pipelines → models → validation → dashboards. If your
@@ -3862,9 +3867,9 @@ const DEMOS = {
       (() => {
         const cases = [...document.querySelectorAll(".case")];
         if (!cases.length || !("IntersectionObserver" in window)) return;
-        const wrap = document.querySelector(".cases");
-        if (!wrap) return;
-        wrap.classList.add("reveal-on");
+        const wraps = [...document.querySelectorAll(".cases, .platform")];
+        if (!wraps.length) return;
+        wraps.forEach((w) => w.classList.add("reveal-on"));
         if (matchMedia("(prefers-reduced-motion: reduce)").matches) { cases.forEach((c) => c.classList.add("in")); return; }
         const io = new IntersectionObserver((entries) => {
           entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); } });
@@ -3893,6 +3898,15 @@ const DEMOS = {
       .sub { margin: 0; font-size: 1.1rem; line-height: 1.65; color: var(--ink-muted); max-width: 38rem; }
 
       .cases { max-width: 62rem; margin: 0 auto; padding: 0 24px 10vh; display: flex; flex-direction: column; gap: 28px; }
+
+      /* Pustaka is a platform product, not a public-data case study, so it sits below
+         the gallery behind a rule rather than competing inside it. */
+      .platform { max-width: 62rem; margin: 0 auto; padding: 0 24px 10vh;
+        display: flex; flex-direction: column; gap: 10px; }
+      .platform::before { content: ""; display: block; height: 1px;
+        background: var(--hairline); margin-bottom: 7vh; }
+      .platform h2 { margin: 0 0 14px; font-size: 1.5rem; letter-spacing: -0.01em; max-width: 26ch; }
+      .platform .kicker { margin: 0; }
       *, *::before, *::after { box-sizing: border-box; }
       .case { display: grid; grid-template-columns: 1.1fr 1fr; border: 1px solid var(--hairline); border-radius: 8px;
         overflow: hidden; background: linear-gradient(160deg, var(--surface-raised), var(--surface) 70%); text-decoration: none; color: var(--ink);
