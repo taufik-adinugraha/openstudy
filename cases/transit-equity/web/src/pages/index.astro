@@ -27,10 +27,11 @@ import "maplibre-gl/dist/maplibre-gl.css";
       <div class="hero-copy">
         <span class="eyebrow">Demo Lab · Case G · Jabodetabek</span>
         <h1>The hour.</h1>
-        <p class="lede">An hour on public transport buys a Menteng resident a large share of
-        Jakarta's job-dense floorspace. Sixty minutes from a desa in Kabupaten Bogor buys a
-        walk. This is that hour, computed door-to-door over every footpath, busway, commuter
-        rail, MRT and LRT in Greater Jakarta.</p>
+        <p class="lede">An hour on public transport buys a Menteng resident about a tenth of
+        Greater Jakarta's job-dense floorspace. Sixty minutes from a desa in Kabupaten Bogor
+        buys a walk. This is that hour, computed door-to-door over every footpath, busway,
+        commuter rail, MRT and LRT in the region — and the hour itself is a choice, so the
+        half-hour and the three-quarter-hour are published beside it.</p>
         <div class="hero-hud" id="hero-hud" hidden>
           <div class="hud-main">
             <span class="hud-num" id="hud-clock">00:00</span>
@@ -140,9 +141,13 @@ import "maplibre-gl/dist/maplibre-gl.css";
           <div class="equity-side reveal">
             <div class="bigstat"><span class="bignum" id="gini">—</span><span class="biglab">Gini of population-weighted 60-minute access</span></div>
             <div class="bigstat"><span class="bignum" id="palma">—</span><span class="biglab">Palma ratio — the top tenth's access over the bottom four tenths'</span></div>
-            <div class="bigstat"><span class="bignum" id="nohosp">—</span><span class="biglab">of Jabodetabek's people cannot reach a single hospital in an hour</span></div>
+            <div class="bigstat"><span class="bignum" id="nohosp">—</span><span class="biglab">of Jabodetabek's people cannot reach a single hospital in an hour <b>on scheduled public transport</b> — most of the region travels by motorcycle, which this does not model</span></div>
           </div>
         </div>
+        <div class="cutstrip reveal" id="cutstrip"></div>
+        <p class="cutnote reveal">Every inequality number on this page is a property of the hour
+        as much as of the network: a cumulative-opportunity measure counts what falls inside an
+        arbitrary boundary, so the boundary has to be published with it.</p>
         <div class="tables reveal">
           <div class="tbl"><h4>Best served</h4><div id="tbl-best"></div></div>
           <div class="tbl"><h4>Worst served (population over 5,000)</h4><div id="tbl-worst"></div></div>
@@ -195,8 +200,21 @@ import "maplibre-gl/dist/maplibre-gl.css";
               <li><b>Walking access to transit is capped at 30 minutes</b>, the standard
               assumption; ojek and feeder angkot are not modelled.</li>
             </ul>
+            <ul class="limits" id="limits-review"></ul>
           </div>
         </div>
+      </section>
+
+      <section class="chapter review-cta" id="review">
+        <span class="eyebrow">06 · Review</span>
+        <h2>We had this instrument reviewed, adversarially.</h2>
+        <p>An independent read of the same data against the published literature. It shows that
+        the inequality headline is largely a property of the sixty-minute cut-off rather than of
+        the network; that the whole system is relatively regressive on this measure, with 94 % of
+        what it adds accruing to the 30 % of the region inside DKI; that the one check this build
+        passed compares two different estimators; and it computes the poverty axis this page had
+        been carrying as pending.</p>
+        <a class="cta big" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/article`}>Read the review article →</a>
       </section>
 
       <section class="cta" id="cta">
@@ -244,7 +262,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
       const num = (v) => (v === null || v === undefined || !isFinite(v) ? "—" : d3.format(",")(Math.round(v)));
       const bandOf = (t) => (t <= 15 ? 0 : t <= 30 ? 1 : t <= 45 ? 2 : 3);
 
-      const [geo, access, cells, net, equity, stats, hero] = await Promise.all([
+      const [geo, access, cells, net, equity, stats, hero, review] = await Promise.all([
         fetch(`${base}/data/adm4.geojson`).then((r) => r.json()),
         fetch(`${base}/data/access.json`).then((r) => r.json()),
         fetch(`${base}/data/cells.json`).then((r) => r.json()),
@@ -252,6 +270,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
         fetch(`${base}/data/equity.json`).then((r) => r.json()),
         fetch(`${base}/data/stats.json`).then((r) => r.json()).catch(() => null),
         fetch(`${base}/data/hero.json`).then((r) => r.json()).catch(() => null),
+        fetch(`${base}/data/review_summary.json`).then((r) => r.json()).catch(() => null),
       ]);
 
       const state = { cutoff: 60, scenario: "all", sel: null };
@@ -879,10 +898,24 @@ import "maplibre-gl/dist/maplibre-gl.css";
         };
         tbl(equity.best ?? [], "tbl-best");
         tbl(equity.worst ?? [], "tbl-worst");
+        /* the hour is a choice — publish what the other choices give */
+        const bc = equity.by_cutoff ?? [];
+        if (bc.length) {
+          document.getElementById("cutstrip").innerHTML =
+            `<div class="cs-h"><span>If the hour were shorter</span></div>` +
+            `<table><thead><tr><th>Time budget</th><th class="r">Gini</th><th class="r">Palma</th><th class="r">DKI</th><th class="r">Bodetabek</th><th class="r">Gap</th></tr></thead><tbody>` +
+            bc.map((r) => `<tr class="${r.cutoff === 60 ? "on" : ""}"><td>${r.cutoff} minutes${r.cutoff === 60 ? " · published" : ""}</td>` +
+              `<td class="r num">${fx(r.gini)}</td><td class="r num">${fx(r.palma, 1)}×</td>` +
+              `<td class="r num">${pct(r.dki_median, 2)}</td><td class="r num">${pct(r.bodetabek_median, 2)}</td>` +
+              `<td class="r num">${r.ratio ? r.ratio.toFixed(0) + "×" : "—"}</td></tr>`).join("") +
+            `</tbody></table>`;
+        }
+        const c30 = bc.find((r) => r.cutoff === 30);
         const pl = equity.poverty_link ?? {};
         document.getElementById("ch3-sowhat").textContent =
-          `So what: a Gini of ${fx(sAll.gini)} on access means the hour is shared about as unevenly as income is in many countries — and ${pct(sAll.pop_share_no_hospital_60min, 0)} of the region's people cannot reach a hospital in it at all. ` +
-          (pl.available ? `Against Case F's poverty surface the rank correlation is ${pl.spearman_rho.toFixed(2)}, and ${num(pl.double_disadvantage_count)} kelurahan are both poor and disconnected.`
+          `So what: a Gini of ${fx(sAll.gini)} on access is not an income Gini and should not be read as one — a hard 60-minute cut-off manufactures exact zeros that an income distribution never has, and it is a property of the chosen hour as much as of the network` +
+          (c30 ? `: cut the budget to 30 minutes and the same data gives ${fx(c30.gini)}, with a Palma of ${fx(c30.palma, 1)}× instead of ${fx(sAll.palma, 1)}×. ` : ". ") +
+          (pl.available ? `Against Case F's kecamatan poverty estimates the rank correlation is ${pl.spearman_rho.toFixed(2)} and the concentration index is ${fx(pl.concentration_index)} — access accrues to the less poor. In the poorest fifth of kelurahan ${pct(pl.quintiles[pl.quintiles.length - 1].zero_share, 0)} reach no measured job-dense floorspace at all in an hour; in the least-poor fifth, ${pct(pl.quintiles[0].zero_share, 0)}.`
                         : `The poverty cross-link is pending: ${(pl.reason ?? "Case F has not published its estimates yet").replace(/\.$/, "")}.`);
       });
 
@@ -904,10 +937,11 @@ import "maplibre-gl/dist/maplibre-gl.css";
         const bars = el.querySelectorAll(".layer-bar i");
         const run = () => bars.forEach((b, i) => setTimeout(() => { b.style.width = b.dataset.w + "%"; }, reduced ? 0 : 120 * i));
         new IntersectionObserver((es, o) => es.forEach((e) => { if (e.isIntersecting) { run(); o.disconnect(); } }), { threshold: 0.3 }).observe(el);
-        const rc = equity.rail_contribution, tc = equity.transit_contribution;
+        const rc = equity.rail_contribution, tc = equity.transit_contribution, inc = equity.incidence;
         document.getElementById("ch4-sowhat").textContent =
-          (rc ? `So what: removing the rail layer costs the average resident ${pct(Math.abs(rc.mean_access_delta ?? 0), 2)} of reachable floorspace${typeof rc.gini_delta === "number" ? ` and moves the Gini by ${fx(Math.abs(rc.gini_delta))}` : ""}. ` : "So what: ") +
-          (tc ? `The whole public-transport system is worth ${pct(Math.abs(tc.mean_access_delta ?? 0), 2)} over walking alone — which is the honest size of the prize, and of the gap left to close.` : "");
+          (tc ? `So what: the whole public-transport system is worth ${pct(Math.abs(tc.mean_access_delta ?? 0), 2)} of reachable floorspace over walking alone, and the rail layer ${pct(Math.abs(rc?.mean_access_delta ?? 0), 2)} of that. ` : "So what: ") +
+          (inc?.transit ? `But a mean says nothing about who: ${pct(inc.transit.dki_share_of_gain, 0)} of what the system adds goes to the ${pct(inc.dki_pop_share, 0)} of the region's people who live inside DKI, and ${pct(inc.rail.dki_share_of_gain, 0)} of what rail adds. ` : "") +
+          (typeof tc?.gini_delta === "number" ? `Every layer raises access everywhere and raises the Gini with it — from ${fx(S.walk?.gini)} on foot to ${fx(S.all?.gini)} with everything. In relative terms this network concentrates opportunity; in absolute terms nobody loses. Both are true, and the periphery's angkot are missing from both.` : "");
       });
 
       /* ═════════ METHOD ═════════ */
@@ -943,7 +977,8 @@ import "maplibre-gl/dist/maplibre-gl.css";
               `${g4.monotonicity.violations_exact != null ? ` (${num(g4.monotonicity.violations_exact)} below the ${pct(g4.monotonicity.tolerance_share, 1)} tolerance — R5 samples frequency headways by Monte Carlo)` : ""}.` : "",
             g4.core_periphery ? `DKI median ${pct(g4.core_periphery.dki_median, 2)} vs Bodetabek ${pct(g4.core_periphery.bodetabek_median, 2)}.` : "",
             pnt.Jakarta ? `People-near-transit (≤15-min headway, 1 km): Jakarta ${pct(pnt.Jakarta.share, 0)} vs ITDP's 2016 anchor 44%; Greater Jakarta ${pct(pnt["Greater Jakarta"].share, 0)} vs 16%.` +
-              `${pnt.method ? `<br><span class="dim">${pnt.method}</span>` : ""}` : "",
+              `${pnt.method ? `<br><span class="dim">${pnt.method}</span>` : ""}` +
+              `<br><span class="dim"><b>Read this as coverage, not as a test.</b> ITDP's 2016 figure counts only rapid transit — in Jakarta that year, BRT corridors alone, and its metro row uses the same numerator as its city row because the network did not leave the city. This counts every stop with a headway of 15 minutes or better, Mikrotrans and commuter rail included, so it measures a different thing. At ${pct(pnt.Jakarta.share, 0)} of Jakarta it also has almost no room to discriminate: nearly any network would pass it.</span>` : "",
           ].filter(Boolean).join("<br>"), g4.pass);
           g.innerHTML = rowsG.join("");
         }
@@ -966,6 +1001,30 @@ import "maplibre-gl/dist/maplibre-gl.css";
         ];
         document.getElementById("sources").innerHTML = `<table><tbody>` + SRC.map(([n, l, v]) =>
           `<tr><td><b>${n}</b><br><span class="dim">${l}</span></td><td class="r dim num">${v ?? "—"}</td></tr>`).join("") + `</tbody></table>`;
+
+        /* Limits the review stage measured rather than asserted. Every number here is read
+           from data/review_summary.json, so this list cannot drift from the pipeline. */
+        const rv = review;
+        const cut = equity.by_cutoff ?? [];
+        const lim = [];
+        if (cut.length >= 2) {
+          const lo = cut[0], hi = cut[cut.length - 1];
+          lim.push(`<li><b>The hour is a choice, and it changes the answer.</b> A cumulative-opportunity measure counts everything inside a time boundary and nothing outside it. At ${lo.cutoff} minutes the core-to-periphery gap is ${lo.ratio?.toFixed(0)}× and the Gini ${fx(lo.gini)}; at ${hi.cutoff} minutes they are ${hi.ratio?.toFixed(0)}× and ${fx(hi.gini)}. All three budgets are published in chapter 03 rather than one.</li>`);
+        }
+        if (rv?.volume) {
+          lim.push(`<li><b>Floor plan, not floor area.</b> The proxy is built <i>surface</i> (GHS-BUILT-S), so a warehouse counts its footprint and a tower counts its footprint too — the region averages ${fx(rv.volume.mean_storeys, 1)} storeys. Re-measured on the matching building-<i>volume</i> product the DKI median rises from ${pct(rv.volume.dki_median_surface, 1)} to ${pct(rv.volume.dki_median_volume, 1)} and the gap widens from ${rv.volume.ratio_surface?.toFixed(0)}× to ${rv.volume.ratio_volume?.toFixed(0)}×, while the ranking of kelurahan is unchanged (ρ ${fx(rv.volume.rho)}). The levels here understate concentration; the ordering survives.</li>`);
+        }
+        if (rv?.maup) {
+          const L = rv.maup.levels;
+          lim.push(`<li><b>Kelurahan are not equal-sized.</b> They run from ${fx(rv.maup.area_min, 2)} km² to ${fx(rv.maup.area_max, 1)} km², a ${num(rv.maup.area_ratio)}-fold range, so one routed point stands for very different amounts of ground. Re-aggregated to ${L[L.length - 1].level} the same data gives a Gini of ${fx(L[L.length - 1].gini)} and a Palma of ${fx(L[L.length - 1].palma, 1)}× instead of ${fx(L[0].gini)} and ${fx(L[0].palma, 1)}×.</li>`);
+        }
+        if (rv?.rail_optimism) {
+          lim.push(`<li><b>The hand-encoded rail runs fast, systematically.</b> All three lines with a published end-to-end time are scheduled ${pct(rv.rail_optimism.min, 1)}–${pct(rv.rail_optimism.max, 1)} quicker than the operator says, in the same direction, because run times are laid along straight lines between stations while the operator's time is for the real, longer alignment: the average chord shortfall is ${pct(rv.rail_optimism.chord_deficit, 1)} against an average optimism of ${pct(rv.rail_optimism.mean, 1)}.</li>`);
+        }
+        if (rv?.network_failures) {
+          lim.push(`<li><b>Some zeros are the network, not the map.</b> ${num(rv.network_failures)} kelurahan — ${num(rv.network_failure_pop)} people — sit within 10 km of more than the median amount of the region's job-dense floorspace and still reach none of it in an hour. That list, not the shading, is what this instrument is for.</li>`);
+        }
+        if (lim.length) document.getElementById("limits-review").innerHTML = lim.join("");
       });
 
       /* entrance reveals */
@@ -1166,9 +1225,30 @@ import "maplibre-gl/dist/maplibre-gl.css";
       .pending { font-size: 0.84rem; color: #E0A63F; background: color-mix(in srgb, #E0A63F 8%, transparent);
         border: 1px dashed color-mix(in srgb, #E0A63F 35%, transparent); border-radius: var(--radius); padding: 10px 12px; }
 
-      .cta { max-width: var(--prose-width); padding: 0 0 clamp(56px, 8vh, 96px); }
-      .cta h3 { font-size: 1.3rem; margin-bottom: 8px; }
-      .cta p { color: var(--ink-muted); margin: 0; }
+      section.cta { max-width: var(--prose-width); padding: 0 0 clamp(56px, 8vh, 96px); }
+      section.cta h3 { font-size: 1.3rem; margin-bottom: 8px; }
+      section.cta p { color: var(--ink-muted); margin: 0; }
+
+      /* Review hand-off — the article is a separate page, so it gets a real door. */
+      .review-cta { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding-bottom: clamp(40px, 6vh, 72px); }
+      .review-cta h2 { font-size: clamp(1.4rem, 3vw, 2rem); max-width: 22ch; }
+      .review-cta p { color: var(--ink-muted); max-width: var(--prose-width); margin: 0; }
+      .cta.big { align-self: flex-start; margin-top: 8px; font-family: var(--font-data);
+        font-size: 0.82rem; letter-spacing: 0.08em; color: var(--accent);
+        border: 1px solid var(--accent); border-radius: 4px; padding: 13px 22px;
+        text-decoration: none; transition: background 0.18s ease, transform 0.18s ease; }
+      .cta.big:hover { background: var(--accent-ink); transform: translateY(-1px); }
+      @media (prefers-reduced-motion: reduce) { .cta.big { transition: none; } }
+
+      /* the cutoff-sensitivity strip under the Lorenz curve */
+      .cutstrip { margin-top: 26px; border: 1px solid var(--hairline); border-radius: var(--radius);
+        background: var(--surface); padding: 14px 16px; overflow-x: auto; }
+      .cutstrip .cs-h { font-family: var(--font-data); font-size: 0.66rem; letter-spacing: .12em;
+        text-transform: uppercase; color: var(--ink-muted); margin-bottom: 8px; }
+      .cutstrip table { min-width: 420px; }
+      .cutstrip th, .cutstrip td { padding-right: 6px; }
+      .cutstrip tr.on td { color: var(--ink); background: color-mix(in srgb, var(--accent) 9%, transparent); }
+      .cutnote { max-width: var(--prose-width); margin: 12px 0 0; font-size: 0.86rem; color: var(--ink-muted); }
       .foot { border-top: 1px solid var(--hairline); padding: 20px clamp(16px, 4vw, 40px); display: flex; flex-direction: column; gap: 6px; }
 
       @media (max-width: 900px) {

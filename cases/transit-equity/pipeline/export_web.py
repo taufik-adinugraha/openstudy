@@ -88,14 +88,18 @@ def access_json(acc: pd.DataFrame, order: list[str]) -> None:
             for pid in rows:
                 if pid in sub.index:
                     r = sub.loc[pid]
+                    # Six decimals, not four: the population-weighted median of jobs_share is
+                    # 0.0021, so rounding at 1e-4 published 217 kelurahan — 3.3 million people
+                    # — as exactly zero when they are not, and the map painted them as though
+                    # they reached nothing at all.
                     rows[pid].setdefault(s, {})[str(c)] = [
-                        _clean(r["jobs_share"]), int(r["hospitals"]), _clean(r["pop_share"]),
+                        _clean(r["jobs_share"], 6), int(r["hospitals"]), _clean(r["pop_share"], 6),
                         int(r["clinics"])]
         ex = a.drop_duplicates("id").set_index("id")
         for pid in rows:
             if pid in ex.index:
                 rows[pid].setdefault(s + "_x", {})["nh"] = _clean(ex.loc[pid, "nearest_hosp_min"], 1)
-                rows[pid][s + "_x"]["g"] = _clean(ex.loc[pid, "gravity_share"])
+                rows[pid][s + "_x"]["g"] = _clean(ex.loc[pid, "gravity_share"], 6)
     _write("access.json", {"order": order, "index": idx, "cutoffs": list(config.CUTOFFS_MIN),
                            "scenarios": [s for s in SCEN_ORDER if (acc.scenario == s).any()],
                            "rows": rows,

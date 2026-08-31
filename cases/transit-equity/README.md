@@ -34,6 +34,48 @@ of the periphery's zero is a **data** fact as much as a transport fact, because 
 that actually move those residents publish no timetable anywhere. Access outside the
 corridors should be read as a floor.
 
+**Read the review before quoting any of the numbers above as levels.** `pipeline/review.py`
+runs eleven adversarial tests on this case's own outputs and the article at
+`/transit/article` publishes them. In one line: the ordering these numbers produce is robust
+to everything we tested; the levels are not.
+
+## The adversarial review (`pipeline/review.py` → `/transit/article`)
+
+| Test | Result |
+|---|---|
+| **A · threshold sweep** | Gini 0.655 → 0.718 → 0.743 and the DKI/Bodetabek gap 14× → 46× → 88× across 30/45/60 min. The "86×" headline is a property of the cut-off. Inequality *rises* with the budget: time compounds for the connected and does nothing for the disconnected. |
+| **B · naive baseline** | A 10 km straight-line circle plus distance to the region's floorspace centre of mass reproduces R² 0.604 of log routed access (ρ 0.819). The choropleth is mostly a compass; the residuals are the product. |
+| **C · opportunity swap** | Measured on population reachable rather than floorspace, the Gini is 0.686 not 0.743 and the Palma 16 not 110. |
+| **D · MAUP ladder** | Same people, same network, same hour: Gini 0.743 / 0.721 / 0.660 and Palma 109.5× / 35.8× / 12.6× at kelurahan / kecamatan / kabupaten. Kelurahan areas span 415-fold. |
+| **E · edge effects** | **Null.** Only 45 kelurahan (0.8 % of population) lie within 10 km of the bbox. Truncation is not driving the zero mass. |
+| **F · rail chord deficit** | All three rail lines are scheduled 5.8–8.0 % *faster* than their operators' published times, in the same direction. Mean optimism 6.8 % against a mean straight-line chord shortfall of 5.7 % — the geometry explains MRT and LRT almost exactly, and under-explains KRL. The ±15 % caveat does not cover a bias. |
+| **G · poverty link** | Case F has published, so the axis is computed: Spearman −0.51, concentration index +0.184, and the share reaching nothing rises 1.6 % → 56.7 % from the least-poor to the poorest fifth. 170 kelurahan (1.06 M people) are in both worst quintiles. |
+| **H · export precision** | 217 kelurahan (3.29 M people) were published as exactly 0.0 because `access.json` rounded to 4 dp — 4.8 % of the measure's own median. **Fixed:** the export now writes 6 dp. |
+| **I · incidence** | 94 % of what public transport adds over walking, and 89 % of what rail adds, accrues to the 30 % of the region inside DKI. Every layer raises access *and* raises the Gini (0.629 → 0.737 → 0.743). |
+| **J · surface vs volume** | Re-weighting the identical matrix with GHS-BUILT-V (building volume) rather than GHS-BUILT-S (footprint): DKI median 4.29 % → 5.28 %, gap 88× → 147×, Gini 0.743 → 0.781 — and ρ 0.9988, so the ranking is untouched. Volume is the better default. |
+| **K · denominator** | On a city frame (DKI residents, DKI destinations, DKI denominator) the mean is 11.5 % and the Gini 0.35, not 1.5 % and 0.74. Against World Bank PRWP 8971's eleven African cities — the only published set reporting this exact quantity — Jakarta-as-a-city is unremarkable and Jabodetabek-as-a-region looks worse than Cape Town. The study area is 6,858 km²; Cape Town's is 2,467. |
+
+### Corrections applied to the case page from the review
+
+- The Gini is no longer described as comparable to income inequality — a hard cut-off
+  manufactures exact zeros an income distribution never has.
+- Chapter 03 now publishes the full cut-off sweep (`equity.json.by_cutoff`) beside the Lorenz
+  curve, so no inequality statistic appears without its time budget.
+- The "cannot reach a hospital in an hour" stat is now explicitly *on scheduled public
+  transport*, with a note that the region moves on motorcycles this model does not route.
+- Chapter 04 now states the *direction* and *incidence* of the layer effects
+  (`equity.json.incidence`), not only the mean deltas.
+- `equity.py:poverty_link` matched Case F on a column name that does not exist (`adm3*code`
+  rather than `pcode`) and would have picked `official_p0` over `p0_est`. Fixed and pinned to
+  the latest year; the axis is no longer pending.
+- `export_web.py` writes access shares at 6 dp instead of 4.
+- The People-Near-Transit check is now labelled on the page as a coverage statistic rather
+  than a test: ITDP's 2016 anchor counts rapid transit only (BRT corridors, KRL excluded, its
+  city and metro rows sharing one numerator), and at 98 % of Jakarta the replication has no
+  power to discriminate.
+- Known limits gained the cut-off, footprint-vs-volume, MAUP, rail-bias and
+  network-failure entries, all rendered from `review_summary.json` so they cannot drift.
+
 ### Gate results
 
 - **G-G1 · timetable sanity — FAIL (3 of 4).** MRT Lebak Bulus→Bundaran HI: published 30 min,
@@ -98,10 +140,11 @@ Carried over from the spec:
    silent). Proceeding with attribution + a written-confirmation request. If refused, the case
    loses its richest layer.
 2. **Meta RWI rejected (CC BY-NC)** → the equity axis uses Case F's kecamatan poverty
-   estimates instead, creating a build-order dependency **F before G**. Case F had not
-   published `estimates_adm3.parquet` when this ran, so `equity.json.poverty_link.available`
-   is `false` with the reason recorded, and the access-vs-poverty chapter is **pending**
-   rather than faked. Re-run `make equity export` once Case F lands.
+   estimates instead, creating a build-order dependency **F before G**. ✅ **RESOLVED.** Case F
+   has published `estimates_adm3.parquet`; the matcher had a second bug (it looked for a
+   column named `adm3*code`, but the key is `pcode`, and it would have selected `official_p0`
+   over the modelled `p0_est`). Both fixed; `equity.json.poverty_link.available` is now `true`
+   on the 2025 vintage across 187 kecamatan.
 3. **Hand-encoded frequency GTFS for rail** as publicly-defensible methodology.
 4. **Google Routes as validation-only comparator** — NOT used in this build (G-G2 pending).
 5. **Kepulauan Seribu**: currently included in every aggregate (6 desa, boat-only access, all

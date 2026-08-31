@@ -3,7 +3,7 @@
 
 PY := uv run python pipeline
 
-.PHONY: rebuild ingest rail network matrix access equity validate export brief web help
+.PHONY: rebuild ingest rail network matrix access equity validate export review article brief web help
 
 help:
 	@echo "rebuild    full DAG: ingest → rail → network → matrix → access → equity → validate → export"
@@ -15,8 +15,10 @@ help:
 	@echo "equity     Lorenz/Gini/Palma of access, access vs wealth (RWI) and vs BPS poverty"
 	@echo "validate   gates G-G1..G-G4 → data/stats.json"
 	@echo "export     web view-models (kelurahan GeoJSON, matrix slices, curves) into web/public/data"
+	@echo "review     eleven adversarial-review tests (thresholds, naive baseline, MAUP, volume, poverty) → web/src/data/review.json"
+	@echo "article    the review article's data layer → web/src/data/article.json"
 
-rebuild: ingest rail network matrix access equity validate export
+rebuild: ingest rail network matrix access equity validate export review article
 
 ingest:
 	$(PY)/ingest.py
@@ -41,6 +43,12 @@ validate:        ## gates G-G1..G-G4
 
 export:
 	$(PY)/export_web.py
+
+review:          ## the eleven review tests → web/src/data/review.json + web/public/data/review_summary.json
+	$(PY)/review.py
+
+article:         ## the review article's data layer → web/src/data/article.json
+	$(PY)/article.py
 
 brief:           ## same mechanism as Flagship A (shared/pipeline/brief.py; PR merge = review)
 	uv run python -c "from pathlib import Path; import sys; sys.path.insert(0, '../../'); \
