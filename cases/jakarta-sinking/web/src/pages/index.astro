@@ -5,6 +5,13 @@
 import "../styles/tokens.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 const S = (await import("../data/summary.json").catch(() => null))?.default ?? null;
+// review findings (pipeline/review.py → pipeline/article.py). Corrections made to this
+// page after the adversarial review quote these, so page and article cannot diverge.
+const R = (await import("../data/article.json").catch(() => null))?.default ?? null;
+const cjktEarly = R?.decel?.all?.find((s) => s.station === "CJKT");
+const estMean = R?.estimator?.estimators?.mean?.["1m"]?.["2025"];
+const estMin = R?.estimator?.estimators?.min?.["1m"]?.["2025"];
+const radarOff = R?.ranking?.drivers?.find((d) => d.k.includes("radar"))?.rho;
 const fmtN = (v) => (v == null ? "—" : Math.round(v).toLocaleString("en-US"));
 const fmtM = (v) => (v == null ? "—" : `${(v / 1e6).toFixed(v >= 1e6 ? 1 : 2)} M`);
 const pct = (v, d = 0) => (v == null ? "—" : `${(v * 100).toFixed(d)}%`);
@@ -48,10 +55,11 @@ const flooded = S?.most_flooded ?? [];
       <div class="hero-copy">
         <span class="eyebrow">Case C · Land subsidence + flood exposure</span>
         <h1>The ground under Jakarta is moving.</h1>
-        <p>Radar interferometry from orbit measures the city sinking — millimetres a year in
-        the centre, centimetres on the north coast. This case turns the measurement into
-        what a city, an insurer or a utility needs: <b>which kelurahan, how many people,
-        how many years</b>.</p>
+        <p>Radar interferometry from orbit measures the city sinking — and measures it
+        <b>slower than the famous numbers</b>, in different places. Over 2017–2023 the fastest
+        ground loses a few centimetres a year, and much of it is inland in the west, not on the
+        coast. This case turns that measurement into what a city, an insurer or a utility needs:
+        <b>which kelurahan, how fast, and how much of it is still moving</b>.</p>
         <span class="stamp dim" id="hero-status">OHENHEN ET AL. 2026 · VERTICAL VELOCITY · 2017–2023 · NEGATIVE = SUBSIDENCE</span>
       </div>
       <div class="hero-hud" id="hero-hud" aria-live="off">
@@ -73,15 +81,24 @@ const flooded = S?.most_flooded ?? [];
       {S?.n_ranked ?? "—"} measured kelurahan the fastest tenth of the ground drops more than that.</p>
       <p>The map colours every kelurahan by its rate over 2017–2023: the fastest decile (p10)
       shows the hotspot cores the way the literature's peak values do; the median tells the
-      neighbourhood story. Fastest of all: <b>{fastest?.name ?? "—"}</b> ({fastest?.kota ?? "—"}),
-      {cm(fastest?.v_p10)} cm/yr in its fastest decile, {cm(fastest?.v_med)} at the median.
+      neighbourhood story. Fastest single decile: <b>{fastest?.name ?? "—"}</b> ({fastest?.kota ?? "—"}),
+      {cm(fastest?.v_p10)} cm/yr, {cm(fastest?.v_med)} at the median.
       Toggle the velocity field to see the measurement itself — including Tangerang and Bekasi,
       which the kelurahan table does not cover.</p>
+      {R?.geography && (
+        <p><b>It is not only a coastal story any more.</b> Of the 20 fastest-subsiding kelurahan by
+        median rate, {R.geography.top20_by_kota["Jakarta Barat"] ?? 0} are in West Jakarta and only
+        {" "}{R.geography.top20_by_kota["Jakarta Utara"] ?? 0} in North Jakarta; just
+        {" "}{R.geography.n_top20_coastal} of the 20 sit in the coastal belt. Across the city, sinking
+        rate and low ground are close to independent (rank correlation ρ = {R.geography.rho_rate_vs_lowground}):
+        the fastest ground includes inland West Jakarta kelurahan whose low ground sits several metres
+        up, which is a foundation and buried-pipe problem rather than a flooding one.</p>
+      )}
       <p class="footnote"><b>Why it sinks:</b> decades of groundwater extraction compacting the young
       alluvial and marine clays under the coastal plain, with the load of the built city on top —
       the mechanism is well documented (Abidin et al. 2011; Chaussard et al. 2013; Ohenhen et al. 2026).
-      Rates have eased since the 2000s peaks (then 10–25 cm/yr in places) as extraction tightened,
-      but the fastest ground still loses several centimetres a year.</p>
+      {cjktEarly ? ` And it has slowed: on the continuous GNSS record the central-Jakarta station CJKT drops from −${Math.abs(cjktEarly.early).toFixed(1)} mm/yr over 2010–2016 to −${Math.abs(cjktEarly.late).toFixed(1)} mm/yr over 2017–2022, and all ${R.decel.west.n} stations inside this working area slowed, while ${R.decel.east.n - R.decel.east.n_slower} of ${R.decel.east.n} elsewhere on the north Java coast got faster.` : ""}
+      The 10–25 cm/yr figures still quoted for Jakarta are from the 1990s and 2000s.</p>
     </section>
 
     <section class="explore">
@@ -107,26 +124,56 @@ const flooded = S?.most_flooded ?? [];
             </li>
           ))}
         </ol>
-        <p class="footnote">Point-based persistent-scatterer studies report higher peaks (Penjaringan
-        up to 10 cm/yr): this field averages ~75 m cells, so hotspot cores read lower — a
-        scale difference stated here, not a discrepancy hidden.</p>
+        <p class="footnote">These rates are lower than the peaks in circulation for Jakarta, for two
+        separate reasons. Part is scale: this field averages ~75 m cells, so a core reads lower than a
+        persistent-scatterer point. Part is time — the ground genuinely slowed between the 2000s surveys
+        and this window, which the GNSS record confirms. Contemporaneous Sentinel-1 studies of the same
+        city over the same years still disagree with each other by a factor of about four, so read these
+        numbers to one significant figure, not two. The review article works through both.</p>
       </div>
     </section>
 
     <section class="chapter">
       <span class="eyebrow">02 · The clock</span>
       <h2>Where the ground goes next — if nothing changes</h2>
-      <p class="big-stat">Today <b class="coral">{fmtM(b1?.["2025"]?.pop)}</b> people live on ground below
-      +1 m. Hold the 2017–2023 rates and it is <b class="coral">{fmtM(b1?.["2030"]?.pop)}</b> by 2030 and
-      <b class="coral">{fmtM(b1?.["2050"]?.pop)}</b> by 2050; below mean sea level,
-      {fmtM(b0?.["2025"]?.pop)} → {fmtM(b0?.["2050"]?.pop)}.</p>
-      <p><b>This is a linear extrapolation, not a forecast.</b> Each 100 m cell's ground drops at its
-      measured 2017–2023 rate, year after year; cells without radar coverage are held still.
-      Groundwater policy, the sea wall, drainage and rainfall are all outside the model. Ground
-      height comes from Copernicus GLO-30 — a 30 m <i>surface</i> model acquired 2011–2015, with
-      ±2–4 m vertical accuracy — using each cell's lowest pixel as the ground proxy. The clock
-      is honest about ordering and magnitude, not about dates.
-      {soon ? ` At its median rate, ${soon.name} (${soon.kota}) — low ground at ${soon.ground_p10?.toFixed(1)} m — reaches mean sea level in about ${Math.round(soon.clock_med_0m)} years; ${S?.already_below_0m ?? 0} kelurahan already have low ground below it.` : ""}</p>
+      <p class="big-stat">On this model <b class="coral">{fmtM(b1?.["2025"]?.pop)}</b> people stand on
+      ground below +1 m today, <b class="coral">{fmtM(b1?.["2030"]?.pop)}</b> by 2030 and
+      <b class="coral">{fmtM(b1?.["2050"]?.pop)}</b> by 2050 if the 2017–2023 rates hold; below mean sea
+      level, {fmtM(b0?.["2025"]?.pop)} → {fmtM(b0?.["2050"]?.pop)}.</p>
+      {R?.estimator && (
+        <p><b>Read those as an ordering, not as counts.</b> "Ground" here is the <i>lowest</i> of the
+        roughly nine 30 m elevation pixels in each 100 m cell — a way of finding roads and yards rather
+        than roofs in a surface model, but also a minimum of nine noisy samples. Computed on the cell
+        mean instead, the same grid and the same population give <b>{fmtN(estMean)}</b> below +1 m rather
+        than {fmtN(estMin)} — a factor of {R.estimator.min_vs_mean_1m_2025}. The published figure is,
+        on the cell mean, the population below +{R.estimator.equivalent_mean_height_m} m. The
+        <i>ranking</i> of kelurahan survives this; the absolute counts do not.</p>
+      )}
+      <p><b>This is a linear extrapolation, not a forecast</b>, and its assumptions are worth more than
+      its signal. Each 100 m cell's ground drops at its measured 2017–2023 rate, year after year; cells
+      without radar coverage are held still. Groundwater policy, the sea wall, drainage, rainfall and
+      sea-level rise are all outside the model. Ground height comes from Copernicus GLO-30 — a 30 m
+      <i>surface</i> model acquired 2011–2015, with ±2–4 m vertical accuracy.
+      {soon ? ` At its median rate, ${soon.name} (${soon.kota}) — low ground at ${soon.ground_p10?.toFixed(1)} m — reaches mean sea level in about ${Math.round(soon.clock_med_0m)} years; ${S?.already_below_0m ?? 0} kelurahan already have low ground below it, and exactly ${R?.clock?.within_horizon ?? "—"} more crosses it inside the window this clock animates.` : ""}</p>
+      {R?.epoch && R?.decay && (
+        <p class="footnote"><b>Three assumptions, priced.</b> Correcting the twelve-year-old elevation
+        model for subsidence since acquisition moves today's count from {fmtN(R.epoch.published["1m"]["2025"])}
+        to {fmtN(R.epoch.counts["1m"]["2025"])} — a number this clock does not otherwise reach until
+        {" "}{R.epoch.clock_year_equivalent}. Raising the sea-level datum 15 cm, within the range implied by
+        measured Java Sea rise, takes 2050 to {fmtN(R.datum.pop_1m_2050[3])}. Letting the rate decay at
+        the halving time the Jakarta GNSS station actually shows, instead of holding it flat, takes 2050
+        down to {fmtN(R.decay.pop_1m_2050)}. Two of those make the clock optimistic and one makes it
+        pessimistic: the honest 2050 bracket is {fmtN(R.decay.pop_1m_2050)}–{fmtN(R.epoch.counts["1m"]["2050"])}
+        on assumptions alone. The review article works through all three.</p>
+      )}
+      {R?.series?.below0m && (
+        <p class="footnote"><b>And one number here is a rounding artefact.</b> The elevation model pins
+        water and near-shore cells to exactly 0.00 m, where {fmtN(R.estimator.pop_at_exact_zero)} people
+        live. They sit one arbitrary millimetre above the mean-sea-level threshold, so the below-MSL
+        count jumps {fmtN(R.series.below0m.first_step)} between 2025 and 2026 — {pct(R.series.below0m.first_share)}
+        of the entire 25-year rise — and then adds a median of {fmtN(R.series.below0m.median_rest)} a year.
+        Use the below-MSL series for its shape after 2026, not for its 2025 level.</p>
+      )}
     </section>
 
     <section class="explore">
@@ -159,6 +206,16 @@ const flooded = S?.most_flooded ?? [];
       <h2>Who stands on the lowest ground</h2>
       <p>Ranked by residents (WorldPop 2020) or built-up surface (GHSL 2020) on ground below the
       threshold in the clock's year. Click a bar to open the kelurahan; the maps follow.</p>
+      {radarOff != null && (
+        <p class="footnote"><b>What this ranking is made of.</b> It is overwhelmingly an elevation
+        ranking. Recomputed with the radar switched off — every velocity set to zero — the 2050 order is
+        rank-correlated ρ = {radarOff} with the published one and shares
+        {" "}{R.ranking.top20_shared_no_radar} of its top 20. Against the measured sinking rate the
+        published ranking correlates only ρ = {R.ranking.drivers.find((d) => d.k.includes("sinking")).rho}.
+        Twenty-five years of subsidence move the city total from {fmtN(R.ranking.city_2050_without)} to
+        {" "}{fmtN(R.ranking.city_2050_with)}. Treat this as a low-ground map with a subsidence
+        adjustment; for the subsidence signal itself, read chapter 01.</p>
+      )}
       <div class="controls">
         <div class="toggle" role="group" aria-label="quantity" id="who-toggle">
           <button data-w="pop" class="on">PEOPLE</button><button data-w="built">BUILT-UP KM²</button>
@@ -171,10 +228,11 @@ const flooded = S?.most_flooded ?? [];
     <section class="chapter">
       <span class="eyebrow">04 · Does it hold up?</span>
       <h2>Checks before the story</h2>
-      <p>Two independent truths sit beside the radar field: continuous GNSS stations (Susilo et al.
-      2023, millimetre-level vertical rates) and the published literature on Jakarta's hotspots.
-      Then the exposure numbers are checked against the census and against floods that actually
-      happened.</p>
+      <p>Three things sit beside the radar field: continuous GNSS stations (Susilo et al. 2023,
+      millimetre-level vertical rates), the published literature on Jakarta's hotspots, and the
+      depositors' own published statistics for the same data. Then the exposure numbers are checked
+      against the census and against floods that actually happened. Two of these checks were
+      misdescribed on this page before the review; the corrections are below the tables.</p>
       <div class="table-scroll">
         <table class="data-table">
           <thead><tr><th>GNSS station</th><th>GNSS vertical mm/yr</th><th>InSAR mm/yr</th><th>Δ</th><th>Cells</th><th>±5 mm/yr</th></tr></thead>
@@ -200,7 +258,9 @@ const flooded = S?.most_flooded ?? [];
         </table>
       </div>
       {c5 && S?.gates?.["G-C5"]?.pass === false && (
-        <p><b>The plausibility gate fails, and the reason is informative.</b> BPBD's 2021–2024 record is
+        <p><b>The plausibility check fails, and the failure is the finding — not an apology.</b>
+        Where Jakarta floods and where Jakarta sinks are different places, and an agency that plans
+        drainage from a subsidence map will defend the wrong neighbourhoods. BPBD's 2021–2024 record is
         dominated by riverine floods along the Ciliwung and its tributaries in East Jakarta —
         {flooded.slice(0, 3).map((f) => `${f.name} (${f.fl_events} event dates)`).join(", ")} — kelurahan on
         higher ground that barely subside. Across the city, flood frequency is <i>inversely</i> related to
@@ -210,10 +270,45 @@ const flooded = S?.most_flooded ?? [];
         the most-exposed kelurahan disproportionately: {pct(c5.top20_exposure_2020_share)} of their area
         against {pct(c5.all_2020_share)} city-wide. We keep the gate red rather than redefine it to pass.</p>
       )}
-      <p class="footnote">GNSS rates are in IGS14; the InSAR field is referenced to stable ground in the
-      same region, so a small frame offset (≈1–2 mm/yr) is expected and stays inside the tolerance.
-      Independent reprocessing — our own LiCSBAS run over LiCSAR frame 098A (2017–2024) against this deposited
-      field — is pending; it needs a 13 GB download and runs after the flagships' bandwidth frees.</p>
+      {R?.gnss && (
+        <p><b>Correction: the GNSS gap is a period gap, not a frame offset.</b> This page previously
+        explained the ≈2 mm/yr difference in the table above as an InSAR reference-frame effect. That was
+        wrong. The depositors transform their field into the same global frame family the GNSS solutions
+        use, and the published GNSS rates are fitted over each station's <i>whole</i> record — at CJKT,
+        2010–2022 — while the radar covers 2017–2023. Refitting each station on the radar's own window
+        (with annual and semi-annual terms removed) collapses the disagreement from
+        {" "}{R.gnss.mean_d_full > 0 ? "+" : "−"}{Math.abs(R.gnss.mean_d_full).toFixed(2)} ± {R.gnss.sd_d_full.toFixed(2)} mm/yr
+        to {R.gnss.mean_d_late > 0 ? "+" : "−"}{Math.abs(R.gnss.mean_d_late).toFixed(2)} ± {R.gnss.sd_d_late.toFixed(2)}.
+        The field is tied far better than the table suggests, and the residual it was hiding is the real
+        signal in chapter 01 — the ground slowed down between the two windows.</p>
+      )}
+      {R?.replication_max_err != null && (
+        <p><b>The strongest check is a replication.</b> The depositors publish per-municipality statistics
+        for this same field (Ohenhen et al. 2026, table S2). Regridding their point cloud independently —
+        different resampling, different boundary file, different zonal method — reproduces that table
+        across all five Jakarta municipalities, with a largest disagreement in the mean of
+        {" "}<b>{R.replication_max_err.toFixed(3)} cm/yr</b>. The ingest, filter, gridding and zonal
+        steps are faithful.</p>
+      )}
+      <p class="footnote">The GNSS comparison is a consistency check rather than an independent one: the
+      depositors used stations from this same archive to align their field to the global frame, so it
+      cannot fail unless something is badly broken. Genuinely independent reprocessing — our own LiCSBAS
+      run over LiCSAR frame 098A (2017–2024) against this deposited field — is pending; it needs a 13 GB
+      download and runs after the flagships' bandwidth frees.</p>
+    </section>
+
+    <section class="chapter review-cta">
+      <span class="eyebrow">05 · Review</span>
+      <h2>We had this case reviewed, adversarially.</h2>
+      <p>An independent read of the same data against the published literature, and against the GNSS
+      archive that was already on this case's disk. It reproduces the depositors' own per-municipality
+      table to {R?.replication_max_err != null ? `${R.replication_max_err.toFixed(3)} cm/yr` : "three decimal places"},
+      shows that the GNSS gap this page used to blame on a reference frame is really a period gap —
+      Jakarta's subsidence has roughly halved while its neighbours' has accelerated — prices the three
+      assumptions inside the clock, and demonstrates that the exposure ranking is
+      {radarOff != null ? ` ρ = ${radarOff} identical` : " almost identical"} to the same ranking with
+      the radar switched off. Every correction it asked for has been applied above.</p>
+      <a class="cta big" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/article`}>Read the review article →</a>
     </section>
 
     <footer class="method">
@@ -235,8 +330,12 @@ const flooded = S?.most_flooded ?? [];
       (WorldPop's cells); kelurahan assigned by cell centre; velocity bilinear; kelurahan p10 = fastest decile
       of covered cells; flood frequency = distinct BPBD event dates with a flooded RT inside the kelurahan.
       <b>The clock:</b> ground(y) = ground(2025) + v·(y−2025), linear, no scenarios, cells without coverage
-      held still — an illustration of momentum, not a prediction. <b>Checks:</b> literature range, GNSS,
-      exposure sanity and flood plausibility evaluated above; independent reprocessing deferred.</p>
+      held still, sea level held at its 2008 datum — an illustration of momentum, not a prediction; the
+      assumption bracket is priced in chapter 02 and in the review. <b>Checks:</b> literature range, GNSS,
+      exposure sanity and flood plausibility evaluated above, plus the eight review tests in
+      <code>pipeline/review.py</code> (replication against the depositors' own district table; GNSS refits
+      on matched windows; three ground estimators; elevation epoch; datum sweep; radar-off ranking; decaying
+      rate). Independent interferometric reprocessing is deferred.</p>
       <span class="stamp dim">A DEMO-LAB CASE · STATIC SNAPSHOT · GENERATED {generated} · ALL SOURCES OPEN</span>
     </footer>
 
@@ -896,6 +995,16 @@ const flooded = S?.most_flooded ?? [];
       .panel-stats dd { margin: 0; font-family: var(--font-data); font-size: 12px; font-variant-numeric: tabular-nums; }
       .panel-clock { margin: 0; font-size: 0.86rem; line-height: 1.55; }
       .spark-label { font-family: var(--font-data); font-size: 12px; fill: var(--ink-muted); }
+
+      /* Review hand-off — the article is a separate page, so it gets a real door. */
+      .review-cta { padding-top: 14vh; }
+      .review-cta p { color: var(--ink-muted); }
+      .cta.big { align-self: flex-start; margin-top: 8px; font-family: var(--font-data);
+        font-size: 0.82rem; letter-spacing: 0.08em; color: var(--accent);
+        border: 1px solid var(--accent); border-radius: 4px; padding: 13px 22px;
+        text-decoration: none; transition: background 0.18s ease, transform 0.18s ease; }
+      .cta.big:hover { background: var(--accent-ink); transform: translateY(-1px); }
+      @media (prefers-reduced-motion: reduce) { .cta.big { transition: none; } }
 
       .method { max-width: 46rem; margin: 0 auto; padding: 12vh 24px 14vh; display: flex; flex-direction: column; gap: 14px; }
       .method p { margin: 0; font-size: 0.9rem; line-height: 1.7; color: var(--ink-muted); }

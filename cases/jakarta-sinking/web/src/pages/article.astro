@@ -1,0 +1,1210 @@
+---
+/* Review article — the Jakarta case, stress-tested against the literature and
+ * against its own inputs.
+ *
+ * Every figure is built here in frontmatter from data/article.json, which
+ * pipeline/article.py derives from what the case publishes plus the eight tests
+ * in pipeline/review.py. Nothing is drawn by hand, so the prose cannot drift
+ * from the numbers. SVG only — no WebGL, no canvas.
+ *
+ * The ONLY hand-entered numbers are the LIT and SPREAD blocks below, plus the
+ * Ohenhen table S2 transcribed in pipeline/article.py — all from the published
+ * papers cited in section 15.
+ */
+import "../styles/tokens.css";
+import A from "../data/article.json";
+
+const CYAN = "#35C6E0", PALE = "#D8F6FC", DEEP = "#144E7A", MID = "#1F8FB5";
+const CORAL = "#F26D5B", PALEC = "#FFCFC3", SLATE = "#6B7CA6";
+const INK = "#E4EBF2", MUTED = "#8CA0B5", GRID = "#1E2E44";
+
+const esc = (s: any) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const n0 = (v: number) => Math.round(v).toLocaleString("en-US");
+const pct = (v: number, d = 1) => `${(v * 100).toFixed(d)}%`;
+const cm = (v: number, d = 2) => `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(d)}`;
+const mm = (v: number, d = 2) => `${v > 0 ? "+" : "−"}${Math.abs(v).toFixed(d)}`;
+
+/* ── Published rates, transcribed with the period each was measured over,
+      because in Jakarta the period is the whole argument. ─────────────────── */
+const LIT = [
+  { site: "Jakarta, levelling", lo: 1, hi: 9, period: "1982–1991", method: "levelling", ref: "abidin2015" },
+  { site: "Jakarta, levelling", lo: 1, hi: 25, period: "1991–1997", method: "levelling", ref: "abidin2015" },
+  { site: "Jakarta, GPS campaigns", lo: 1, hi: 28, period: "1997–2011", method: "GPS", ref: "abidin2015" },
+  { site: "Jakarta coast", lo: 9.5, hi: 21.5, period: "2007–2009", method: "ALOS PALSAR InSAR", ref: "chaussard" },
+  { site: "Jakarta, InSAR", lo: 1, hi: 12, period: "2006–2010", method: "InSAR", ref: "abidin2015" },
+  { site: "North Jakarta coast", lo: 1.16, hi: 6.2, period: "2015–2019", method: "campaign GPS", ref: "abdullah" },
+];
+/* Contemporaneous Sentinel-1-era studies of the same city. Each reports a
+   different statistic; that is part of the finding, so each is labelled. */
+const SPREAD = [
+  { k: "Sidiq et al. 2025", v: 15.0, period: "2017–2023", stat: "maximum, Greater Jakarta", ref: "sidiq" },
+  { k: "Lapadat et al. 2025", v: 7.85, period: "2014–2025", stat: "maximum, Muara Angke bowl", ref: "lapadat" },
+  { k: "Widodo et al. 2025", v: 5.5, period: "2017–2022", stat: "average, north and north-west", ref: "widodo" },
+  { k: "Ohenhen et al. 2026", v: 5.64, period: "2017–2023", stat: "fastest pixel, North Jakarta", ref: "ohenhen" },
+  { k: "Ohenhen et al. 2026", v: 3.6, period: "2017–2023", stat: "maximum, 1 km coastal strip", ref: "ohenhen" },
+];
+
+const HERE = A.hotspots.filter((h: any) => h.p10 != null);
+const fastestHot = HERE.slice().sort((a: any, b: any) => a.p10 - b.p10)[0];
+const D = A.decel, G = A.gnss, EST = A.estimator, EP = A.epoch, DT = A.datum, DEC = A.decay;
+const cjkt = D.all.find((s: any) => s.station === "CJKT");
+const gnssRows = G.stations;
+const meanFull = G.mean_d_full, meanLate = G.mean_d_late, meanPost = G.mean_d_late_post;
+const halved = cjkt ? 1 - cjkt.late / cjkt.early : 0;
+const halvedPost = cjkt && cjkt.late_post ? 1 - cjkt.late_post / cjkt.early : 0;
+const minP = EST.estimators.min["1m"]["2025"], meanP = EST.estimators.mean["1m"]["2025"], q25P = EST.estimators.q25["1m"]["2025"];
+const radarRho = A.ranking.drivers.find((d: any) => d.k.includes("radar")).rho;
+const lowRho = A.ranking.drivers.find((d: any) => d.k.includes("low ground")).rho;
+const rateRho = A.ranking.drivers.find((d: any) => d.k.includes("sinking")).rho;
+const naiveRho = A.ranking.drivers.find((d: any) => d.k.includes("population ×")).rho;
+/* the depositors' own table S2 is transcribed once, in pipeline/article.py, and carried
+   through beside our matching regrid so the two can never drift apart */
+const REP = A.replication;
+const repMaxErr = A.replication_max_err;
+const decayShare = 1 - (DEC.pop_1m_2050 - DEC.series_1m[0]) / (DEC.linear_1m[DEC.linear_1m.length - 1] - DEC.linear_1m[0]);
+
+/* ── Figure 1 · the published record against this field ────────────────────── */
+function figLit() {
+  const W = 760, rowH = 30, T = 46, L = 218, R = 96;
+  const rows = LIT.length + HERE.length + 1;
+  const H = T + rows * rowH + 60;
+  const max = 30;
+  const sx = (v: number) => L + (v / max) * (W - L - R);
+  let y = T;
+  const out: string[] = [];
+  out.push(`<text x="${L - 12}" y="${y + 14}" fill="${MUTED}" font-size="12" text-anchor="end" font-family="var(--font-data)">PUBLISHED</text>`);
+  y += 6;
+  for (const l of LIT) {
+    y += rowH;
+    out.push(`<text x="${L - 12}" y="${y + 2}" fill="${INK}" font-size="12" text-anchor="end">${esc(l.site)}</text>
+      <rect x="${sx(l.lo).toFixed(1)}" y="${y - 8}" width="${Math.max(2, sx(l.hi) - sx(l.lo)).toFixed(1)}" height="12" fill="${PALEC}" opacity="0.55" rx="2"/>
+      <text x="${(sx(l.hi) + 8).toFixed(1)}" y="${y + 3}" fill="${PALEC}" font-size="12" font-family="var(--font-data)">${l.lo}–${l.hi}</text>
+      <text x="${L - 12}" y="${y + 16}" fill="${MUTED}" font-size="11" text-anchor="end" font-family="var(--font-data)">${esc(l.period)} · ${esc(l.method)}</text>`);
+  }
+  y += rowH * 0.7;
+  out.push(`<text x="${L - 12}" y="${y + 22}" fill="${CYAN}" font-size="12" text-anchor="end" font-family="var(--font-data)">THIS FIELD · ${esc(A.window)}</text>`);
+  for (const h of HERE.slice().sort((a: any, b: any) => a.p10 - b.p10)) {
+    y += rowH;
+    const a = Math.min(Math.abs(h.median), Math.abs(h.p10)), b = Math.max(Math.abs(h.median), Math.abs(h.p10));
+    out.push(`<text x="${L - 12}" y="${y + 24}" fill="${INK}" font-size="12" text-anchor="end">${esc(h.name)}</text>
+      <rect x="${sx(a).toFixed(1)}" y="${y + 13}" width="${Math.max(2, sx(b) - sx(a)).toFixed(1)}" height="12" fill="${CYAN}" opacity="0.9" rx="2"/>
+      <text x="${(sx(b) + 8).toFixed(1)}" y="${y + 24}" fill="${CYAN}" font-size="12" font-family="var(--font-data)">${a.toFixed(1)}–${b.toFixed(1)}</text>`);
+  }
+  const xt = [0, 5, 10, 15, 20, 25, 30].map((v) =>
+    `<line x1="${sx(v).toFixed(1)}" y1="${T - 4}" x2="${sx(v).toFixed(1)}" y2="${(y + 32).toFixed(1)}" stroke="${GRID}" opacity="0.45"/>
+     <text x="${sx(v).toFixed(1)}" y="${(y + 50).toFixed(1)}" fill="${MUTED}" font-size="12" text-anchor="middle">${v}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Published Jakarta subsidence rates from 1982 to 2019 against the rates measured in this field for 2017 to 2023">
+    ${xt}${out.join("")}
+    <text x="${((L + W - R) / 2).toFixed(1)}" y="${(y + 72).toFixed(1)}" fill="${MUTED}" font-size="12" text-anchor="middle">subsidence, cm/yr (magnitude) →</text>
+  </svg>`;
+}
+
+/* ── Figure 2 · four studies, one city, one period ─────────────────────────── */
+function figSpread() {
+  const W = 760, T = 46, rowH = 50, L = 208, R = 78;
+  const rows = SPREAD.concat([{ k: "This case", v: Math.abs(fastestHot.p10), period: A.window, stat: `fastest hotspot decile (${esc(fastestHot.name)})`, ref: "" }]);
+  const H = T + rows.length * rowH + 42;
+  const max = 16;
+  const sx = (v: number) => L + (v / max) * (W - L - R);
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rowH;
+    const own = r.k === "This case";
+    const col = own ? CYAN : PALEC;
+    return `<text x="${L - 12}" y="${y + 6}" fill="${own ? CYAN : INK}" font-size="12.5" text-anchor="end">${esc(r.k)}</text>
+      <text x="${L - 12}" y="${y + 21}" fill="${MUTED}" font-size="11" text-anchor="end" font-family="var(--font-data)">${esc(r.period)}</text>
+      <text x="${L - 12}" y="${y + 34}" fill="${MUTED}" font-size="11" text-anchor="end" font-family="var(--font-data)">${esc(r.stat)}</text>
+      <rect x="${L}" y="${y - 4}" width="${(sx(r.v) - L).toFixed(1)}" height="16" fill="${col}" opacity="${own ? 0.95 : 0.5}" rx="2"/>
+      <text x="${(sx(r.v) + 9).toFixed(1)}" y="${y + 9}" fill="${col}" font-size="12.5" font-family="var(--font-data)">${r.v.toFixed(2)}</text>`;
+  }).join("");
+  const xt = [0, 4, 8, 12, 16].map((v) =>
+    `<line x1="${sx(v).toFixed(1)}" y1="${T - 16}" x2="${sx(v).toFixed(1)}" y2="${T + rows.length * rowH - 12}" stroke="${GRID}" opacity="0.45"/>
+     <text x="${sx(v).toFixed(1)}" y="${T + rows.length * rowH + 6}" fill="${MUTED}" font-size="12" text-anchor="middle">${v}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Peak Jakarta subsidence rate reported by five contemporaneous Sentinel-1 era studies, spanning a factor of four">
+    ${xt}${body}
+    <text x="${((L + W - R) / 2).toFixed(1)}" y="${H - 10}" fill="${MUTED}" font-size="12" text-anchor="middle">reported peak subsidence, cm/yr — same city, overlapping years, different answers</text>
+  </svg>`;
+}
+
+/* ── Figure 3 · our regrid against the depositors' own district table ──────── */
+function figRep() {
+  const W = 760, H = 380, L = 76, R = 26, T = 40, B = 60;
+  const rows = REP.filter((r: any) => r.lit);
+  const lo = -1.25, hi = 0.2;
+  const sx = (v: number) => L + ((v - lo) / (hi - lo)) * (W - L - R);
+  const sy = (v: number) => H - B - ((v - lo) / (hi - lo)) * (H - T - B);
+  const diag = `<line x1="${sx(lo).toFixed(1)}" y1="${sy(lo).toFixed(1)}" x2="${sx(hi).toFixed(1)}" y2="${sy(hi).toFixed(1)}" stroke="${GRID}" stroke-dasharray="4 4"/>`;
+  const body = rows.map((r: any, i: number) => {
+    const x = sx(r.lit.mean), y = sy(r.mean);
+    const flip = x > W - R - 240;                      // keep the read-out inside the frame
+    const lx = flip ? x - 12 : x + 12, anchor = flip ? "end" : "start";
+    const dy = i % 2 ? -12 : 18;
+    return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" fill="${CYAN}" opacity="0.9"/>
+      <text x="${lx.toFixed(1)}" y="${(y + dy).toFixed(1)}" text-anchor="${anchor}" fill="${INK}" font-size="12" font-family="var(--font-data)">${esc(r.kota.replace("Jakarta ", ""))}</text>
+      <text x="${lx.toFixed(1)}" y="${(y + dy + 14).toFixed(1)}" text-anchor="${anchor}" fill="${MUTED}" font-size="11" font-family="var(--font-data)">theirs ${r.lit.mean.toFixed(3)} · ours ${r.mean.toFixed(3)}</text>`;
+  }).join("");
+  const t = [-1.0, -0.5, 0.0].map((v) =>
+    `<line x1="${sx(v).toFixed(1)}" y1="${T}" x2="${sx(v).toFixed(1)}" y2="${H - B}" stroke="${GRID}" opacity="0.4"/>
+     <line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - R}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.4"/>
+     <text x="${sx(v).toFixed(1)}" y="${H - B + 20}" fill="${MUTED}" font-size="12" text-anchor="middle">${v.toFixed(1)}</text>
+     <text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="12" text-anchor="end">${v.toFixed(1)}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Mean subsidence per Jakarta municipality: this case's regrid against the depositors' published table, all five on the one-to-one line">
+    ${t}${diag}${body}
+    <text x="${L}" y="${T - 16}" fill="${CYAN}" font-size="12" font-family="var(--font-data)">largest disagreement across all five municipalities: ${repMaxErr.toFixed(3)} cm/yr</text>
+    <text x="${((L + W - R) / 2).toFixed(1)}" y="${H - 14}" fill="${MUTED}" font-size="12" text-anchor="middle">Ohenhen et al. (2026) table S2, mean cm/yr →</text>
+    <text x="18" y="${H / 2}" fill="${MUTED}" font-size="12" text-anchor="middle" transform="rotate(-90 18 ${H / 2})">this case's regrid, mean cm/yr →</text>
+  </svg>`;
+}
+
+/* ── Figure 4 · the same comparison, made twice ────────────────────────────── */
+function figGnss() {
+  const W = 760, T = 56, rowH = 56, L = 96, R = 240;
+  const H = T + gnssRows.length * rowH + 42;
+  const axisY = T + gnssRows.length * rowH - 8;
+  const all = gnssRows.flatMap((r: any) => [r.insar, r.gnss_full, r.gnss_late]);
+  const lo = Math.min(...all) - 1.2, hi = Math.max(...all) + 1.2;
+  const sx = (v: number) => L + ((v - lo) / (hi - lo)) * (W - L - R);
+  const zero = sx(0);
+  const body = gnssRows.map((r: any, i: number) => {
+    const y = T + i * rowH;
+    return `
+      <text x="${L - 12}" y="${y + 5}" fill="${INK}" font-size="12.5" text-anchor="end" font-family="var(--font-data)">${esc(r.station)}</text>
+      <line x1="${sx(r.gnss_full).toFixed(1)}" y1="${y}" x2="${sx(r.insar).toFixed(1)}" y2="${y}" stroke="${CORAL}" stroke-width="1.4" stroke-dasharray="3 3" opacity="0.8"/>
+      <line x1="${sx(r.gnss_late).toFixed(1)}" y1="${y + 18}" x2="${sx(r.insar).toFixed(1)}" y2="${y + 18}" stroke="${CYAN}" stroke-width="1.4" opacity="0.9"/>
+      <circle cx="${sx(r.gnss_full).toFixed(1)}" cy="${y}" r="4.6" fill="${PALEC}"/>
+      <circle cx="${sx(r.gnss_late).toFixed(1)}" cy="${y + 18}" r="4.6" fill="${PALE}"/>
+      <rect x="${(sx(r.insar) - 4).toFixed(1)}" y="${y - 4}" width="8" height="8" fill="${CYAN}" transform="rotate(45 ${sx(r.insar).toFixed(1)} ${y})"/>
+      <rect x="${(sx(r.insar) - 4).toFixed(1)}" y="${y + 14}" width="8" height="8" fill="${CYAN}" transform="rotate(45 ${sx(r.insar).toFixed(1)} ${y + 18})"/>
+      <text x="${W - R + 14}" y="${y + 4}" fill="${CORAL}" font-size="12" font-family="var(--font-data)">whole record · Δ ${mm(r.d_full)}</text>
+      <text x="${W - R + 14}" y="${y + 22}" fill="${CYAN}" font-size="12" font-family="var(--font-data)">matched window · Δ ${mm(r.d_late)}</text>`;
+  }).join("");
+  const xt = [-6, -4, -2, 0, 2].filter((v) => v >= lo && v <= hi).map((v) =>
+    `<text x="${sx(v).toFixed(1)}" y="${axisY + 18}" fill="${MUTED}" font-size="12" text-anchor="middle">${v}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="At all three GNSS stations the InSAR rate disagrees with the whole-record GNSS rate but matches the GNSS rate refitted on the same years">
+    <line x1="${zero.toFixed(1)}" y1="${T - 22}" x2="${zero.toFixed(1)}" y2="${axisY}" stroke="${GRID}" stroke-dasharray="3 4"/>
+    <g><circle cx="${L}" cy="22" r="4.6" fill="${PALEC}"/><text x="${L + 12}" y="26" fill="${MUTED}" font-size="12">GNSS, whole record</text>
+      <circle cx="${L + 168}" cy="22" r="4.6" fill="${PALE}"/><text x="${L + 180}" y="26" fill="${MUTED}" font-size="12">GNSS, 2017 onward</text>
+      <rect x="${L + 336}" y="18" width="8" height="8" fill="${CYAN}" transform="rotate(45 ${L + 340} 22)"/>
+      <text x="${L + 352}" y="26" fill="${MUTED}" font-size="12">InSAR ${esc(A.window)}</text></g>
+    ${body}${xt}
+    <text x="${((L + W - R) / 2).toFixed(1)}" y="${H - 8}" fill="${MUTED}" font-size="12" text-anchor="middle">vertical rate, mm/yr →</text>
+  </svg>`;
+}
+
+/* ── Figure 5 · the ground at CJKT, and the two trends in it ───────────────── */
+function figCjkt() {
+  const W = 760, H = 380, L = 62, R = 26, T = 22, B = 54;
+  const s = A.gnssSeries.CJKT;
+  const t0 = Math.min(...s.t), t1 = Math.max(...s.t);
+  const v0 = Math.min(...s.v_mm), v1 = Math.max(...s.v_mm);
+  const sx = (v: number) => L + ((v - t0) / (t1 - t0)) * (W - L - R);
+  const sy = (v: number) => H - B - ((v - v0) / (v1 - v0)) * (H - T - B);
+  const dots = s.t.map((t: number, i: number) =>
+    `<circle cx="${sx(t).toFixed(1)}" cy="${sy(s.v_mm[i]).toFixed(1)}" r="1.5" fill="${SLATE}" opacity="0.55"/>`).join("");
+  const seg = (t0s: number, t1s: number, rate: number, col: string, lab: string, dy: number) => {
+    const inSeg = s.t.map((t: number, i: number) => [t, s.v_mm[i]]).filter((p: number[]) => p[0] >= t0s && p[0] < t1s);
+    const mt = inSeg.reduce((a: number, p: number[]) => a + p[0], 0) / inSeg.length;
+    const mv = inSeg.reduce((a: number, p: number[]) => a + p[1], 0) / inSeg.length;
+    const ya = mv + rate * (t0s - mt), yb = mv + rate * (t1s - mt);
+    return `<line x1="${sx(t0s).toFixed(1)}" y1="${sy(ya).toFixed(1)}" x2="${sx(t1s).toFixed(1)}" y2="${sy(yb).toFixed(1)}"
+              stroke="${col}" stroke-width="2.6"/>
+      <text x="${((sx(t0s) + sx(t1s)) / 2).toFixed(1)}" y="${(sy((ya + yb) / 2) + dy).toFixed(1)}" fill="${col}"
+        font-size="12.5" text-anchor="middle" font-family="var(--font-data)">${esc(lab)}</text>`;
+  };
+  const shade = `<rect x="${sx(2017).toFixed(1)}" y="${T}" width="${(sx(t1) - sx(2017)).toFixed(1)}" height="${H - T - B}"
+      fill="${CYAN}" opacity="0.07"/>
+    <text x="${(sx(2017) + 8).toFixed(1)}" y="${T + 14}" fill="${CYAN}" font-size="12" font-family="var(--font-data)">the radar field's window</text>`;
+  const xt = [2011, 2013, 2015, 2017, 2019, 2021].map((y) =>
+    `<text x="${sx(y).toFixed(1)}" y="${H - B + 20}" fill="${MUTED}" font-size="12" text-anchor="middle">${y}</text>`).join("");
+  const yticks = [0, -20, -40, -60].filter((v) => v >= v0 - 6 && v <= v1 + 6).map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - R}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.6"/>
+     <text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="12" text-anchor="end">${v}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Daily vertical position at the Jakarta GNSS station from 2010 to 2022, with a steep trend before 2017 and a much shallower one after">
+    ${yticks}${shade}${dots}
+    ${seg(t0, 2017, cjkt.early, PALEC, `${mm(cjkt.early, 1)} mm/yr`, -14)}
+    ${seg(2017, t1, cjkt.late, CYAN, `${mm(cjkt.late, 1)} mm/yr`, -14)}
+    ${xt}
+    <text x="16" y="${H / 2}" fill="${MUTED}" font-size="12" text-anchor="middle" transform="rotate(-90 16 ${H / 2})">vertical position, mm →</text>
+    <text x="${((L + W - R) / 2).toFixed(1)}" y="${H - 12}" fill="${MUTED}" font-size="12" text-anchor="middle">CJKT · continuous GNSS, IGb14 · daily solutions, weekly samples shown</text>
+  </svg>`;
+}
+
+/* ── Figure 6 · every north-Java station, before and after 2017 ────────────── */
+function figDumb() {
+  const rows = D.all.filter((r: any) => Math.abs(r.early) < 40 && Math.abs(r.late) < 40);
+  const W = 760, T = 42, rowH = 20, L = 72, R = 132;
+  const H = T + rows.length * rowH + 44;
+  const lo = Math.min(...rows.flatMap((r: any) => [r.early, r.late])) - 1.5;
+  const hi = Math.max(...rows.flatMap((r: any) => [r.early, r.late])) + 1.5;
+  const sx = (v: number) => L + ((v - lo) / (hi - lo)) * (W - L - R);
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rowH + 10;
+    const col = r.west ? CYAN : SLATE;
+    return `<text x="${L - 10}" y="${y + 4}" fill="${r.west ? INK : MUTED}" font-size="12" text-anchor="end" font-family="var(--font-data)">${esc(r.station)}</text>
+      <line x1="${sx(r.early).toFixed(1)}" y1="${y}" x2="${sx(r.late).toFixed(1)}" y2="${y}" stroke="${col}" stroke-width="${r.west ? 2.2 : 1.4}" opacity="${r.west ? 0.95 : 0.5}"/>
+      <circle cx="${sx(r.early).toFixed(1)}" cy="${y}" r="${r.west ? 3.4 : 2.6}" fill="${GRID}" stroke="${col}" stroke-width="1.2"/>
+      <circle cx="${sx(r.late).toFixed(1)}" cy="${y}" r="${r.west ? 4 : 3}" fill="${col}"/>
+      <text x="${W - R + 12}" y="${y + 4}" fill="${r.d > 0 ? CYAN : CORAL}" font-size="12" font-family="var(--font-data)">${mm(r.d, 1)} mm/yr</text>`;
+  }).join("");
+  const xt = [-20, -15, -10, -5, 0, 5].filter((v) => v >= lo && v <= hi).map((v) =>
+    `<line x1="${sx(v).toFixed(1)}" y1="${T}" x2="${sx(v).toFixed(1)}" y2="${H - 40}" stroke="${GRID}" opacity="0.5"/>
+     <text x="${sx(v).toFixed(1)}" y="${H - 22}" fill="${MUTED}" font-size="12" text-anchor="middle">${v}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Change in vertical rate between 2010-2016 and 2017-2022 at twenty north Java GNSS stations; the three Jakarta-area stations all slow down">
+    ${xt}
+    <g><circle cx="${L}" cy="20" r="3.4" fill="${GRID}" stroke="${MUTED}" stroke-width="1.2"/><text x="${L + 10}" y="24" fill="${MUTED}" font-size="12">2010–2016</text>
+      <circle cx="${L + 108}" cy="20" r="4" fill="${MUTED}"/><text x="${L + 118}" y="24" fill="${MUTED}" font-size="12">2017–2022</text>
+      <line x1="${L + 232}" y1="20" x2="${L + 258}" y2="20" stroke="${CYAN}" stroke-width="2.2"/><text x="${L + 266}" y="24" fill="${MUTED}" font-size="12">inside the case's own working area</text></g>
+    ${body}
+    <text x="${((L + W - R) / 2).toFixed(1)}" y="${H - 6}" fill="${MUTED}" font-size="12" text-anchor="middle">vertical rate, mm/yr — Pekalongan (−105 → −118) is off scale →</text>
+  </svg>`;
+}
+
+/* ── Figure 7 · fast ground and low ground are different places ────────────── */
+function figScatter() {
+  const W = 760, H = 470, L = 66, R = 26, T = 46, B = 56;
+  const pts = A.scatter.filter((p: any) => p.v_p10 != null && p.ground != null);
+  const x0 = -0.12, x1 = Math.max(...pts.map((p: any) => -p.v_p10)) * 1.06;
+  const sx = (v: number) => L + ((v - x0) / (x1 - x0)) * (W - L - R);
+  const BRK = 15, gmax = Math.max(...pts.map((p: any) => p.ground)) * 1.02, g0 = -4;
+  const yBrk = T + (H - T - B) * 0.26, yBot = H - B;
+  const sy = (v: number) => v <= BRK
+    ? yBot - ((v - g0) / (BRK - g0)) * (yBot - yBrk)
+    : yBrk - 12 - ((Math.min(v, gmax) - BRK) / (gmax - BRK)) * (yBrk - 12 - T);
+  const dots = pts.map((p: any) => {
+    const r = 2.2 + Math.sqrt(p.pop) / 130;
+    return `<circle class="d1 ${p.coastal ? "co" : "in"}" cx="${sx(-p.v_p10).toFixed(1)}" cy="${sy(p.ground).toFixed(1)}" r="${r.toFixed(1)}"
+      data-n="${esc(p.name)}" data-k="${esc(p.kota)}" data-v="${cm(p.v_p10)}" data-m="${cm(p.v_med)}" data-g="${p.ground.toFixed(2)}" data-p="${n0(p.pop)}" data-e="${n0(p.e50)}"/>`;
+  }).join("");
+  const named = A.geography.fastest_inland.slice(0, 3).concat(
+    pts.filter((p: any) => p.name === "Pluit" || p.name === "Kamal Muara"));
+  const labels = named.map((p: any, i: number) => {
+    const x = sx(-p.v_p10), y = sy(p.ground);
+    const dx = i === 4 ? -12 : 11, dy = i % 2 ? -9 : 13;
+    return `<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${(x + dx * 0.8).toFixed(1)}" y2="${(y + dy - 3).toFixed(1)}" stroke="${MUTED}" stroke-width="0.8"/>
+      <text x="${(x + dx).toFixed(1)}" y="${(y + dy).toFixed(1)}" text-anchor="${dx < 0 ? "end" : "start"}" fill="${p.coastal ? PALE : PALEC}" font-size="12" font-family="var(--font-data)">${esc(p.name)}</text>`;
+  }).join("");
+  const thr = `<line x1="${L}" y1="${sy(1).toFixed(1)}" x2="${W - R}" y2="${sy(1).toFixed(1)}" stroke="${CORAL}" stroke-dasharray="4 4" opacity="0.8"/>
+`;
+  const brk = `<line x1="${L}" y1="${(yBrk - 6).toFixed(1)}" x2="${W - R}" y2="${(yBrk - 6).toFixed(1)}" stroke="${GRID}" stroke-dasharray="2 5"/>
+    <text x="${W - R}" y="${(yBrk - 11).toFixed(1)}" fill="${MUTED}" font-size="11" text-anchor="end" font-family="var(--font-data)">axis compressed above +15 m · ${pts.filter((p: any) => p.ground > BRK).length} kelurahan</text>`;
+  const xt = [0, 1, 2, 3, 4].filter((v) => v <= x1).map((v) =>
+    `<line x1="${sx(v).toFixed(1)}" y1="${T}" x2="${sx(v).toFixed(1)}" y2="${yBot}" stroke="${GRID}" opacity="0.4"/>
+     <text x="${sx(v).toFixed(1)}" y="${yBot + 20}" fill="${MUTED}" font-size="12" text-anchor="middle">${v}</text>`).join("");
+  const yt = [0, 5, 10, 15, 30, 50].filter((v) => v <= gmax).map((v) =>
+    `<text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="12" text-anchor="end">${v}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Scatter of kelurahan sinking rate against low-ground height; the fastest-sinking kelurahan sit on high inland ground">
+    ${xt}${yt}${brk}${thr}${dots}${labels}
+    <g><circle cx="${L + 4}" cy="18" r="4.5" fill="${CYAN}" opacity="0.8"/><text x="${L + 16}" y="22" fill="${MUTED}" font-size="12">coastal belt (${A.geography.n_coastal})</text>
+      <circle cx="${L + 170}" cy="18" r="4.5" fill="${CORAL}" opacity="0.72"/><text x="${L + 182}" y="22" fill="${MUTED}" font-size="12">inland (${A.city.n_ranked - A.geography.n_coastal})</text>
+      <line x1="${L + 288}" y1="18" x2="${L + 316}" y2="18" stroke="${CORAL}" stroke-width="1.6" stroke-dasharray="4 4"/>
+      <text x="${L + 324}" y="22" fill="${MUTED}" font-size="12">the +1 m exposure line</text>
+      <text x="${W - R}" y="40" fill="${MUTED}" font-size="12" text-anchor="end">circle area = residents · ρ = ${A.geography.rho_rate_vs_lowground}</text></g>
+    <text x="${((L + W - R) / 2).toFixed(1)}" y="${H - 12}" fill="${MUTED}" font-size="12" text-anchor="middle">subsidence of the fastest decile, cm/yr →</text>
+    <text x="16" y="${H / 2}" fill="${MUTED}" font-size="12" text-anchor="middle" transform="rotate(-90 16 ${H / 2})">low ground, metres above mean sea level →</text>
+  </svg>`;
+}
+
+/* ── Figure 8 · the exposure curve, under two ground estimators ────────────── */
+function figCurve() {
+  const W = 760, H = 400, L = 74, R = 132, T = 22, B = 54;
+  const c = EST.curve;
+  const idx = c.heights.map((_: number, i: number) => i).filter((i: number) => c.heights[i] >= -1 && c.heights[i] <= 5);
+  const x0 = -1, x1 = 5, y1 = Math.max(...idx.map((i: number) => c.min_2025[i])) * 1.05;
+  const sx = (v: number) => L + ((v - x0) / (x1 - x0)) * (W - L - R);
+  const sy = (v: number) => H - B - (v / y1) * (H - T - B);
+  const path = (key: string, col: string, w: number, dash = "") =>
+    `<path fill="none" stroke="${col}" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ""} d="${idx.map((i: number, j: number) =>
+      `${j ? "L" : "M"}${sx(c.heights[i]).toFixed(1)} ${sy(c[key][i]).toFixed(1)}`).join("")}"/>`;
+  const at = (key: string, h: number) => {
+    const i = c.heights.indexOf(h);
+    return i < 0 ? 0 : c[key][i];
+  };
+  const marks = [1.0, 0.0].map((h) =>
+    `<line x1="${sx(h).toFixed(1)}" y1="${T + 156}" x2="${sx(h).toFixed(1)}" y2="${H - B}" stroke="${CORAL}" stroke-dasharray="3 4" opacity="0.6"/>
+     <text x="${(sx(h) + 5).toFixed(1)}" y="${T + 150}" fill="${CORAL}" font-size="12" font-family="var(--font-data)">${h === 0 ? "MSL" : "+1 m"}</text>`).join("");
+  const bridge = `<line x1="${sx(1).toFixed(1)}" y1="${sy(at("min_2025", 1)).toFixed(1)}" x2="${sx(EST.equivalent_mean_height_m).toFixed(1)}" y2="${sy(at("min_2025", 1)).toFixed(1)}"
+      stroke="${PALEC}" stroke-width="1.2" stroke-dasharray="2 3"/>
+    <circle cx="${sx(EST.equivalent_mean_height_m).toFixed(1)}" cy="${sy(at("min_2025", 1)).toFixed(1)}" r="4.5" fill="${PALEC}"/>
+    <text x="${(sx(EST.equivalent_mean_height_m) + 9).toFixed(1)}" y="${(sy(at("min_2025", 1)) - 9).toFixed(1)}" fill="${PALEC}" font-size="12" font-family="var(--font-data)">the cell mean reaches the same count</text>
+    <text x="${(sx(EST.equivalent_mean_height_m) + 9).toFixed(1)}" y="${(sy(at("min_2025", 1)) + 6).toFixed(1)}" fill="${PALEC}" font-size="12" font-family="var(--font-data)">only at +${EST.equivalent_mean_height_m} m</text>`;
+  const box = `<g>
+    <text x="${L + 10}" y="${T + 18}" fill="${CYAN}" font-size="12.5" font-family="var(--font-data)">at +1 m · cell minimum · ${n0(at("min_2025", 1))} residents</text>
+    <text x="${L + 10}" y="${T + 38}" fill="${SLATE}" font-size="12.5" font-family="var(--font-data)">at +1 m · cell mean · ${n0(at("mean_2025", 1))} residents</text>
+    <text x="${L + 10}" y="${T + 58}" fill="${MUTED}" font-size="12" font-family="var(--font-data)">a factor of ${EST.min_vs_mean_1m_2025} on one estimator choice</text></g>`;
+  const xt = [-1, 0, 1, 2, 3, 4, 5].map((v) =>
+    `<text x="${sx(v).toFixed(1)}" y="${H - B + 20}" fill="${MUTED}" font-size="12" text-anchor="middle">${v}</text>`).join("");
+  const yt = [0, 1e6, 2e6, 3e6].filter((v) => v <= y1).map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - R}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.5"/>
+     <text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="12" text-anchor="end">${v ? `${v / 1e6}M` : 0}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Population standing below a given height, computed on the cell minimum and on the cell mean; the two curves are about two metres apart">
+    ${yt}${marks}${path("mean_2025", SLATE, 2.2)}${path("min_2025", CYAN, 2.6)}${path("min_2050", PALE, 1.6, "4 3")}
+    ${bridge}${box}
+    <circle cx="${sx(1).toFixed(1)}" cy="${sy(at("min_2025", 1)).toFixed(1)}" r="4.5" fill="${CYAN}"/>
+    <circle cx="${sx(1).toFixed(1)}" cy="${sy(at("mean_2025", 1)).toFixed(1)}" r="4.5" fill="${SLATE}"/>
+    <g><line x1="${W - R + 10}" y1="${T + 14}" x2="${W - R + 36}" y2="${T + 14}" stroke="${CYAN}" stroke-width="2.6"/><text x="${W - R + 42}" y="${T + 18}" fill="${MUTED}" font-size="12">cell minimum</text>
+      <line x1="${W - R + 10}" y1="${T + 36}" x2="${W - R + 36}" y2="${T + 36}" stroke="${SLATE}" stroke-width="2.2"/><text x="${W - R + 42}" y="${T + 40}" fill="${MUTED}" font-size="12">cell mean</text>
+      <line x1="${W - R + 10}" y1="${T + 58}" x2="${W - R + 36}" y2="${T + 58}" stroke="${PALE}" stroke-width="1.6" stroke-dasharray="4 3"/><text x="${W - R + 42}" y="${T + 62}" fill="${MUTED}" font-size="12">minimum, 2050</text></g>
+    ${xt}
+    <text x="${((L + W - R) / 2).toFixed(1)}" y="${H - 12}" fill="${MUTED}" font-size="12" text-anchor="middle">ground height, metres above EGM2008 mean sea level →</text>
+    <text x="16" y="${H / 2}" fill="${MUTED}" font-size="12" text-anchor="middle" transform="rotate(-90 16 ${H / 2})">residents below that height →</text>
+  </svg>`;
+}
+
+/* ── Figure 9 · the step in the case's own below-sea-level series ──────────── */
+function figStep() {
+  const W = 760, H = 320, L = 74, R = 196, T = 26, B = 52;
+  const s = A.series.below0m.series, yr = A.series.years;
+  const y1 = Math.max(...s) * 1.1;
+  const sx = (i: number) => L + (i / (s.length - 1)) * (W - L - R);
+  const sy = (v: number) => H - B - (v / y1) * (H - T - B);
+  const line = `<path fill="none" stroke="${CORAL}" stroke-width="2.6" d="${s.map((v: number, i: number) => `${i ? "L" : "M"}${sx(i).toFixed(1)} ${sy(v).toFixed(1)}`).join("")}"/>`;
+  const dots = s.map((v: number, i: number) => `<circle cx="${sx(i).toFixed(1)}" cy="${sy(v).toFixed(1)}" r="2.6" fill="${CORAL}" opacity="0.85"/>`).join("");
+  const step = `<line x1="${sx(0).toFixed(1)}" y1="${sy(s[0]).toFixed(1)}" x2="${sx(0).toFixed(1)}" y2="${sy(s[1]).toFixed(1)}" stroke="${PALEC}" stroke-width="3"/>
+    <text x="${(sx(0) + 12).toFixed(1)}" y="${((sy(s[0]) + sy(s[1])) / 2 + 4).toFixed(1)}" fill="${PALEC}" font-size="12.5" font-family="var(--font-data)">+${n0(A.series.below0m.first_step)} in one year</text>
+    <text x="${(sx(0) + 12).toFixed(1)}" y="${((sy(s[0]) + sy(s[1])) / 2 + 22).toFixed(1)}" fill="${MUTED}" font-size="12" font-family="var(--font-data)">${pct(A.series.below0m.first_share, 0)} of the whole 25-year rise</text>`;
+  const rest = `<text x="${sx(s.length - 1).toFixed(1)}" y="${(sy(s[s.length - 1]) - 12).toFixed(1)}" fill="${CORAL}" font-size="12" text-anchor="end" font-family="var(--font-data)">then a median of ${n0(A.series.below0m.median_rest)} a year</text>`;
+  const zy = sy(EST.pop_at_exact_zero);
+  const zeroPop = `<line x1="${L}" y1="${zy.toFixed(1)}" x2="${W - R}" y2="${zy.toFixed(1)}" stroke="${SLATE}" stroke-dasharray="4 4"/>
+    <text x="${W - R + 10}" y="${(zy - 8).toFixed(1)}" fill="${SLATE}" font-size="12" font-family="var(--font-data)">${n0(EST.pop_at_exact_zero)} people stand</text>
+    <text x="${W - R + 10}" y="${(zy + 8).toFixed(1)}" fill="${SLATE}" font-size="12" font-family="var(--font-data)">on ${n0(EST.cells_at_exact_zero)} cells pinned</text>
+    <text x="${W - R + 10}" y="${(zy + 24).toFixed(1)}" fill="${SLATE}" font-size="12" font-family="var(--font-data)">to exactly 0.00 m</text>`;
+  const xt = [0, 5, 10, 15, 20, 25].map((i) =>
+    `<text x="${sx(i).toFixed(1)}" y="${H - B + 20}" fill="${MUTED}" font-size="12" text-anchor="middle">${yr[i]}</text>`).join("");
+  const yt = [0, 50000, 100000, 150000, 200000].filter((v) => v <= y1).map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - R}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.5"/>
+     <text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="12" text-anchor="end">${v / 1000}k</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="The published count of people below mean sea level jumps 44 thousand in the first year and then rises slowly">
+    ${yt}${zeroPop}${line}${dots}${step}${rest}${xt}
+    <text x="${((L + W - R) / 2).toFixed(1)}" y="${H - 12}" fill="${MUTED}" font-size="12" text-anchor="middle">the case's published city series · residents on ground below mean sea level</text>
+  </svg>`;
+}
+
+/* ── Figure 10 · what the 2050 exposure ranking is made of ─────────────────── */
+function figRank() {
+  const rows = A.ranking.drivers;
+  const W = 760, T = 20, rowH = 34, L = 262, R = 66;
+  const H = T + rows.length * rowH + 48;
+  const lo = -0.2, hi = 1.0, bw = W - L - R;
+  const sx = (v: number) => L + ((v - lo) / (hi - lo)) * bw;
+  const zero = sx(0);
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rowH;
+    const col = r.rho >= 0.9 ? CORAL : r.rho >= 0.3 ? MID : SLATE;
+    const x = Math.min(zero, sx(r.rho)), w = Math.max(2, Math.abs(sx(r.rho) - zero));
+    const tx = r.rho >= 0 ? sx(r.rho) + 9 : sx(r.rho) - 9;
+    return `<text x="${L - 14}" y="${y + 19}" fill="${INK}" font-size="12.5" text-anchor="end">${esc(r.k)}</text>
+      <rect x="${x.toFixed(1)}" y="${y + 7}" width="${w.toFixed(1)}" height="17" fill="${col}" rx="2"/>
+      <text x="${tx.toFixed(1)}" y="${y + 20}" fill="${col}" font-size="12" text-anchor="${r.rho >= 0 ? "start" : "end"}" font-family="var(--font-data)">${r.rho.toFixed(3)}</text>`;
+  }).join("");
+  const ticks = [0, 0.5, 1.0].map((v) =>
+    `<text x="${sx(v).toFixed(1)}" y="${T + rows.length * rowH + 16}" fill="${MUTED}" font-size="12" text-anchor="middle">${v.toFixed(1)}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Rank correlation of the 2050 exposure ranking with each candidate driver; low ground and today's map score above 0.95 while the sinking rate scores 0.22">
+    <line x1="${zero.toFixed(1)}" y1="${T}" x2="${zero.toFixed(1)}" y2="${T + rows.length * rowH}" stroke="${GRID}"/>
+    ${body}${ticks}
+    <text x="${L - 14}" y="${H - 8}" fill="${MUTED}" font-size="12" text-anchor="end">Spearman ρ · ${A.city.n_ranked} kelurahan →</text>
+  </svg>`;
+}
+
+/* ── Figure 11 · four versions of the same clock ───────────────────────────── */
+function figClocks() {
+  const W = 760, H = 400, L = 74, R = 214, T = 30, B = 54;
+  const yrs = DEC.years;
+  const pub = DEC.linear_1m, dec = DEC.series_1m;
+  const ep = [EP.published["1m"]["2025"], EP.counts["1m"]["2025"], EP.counts["1m"]["2050"]];
+  const dtm = DT.pop_1m_2050;
+  const y1 = Math.max(...pub, ...ep, dtm[2]) * 1.08, y0 = 350000;
+  const sx = (y: number) => L + ((y - 2025) / 25) * (W - L - R);
+  const sy = (v: number) => H - B - ((v - y0) / (y1 - y0)) * (H - T - B);
+  const draw = (xs: number[], ys: number[], col: string, w: number, dash = "") =>
+    `<path fill="none" stroke="${col}" stroke-width="${w}" ${dash ? `stroke-dasharray="${dash}"` : ""} d="${ys.map((v, i) =>
+      `${i ? "L" : "M"}${sx(xs[i]).toFixed(1)} ${sy(v).toFixed(1)}`).join("")}"/>`;
+  const end = (v: number, col: string, big: string, small: string, dy = 0) =>
+    `<circle cx="${sx(2050).toFixed(1)}" cy="${sy(v).toFixed(1)}" r="4" fill="${col}"/>
+     <text x="${(sx(2050) + 10).toFixed(1)}" y="${(sy(v) + dy - 3).toFixed(1)}" fill="${col}" font-size="12.5" font-family="var(--font-data)">${esc(big)}</text>
+     <text x="${(sx(2050) + 10).toFixed(1)}" y="${(sy(v) + dy + 12).toFixed(1)}" fill="${MUTED}" font-size="11.5" font-family="var(--font-data)">${esc(small)}</text>`;
+  const yt = [350000, 400000, 450000, 500000, 550000].filter((v) => v >= y0 && v <= y1).map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - R}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.5"/>
+     <text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="12" text-anchor="end">${v / 1000}k</text>`).join("");
+  const xt = [2025, 2030, 2035, 2040, 2045, 2050].map((y) =>
+    `<text x="${sx(y).toFixed(1)}" y="${H - B + 20}" fill="${MUTED}" font-size="12" text-anchor="middle">${y}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="The published clock against three corrected versions: a decaying rate, a corrected elevation epoch, and a rising datum">
+    ${yt}
+    ${draw([2025, 2050], [ep[1], ep[2]], PALEC, 2.2, "5 4")}
+    ${draw(yrs, pub, CORAL, 2.8)}
+    ${draw(yrs, dec, CYAN, 2.4, "4 3")}
+    ${draw([2025, 2050], [pub[0], dtm[3]], MID, 2, "1 4")}
+    ${end(dtm[3], MID, n0(dtm[3]), "+15 cm of sea level", -14)}
+    ${end(ep[2], PALEC, n0(ep[2]), "elevation epoch corrected", 6)}
+    ${end(pub[pub.length - 1], CORAL, n0(pub[pub.length - 1]), "as published", 0)}
+    ${end(dec[dec.length - 1], CYAN, n0(dec[dec.length - 1]), "if the rate keeps decaying", 4)}
+    ${xt}
+    <text x="${((L + W - R) / 2).toFixed(1)}" y="${H - 12}" fill="${MUTED}" font-size="12" text-anchor="middle">residents on ground below +1 m — four assumptions, one measurement</text>
+  </svg>`;
+}
+
+const F1 = figLit(), F2 = figSpread(), F3 = figRep(), F4 = figGnss(), F5 = figCjkt(), F6 = figDumb();
+const F7 = figScatter(), F8 = figCurve(), F9 = figStep(), F10 = figRank(), F11 = figClocks();
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+---
+<html lang="en" data-case="sinking" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Is Jakarta Still Sinking?</title>
+    <meta name="description" content="An adversarial review of a Sentinel-1 InSAR subsidence and exposure model for Jakarta: the measurement replicates exactly, the rate has roughly halved, the fastest ground is inland, and the exposure headline is an estimator choice." />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="back" href={`${BASE}/`}>← The case</a>
+      <span class="stamp dim">REVIEW ARTICLE · DATA VINTAGE {A.vintage}</span>
+    </header>
+
+    <article>
+      <div class="masthead">
+        <span class="eyebrow">METHODS &amp; VALIDATION · JAKARTA LAND SUBSIDENCE</span>
+        <h1>Is Jakarta still sinking?</h1>
+        <p class="standfirst">Yes — but roughly half as fast as the decade the famous numbers come from,
+        and not mainly where the story says. This is an adversarial review of the case's Sentinel-1
+        field, checked against the published record and against the GNSS archive sitting unused on the
+        same disk. The measurement replicates the depositors' own table almost exactly. Three of the
+        headlines built on it do not survive.</p>
+        <div class="byline">
+          <span>Demo Lab · FMV</span><span>Field vintage {A.window}</span>
+          <span>{A.city.n_ranked} kelurahan · {n0(A.points)} radar points</span>
+        </div>
+      </div>
+
+      <section class="abstract">
+        <h2>Abstract</h2>
+        <p><b>Question.</b> The case measures Jakarta's land subsidence from Sentinel-1 interferometry and
+        turns it into a kelurahan exposure index and a clock to 2050. We ask three things separately: is
+        the measurement right, is the exposure product informative beyond elevation, and does the clock
+        mean what a reader will take it to mean?</p>
+        <p><b>Method.</b> We re-derived every headline statistic from the case's own published JSON, then
+        ran eight pre-specified tests on data already on its disk: reproducing the depositors' published
+        per-municipality table from our regrid; refitting all {D.n_stations} north-Java GNSS stations from
+        the Susilo et al. (2023) archive over early and late sub-periods; recomputing the exposure counts
+        under three ground estimators; applying the elevation-epoch correction the pipeline declines;
+        sweeping the sea-level datum the clock holds fixed; switching the radar off and re-ranking; and
+        re-running the clock with a decaying rate.</p>
+        <p><b>Findings.</b> <b>(1)</b> The regrid is faithful: across all five Jakarta municipalities our
+        mean rate differs from <a href="#ref-ohenhen">Ohenhen et al.'s</a> published table by at most
+        <b>{repMaxErr.toFixed(3)} cm/yr</b>. <b>(2)</b> The field is tied to an absolute datum far better
+        than the case claims. Against GNSS refitted on the <i>same years</i> the mean residual is
+        {mm(meanLate)} mm/yr, not the {mm(meanFull)} mm/yr the case's validation table reports and blames
+        on a reference frame. <b>(3)</b> That {mm(meanFull)} is a real signal read as an error: at CJKT the
+        rate fell from {mm(cjkt.early, 1)} to {mm(cjkt.late, 1)} mm/yr, a {pct(halved, 0)} reduction,
+        while {D.east.n - D.east.n_slower} of {D.east.n} stations elsewhere on the north Java coast
+        accelerated. <b>(4)</b> The fastest ground is not on the coast:
+        {20 - A.geography.n_top20_coastal} of the 20 fastest-sinking kelurahan are inland, and rank
+        correlation between sinking rate and low ground is ρ = {A.geography.rho_rate_vs_lowground}.
+        <b>(5)</b> "{n0(minP)} people live on ground below +1 m" is an estimator choice: the same grid
+        gives {n0(meanP)} on the cell mean. <b>(6)</b> The 2050 exposure ranking is ρ = {radarRho}
+        identical to the ranking with the radar switched off. <b>(7)</b> Two unpriced assumptions — an
+        uncorrected {EP.dem_epoch} elevation epoch and a fixed sea-level datum — each move the count by
+        more than a decade of the clock's own projected change.</p>
+        <p><b>Conclusion.</b> The instrument is sound and its validation is stronger than the case claims.
+        The <i>product</i> built on it is not: it publishes an elevation map as a subsidence map, an
+        estimator artefact as a population count, and an extrapolation as a clock. The measurement's real
+        news — that Jakarta's subsidence is decaying while its neighbours' is not, and that the remaining
+        fast ground has moved inland to exactly the districts the current groundwater-free zone does not
+        cover — is not on the case page at all.</p>
+      </section>
+
+      <nav class="toc">
+        <a href="#s1">1 · The claim under test</a><a href="#s2">2 · What is already known</a>
+        <a href="#s3">3 · One city, four answers</a><a href="#s4">4 · Data and method</a>
+        <a href="#s5">5 · The regrid is faithful</a><a href="#s6">6 · Better tied than claimed</a>
+        <a href="#s7">7 · The rate has roughly halved</a><a href="#s8">8 · The fast ground moved inland</a>
+        <a href="#s9">9 · A headline made by an estimator</a><a href="#s10">10 · The clock is an elevation map</a>
+        <a href="#s11">11 · Three unpriced assumptions</a><a href="#s12">12 · Exposure is not risk</a>
+        <a href="#s13">13 · What follows for decisions</a><a href="#s14">14 · What remains open</a>
+        <a href="#refs">References</a>
+      </nav>
+
+      <section id="s1">
+        <h2><span class="num">1</span> The claim under test</h2>
+        <p>"Jakarta is sinking" is one of the most repeated facts about any city on earth. It usually
+        arrives with a rate — ten, fifteen, twenty-five centimetres a year — and a date, 2050, by which
+        some large fraction of the city is said to be underwater. The case under review measures the
+        ground motion honestly, from orbit, and then does what everyone does with it: turns it into a map
+        of who is exposed and a countdown.</p>
+        <p>Three questions follow, and they have to be asked separately. Is the <b>measurement</b> right?
+        Is the <b>exposure product</b> built on it telling you anything the elevation model did not already
+        say? And does the <b>clock</b> support the reading it invites? We find the answers are yes, no and
+        no — an awkward order, because it means the weakest parts of the page rest on its strongest part.</p>
+      </section>
+
+      <section id="s2">
+        <h2><span class="num">2</span> What is already known, and over which years</h2>
+        <p>Jakarta's subsidence has been measured for four decades and the record is unusually specific.
+        <a href="#ref-abidin2015">Abidin et al. (2015)</a> tabulate it by method and period: levelling
+        gives 1–9 cm/yr for 1982–1991 and 1–25 cm/yr for 1991–1997; GPS campaigns 1–28 cm/yr over
+        1997–2011; InSAR 1–12 cm/yr over 2006–2010. <a href="#ref-chaussard">Chaussard et al. (2013)</a>,
+        using ALOS PALSAR over 2007–2009, report a Jakarta mean vertical rate of 7.2 cm/yr and a maximum
+        of 21.8, with the coast running 9.5–21.5 cm/yr. <a href="#ref-abdullah">Abdullah et al. (2021)</a>,
+        on campaign GPS for 2015–2019, report a maximum of 6.2 cm/yr at Muara Baru and a southern average
+        of 1.16.</p>
+        <figure>
+          <Fragment set:html={F1} />
+          <figcaption><b>Figure 1.</b> The published record against this field. Pale bars are literature
+          rates with the years they were measured over; cyan bars are this case's own named hotspots,
+          median to fastest decile, for {A.window}. The fastest point in this field
+          ({esc(fastestHot.name)}, {Math.abs(fastestHot.p10).toFixed(1)} cm/yr) sits below the bottom of
+          the range published for the 2000s — and close to the 2015–2019 GPS result.</figcaption>
+        </figure>
+        <p>Read down the figure and the story is not "the case disagrees with the literature". It is that
+        the rate has a <b>date</b> attached, and the dates are falling. The case's page explains its lower
+        numbers as a matter of scale — a ~75 m cell average cannot reproduce a persistent-scatterer point
+        peak. That is true and it is part of the answer. Sections 6 and 7 show it is not the larger part.</p>
+      </section>
+
+      <section id="s3">
+        <h2><span class="num">3</span> One city, one period, four different answers</h2>
+        <p>Before trusting any single field it is worth asking what the spread between fields is. Four
+        Sentinel-1-era studies of Jakarta over overlapping years are available, and they do not agree.</p>
+        <figure>
+          <Fragment set:html={F2} />
+          <figcaption><b>Figure 2.</b> Peak subsidence reported by contemporaneous studies of the same
+          city. Each reports a different statistic over a slightly different footprint, which is itself
+          part of the problem — the labels say which. The bottom bar is this case.</figcaption>
+        </figure>
+        <p><a href="#ref-sidiq">Sidiq et al. (2025)</a> report up to 15 cm/yr for Greater Jakarta on
+        Sentinel-1 SBAS over 2017–2023 — the identical years as the field under review.
+        <a href="#ref-lapadat">Lapadat et al. (2025)</a>, with a full three-dimensional decomposition in a
+        Sunda-plate-fixed frame, find a maximum of 7.85 cm/yr in the Muara Angke bowl over 2014–2025.
+        <a href="#ref-widodo">Widodo et al. (2025)</a>, on L-band ALOS-2 validated against 255 GPS points,
+        give an average of 5–6 cm/yr for northern and north-western Jakarta.
+        <a href="#ref-ohenhen">Ohenhen et al. (2026)</a> — the source of this case's field — put the
+        fastest pixel in any Jakarta municipality at 5.64 cm/yr and the maximum within a 1 km coastal strip
+        at 3.6.</p>
+        <p class="pull">Four independent Sentinel-1-era analyses of one city over overlapping years span a
+        factor of four. This case reports its rates to two decimal places and treats the deposit as truth.</p>
+        <p>That spread is the honest error bar on any single-source subsidence product, and it dwarfs the
+        formal uncertainties any of the studies publish. It does not invalidate the case; it sets the
+        precision at which any of its numbers should be read.</p>
+      </section>
+
+      <section id="s4">
+        <h2><span class="num">4</span> Data and method</h2>
+        <p><b>The field.</b> Ohenhen et al.'s Java-wide vertical land motion product, Sentinel-1,
+        {A.window}: {n0(A.points)} points inside the Jakarta window, {n0(A.unique)} unique coordinates
+        after averaging overlapping frames, gridded to 0.001°. Two things about it matter for this review.
+        First, vertical motion was decomposed from ascending and descending line-of-sight geometry by the
+        depositors, so the case inherits a two-dimensional decomposition rather than making a
+        line-of-sight assumption of its own. Second, the depositors tied the result to the
+        <b>IGS14</b> global frame by an affine transformation using ten GNSS stations — including stations
+        from the Susilo et al. archive that this case then uses to validate it.</p>
+        <p><b>Coverage.</b> Every mainland kelurahan has at least {pct(A.coverage.min, 0)} of its cells
+        measured, with a median of {pct(A.coverage.median, 0)}. The published field images fill isolated
+        gaps for display only; all statistics use the raw grid, and our recomputation of every headline
+        number from the live published table reproduces the page to within rounding.</p>
+        <p><b>The exposure layer.</b> WorldPop 2020 constrained population ({n0(A.city.pop)} against a
+        census of {n0(A.city.official)}), GHSL built-up surface, and Copernicus GLO-30 elevation, all on
+        one 100 m grid, aggregated to {A.city.n_mainland} mainland kelurahan. Ground height per cell is
+        the <i>lowest</i> of that cell's roughly nine 30 m pixels.</p>
+        <p><b>The clock.</b> Ground height in year <i>y</i> is the 2025 height plus the measured
+        {A.window} rate times the elapsed years. Cells without radar coverage are held still.</p>
+        <p class="caveat"><b>The tests.</b> Eight checks were specified before they were run, all on data
+        already on the case's disk: (A) refit every GNSS station on an early and a late sub-period;
+        (B) compare the radar to GNSS refitted on the radar's own years; (C) recompute the exposure counts
+        on the cell minimum, the cell 25th percentile and the cell mean; (D) apply the elevation-epoch
+        correction; (E) sweep the sea-level datum; (F) re-rank with the radar switched off; (G) re-run the
+        clock with a decaying rate; (H) reproduce the depositors' own published per-municipality table.
+        Every result below is published, including the two that support the case.</p>
+      </section>
+
+      <section id="s5">
+        <h2><span class="num">5</span> Finding one — the regrid is faithful, and this is the check the case is missing</h2>
+        <p>Before criticising what the case built on the field, we should establish that it read the field
+        correctly. Ohenhen et al. publish per-municipality statistics for the same data in their
+        supplementary table S2. That is a direct, like-for-like target: if the case's ingest, quality
+        filter, gridding and zonal aggregation are faithful, our numbers should land on theirs.</p>
+        <figure>
+          <Fragment set:html={F3} />
+          <figcaption><b>Figure 3.</b> Mean vertical rate per Jakarta municipality: the depositors'
+          published table on the horizontal axis, this case's independent regrid on the vertical. The
+          dashed line is one-to-one.</figcaption>
+        </figure>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Municipality</th><th>mean, theirs</th><th>mean, ours</th><th>median, theirs</th><th>median, ours</th><th>fastest pixel, theirs</th><th>ours</th><th>% below −1, theirs</th><th>ours</th></tr></thead>
+            <tbody>
+              {REP.filter((r: any) => r.lit).map((r: any) => (
+                <tr><td>{r.kota}</td><td>{r.lit.mean.toFixed(3)}</td><td>{r.mean.toFixed(3)}</td>
+                <td>{r.lit.median.toFixed(3)}</td><td>{r.median.toFixed(3)}</td>
+                <td>{r.lit.min.toFixed(2)}</td><td>{r.min.toFixed(2)}</td>
+                <td>{r.lit.share_lt1}</td><td>{r.share_lt1}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p>Every municipality lands on the line. The largest disagreement in the mean is
+        <b>{repMaxErr.toFixed(3)} cm/yr</b>, and the ordering, the medians, the standard deviations and the
+        share of each municipality subsiding faster than 1 cm/yr all reproduce. An independent
+        pipeline — different resampling, different boundary file, different zonal method — recovers the
+        depositors' published table.</p>
+        <p>That is the strongest validation available to this case, and it is not on the case page. It
+        also matters for everything that follows: when we say below that the case's <i>product</i> is
+        wrong, we are not saying its measurement is.</p>
+      </section>
+
+      <section id="s6">
+        <h2><span class="num">6</span> Finding two — the field is tied to the ground better than the case claims</h2>
+        <p>The case validates its field against three continuous GNSS stations and reports a pass inside
+        its ±5 mm/yr tolerance: at CJKT the radar reads {A.gnss.published[0].insar_mm} mm/yr against a
+        published GNSS rate of {A.gnss.published[0].gnss_mm}. Its methodology footer used to explain the
+        gap this way: <i>"the InSAR field is referenced to stable ground in the same region, so a small
+        frame offset (≈1–2 mm/yr) is expected."</i></p>
+        <p>That explanation is wrong on two counts. The field is not referenced to local stable ground: the
+        depositors transformed it into IGS14, the same family of frame the GNSS solutions are in
+        (IGb14), so no frame offset should be expected at all. And the published GNSS rates are fitted over
+        each station's <b>whole record</b> — at CJKT, 2010 to 2022 — while the radar covers {A.window}.
+        The two numbers describe different decades.</p>
+        <p>We refitted each station's daily vertical series on the radar's own window, with annual and
+        semi-annual terms to absorb the hydrological load cycle. Our whole-record refits reproduce the
+        published rates almost exactly ({gnssRows.map((r: any) => `${r.station} ${mm(r.gnss_full, 1)} vs ${r.published}`).join("; ")} mm/yr),
+        which is the check that the refitting is sound.</p>
+        <figure>
+          <Fragment set:html={F4} />
+          <figcaption><b>Figure 4.</b> The same three comparisons made twice. Coral: the radar against the
+          published whole-record GNSS rate, which is what the case's validation table does. Cyan: the
+          radar against the same stations refitted on {A.window}. The disagreement is not in the radar.</figcaption>
+        </figure>
+        <p class="pull">Compared like for like, InSAR minus GNSS is {mm(meanLate)} ± {G.sd_d_late.toFixed(2)} mm/yr
+        across the three stations, with a largest single residual of {G.max_abs_d_late.toFixed(2)}.
+        Compared as the case compares them, it is {mm(meanFull)} ± {G.sd_d_full.toFixed(2)}.</p>
+        <p>Two things follow. The deposited field is tied to an absolute datum an order of magnitude better
+        than the case gives it credit for. And the {mm(meanFull)} mm/yr the case writes off as a frame
+        offset is not noise: it is the same sign and roughly the same size at all three stations, and it is
+        measuring something real.</p>
+        <p class="caveat"><b>This check is not fully independent, and the case does not say so.</b> Ohenhen
+        et al. aligned their field to IGS14 using ten GNSS stations drawn partly from the Susilo et al.
+        archive — the same archive the case's GNSS gate tests against. A check between a product and the
+        data used to align that product can only fail if something is badly broken. The case presents it
+        as external corroboration. The honest description is a consistency check, and the genuinely
+        external validation is Section 5's replication and the multi-study comparison in Section 3.</p>
+      </section>
+
+      <section id="s7">
+        <h2><span class="num">7</span> Finding three — Jakarta's subsidence has roughly halved, and its neighbours' has not</h2>
+        <p>If the radar's window disagrees with the GNSS record's window by a consistent amount, the ground
+        changed speed between them. The Susilo et al. archive on the case's disk holds daily vertical
+        solutions for {D.n_stations} continuous stations along north Java from 2010 to 2022 — a direct test
+        the case never runs.</p>
+        <figure>
+          <Fragment set:html={F5} />
+          <figcaption><b>Figure 5.</b> The ground at CJKT, in central Jakarta. Every dot is a daily GNSS
+          solution. Two lines fitted independently before and after 2017 with seasonal terms removed:
+          {mm(cjkt.early, 1)} mm/yr, then {mm(cjkt.late, 1)}. The shaded band is the radar field's own
+          window.</figcaption>
+        </figure>
+        <p>At CJKT the rate falls from {mm(cjkt.early, 1)} to {mm(cjkt.late, 1)} mm/yr — a
+        {pct(halved, 0)} reduction. The other two stations inside the case's working area do the same:
+        {D.all.filter((s: any) => s.west && s.station !== "CJKT").map((s: any) => `${s.station} ${mm(s.early, 1)} → ${mm(s.late, 1)}`).join(", ")} mm/yr.
+        All {D.west.n} slowed, by an average of {mm(D.west.mean_change_mm)} mm/yr.</p>
+        <figure>
+          <Fragment set:html={F6} />
+          <figcaption><b>Figure 6.</b> Every station in the archive, 2010–2016 against 2017–2022. Hollow
+          circles are the early rate, filled the late. Cyan marks the stations inside the case's own
+          working area; all three move rightward. Pekalongan (CPKL), off scale at −105 → −118 mm/yr, moves
+          the other way.</figcaption>
+        </figure>
+        <p>The contrast is the finding. Across the rest of the north Java coast,
+        {D.east.n - D.east.n_slower} of {D.east.n} stations got <i>faster</i>, by an average of
+        {mm(D.east.mean_change_mm)} mm/yr. At Pekalongan the ground is dropping at nearly 12 cm a year and
+        accelerating — roughly three times the rate of the fastest decile of the fastest kelurahan in
+        Jakarta.</p>
+        <p class="pull">Jakarta is no longer the fastest-sinking city on Java, and on this evidence it has
+        not been for some years. The famous numbers are real, and they are historical.</p>
+        <p>This is not our discovery. It is the central claim of the paper the case's own field comes from:
+        Ohenhen et al. report that 45% of subsiding Java shows statistically significant deceleration
+        against 17% acceleration, and specifically that Jakarta has shifted "from rapid subsidence during
+        2007–2010 to near stability or even uplift in 2017–2023 in 50% of the land areas," attributing it
+        to groundwater extraction bans, industrial relocation and piped-water expansion. The case uses the
+        dataset and not the finding. Our contribution is to confirm it from an entirely different
+        instrument — continuous GNSS rather than InSAR — and to show that the residual the case's own
+        validation table writes off is exactly this signal.</p>
+        <p class="caveat"><b>Robustness, and what this does not show.</b> The Susilo archive documents
+        equipment changes that are not modelled as offsets. Refitting the late window from 2018, so that
+        any step in late 2017 falls outside it, gives CJKT {mm(cjkt.late_post, 1)} rather than
+        {mm(cjkt.late, 1)} mm/yr — a {pct(halvedPost, 0)} reduction instead of {pct(halved, 0)}, and a
+        mean InSAR-minus-GNSS residual of {mm(meanPost)} rather than {mm(meanLate)}. The direction and
+        rough magnitude survive; the second decimal does not. Beyond that: the GNSS record ends in 2022,
+        and three stations is a thin sample for a city of 660 km². Deceleration at three points is not
+        deceleration everywhere, and a rate that has halved can un-halve if extraction resumes.</p>
+      </section>
+
+      <section id="s8">
+        <h2><span class="num">8</span> Finding four — the fast ground has moved inland, away from the exposure</h2>
+        <p>The case's hero used to promise "millimetres a year in the centre, centimetres on the north
+        coast." Its own ranking says otherwise. Of the 20 fastest-subsiding kelurahan by median rate,
+        {A.geography.top20_by_kota["Jakarta Barat"] ?? 0} are in West Jakarta,
+        {A.geography.top20_by_kota["Jakarta Selatan"] ?? 0} in South Jakarta and only
+        {A.geography.top20_by_kota["Jakarta Utara"] ?? 0} in North Jakarta; only
+        {A.geography.n_top20_coastal} of the 20 sit in the coastal belt at all. Ohenhen et al.'s own table
+        agrees: {REP.find((r: any) => r.kota === "Jakarta Barat").lit.share_lt1}% of West Jakarta subsides
+        faster than 1 cm/yr against {REP.find((r: any) => r.kota === "Jakarta Utara").lit.share_lt1}%
+        of North Jakarta.</p>
+        <figure>
+          <Fragment set:html={F7} />
+          <figcaption><b>Figure 7.</b> Every measured kelurahan: how fast its fastest decile sinks against
+          how low its low ground is. Circle area is population; the coral line is the +1 m exposure
+          threshold. If subsidence and exposure were the same problem this cloud would run diagonally.
+          Hover any circle.</figcaption>
+        </figure>
+        <p>Rank correlation between sinking rate and low-ground share across all {A.city.n_ranked} measured
+        kelurahan is <b>ρ = {A.geography.rho_rate_vs_lowground}</b>. They are very nearly independent
+        quantities, and the case's exposure index averages their ranks as though they were two readings of
+        one thing.</p>
+        <p>The two fastest-sinking kelurahan make the point unaided.
+        {esc(A.geography.fastest_inland[0].name)} sinks at {cm(A.geography.fastest_inland[0].v_med)} cm/yr
+        at the median — faster than any kelurahan in North Jakarta — with low ground at
+        {A.geography.fastest_inland[0].ground.toFixed(1)} m. {esc(A.geography.fastest_inland[1].name)},
+        {cm(A.geography.fastest_inland[1].v_med)} cm/yr, low ground
+        {A.geography.fastest_inland[1].ground.toFixed(1)} m. Between them they hold
+        {n0(A.geography.fastest_inland[0].pop + A.geography.fastest_inland[1].pop)} people. Both contribute
+        exactly zero to the 2050 exposure count.</p>
+        <p>That is not a defect in the measurement; it is the measurement telling you something. Fast
+        ground on a high terrace is a foundation, buried-pipe and drainage-gradient problem, not a flooding
+        problem, and it is where the remaining extraction is. Section 13 shows a published policy analysis
+        reaching the same conclusion from different data.</p>
+      </section>
+
+      <section id="s9">
+        <h2><span class="num">9</span> Finding five — the headline exposure number is a choice of estimator</h2>
+        <p>The case's most quoted statistic is that <b>{n0(minP)} people live on ground below +1 m</b>.
+        Ground height per 100 m cell is the <i>lowest</i> of that cell's roughly nine GLO-30 pixels — a
+        defensible attempt to find roads and yards rather than roofs in a surface model. It is also a
+        minimum of nine noisy samples, and it behaves like one.</p>
+        <figure>
+          <Fragment set:html={F8} />
+          <figcaption><b>Figure 8.</b> Residents standing below each height, computed three ways on the
+          same grid and the same population. The two 2025 curves are separated by about two metres of
+          ground — twice the width of the threshold they are being compared against.</figcaption>
+        </figure>
+        <p>On the cell minimum, {n0(minP)} people are below +1 m. On the cell's 25th percentile,
+        {n0(q25P)}. On the cell mean, <b>{n0(meanP)}</b> — a factor of {EST.min_vs_mean_1m_2025} between
+        the first and the last. The median gap between the two estimators is
+        {Math.abs(EST.median_min_minus_mean_m).toFixed(2)} m of ground. Read on the cell mean, the
+        published headline is the population below <b>+{EST.equivalent_mean_height_m} m</b>, not below
+        +1 m.</p>
+        <p>Below mean sea level the sensitivity is worse — a factor of {EST.min_vs_mean_0m_2025} — and
+        there the estimator meets a second artefact. GLO-30 pins water and near-shore cells to exactly
+        0.00 m. <b>{n0(EST.pop_at_exact_zero)} people</b> live in {n0(EST.cells_at_exact_zero)} cells
+        sitting at exactly that value, poised one arbitrary millimetre above the threshold.</p>
+        <figure>
+          <Fragment set:html={F9} />
+          <figcaption><b>Figure 9.</b> The case's own published below-sea-level series. The single-year
+          jump between 2025 and 2026 is {pct(A.series.below0m.first_share, 0)} of the entire 25-year rise
+          the clock projects; every subsequent year adds a median of
+          {n0(A.series.below0m.median_rest)}.</figcaption>
+        </figure>
+        <p class="pull">The case's own numbers contradict its own headline. If {n0(A.series.below0m.series[0])}
+        people are below mean sea level in 2025 and {n0(A.series.below0m.series[1])} in 2026, the 2025
+        figure is not a measurement of Jakarta. It is a measurement of where a digital elevation model
+        stops rounding.</p>
+        <p>The context makes this avoidable rather than unlucky. The depositors of the very field this
+        case uses paired it with <a href="#ref-deltadtm">DeltaDTM</a>, a bare-earth model corrected with
+        ICESat-2 and GEDI and published with a mean absolute error of 0.43 m. The case took a raw surface
+        model and recovered a ground proxy with a minimum operator. Neither choice is unreasonable on its
+        own; only one of them has a stated error budget.</p>
+        <p>None of this makes the exposure map worthless. The <i>ranking</i> of kelurahan is far more
+        robust than the absolute counts, because the estimator bias is broadly common across the city.
+        But a count published to the nearest person, when the estimator moves it by a factor of eleven,
+        cannot bear the weight put on it.</p>
+      </section>
+
+      <section id="s10">
+        <h2><span class="num">10</span> Finding six — the clock is, to three decimal places, an elevation map</h2>
+        <p>The case's central product ranks kelurahan by residents on ground below +1 m in a chosen year,
+        animated from 2025 to 2050. The obvious question is whether the radar is doing any work in it. We
+        switched the radar off — velocity set to zero in every cell — and re-ran the same ranking.</p>
+        <figure>
+          <Fragment set:html={F10} />
+          <figcaption><b>Figure 10.</b> Rank correlation of the published 2050 ranking against each
+          candidate explanation, over {A.city.n_ranked} kelurahan.</figcaption>
+        </figure>
+        <p>The 2050 ranking correlates <b>ρ = {radarRho}</b> with the identical ranking computed with no
+        subsidence at all, and shares {A.ranking.top20_shared_no_radar} of its top 20 kelurahan with it.
+        It correlates ρ = {lowRho} with low-ground share alone and ρ = {naiveRho} with the trivial product
+        of population and low-ground share. Against the measured sinking rate — the case's entire
+        instrument — it correlates ρ = {rateRho}.</p>
+        <p>Twenty-five years of subsidence moves the city total from {n0(A.ranking.city_2050_without)} to
+        {n0(A.ranking.city_2050_with)} people, a change of
+        {pct(A.series.below1m.total / A.ranking.city_2050_without, 1)}, against a base that Section 9
+        showed is itself uncertain by a factor of eleven. The signal the radar contributes is an order of
+        magnitude smaller than the uncertainty in the layer it is added to.</p>
+        <p>The clock's own internals say the same. Of {A.city.n_ranked} measured kelurahan,
+        {A.clock.already_below} already have low ground below mean sea level, {A.clock.no_clock} are not
+        subsiding fast enough for the clock to run at all, {A.clock.beyond_century} need more than a
+        century to reach it — and exactly <b>{A.clock.within_horizon}</b> crosses mean sea level inside the
+        2025–2050 window the page animates.</p>
+        <p class="caveat"><b>What this does not mean.</b> It does not mean the radar is useless; it means
+        the radar is being asked the wrong question. A quantity that is 96% elevation should be presented
+        as an elevation product with a subsidence adjustment, and the subsidence measurement should be
+        published where it is the whole signal — Section 8's inland hotspots, Section 7's deceleration —
+        rather than buried inside a composite where it contributes four per cent.</p>
+      </section>
+
+      <section id="s11">
+        <h2><span class="num">11</span> Finding seven — three assumptions, none of them priced</h2>
+        <p>The clock states its assumptions plainly, which is to its credit. What it does not state is how
+        much each one is worth. We priced three of them on the same grid.</p>
+        <figure>
+          <Fragment set:html={F11} />
+          <figcaption><b>Figure 11.</b> Residents on ground below +1 m under four treatments of the same
+          measurement. Every line uses the identical radar field, population and elevation model; they
+          differ only in an assumption the case makes and does not price.</figcaption>
+        </figure>
+        <p><b>The elevation is twelve years old.</b> GLO-30 was acquired 2011–2015 and is used as the 2025
+        surface. Applying the correction the case declines — dropping every cell by its own measured rate
+        over {EP.lag_years} years — moves today's count from {n0(EP.published["1m"]["2025"])} to
+        <b>{n0(EP.counts["1m"]["2025"])}</b>. That is a number the published clock does not reach until
+        <b>{EP.clock_year_equivalent}</b>: the uncorrected epoch is worth
+        {EP.clock_year_equivalent - 2025} of the clock's {A.clock.horizon} years.</p>
+        <p><b>The sea does not stay still.</b> "Below mean sea level" is evaluated against a fixed EGM2008
+        datum in every year to 2050. Ohenhen et al. measure absolute sea-level rise in the Java Sea at
+        5–7 mm/yr over 2001–2024, 25–75% above the global mean; twenty-five years of that is 12.5–17.5 cm.
+        Raising the datum by 15 cm moves the 2050 below-MSL count from {n0(DT.pop_0m_2050[0])} to
+        <b>{n0(DT.pop_0m_2050[3])}</b> and the below-+1 m count to {n0(DT.pop_1m_2050[3])}. Ten
+        centimetres of sea level is worth
+        {pct((DT.pop_0m_2050[2] - DT.pop_0m_2050[0]) / A.series.below0m.total, 0)} of everything
+        twenty-five years of subsidence achieves.</p>
+        <p><b>The rate is not a constant.</b> Section 7 measured a halving time of about
+        {D.cjkt_halving_years} years at CJKT. Running the clock with the rate decaying on that schedule
+        rather than held flat gives {DEC.effective_years_2050} equivalent years of subsidence by 2050
+        instead of {DEC.linear_years_2050}, and a 2050 count of <b>{n0(DEC.pop_1m_2050)}</b> against the
+        published {n0(DEC.linear_1m[DEC.linear_1m.length - 1])} — {pct(decayShare, 0)} of the projected
+        rise disappears.</p>
+        <p>Two of these make the clock optimistic and one makes it pessimistic, and the case's page claims
+        only the first direction: it argues the uncorrected elevation makes the clock "if anything,
+        optimistic" without mentioning that its constant-rate assumption pushes hard the other way. The
+        honest statement is that the 2050 number is bracketed by roughly {n0(DEC.pop_1m_2050)} to
+        {n0(EP.counts["1m"]["2050"])} on assumptions alone, before any uncertainty in the measurement and
+        before the factor of eleven in Section 9.</p>
+        <p class="caveat"><b>There is precedent for getting this wrong.</b> Chaussard et al. (2013)
+        closed with exactly this kind of extrapolation: "assuming subsidence continues at an average rate
+        of 10 cm/year and an average elevation above relative sea level of 2 m, … the coastal part of
+        Jakarta will be below relative sea level in 20 years" — that is, by about 2033. Thirteen years
+        later, the same coast is measured at under 4 cm/yr by the field this case uses. The projection
+        failed not because the measurement was wrong but because a rate was assumed constant while the
+        policy that drove it changed.</p>
+      </section>
+
+      <section id="s12">
+        <h2><span class="num">12</span> Finding eight — exposure is being read as risk, and the best-known number about Jakarta is not evidence</h2>
+        <p>The case is careful to call its output exposure. Its page furniture is not: a countdown, a play
+        button, a coral ramp and a year that ticks forward all invite the reading "this is what will
+        happen." Exposure is one of three factors. Hazard — how often and how deep water actually
+        arrives — and vulnerability — who can absorb it — are both absent.</p>
+        <p>The case's own failed plausibility check is the evidence. Its exposure index correlates with
+        recorded 2021–24 flood events at ρ = {A.flood.rho_index_vs_flood_events}, against a pre-registered
+        threshold of {A.flood.threshold}. Low ground correlates <i>negatively</i>
+        (ρ = {A.flood.rho_low1_vs_flood_events}): Jakarta's frequent floods are riverine, along the
+        Ciliwung and its tributaries, on higher ground in the east. The case publishes this failure in red
+        and diagnoses it correctly, which is more than most such products do — but it then treats it as a
+        limitation rather than as the finding. <b>Where Jakarta floods and where Jakarta sinks are
+        different places</b>, and an agency that plans drainage from the subsidence map will defend the
+        wrong neighbourhoods. The one place the two coincide is the January 2020 extreme, which covered
+        {pct(A.flood.top20_exposure_2020_share, 0)} of the 20 most exposed kelurahan against
+        {pct(A.flood.all_2020_share, 0)} city-wide — a signal for rare compound events, not for the annual
+        flood season.</p>
+        <p>The same discipline should be applied to the single most-cited fact about this city.
+        <b>"Forty per cent of Jakarta lies below sea level"</b> traces to a
+        <a href="#ref-wb">World Bank working paper of 2011</a>, whose own figure caption hedges it as
+        what the area "is said to constitute", sourced to a provincial mapping department dataset of 2000
+        and footnoted to a non-peer-reviewed trade book. No DEM, no vertical datum, no method. On this
+        case's grid the figure is <b>{pct(A.area.min_0m_share, 1)}</b> of DKI's land area on the generous
+        cell-minimum estimator ({A.area.min_0m} km² of {n0(A.area.total_km2)}), or
+        {pct(A.area.min_0m_incl_zero_share, 1)} if every cell the DEM pins to exactly 0.00 m is counted as
+        below — and {pct(A.area.mean_0m_share, 1)} on the cell mean.</p>
+        <p>We are not able to say the 40% figure is wrong, because there is nothing to test it against:
+        no peer-reviewed Jakarta-specific estimate of area or population below mean sea level exists.
+        <a href="#ref-hooijer">Hooijer and Vernimmen (2021)</a> put 1.7 million Indonesians below 0 m with
+        a 68% interval of 0 to 5 million, on a grid too coarse to resolve a city. What we can say is that
+        the most repeated quantitative claim about Jakarta rests on a citation chain that does not
+        terminate in a measurement, and that every modern elevation model puts the true figure at least an
+        order of magnitude lower.</p>
+        <div class="stat-row">
+          <div class="stat"><span class="sv cyan">{pct(A.velocity.share_fast2, 1)}</span><span class="sl">of Jakarta's residents stand on ground sinking faster than 2 cm/yr</span></div>
+          <div class="stat"><span class="sv">{cm(A.velocity.med_q.p50)} cm/yr</span><span class="sl">median kelurahan rate — the typical Jakarta neighbourhood is close to stable</span></div>
+          <div class="stat"><span class="sv">{A.velocity.n_uplift} of {A.city.n_ranked}</span><span class="sl">kelurahan whose median ground is measured as rising</span></div>
+        </div>
+        <p>Those three numbers are the honest summary of the field, and none of them appears on the case
+        page. {pct(A.velocity.share_fast2, 1)} of residents on fast ground is a serious, actionable
+        finding. It is not the same claim as "Jakarta is sinking", and the difference between them is
+        where the policy lives.</p>
+      </section>
+
+      <section id="s13">
+        <h2><span class="num">13</span> What follows for decisions</h2>
+        <p>Evidence is only worth gathering if it changes an action. Read strictly, this instrument
+        supports four uses and forbids a fifth.</p>
+        <ol class="uses">
+          <li><b>Redrawing the groundwater-free zone.</b> DKI's current instrument, Pergub 93/2021,
+          prohibits extraction from 1 August 2023 for buildings above 5,000 m² or eight storeys, across an
+          enumerated list of corridors and precincts concentrated in the Central and South Jakarta business
+          districts. Central Jakarta is the one municipality this field measures as
+          <b>not subsiding at all</b> ({cm(A.replication.find((r: any) => r.kota === "Jakarta Pusat").mean)} cm/yr mean).
+          The fast ground is in West Jakarta. <a href="#ref-widodo">Widodo et al. (2025)</a> reach the same
+          conclusion from L-band InSAR and rank the redesign priority West, North, South, East, Central.
+          This case's own ranking independently supports that reordering, and does not say so.</li>
+          <li><b>Verifying that the policy worked.</b> Section 7 is a quantitative statement that Jakarta's
+          subsidence responded to a decade of intervention, measured on an instrument independent of the
+          one that produced the field. That is the highest-value output here — it tells a ministry which
+          lever moved the ground — and it is currently discarded as a calibration residual.</li>
+          <li><b>Asset-level engineering triage.</b> Subsidence on high inland ground threatens
+          foundations, buried pipe and drainage gradients — PUPR, PAM Jaya, the toll and rail
+          operators — long before it threatens anyone with seawater. The exposure map cannot see this
+          because it filters on elevation.</li>
+          <li><b>A design-life prior for coastal defence.</b> For the NCICD sea wall and the North Jakarta
+          embankments the relevant quantity is relative sea level: subsidence plus sea-level rise, at the
+          structure. Ohenhen et al. publish exactly that for two points in Jakarta Bay. This case has all
+          three components and combines only one of them.</li>
+          <li class="no"><b>Not: a countdown to 2050.</b> On the case's own grid the 2050 headline moves by
+          a factor of {EST.min_vs_mean_1m_2025} on the ground estimator, by
+          {EP.clock_year_equivalent - 2025} years of clock on the elevation epoch, and by
+          {pct(decayShare, 0)} on whether the rate keeps falling. Exactly {A.clock.within_horizon} of
+          {A.city.n_ranked} kelurahan crosses mean sea level inside the window being animated. The clock
+          should be relabelled as a momentum illustration with its assumption bracket shown, or withdrawn.</li>
+        </ol>
+        <p class="pull">The gap this case should close is not between Jakarta and data — Jakarta has four
+        decades of subsidence data. It is between the measurement and the licence decision, the pipe
+        replacement, the design life. That gap is crossed by publishing where the ground is still moving
+        and who is allowed to pump there, not by a countdown.</p>
+      </section>
+
+      <section id="s14">
+        <h2><span class="num">14</span> What remains open</h2>
+        <ol class="next">
+          <li><b>An independent reprocessing.</b> The case's own deferred check — its own LiCSBAS run over
+          LiCSAR frame 098A against the deposited field — remains the right test and remains not done.
+          Section 5 validates the regrid against the depositors' published table, which is a different and
+          weaker thing than an independent interferometric chain. Section 3's factor-of-four spread is the
+          reason it matters.</li>
+          <li><b>A ground model with a stated error budget.</b> Section 9's factor of eleven is not
+          resolvable by choosing a different percentile. It needs a bare-earth model whose vertical datum
+          and noise are known at building scale — DeltaDTM, Indonesia's DEMNAS, or municipal lidar — which
+          replaces an estimator argument with a measurement.</li>
+          <li><b>Relative sea level, not ground alone.</b> Combining the subsidence field with a published
+          local sea-level projection is a day's work on data already here, and it is the number every
+          coastal-defence decision actually needs.</li>
+          <li><b>Extend the GNSS test past 2022.</b> The archive ends where the interesting part begins.
+          Whether the deceleration of Section 7 held through 2023–2026 — across the 1 August 2023 ban
+          coming into force — is answerable from the same network, and would turn a retrospective into a
+          monitor.</li>
+        </ol>
+      </section>
+
+      <section id="refs">
+        <h2><span class="num">15</span> References and reproducibility</h2>
+        <ol class="refs">
+          <li id="ref-ohenhen">Ohenhen, L.O., Shirzaei, M., Kumar, P., Aditiya, A., Tiwari, A., Davis, J.L.,
+          Kolawole, F., Chaussard, E., Sadhasivam, N., Dasho, O., Zhong, W., James, R.H., Daramola, S.,
+          Nicholls, R.J. &amp; Minderhoud, P.S.J. (2026). Land subsidence on Java Island and its
+          contributions to relative sea level change. <i>Science Advances</i> 12, eaec0172.
+          doi:10.1126/sciadv.aec0172. Dataset: Zenodo doi:10.5281/zenodo.15786356 (CC BY 4.0) — the
+          velocity field under review; per-municipality statistics in table S2.</li>
+          <li id="ref-susilo">Susilo, S., Salman, R., Hermawan, W., Widyaningrum, R., Wibowo, S.T.,
+          Lumban-Gaol, Y.A., Meilano, I. &amp; Yun, S.-H. (2023). GNSS land subsidence observations along
+          the northern coastline of Java, Indonesia. <i>Scientific Data</i> 10, 421.
+          doi:10.1038/s41597-023-02274-0. Dataset: Zenodo doi:10.5281/zenodo.7775016 (CC BY 4.0) — the
+          daily station series refitted in Sections 6 and 7.</li>
+          <li id="ref-abidin2015">Abidin, H.Z., Andreas, H., Gumilar, I. &amp; Wibowo, I.R.R. (2015). On
+          correlation between urban development, land subsidence and flooding phenomena in Jakarta.
+          <i>Proc. IAHS</i> 370, 15–20. doi:10.5194/piahs-370-15-2015 (table 1). See also Abidin, H.Z. et
+          al. (2011), Land subsidence of Jakarta (Indonesia) and its relation with urban development,
+          <i>Natural Hazards</i> 59(3), 1753–1771, doi:10.1007/s11069-011-9866-9.</li>
+          <li id="ref-chaussard">Chaussard, E., Amelung, F., Abidin, H. &amp; Hong, S.-H. (2013). Sinking
+          cities in Indonesia: ALOS PALSAR detects rapid subsidence due to groundwater and gas extraction.
+          <i>Remote Sensing of Environment</i> 128, 150–161. doi:10.1016/j.rse.2012.10.015 (table 2).</li>
+          <li id="ref-abdullah">Abdullah, F.M., Andriyanto, H., Nababan, J.R., Abdillah, F. &amp;
+          Sulistyawan, R.I.H. (2021). Results of land subsidence measurement using GPS method in the Jakarta
+          groundwater basin in 2015–2019. <i>IOP Conf. Ser. Earth Environ. Sci.</i> 873, 012034.
+          doi:10.1088/1755-1315/873/1/012034.</li>
+          <li id="ref-sidiq">Sidiq, T.P., Gumilar, I., Abidin, H.Z., Meilano, I., Purwarianti, A. &amp;
+          Lestari, R. (2025). Spatial distribution and monitoring of land subsidence using Sentinel-1 SAR
+          data in Java, Indonesia. <i>Applied Sciences</i> 15(7), 3732. doi:10.3390/app15073732.</li>
+          <li id="ref-lapadat">Lapadat, A.M., Andreas, H., Brouwer, W.S., van Diepen, S., Pradipta, D. &amp;
+          Hanssen, R.F. (2025). Land subsidence in Jakarta in three dimensions (2014–2025) using
+          InSAR–GNSS datum connection and the strapdown decomposition. EarthArXiv preprint,
+          doi:10.31223/X5R45H. <i>Not peer-reviewed at the time of writing.</i></li>
+          <li id="ref-widodo">Widodo, J., Trihatmoko, E., Setyaningrum, N., Izumi, Y., Handika, R., Ardha,
+          M., Arief, R., Sobue, S., Nurlinda, N., Pranantya, P.A., Wiranu, J.R. &amp; Khomarudin, M.R.
+          (2025). Technical and policy analysis: time series of land subsidence for the evaluation of the
+          Jakarta groundwater-free zone. <i>Urban Science</i> 9(3), 67. doi:10.3390/urbansci9030067.</li>
+          <li id="ref-deltadtm">Pronk, M., Hooijer, A., Eilander, D., Haag, A., de Jong, T., Vousdoukas, M.,
+          Vernimmen, R., Ledoux, H. &amp; Eleveld, M. (2024). DeltaDTM: a global coastal digital terrain
+          model. <i>Scientific Data</i> 11, 273. Dataset doi:10.4121/21997565.</li>
+          <li id="ref-hooijer">Hooijer, A. &amp; Vernimmen, R. (2021). Global LiDAR land elevation data
+          reveal greatest sea-level rise vulnerability in the tropics. <i>Nature Communications</i> 12, 3592.
+          doi:10.1038/s41467-021-23810-9 (table 1).</li>
+          <li id="ref-wb">World Bank (2011). <i>Jakarta: urban challenges in a changing climate</i>. Mayors'
+          Task Force on Climate Change, Disaster Risk and the Urban Poor, working paper 65018 — the source
+          of the "40% below sea level" figure, there attributed to DKI Jakarta Department of Land and
+          Mapping (2000).</li>
+          <li id="ref-pergub">Pemerintah Provinsi DKI Jakarta (2021). Peraturan Gubernur No. 93 Tahun 2021
+          tentang Zona Bebas Air Tanah. Promulgated 26 October 2021, Berita Daerah 2021 No. 63013;
+          prohibition effective 1 August 2023 (article 8) for buildings ≥ 5,000 m² and/or ≥ 8 storeys
+          (article 2).</li>
+          <li id="ref-glo30">European Space Agency / Airbus (2022). Copernicus DEM GLO-30 global 30 m
+          digital surface model. doi:10.5270/ESA-c5d3d65. WorldPop (2020), Global High Resolution Population
+          Denominators, Indonesia, doi:10.5258/SOTON/WP00660. Pesaresi, M. &amp; Politis, P. (2023),
+          GHS-BUILT-S and GHS-POP R2023A, European Commission JRC.</li>
+        </ol>
+        <p class="repro"><b>Corrections applied to the case page.</b> Seven, all from this review and all
+        live: the hero no longer claims the fast ground is on the north coast; chapter 01 carries the
+        deceleration result and the inland geography; the hotspot footnote no longer attributes the whole
+        gap with the 2000s literature to pixel size; chapter 02 publishes the ground-estimator factor of
+        {EST.min_vs_mean_1m_2025}, the assumption bracket and the rounding artefact in the below-sea-level
+        series; chapter 03 states that the ranking is ρ = {radarRho} identical to itself with the radar
+        off; chapter 04 withdraws the reference-frame explanation, adds the replication and says plainly
+        that the GNSS check is a consistency check; and the failed flood check is reframed as a finding
+        rather than an apology. Where a correction changed a number, the number on both pages comes from
+        the same file.</p>
+        <p class="repro"><b>Reproducibility.</b> Every figure and every statistic on this page is generated
+        in this page's own frontmatter from <code>web/src/data/article.json</code>, written by
+        <code>pipeline/article.py</code> from the case's published outputs plus
+        <code>pipeline/review.py</code>, which contains the eight tests of Section 4 and runs in under two
+        minutes on the case's existing <code>data/</code> directory. The only hand-entered numbers are the
+        published literature rates in Figures 1 and 2 and the Ohenhen table S2 column in Section 5, each
+        transcribed from the sources cited above with the period it was measured over. Field vintage
+        {A.window}; snapshot generated {A.vintage}. Every rank correlation was recomputed independently
+        from the case's live <code>exposure.json</code> before it was written into prose.</p>
+      </section>
+
+      <footer class="end">
+        <p>Part of the Demo Lab. Built end-to-end on public data — acquisition, pipeline, model,
+        validation, and this review.</p>
+        <a class="cta" href={`${BASE}/`}>← Back to the case</a>
+      </footer>
+    </article>
+
+    <div id="tip" hidden></div>
+
+    <style is:global>
+      body { margin: 0; background: var(--ground); color: var(--ink);
+        font-family: var(--font-body); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+      *, *::before, *::after { box-sizing: border-box; }
+      a { color: var(--accent); }
+
+      .bar { position: sticky; top: 0; z-index: 20; display: flex; justify-content: space-between;
+        align-items: center; gap: 16px; padding: 12px 24px; background: color-mix(in srgb, var(--ground) 92%, transparent);
+        backdrop-filter: blur(8px); border-bottom: 1px solid var(--hairline); }
+      .back { text-decoration: none; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.06em; }
+      .stamp { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); }
+
+      article { max-width: 50rem; margin: 0 auto; padding: 0 24px 12vh; }
+      .masthead { padding: 9vh 0 4vh; border-bottom: 1px solid var(--hairline); }
+      .eyebrow { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--accent); }
+      h1 { font-family: var(--font-display); font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.1;
+        letter-spacing: -0.02em; margin: 18px 0 20px; }
+      .standfirst { font-size: 1.12rem; color: var(--ink); margin: 0 0 26px; max-width: 42rem; }
+      .byline { display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: var(--font-data);
+        font-size: 0.74rem; letter-spacing: 0.08em; color: var(--ink-muted); text-transform: uppercase; }
+
+      .abstract { margin: 5vh 0; padding: 26px 28px; border: 1px solid var(--hairline);
+        border-left: 3px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
+      .abstract h2 { font-family: var(--font-data); font-size: 0.76rem; letter-spacing: 0.16em;
+        color: var(--accent); margin: 0 0 14px; text-transform: uppercase; }
+      .abstract p { margin: 0 0 12px; font-size: 0.97rem; }
+      .abstract p:last-child { margin-bottom: 0; }
+
+      .toc { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 20px 0 8px; margin-bottom: 4vh;
+        border-bottom: 1px solid var(--hairline); font-family: var(--font-data); font-size: 0.74rem; }
+      .toc a { text-decoration: none; color: var(--ink-muted); }
+      .toc a:hover { color: var(--accent); }
+
+      section { margin: 6vh 0; }
+      h2 { font-family: var(--font-display); font-size: 1.5rem; line-height: 1.25; letter-spacing: -0.01em;
+        margin: 0 0 20px; display: flex; gap: 14px; align-items: baseline; }
+      .num { font-family: var(--font-data); font-size: 0.9rem; color: var(--accent); flex: none; }
+      p { margin: 0 0 18px; }
+      b { color: #F2F7FB; font-weight: 600; }
+
+      .caveat { border-left: 2px solid var(--alert); padding: 2px 0 2px 18px; color: var(--ink-muted); }
+      .caveat b { color: var(--alert); }
+      .pull { font-size: 1.1rem; line-height: 1.6; border-left: 3px solid var(--accent);
+        padding: 8px 0 8px 20px; color: #F2F7FB; }
+
+      figure { margin: 34px 0; padding: 20px 18px 14px; border: 1px solid var(--hairline);
+        border-radius: var(--radius); background: var(--surface); overflow-x: auto; }
+      .fig { display: block; width: 100%; min-width: 620px; height: auto; overflow: visible; }
+      figcaption { font-size: 0.85rem; color: var(--ink-muted); margin-top: 14px; line-height: 1.55; }
+      figcaption b { color: var(--ink); }
+
+      .table-wrap { overflow-x: auto; margin: 26px 0; border: 1px solid var(--hairline);
+        border-radius: var(--radius); background: var(--surface); }
+      table { border-collapse: collapse; width: 100%; min-width: 620px; font-family: var(--font-data);
+        font-size: 0.74rem; line-height: 1.5; font-variant-numeric: tabular-nums; }
+      th { text-align: right; font-weight: 600; letter-spacing: 0.04em; color: var(--ink-muted);
+        padding: 12px 10px; border-bottom: 1px solid var(--ink-muted); white-space: nowrap; }
+      th:first-child, td:first-child { text-align: left; }
+      td { padding: 9px 10px; border-bottom: 1px solid var(--hairline); text-align: right; white-space: nowrap; }
+      tbody tr:last-child td { border-bottom: 0; }
+
+      .d1 { transition: opacity 0.12s; cursor: crosshair; }
+      .d1.co { fill: #35C6E0; opacity: 0.62; }
+      .d1.in { fill: #F26D5B; opacity: 0.55; }
+      .d1:hover { opacity: 1; }
+
+      .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin: 26px 0; }
+      .stat { padding: 18px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
+      .sv { display: block; font-family: var(--font-display); font-size: 1.55rem; letter-spacing: -0.01em; }
+      .sv.cyan { color: var(--accent); }
+      .sl { display: block; font-size: 0.82rem; color: var(--ink-muted); margin-top: 6px; line-height: 1.45; }
+
+      ol.uses, ol.next { padding-left: 22px; margin: 0 0 18px; }
+      ol.uses li, ol.next li { margin-bottom: 14px; }
+      ol.uses li.no { color: var(--ink-muted); }
+      ol.uses li.no b { color: var(--danger); }
+
+      ol.refs { padding-left: 22px; font-size: 0.9rem; color: var(--ink-muted); }
+      ol.refs li { margin-bottom: 12px; }
+      .repro { font-size: 0.86rem; color: var(--ink-muted); border-top: 1px solid var(--hairline); padding-top: 18px; }
+      code { font-family: var(--font-data); font-size: 0.88em; color: var(--accent); word-break: break-word; }
+
+      .end { margin-top: 8vh; padding-top: 26px; border-top: 1px solid var(--hairline); }
+      .end p { color: var(--ink-muted); font-size: 0.9rem; }
+      .cta { display: inline-block; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.08em;
+        color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 10px 18px; text-decoration: none; }
+      .cta:hover { background: var(--accent-ink); }
+
+      #tip { position: fixed; z-index: 60; pointer-events: none; background: var(--surface-raised);
+        border: 1px solid var(--hairline); border-radius: 5px; padding: 8px 11px; font-family: var(--font-data);
+        font-size: 0.72rem; line-height: 1.5; color: var(--ink); box-shadow: 0 8px 26px rgba(0,0,0,0.5); max-width: 17rem; }
+      #tip[hidden] { display: none; }
+
+      @media (max-width: 680px) {
+        article { padding: 0 16px 10vh; }
+        .masthead { padding-top: 5vh; }
+        figure { padding: 14px 10px 10px; }
+        h2 { font-size: 1.25rem; }
+      }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+
+    <script>
+      /* Hover read-out for the kelurahan scatter. Pure SVG, no GPU path. */
+      const tip = document.getElementById("tip");
+      const show = (html, e) => {
+        tip.innerHTML = html; tip.hidden = false;
+        const r = tip.getBoundingClientRect();
+        let x = e.clientX + 14, y = e.clientY + 14;
+        if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+        if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+        tip.style.left = Math.max(6, x) + "px"; tip.style.top = Math.max(6, y) + "px";
+      };
+      document.querySelectorAll(".d1").forEach((el) => {
+        el.addEventListener("mousemove", (e) => {
+          const d = el.dataset;
+          show(`<b>${d.n}</b> · ${d.k}<br>fastest decile ${d.v} cm/yr · median ${d.m}<br>` +
+               `low ground ${d.g} m · ${d.p} residents<br>${d.e} below +1 m in 2050`, e);
+        });
+        el.addEventListener("mouseleave", () => { tip.hidden = true; });
+      });
+    </script>
+  </body>
+</html>

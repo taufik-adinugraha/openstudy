@@ -4,7 +4,7 @@
 
 PY := uv run python pipeline
 
-.PHONY: rebuild ingest grid fuse export validate insar
+.PHONY: rebuild ingest grid fuse export review article validate insar
 
 ingest:            ## ~300 MB of open inputs; idempotent (each source independent)
 	$(PY)/ingest.py
@@ -18,9 +18,15 @@ fuse:              ## kelurahan exposure + the clock + gates G-C4/G-C5
 export:            ## web view-models → web/public/data, web/src/data/summary.json, hero.jpg
 	$(PY)/export_web.py
 
+review:            ## the eight adversarial-review tests → data/derived/review.json
+	$(PY)/review.py
+
+article:           ## review.json + published outputs → web/src/data/article.json
+	$(PY)/article.py
+
 validate: grid fuse   ## re-evaluate every gate (G-C3 deferred, see `insar`)
 
-rebuild: ingest grid fuse export
+rebuild: ingest grid fuse export review article
 
 insar:             ## gate G-C3 — own LiCSBAS run on LiCSAR 098A (13 GB); DEFERRED, not started
 	@echo "G-C3 (LiCSBAS 098A_09673_121312, 2017–2024) is deferred — see README 'Deferred'."
