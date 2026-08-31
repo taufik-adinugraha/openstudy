@@ -602,6 +602,13 @@ const F7 = fig7(), F8 = fig8(), F9 = fig9(), F10 = fig10(), F11 = fig11();
         that is already on disk.</p>
         <p class="pull">A share has a numerator and a denominator. When a series is presented as
         attention, the reader assumes the numerator moved. Over this decade, mostly, the denominator did.</p>
+        <p class="caveat"><b>A note on tense.</b> This review was written against the case page as it
+        stood on {A.vintage}, and it quotes that page throughout. The corrections it asks for have since
+        been applied, so a reader following the link back will find the page already changed — the hero
+        rewritten, chapter 01 renamed and carrying both halves of its ratio, chapter 02's headline
+        negative result corrected, every theme panel labelled with its window, and the normalization
+        claim in the methodology withdrawn. The quotations are left as they were: a review that edits the
+        thing it is reviewing is not a review.</p>
       </section>
 
       <section id="s2">
@@ -1049,15 +1056,18 @@ const F7 = fig7(), F8 = fig8(), F9 = fig9(), F10 = fig10(), F11 = fig11();
         <b>{coal.label}, {coal.months} months from {coal.first} to {coal.last}</b> — is presented in the
         theme grid with a decade-mean stamp and ranked against series holding
         {A.themes.full_months} months. Its apparent {pc(coal.share_mean, 2)} mean is a
-        {coal.months}-month figure. That is a presentation defect with an easy fix: label the window, or
-        withhold the curve until it is comparable.</p>
+        {coal.months}-month figure. <b>Acted on:</b> every panel on the case page now prints its month
+        count, short windows are flagged in the alert colour, and a theme no longer enters an era's
+        ranking unless it covers at least 60% of that era — which removed a one-year curve from a
+        ten-year league table.</p>
         <p class="caveat"><b>One more presentation defect.</b> The "who's talking" heat map ranks
         publishing countries by the share of their own output that mentions Indonesia. That statistic is
         not size-controlled, so countries with a tiny GDELT footprint float to the top: the published
         ranking places {A.layers.top_countries[6].name} seventh and {A.layers.top_countries[9].name}
         tenth, above {A.layers.top_countries[10].name}. The ordering among the large neighbours
         ({A.layers.top_countries.slice(1, 4).map((c: any) => c.name).join(", ")}) is informative; the tail
-        is small-sample noise and should be cut or given a minimum-volume floor.</p>
+        is small-sample noise and should be cut or given a minimum-volume floor. <b>Acted on in part:</b>
+        the case page now carries the caveat; the floor itself is still to be implemented.</p>
       </section>
 
       <section id="s11">
