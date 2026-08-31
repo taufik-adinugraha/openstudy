@@ -1,0 +1,4248 @@
+{
+ "vintage": "2026-07",
+ "generated": "2026-08-30T06:52Z",
+ "bps": {
+  "annual_var": 2194,
+  "quarterly_var": 2534,
+  "domain": "0000",
+  "annual_years": [
+   2010,
+   2011,
+   2012,
+   2013,
+   2014,
+   2015,
+   2016,
+   2017,
+   2018,
+   2019,
+   2020,
+   2021,
+   2022,
+   2023,
+   2024,
+   2025
+  ],
+  "quarterly_years": [
+   2022,
+   2023,
+   2024,
+   2025
+  ],
+  "latest_annual": 2025,
+  "latest_quarter": "2025Q4",
+  "n_regencies": 514
+ },
+ "levels": [
+  {
+   "year": 2018,
+   "all": {
+    "slope": 0.7252,
+    "r2": 0.695,
+    "n": 514
+   },
+   "kota": {
+    "slope": 0.9528,
+    "r2": 0.7656,
+    "n": 101
+   },
+   "kabupaten": {
+    "slope": 0.6748,
+    "r2": 0.6713,
+    "n": 413
+   }
+  },
+  {
+   "year": 2019,
+   "all": {
+    "slope": 0.7241,
+    "r2": 0.6858,
+    "n": 514
+   },
+   "kota": {
+    "slope": 0.9928,
+    "r2": 0.8068,
+    "n": 101
+   },
+   "kabupaten": {
+    "slope": 0.6651,
+    "r2": 0.6512,
+    "n": 413
+   }
+  },
+  {
+   "year": 2020,
+   "all": {
+    "slope": 0.7285,
+    "r2": 0.6731,
+    "n": 514
+   },
+   "kota": {
+    "slope": 0.9844,
+    "r2": 0.7901,
+    "n": 101
+   },
+   "kabupaten": {
+    "slope": 0.6701,
+    "r2": 0.6374,
+    "n": 413
+   }
+  },
+  {
+   "year": 2021,
+   "all": {
+    "slope": 0.7191,
+    "r2": 0.6933,
+    "n": 514
+   },
+   "kota": {
+    "slope": 0.9698,
+    "r2": 0.7887,
+    "n": 101
+   },
+   "kabupaten": {
+    "slope": 0.6621,
+    "r2": 0.6674,
+    "n": 413
+   }
+  },
+  {
+   "year": 2022,
+   "all": {
+    "slope": 0.7418,
+    "r2": 0.718,
+    "n": 514
+   },
+   "kota": {
+    "slope": 0.9206,
+    "r2": 0.7421,
+    "n": 101
+   },
+   "kabupaten": {
+    "slope": 0.6962,
+    "r2": 0.7068,
+    "n": 413
+   }
+  },
+  {
+   "year": 2023,
+   "all": {
+    "slope": 0.7711,
+    "r2": 0.717,
+    "n": 514
+   },
+   "kota": {
+    "slope": 1.0064,
+    "r2": 0.7565,
+    "n": 101
+   },
+   "kabupaten": {
+    "slope": 0.7162,
+    "r2": 0.7087,
+    "n": 413
+   }
+  },
+  {
+   "year": 2024,
+   "all": {
+    "slope": 0.7362,
+    "r2": 0.7271,
+    "n": 514
+   },
+   "kota": {
+    "slope": 0.9568,
+    "r2": 0.7753,
+    "n": 101
+   },
+   "kabupaten": {
+    "slope": 0.6851,
+    "r2": 0.7144,
+    "n": 413
+   }
+  },
+  {
+   "year": 2025,
+   "all": {
+    "slope": 0.7181,
+    "r2": 0.7319,
+    "n": 514
+   },
+   "kota": {
+    "slope": 0.9427,
+    "r2": 0.7525,
+    "n": 101
+   },
+   "kabupaten": {
+    "slope": 0.6711,
+    "r2": 0.7274,
+    "n": 413
+   }
+  }
+ ],
+ "scatterLatest": {
+  "year": 2025,
+  "points": [
+   {
+    "x": 7.08,
+    "y": 8.846,
+    "kota": false,
+    "flare": false,
+    "name": "Seruyan"
+   },
+   {
+    "x": 4.75,
+    "y": 6.828,
+    "kota": false,
+    "flare": false,
+    "name": "Yalimo"
+   },
+   {
+    "x": 4.086,
+    "y": 7.117,
+    "kota": false,
+    "flare": false,
+    "name": "Tolikara"
+   },
+   {
+    "x": 7.942,
+    "y": 9.577,
+    "kota": false,
+    "flare": true,
+    "name": "Bulungan"
+   },
+   {
+    "x": 7.368,
+    "y": 9.863,
+    "kota": false,
+    "flare": false,
+    "name": "Luwu Timur"
+   },
+   {
+    "x": 5.751,
+    "y": 7.78,
+    "kota": false,
+    "flare": false,
+    "name": "Alor"
+   },
+   {
+    "x": 5.7,
+    "y": 8.939,
+    "kota": false,
+    "flare": false,
+    "name": "Kolaka Utara"
+   },
+   {
+    "x": 7.419,
+    "y": 9.203,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Sorong"
+   },
+   {
+    "x": 6.063,
+    "y": 9.22,
+    "kota": false,
+    "flare": false,
+    "name": "Donggala"
+   },
+   {
+    "x": 4.333,
+    "y": 8.03,
+    "kota": false,
+    "flare": false,
+    "name": "Nias"
+   },
+   {
+    "x": 5.834,
+    "y": 10.54,
+    "kota": false,
+    "flare": true,
+    "name": "Teluk Bintuni"
+   },
+   {
+    "x": 3.998,
+    "y": 6.782,
+    "kota": false,
+    "flare": false,
+    "name": "Sumba Tengah"
+   },
+   {
+    "x": 5.34,
+    "y": 6.818,
+    "kota": false,
+    "flare": false,
+    "name": "Puncak"
+   },
+   {
+    "x": 7.204,
+    "y": 8.914,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Bukittinggi"
+   },
+   {
+    "x": 6.106,
+    "y": 8.503,
+    "kota": false,
+    "flare": false,
+    "name": "Aceh Selatan"
+   },
+   {
+    "x": 6.381,
+    "y": 8.436,
+    "kota": false,
+    "flare": false,
+    "name": "Gunung Mas"
+   },
+   {
+    "x": 6.831,
+    "y": 8.276,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Tomohon"
+   },
+   {
+    "x": 4.6,
+    "y": 6.965,
+    "kota": false,
+    "flare": false,
+    "name": "Pakpak Bharat"
+   },
+   {
+    "x": 6.915,
+    "y": 7.405,
+    "kota": false,
+    "flare": false,
+    "name": "Waropen"
+   },
+   {
+    "x": 8.011,
+    "y": 8.845,
+    "kota": false,
+    "flare": false,
+    "name": "Mempawah"
+   },
+   {
+    "x": 7.699,
+    "y": 9.885,
+    "kota": false,
+    "flare": true,
+    "name": "Tanjung Jabung Timur"
+   },
+   {
+    "x": 7.464,
+    "y": 8.818,
+    "kota": true,
+    "flare": true,
+    "name": "Kota Prabumulih"
+   },
+   {
+    "x": 9.326,
+    "y": 10.79,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Bandar Lampung"
+   },
+   {
+    "x": 7.071,
+    "y": 9.124,
+    "kota": false,
+    "flare": false,
+    "name": "Bima"
+   },
+   {
+    "x": 5.782,
+    "y": 7.437,
+    "kota": false,
+    "flare": false,
+    "name": "Bolaang Mongondow Selatan"
+   },
+   {
+    "x": 7.312,
+    "y": 8.708,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Blitar"
+   },
+   {
+    "x": 6.554,
+    "y": 8.435,
+    "kota": false,
+    "flare": false,
+    "name": "Sumba Timur"
+   },
+   {
+    "x": 9.417,
+    "y": 10.09,
+    "kota": false,
+    "flare": false,
+    "name": "Bantul"
+   },
+   {
+    "x": 4.984,
+    "y": 8.378,
+    "kota": false,
+    "flare": false,
+    "name": "Kepulauan Selayar"
+   },
+   {
+    "x": 6.366,
+    "y": 8.588,
+    "kota": false,
+    "flare": false,
+    "name": "Sekadau"
+   },
+   {
+    "x": 7.362,
+    "y": 9.289,
+    "kota": false,
+    "flare": false,
+    "name": "Gorontalo"
+   },
+   {
+    "x": 10.3,
+    "y": 11.88,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Batam"
+   },
+   {
+    "x": 8.57,
+    "y": 9.887,
+    "kota": false,
+    "flare": false,
+    "name": "Lampung Utara"
+   },
+   {
+    "x": 6.174,
+    "y": 8.136,
+    "kota": false,
+    "flare": false,
+    "name": "Bengkulu Tengah"
+   },
+   {
+    "x": 10.01,
+    "y": 11.38,
+    "kota": false,
+    "flare": false,
+    "name": "Deli Serdang"
+   },
+   {
+    "x": 8.798,
+    "y": 10.23,
+    "kota": false,
+    "flare": false,
+    "name": "Ciamis"
+   },
+   {
+    "x": 6.056,
+    "y": 8.336,
+    "kota": false,
+    "flare": false,
+    "name": "Boalemo"
+   },
+   {
+    "x": 8.805,
+    "y": 9.707,
+    "kota": false,
+    "flare": false,
+    "name": "Ngawi"
+   },
+   {
+    "x": 6.554,
+    "y": 7.971,
+    "kota": false,
+    "flare": false,
+    "name": "Kepulauan Aru"
+   },
+   {
+    "x": 6.46,
+    "y": 7.622,
+    "kota": false,
+    "flare": false,
+    "name": "Aceh Singkil"
+   },
+   {
+    "x": 7.963,
+    "y": 10.6,
+    "kota": false,
+    "flare": false,
+    "name": "Paser"
+   },
+   {
+    "x": 6.65,
+    "y": 7.737,
+    "kota": false,
+    "flare": false,
+    "name": "Keerom"
+   },
+   {
+    "x": 8.271,
+    "y": 9.217,
+    "kota": false,
+    "flare": false,
+    "name": "Padang Lawas"
+   },
+   {
+    "x": 8.107,
+    "y": 10.45,
+    "kota": false,
+    "flare": false,
+    "name": "Simalungun"
+   },
+   {
+    "x": 7.333,
+    "y": 9.05,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Singkawang"
+   },
+   {
+    "x": 8.115,
+    "y": 10.39,
+    "kota": true,
+    "flare": true,
+    "name": "Kota Dumai"
+   },
+   {
+    "x": 9.14,
+    "y": 10.83,
+    "kota": false,
+    "flare": false,
+    "name": "Banyumas"
+   },
+   {
+    "x": 6.68,
+    "y": 8.247,
+    "kota": false,
+    "flare": false,
+    "name": "Biak Numfor"
+   },
+   {
+    "x": 6.529,
+    "y": 8.857,
+    "kota": false,
+    "flare": false,
+    "name": "Bangka Selatan"
+   },
+   {
+    "x": 7.978,
+    "y": 10.16,
+    "kota": false,
+    "flare": false,
+    "name": "Buleleng"
+   },
+   {
+    "x": 8.895,
+    "y": 10.29,
+    "kota": false,
+    "flare": false,
+    "name": "Sumedang"
+   },
+   {
+    "x": 6.769,
+    "y": 7.944,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Pagar Alam"
+   },
+   {
+    "x": 5.843,
+    "y": 7.43,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Subulussalam"
+   },
+   {
+    "x": 6.369,
+    "y": 8.689,
+    "kota": false,
+    "flare": false,
+    "name": "Hulu Sungai Tengah"
+   },
+   {
+    "x": 6.841,
+    "y": 9.604,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Bitung"
+   },
+   {
+    "x": 5.451,
+    "y": 8.41,
+    "kota": false,
+    "flare": false,
+    "name": "Tojo Una-Una"
+   },
+   {
+    "x": 9.575,
+    "y": 13.24,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Jakarta Pusat"
+   },
+   {
+    "x": 4.462,
+    "y": 7.28,
+    "kota": false,
+    "flare": false,
+    "name": "Lanny Jaya"
+   },
+   {
+    "x": 9.452,
+    "y": 10.9,
+    "kota": false,
+    "flare": true,
+    "name": "Tuban"
+   },
+   {
+    "x": 8.676,
+    "y": 10.6,
+    "kota": false,
+    "flare": false,
+    "name": "Kendal"
+   },
+   {
+    "x": 7.783,
+    "y": 8.167,
+    "kota": false,
+    "flare": false,
+    "name": "Boven Digoel"
+   },
+   {
+    "x": 5.827,
+    "y": 7.763,
+    "kota": false,
+    "flare": false,
+    "name": "Aceh Jaya"
+   },
+   {
+    "x": 5.989,
+    "y": 8.311,
+    "kota": false,
+    "flare": false,
+    "name": "Hulu Sungai Utara"
+   },
+   {
+    "x": 7.734,
+    "y": 9.403,
+    "kota": false,
+    "flare": false,
+    "name": "Tapanuli Selatan"
+   },
+   {
+    "x": 6.842,
+    "y": 8.442,
+    "kota": false,
+    "flare": false,
+    "name": "Tana Tidung"
+   },
+   {
+    "x": 6.739,
+    "y": 8.188,
+    "kota": false,
+    "flare": false,
+    "name": "Aceh Barat Daya"
+   },
+   {
+    "x": 4.327,
+    "y": 7.154,
+    "kota": false,
+    "flare": false,
+    "name": "Konawe Kepulauan"
+   },
+   {
+    "x": 4.193,
+    "y": 7.285,
+    "kota": false,
+    "flare": false,
+    "name": "Nias Barat"
+   },
+   {
+    "x": 8.819,
+    "y": 9.883,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Palu"
+   },
+   {
+    "x": 9.386,
+    "y": 9.814,
+    "kota": false,
+    "flare": false,
+    "name": "Bangkalan"
+   },
+   {
+    "x": 3.82,
+    "y": 6.778,
+    "kota": false,
+    "flare": false,
+    "name": "Mamberamo Tengah"
+   },
+   {
+    "x": 4.357,
+    "y": 7.721,
+    "kota": false,
+    "flare": false,
+    "name": "Muna Barat"
+   },
+   {
+    "x": 7.504,
+    "y": 8.667,
+    "kota": false,
+    "flare": true,
+    "name": "Penukal Abab Lematang Ilir"
+   },
+   {
+    "x": 7.809,
+    "y": 10.07,
+    "kota": false,
+    "flare": false,
+    "name": "Labuhan Batu Selatan"
+   },
+   {
+    "x": 6.402,
+    "y": 7.771,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Tidore Kepulauan"
+   },
+   {
+    "x": 9.487,
+    "y": 10.47,
+    "kota": false,
+    "flare": false,
+    "name": "Klaten"
+   },
+   {
+    "x": 7.372,
+    "y": 9.873,
+    "kota": false,
+    "flare": true,
+    "name": "Nunukan"
+   },
+   {
+    "x": 3.899,
+    "y": 7.628,
+    "kota": false,
+    "flare": false,
+    "name": "Siau Tagulandang Biaro"
+   },
+   {
+    "x": 7.328,
+    "y": 9.203,
+    "kota": false,
+    "flare": true,
+    "name": "Sorong"
+   },
+   {
+    "x": 9.616,
+    "y": 9.645,
+    "kota": false,
+    "flare": false,
+    "name": "Sampang"
+   },
+   {
+    "x": 6.892,
+    "y": 10.26,
+    "kota": false,
+    "flare": false,
+    "name": "Bone"
+   },
+   {
+    "x": 4.869,
+    "y": 8.082,
+    "kota": false,
+    "flare": false,
+    "name": "Banggai Kepulauan"
+   },
+   {
+    "x": 6.445,
+    "y": 8.471,
+    "kota": false,
+    "flare": false,
+    "name": "Solok Selatan"
+   },
+   {
+    "x": 6.437,
+    "y": 8.283,
+    "kota": false,
+    "flare": false,
+    "name": "Sikka"
+   },
+   {
+    "x": 8.827,
+    "y": 11.45,
+    "kota": true,
+    "flare": true,
+    "name": "Kota Cilegon"
+   },
+   {
+    "x": 7.184,
+    "y": 8.544,
+    "kota": false,
+    "flare": false,
+    "name": "Bangli"
+   },
+   {
+    "x": 7.654,
+    "y": 8.829,
+    "kota": false,
+    "flare": true,
+    "name": "Musi Rawas Utara"
+   },
+   {
+    "x": 5.581,
+    "y": 7.775,
+    "kota": false,
+    "flare": false,
+    "name": "Bolaang Mongondow Timur"
+   },
+   {
+    "x": 5.979,
+    "y": 9.243,
+    "kota": false,
+    "flare": false,
+    "name": "Luwu Utara"
+   },
+   {
+    "x": 8.571,
+    "y": 10.14,
+    "kota": false,
+    "flare": false,
+    "name": "Kebumen"
+   },
+   {
+    "x": 8.882,
+    "y": 11.6,
+    "kota": false,
+    "flare": false,
+    "name": "Morowali"
+   },
+   {
+    "x": 7.987,
+    "y": 10.4,
+    "kota": false,
+    "flare": false,
+    "name": "Asahan"
+   },
+   {
+    "x": 7.425,
+    "y": 10.67,
+    "kota": true,
+    "flare": true,
+    "name": "Kota Bontang"
+   },
+   {
+    "x": 6.648,
+    "y": 8.913,
+    "kota": false,
+    "flare": false,
+    "name": "Sigi"
+   },
+   {
+    "x": 6.339,
+    "y": 7.663,
+    "kota": false,
+    "flare": false,
+    "name": "Sarmi"
+   },
+   {
+    "x": 9.145,
+    "y": 10.42,
+    "kota": false,
+    "flare": false,
+    "name": "Tulungagung"
+   },
+   {
+    "x": 7.6,
+    "y": 9.416,
+    "kota": false,
+    "flare": false,
+    "name": "Bangka"
+   },
+   {
+    "x": 6.973,
+    "y": 8.639,
+    "kota": false,
+    "flare": false,
+    "name": "Kupang"
+   },
+   {
+    "x": 6.383,
+    "y": 7.931,
+    "kota": false,
+    "flare": false,
+    "name": "Manggarai Barat"
+   },
+   {
+    "x": 9.175,
+    "y": 10.43,
+    "kota": false,
+    "flare": false,
+    "name": "Sragen"
+   },
+   {
+    "x": 5.163,
+    "y": 8.284,
+    "kota": false,
+    "flare": false,
+    "name": "Kepulauan Sangihe"
+   },
+   {
+    "x": 8.131,
+    "y": 9.805,
+    "kota": false,
+    "flare": false,
+    "name": "Halmahera Selatan"
+   },
+   {
+    "x": 8.072,
+    "y": 9.654,
+    "kota": false,
+    "flare": false,
+    "name": "Bungo"
+   },
+   {
+    "x": 6.456,
+    "y": 8.675,
+    "kota": false,
+    "flare": false,
+    "name": "Bombana"
+   },
+   {
+    "x": 6.739,
+    "y": 9.07,
+    "kota": false,
+    "flare": false,
+    "name": "Nabire"
+   },
+   {
+    "x": 4.916,
+    "y": 7.558,
+    "kota": false,
+    "flare": false,
+    "name": "Buru"
+   },
+   {
+    "x": 9.36,
+    "y": 9.971,
+    "kota": false,
+    "flare": true,
+    "name": "Muaro Jambi"
+   },
+   {
+    "x": 6.109,
+    "y": 8.751,
+    "kota": false,
+    "flare": false,
+    "name": "Barito Timur"
+   },
+   {
+    "x": 7.253,
+    "y": 8.442,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Tebing Tinggi"
+   },
+   {
+    "x": 8.509,
+    "y": 9.472,
+    "kota": false,
+    "flare": false,
+    "name": "Ogan Komering Ulu Timur"
+   },
+   {
+    "x": 8.217,
+    "y": 9.806,
+    "kota": false,
+    "flare": false,
+    "name": "Tabalong"
+   },
+   {
+    "x": 8.084,
+    "y": 9.484,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Madiun"
+   },
+   {
+    "x": 7.089,
+    "y": 7.61,
+    "kota": false,
+    "flare": false,
+    "name": "Mahakam Hulu"
+   },
+   {
+    "x": 5.393,
+    "y": 5.441,
+    "kota": false,
+    "flare": false,
+    "name": "Pegunungan Arfak"
+   },
+   {
+    "x": 6.707,
+    "y": 8.516,
+    "kota": false,
+    "flare": false,
+    "name": "Humbang Hasundutan"
+   },
+   {
+    "x": 6.089,
+    "y": 8.157,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Solok"
+   },
+   {
+    "x": 5.719,
+    "y": 8.138,
+    "kota": false,
+    "flare": false,
+    "name": "Kepahiang"
+   },
+   {
+    "x": 6.361,
+    "y": 8.655,
+    "kota": false,
+    "flare": false,
+    "name": "Dompu"
+   },
+   {
+    "x": 5.52,
+    "y": 8.655,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Sungai Penuh"
+   },
+   {
+    "x": 7.88,
+    "y": 9.853,
+    "kota": false,
+    "flare": false,
+    "name": "Banjarnegara"
+   },
+   {
+    "x": 3.999,
+    "y": 7.58,
+    "kota": false,
+    "flare": false,
+    "name": "Simeulue"
+   },
+   {
+    "x": 9.01,
+    "y": 10.17,
+    "kota": false,
+    "flare": false,
+    "name": "Wonogiri"
+   },
+   {
+    "x": 8.343,
+    "y": 9.886,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Bengkulu"
+   },
+   {
+    "x": 9.599,
+    "y": 11.11,
+    "kota": false,
+    "flare": false,
+    "name": "Serang"
+   },
+   {
+    "x": 9.061,
+    "y": 10.97,
+    "kota": false,
+    "flare": true,
+    "name": "Muara Enim"
+   },
+   {
+    "x": 6.291,
+    "y": 9.62,
+    "kota": false,
+    "flare": true,
+    "name": "Kepulauan Meranti"
+   },
+   {
+    "x": 5.265,
+    "y": 7.899,
+    "kota": false,
+    "flare": false,
+    "name": "Ngada"
+   },
+   {
+    "x": 6.789,
+    "y": 8.341,
+    "kota": false,
+    "flare": false,
+    "name": "Melawi"
+   },
+   {
+    "x": 8.725,
+    "y": 10.72,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Surakarta"
+   },
+   {
+    "x": 6.999,
+    "y": 9.012,
+    "kota": false,
+    "flare": false,
+    "name": "Takalar"
+   },
+   {
+    "x": 6.455,
+    "y": 8.141,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Bima"
+   },
+   {
+    "x": 8.772,
+    "y": 10.45,
+    "kota": false,
+    "flare": false,
+    "name": "Berau"
+   },
+   {
+    "x": 8.905,
+    "y": 10.61,
+    "kota": false,
+    "flare": false,
+    "name": "Cianjur"
+   },
+   {
+    "x": 8.269,
+    "y": 9.681,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Mataram"
+   },
+   {
+    "x": 6.38,
+    "y": 8.045,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Padang Panjang"
+   },
+   {
+    "x": 8.599,
+    "y": 10.38,
+    "kota": false,
+    "flare": false,
+    "name": "Rokan Hulu"
+   },
+   {
+    "x": 9.26,
+    "y": 11.42,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Pekanbaru"
+   },
+   {
+    "x": 5.684,
+    "y": 7.437,
+    "kota": false,
+    "flare": false,
+    "name": "Sumba Barat"
+   },
+   {
+    "x": 6.673,
+    "y": 9.132,
+    "kota": false,
+    "flare": false,
+    "name": "Pidie"
+   },
+   {
+    "x": 6.885,
+    "y": 9.343,
+    "kota": false,
+    "flare": false,
+    "name": "Pesisir Selatan"
+   },
+   {
+    "x": 7.464,
+    "y": 10.91,
+    "kota": false,
+    "flare": false,
+    "name": "Indragiri Hilir"
+   },
+   {
+    "x": 6.733,
+    "y": 8.642,
+    "kota": false,
+    "flare": false,
+    "name": "Pohuwato"
+   },
+   {
+    "x": 6.222,
+    "y": 9.15,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Ternate"
+   },
+   {
+    "x": 7.354,
+    "y": 9.59,
+    "kota": false,
+    "flare": false,
+    "name": "Padang Pariaman"
+   },
+   {
+    "x": 6.145,
+    "y": 8.171,
+    "kota": false,
+    "flare": false,
+    "name": "Belu"
+   },
+   {
+    "x": 8.669,
+    "y": 10.25,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Banjarmasin"
+   },
+   {
+    "x": 9.002,
+    "y": 11.59,
+    "kota": false,
+    "flare": true,
+    "name": "Cilacap"
+   },
+   {
+    "x": 8.113,
+    "y": 9.845,
+    "kota": false,
+    "flare": false,
+    "name": "Temanggung"
+   },
+   {
+    "x": 9.429,
+    "y": 10.57,
+    "kota": false,
+    "flare": false,
+    "name": "Pati"
+   },
+   {
+    "x": 6.365,
+    "y": 8.676,
+    "kota": false,
+    "flare": false,
+    "name": "Hulu Sungai Selatan"
+   },
+   {
+    "x": 9.472,
+    "y": 9.545,
+    "kota": false,
+    "flare": false,
+    "name": "Pamekasan"
+   },
+   {
+    "x": 6.895,
+    "y": 8.735,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Parepare"
+   },
+   {
+    "x": 5.814,
+    "y": 8.441,
+    "kota": false,
+    "flare": false,
+    "name": "Minahasa Tenggara"
+   },
+   {
+    "x": 9.039,
+    "y": 10.43,
+    "kota": false,
+    "flare": false,
+    "name": "Karanganyar"
+   },
+   {
+    "x": 8.309,
+    "y": 9.353,
+    "kota": false,
+    "flare": false,
+    "name": "Karimun"
+   },
+   {
+    "x": 4.919,
+    "y": 7.732,
+    "kota": false,
+    "flare": true,
+    "name": "Seram Bagian Timur"
+   },
+   {
+    "x": 8.028,
+    "y": 9.416,
+    "kota": false,
+    "flare": false,
+    "name": "Lombok Barat"
+   },
+   {
+    "x": 6.978,
+    "y": 8.879,
+    "kota": false,
+    "flare": false,
+    "name": "Ogan Komering Ulu Selatan"
+   },
+   {
+    "x": 9.108,
+    "y": 10.25,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Serang"
+   },
+   {
+    "x": 6.215,
+    "y": 8.63,
+    "kota": false,
+    "flare": false,
+    "name": "Timor Tengah Selatan"
+   },
+   {
+    "x": 9.333,
+    "y": 10.35,
+    "kota": false,
+    "flare": false,
+    "name": "Tegal"
+   },
+   {
+    "x": 6.693,
+    "y": 8.309,
+    "kota": false,
+    "flare": false,
+    "name": "Mukomuko"
+   },
+   {
+    "x": 9.417,
+    "y": 10.46,
+    "kota": false,
+    "flare": false,
+    "name": "Jombang"
+   },
+   {
+    "x": 5.965,
+    "y": 8.759,
+    "kota": false,
+    "flare": false,
+    "name": "Bengkulu Utara"
+   },
+   {
+    "x": 8.832,
+    "y": 9.771,
+    "kota": false,
+    "flare": false,
+    "name": "Ponorogo"
+   },
+   {
+    "x": 7.109,
+    "y": 7.071,
+    "kota": false,
+    "flare": false,
+    "name": "Mamberamo Raya"
+   },
+   {
+    "x": 7.667,
+    "y": 9.551,
+    "kota": false,
+    "flare": false,
+    "name": "Kapuas"
+   },
+   {
+    "x": 6.06,
+    "y": 7.403,
+    "kota": false,
+    "flare": false,
+    "name": "Pegunungan Bintang"
+   },
+   {
+    "x": 10.47,
+    "y": 12.16,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Medan"
+   },
+   {
+    "x": 6.751,
+    "y": 8.65,
+    "kota": false,
+    "flare": false,
+    "name": "Jayawijaya"
+   },
+   {
+    "x": 7.124,
+    "y": 8.74,
+    "kota": false,
+    "flare": false,
+    "name": "Katingan"
+   },
+   {
+    "x": 6.108,
+    "y": 8.358,
+    "kota": false,
+    "flare": false,
+    "name": "Halmahera Utara"
+   },
+   {
+    "x": 5.957,
+    "y": 8.181,
+    "kota": false,
+    "flare": false,
+    "name": "Manggarai"
+   },
+   {
+    "x": 9.36,
+    "y": 10.43,
+    "kota": false,
+    "flare": false,
+    "name": "Sukoharjo"
+   },
+   {
+    "x": 6.29,
+    "y": 8.896,
+    "kota": false,
+    "flare": false,
+    "name": "Maluku Tengah"
+   },
+   {
+    "x": 6.141,
+    "y": 8.252,
+    "kota": false,
+    "flare": false,
+    "name": "Bone Bolango"
+   },
+   {
+    "x": 5.32,
+    "y": 8.154,
+    "kota": false,
+    "flare": false,
+    "name": "Lingga"
+   },
+   {
+    "x": 5.601,
+    "y": 8.248,
+    "kota": false,
+    "flare": false,
+    "name": "Wakatobi"
+   },
+   {
+    "x": 6.194,
+    "y": 8.371,
+    "kota": false,
+    "flare": false,
+    "name": "Bener Meriah"
+   },
+   {
+    "x": 8.329,
+    "y": 9.295,
+    "kota": false,
+    "flare": false,
+    "name": "Kulon Progo"
+   },
+   {
+    "x": 8.628,
+    "y": 10.05,
+    "kota": false,
+    "flare": false,
+    "name": "Pemalang"
+   },
+   {
+    "x": 8.039,
+    "y": 9.834,
+    "kota": false,
+    "flare": true,
+    "name": "Aceh Utara"
+   },
+   {
+    "x": 8.197,
+    "y": 9.925,
+    "kota": false,
+    "flare": false,
+    "name": "Pekalongan"
+   },
+   {
+    "x": 8.491,
+    "y": 9.686,
+    "kota": false,
+    "flare": false,
+    "name": "Magetan"
+   },
+   {
+    "x": 9.07,
+    "y": 10.95,
+    "kota": false,
+    "flare": false,
+    "name": "Purwakarta"
+   },
+   {
+    "x": 7.446,
+    "y": 9.347,
+    "kota": false,
+    "flare": false,
+    "name": "Tanah Datar"
+   },
+   {
+    "x": 9.347,
+    "y": 10.52,
+    "kota": false,
+    "flare": false,
+    "name": "Lampung Selatan"
+   },
+   {
+    "x": 8.216,
+    "y": 10.69,
+    "kota": false,
+    "flare": false,
+    "name": "Pelalawan"
+   },
+   {
+    "x": 8.972,
+    "y": 9.996,
+    "kota": false,
+    "flare": false,
+    "name": "Kuningan"
+   },
+   {
+    "x": 7.187,
+    "y": 9.667,
+    "kota": false,
+    "flare": false,
+    "name": "Wajo"
+   },
+   {
+    "x": 6.897,
+    "y": 8.208,
+    "kota": false,
+    "flare": false,
+    "name": "Sukamara"
+   },
+   {
+    "x": 8.735,
+    "y": 9.955,
+    "kota": false,
+    "flare": false,
+    "name": "Gianyar"
+   },
+   {
+    "x": 8.209,
+    "y": 9.531,
+    "kota": false,
+    "flare": true,
+    "name": "Sarolangun"
+   },
+   {
+    "x": 4.362,
+    "y": 6.259,
+    "kota": false,
+    "flare": false,
+    "name": "Maybrat"
+   },
+   {
+    "x": 9.142,
+    "y": 10.34,
+    "kota": false,
+    "flare": false,
+    "name": "Blitar"
+   },
+   {
+    "x": 8.87,
+    "y": 10.5,
+    "kota": false,
+    "flare": false,
+    "name": "Langkat"
+   },
+   {
+    "x": 8.62,
+    "y": 11.3,
+    "kota": false,
+    "flare": true,
+    "name": "Bengkalis"
+   },
+   {
+    "x": 4.66,
+    "y": 7.617,
+    "kota": false,
+    "flare": false,
+    "name": "Kepulauan Talaud"
+   },
+   {
+    "x": 5.463,
+    "y": 8.493,
+    "kota": false,
+    "flare": false,
+    "name": "Ende"
+   },
+   {
+    "x": 9.127,
+    "y": 10.26,
+    "kota": false,
+    "flare": false,
+    "name": "Sumenep"
+   },
+   {
+    "x": 7.787,
+    "y": 9.517,
+    "kota": false,
+    "flare": false,
+    "name": "Pacitan"
+   },
+   {
+    "x": 8.045,
+    "y": 9.748,
+    "kota": false,
+    "flare": false,
+    "name": "Tabanan"
+   },
+   {
+    "x": 8.692,
+    "y": 10.03,
+    "kota": false,
+    "flare": false,
+    "name": "Nganjuk"
+   },
+   {
+    "x": 8.135,
+    "y": 10.29,
+    "kota": false,
+    "flare": false,
+    "name": "Halmahera Tengah"
+   },
+   {
+    "x": 7.281,
+    "y": 9.325,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Pematang Siantar"
+   },
+   {
+    "x": 9.135,
+    "y": 10.69,
+    "kota": false,
+    "flare": false,
+    "name": "Semarang"
+   },
+   {
+    "x": 9.997,
+    "y": 11.74,
+    "kota": false,
+    "flare": true,
+    "name": "Gresik"
+   },
+   {
+    "x": 5.211,
+    "y": 8.338,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Sibolga"
+   },
+   {
+    "x": 8.175,
+    "y": 9.716,
+    "kota": false,
+    "flare": false,
+    "name": "Purworejo"
+   },
+   {
+    "x": 5.808,
+    "y": 8.376,
+    "kota": false,
+    "flare": false,
+    "name": "Empat Lawang"
+   },
+   {
+    "x": 6.64,
+    "y": 9.358,
+    "kota": false,
+    "flare": false,
+    "name": "Bangka Barat"
+   },
+   {
+    "x": 5.577,
+    "y": 7.005,
+    "kota": false,
+    "flare": false,
+    "name": "Teluk Wondama"
+   },
+   {
+    "x": 7.199,
+    "y": 8.91,
+    "kota": false,
+    "flare": false,
+    "name": "Rejang Lebong"
+   },
+   {
+    "x": 8.198,
+    "y": 11.09,
+    "kota": false,
+    "flare": true,
+    "name": "Siak"
+   },
+   {
+    "x": 6.796,
+    "y": 10.01,
+    "kota": false,
+    "flare": true,
+    "name": "Banggai"
+   },
+   {
+    "x": 6.76,
+    "y": 8.816,
+    "kota": false,
+    "flare": false,
+    "name": "Toba Samosir"
+   },
+   {
+    "x": 7.852,
+    "y": 9.255,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Probolinggo"
+   },
+   {
+    "x": 8.515,
+    "y": 9.911,
+    "kota": false,
+    "flare": false,
+    "name": "Batang"
+   },
+   {
+    "x": 9.0,
+    "y": 10.42,
+    "kota": false,
+    "flare": false,
+    "name": "Lampung Timur"
+   },
+   {
+    "x": 4.816,
+    "y": 7.862,
+    "kota": false,
+    "flare": false,
+    "name": "Mamuju Tengah"
+   },
+   {
+    "x": 8.206,
+    "y": 9.86,
+    "kota": false,
+    "flare": false,
+    "name": "Tulangbawang"
+   },
+   {
+    "x": 8.127,
+    "y": 9.761,
+    "kota": false,
+    "flare": false,
+    "name": "Karo"
+   },
+   {
+    "x": 8.822,
+    "y": 10.28,
+    "kota": false,
+    "flare": false,
+    "name": "Magelang"
+   },
+   {
+    "x": 4.622,
+    "y": 6.994,
+    "kota": false,
+    "flare": false,
+    "name": "Puncak Jaya"
+   },
+   {
+    "x": 4.818,
+    "y": 7.927,
+    "kota": false,
+    "flare": false,
+    "name": "Nias Utara"
+   },
+   {
+    "x": 6.304,
+    "y": 9.326,
+    "kota": false,
+    "flare": false,
+    "name": "Polewali Mandar"
+   },
+   {
+    "x": 8.01,
+    "y": 9.148,
+    "kota": false,
+    "flare": true,
+    "name": "Ogan Ilir"
+   },
+   {
+    "x": 7.535,
+    "y": 9.551,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Palangka Raya"
+   },
+   {
+    "x": 4.636,
+    "y": 7.903,
+    "kota": false,
+    "flare": false,
+    "name": "Buton Utara"
+   },
+   {
+    "x": 10.25,
+    "y": 11.12,
+    "kota": false,
+    "flare": false,
+    "name": "Banyuwangi"
+   },
+   {
+    "x": 7.515,
+    "y": 8.99,
+    "kota": false,
+    "flare": false,
+    "name": "Sijunjung"
+   },
+   {
+    "x": 5.036,
+    "y": 6.845,
+    "kota": false,
+    "flare": false,
+    "name": "Deiyai"
+   },
+   {
+    "x": 7.287,
+    "y": 10.89,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Padang"
+   },
+   {
+    "x": 9.096,
+    "y": 10.27,
+    "kota": false,
+    "flare": false,
+    "name": "Boyolali"
+   },
+   {
+    "x": 8.827,
+    "y": 10.09,
+    "kota": false,
+    "flare": false,
+    "name": "Serdang Bedagai"
+   },
+   {
+    "x": 5.606,
+    "y": 7.494,
+    "kota": false,
+    "flare": false,
+    "name": "Halmahera Barat"
+   },
+   {
+    "x": 8.091,
+    "y": 10.27,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Cimahi"
+   },
+   {
+    "x": 10.23,
+    "y": 12.85,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Jakarta Timur"
+   },
+   {
+    "x": 10.51,
+    "y": 12.23,
+    "kota": false,
+    "flare": true,
+    "name": "Karawang"
+   },
+   {
+    "x": 7.473,
+    "y": 8.698,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Mojokerto"
+   },
+   {
+    "x": 6.45,
+    "y": 8.847,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Palopo"
+   },
+   {
+    "x": 8.824,
+    "y": 9.167,
+    "kota": false,
+    "flare": false,
+    "name": "Malinau"
+   },
+   {
+    "x": 10.33,
+    "y": 11.36,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Bekasi"
+   },
+   {
+    "x": 7.381,
+    "y": 8.976,
+    "kota": false,
+    "flare": false,
+    "name": "Tapin"
+   },
+   {
+    "x": 8.716,
+    "y": 9.765,
+    "kota": false,
+    "flare": false,
+    "name": "Gunung Kidul"
+   },
+   {
+    "x": 8.298,
+    "y": 8.917,
+    "kota": false,
+    "flare": false,
+    "name": "Murung Raya"
+   },
+   {
+    "x": 8.355,
+    "y": 9.456,
+    "kota": false,
+    "flare": false,
+    "name": "Tanah Laut"
+   },
+   {
+    "x": 8.415,
+    "y": 9.738,
+    "kota": false,
+    "flare": false,
+    "name": "Lombok Timur"
+   },
+   {
+    "x": 6.907,
+    "y": 9.076,
+    "kota": false,
+    "flare": false,
+    "name": "Landak"
+   },
+   {
+    "x": 6.037,
+    "y": 8.658,
+    "kota": false,
+    "flare": false,
+    "name": "Tana Toraja"
+   },
+   {
+    "x": 9.322,
+    "y": 11.9,
+    "kota": false,
+    "flare": true,
+    "name": "Kutai Kartanegara"
+   },
+   {
+    "x": 7.534,
+    "y": 9.427,
+    "kota": false,
+    "flare": true,
+    "name": "Ogan Komering Ulu"
+   },
+   {
+    "x": 9.597,
+    "y": 11.1,
+    "kota": false,
+    "flare": false,
+    "name": "Jember"
+   },
+   {
+    "x": 5.691,
+    "y": 7.703,
+    "kota": false,
+    "flare": false,
+    "name": "Malaka"
+   },
+   {
+    "x": 6.778,
+    "y": 8.07,
+    "kota": false,
+    "flare": false,
+    "name": "Kayong Utara"
+   },
+   {
+    "x": 8.252,
+    "y": 10.02,
+    "kota": false,
+    "flare": false,
+    "name": "Ketapang"
+   },
+   {
+    "x": 8.84,
+    "y": 9.706,
+    "kota": false,
+    "flare": false,
+    "name": "Madiun"
+   },
+   {
+    "x": 4.399,
+    "y": 9.078,
+    "kota": false,
+    "flare": false,
+    "name": "Mamuju Utara"
+   },
+   {
+    "x": 8.527,
+    "y": 9.851,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Banda Aceh"
+   },
+   {
+    "x": 7.556,
+    "y": 9.723,
+    "kota": false,
+    "flare": true,
+    "name": "Musi Rawas"
+   },
+   {
+    "x": 8.814,
+    "y": 9.893,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Kupang"
+   },
+   {
+    "x": 4.475,
+    "y": 8.355,
+    "kota": false,
+    "flare": false,
+    "name": "Majene"
+   },
+   {
+    "x": 8.75,
+    "y": 9.889,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Tasikmalaya"
+   },
+   {
+    "x": 9.375,
+    "y": 10.98,
+    "kota": false,
+    "flare": false,
+    "name": "Lampung Tengah"
+   },
+   {
+    "x": 8.907,
+    "y": 10.26,
+    "kota": false,
+    "flare": false,
+    "name": "Probolinggo"
+   },
+   {
+    "x": 7.325,
+    "y": 9.039,
+    "kota": false,
+    "flare": false,
+    "name": "Mesuji"
+   },
+   {
+    "x": 6.592,
+    "y": 8.817,
+    "kota": false,
+    "flare": true,
+    "name": "Aceh Tamiang"
+   },
+   {
+    "x": 10.27,
+    "y": 12.11,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Semarang"
+   },
+   {
+    "x": 8.13,
+    "y": 9.841,
+    "kota": false,
+    "flare": false,
+    "name": "Gowa"
+   },
+   {
+    "x": 4.796,
+    "y": 7.799,
+    "kota": false,
+    "flare": false,
+    "name": "Manggarai Timur"
+   },
+   {
+    "x": 10.12,
+    "y": 12.91,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Jakarta Barat"
+   },
+   {
+    "x": 7.329,
+    "y": 9.468,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Ambon"
+   },
+   {
+    "x": 8.806,
+    "y": 9.884,
+    "kota": false,
+    "flare": false,
+    "name": "Tanah Bumbu"
+   },
+   {
+    "x": 6.458,
+    "y": 9.505,
+    "kota": false,
+    "flare": false,
+    "name": "Parigi Moutong"
+   },
+   {
+    "x": 6.581,
+    "y": 8.894,
+    "kota": false,
+    "flare": false,
+    "name": "Manokwari"
+   },
+   {
+    "x": 7.23,
+    "y": 9.374,
+    "kota": false,
+    "flare": false,
+    "name": "Solok"
+   },
+   {
+    "x": 9.436,
+    "y": 11.17,
+    "kota": false,
+    "flare": true,
+    "name": "Indramayu"
+   },
+   {
+    "x": 7.446,
+    "y": 9.195,
+    "kota": false,
+    "flare": false,
+    "name": "Pangandaran"
+   },
+   {
+    "x": 5.817,
+    "y": 8.439,
+    "kota": false,
+    "flare": false,
+    "name": "Buol"
+   },
+   {
+    "x": 7.774,
+    "y": 9.415,
+    "kota": false,
+    "flare": false,
+    "name": "Karang Asem"
+   },
+   {
+    "x": 5.797,
+    "y": 7.759,
+    "kota": false,
+    "flare": false,
+    "name": "Rote Ndao"
+   },
+   {
+    "x": 7.744,
+    "y": 9.466,
+    "kota": false,
+    "flare": true,
+    "name": "Tebo"
+   },
+   {
+    "x": 8.249,
+    "y": 9.72,
+    "kota": false,
+    "flare": false,
+    "name": "Bondowoso"
+   },
+   {
+    "x": 6.81,
+    "y": 9.238,
+    "kota": false,
+    "flare": false,
+    "name": "Padang Lawas Utara"
+   },
+   {
+    "x": 9.292,
+    "y": 11.24,
+    "kota": false,
+    "flare": false,
+    "name": "Kudus"
+   },
+   {
+    "x": 6.617,
+    "y": 8.427,
+    "kota": false,
+    "flare": false,
+    "name": "Lamandau"
+   },
+   {
+    "x": 6.607,
+    "y": 7.542,
+    "kota": false,
+    "flare": false,
+    "name": "Asmat"
+   },
+   {
+    "x": 9.514,
+    "y": 11.12,
+    "kota": false,
+    "flare": true,
+    "name": "Bojonegoro"
+   },
+   {
+    "x": 5.648,
+    "y": 9.145,
+    "kota": false,
+    "flare": false,
+    "name": "Sinjai"
+   },
+   {
+    "x": 10.02,
+    "y": 11.25,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Tangerang Selatan"
+   },
+   {
+    "x": 9.488,
+    "y": 10.43,
+    "kota": false,
+    "flare": false,
+    "name": "Lamongan"
+   },
+   {
+    "x": 7.678,
+    "y": 9.843,
+    "kota": false,
+    "flare": true,
+    "name": "Bintan"
+   },
+   {
+    "x": 10.98,
+    "y": 11.7,
+    "kota": false,
+    "flare": false,
+    "name": "Tangerang"
+   },
+   {
+    "x": 5.761,
+    "y": 7.201,
+    "kota": false,
+    "flare": false,
+    "name": "Lembata"
+   },
+   {
+    "x": 7.604,
+    "y": 7.681,
+    "kota": false,
+    "flare": false,
+    "name": "Mappi"
+   },
+   {
+    "x": 4.265,
+    "y": 8.065,
+    "kota": false,
+    "flare": false,
+    "name": "Kepulauan Seribu"
+   },
+   {
+    "x": 7.245,
+    "y": 9.62,
+    "kota": false,
+    "flare": false,
+    "name": "Minahasa"
+   },
+   {
+    "x": 9.247,
+    "y": 10.62,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Bogor"
+   },
+   {
+    "x": 7.198,
+    "y": 9.041,
+    "kota": false,
+    "flare": false,
+    "name": "Jeneponto"
+   },
+   {
+    "x": 6.755,
+    "y": 9.017,
+    "kota": false,
+    "flare": false,
+    "name": "Kerinci"
+   },
+   {
+    "x": 7.414,
+    "y": 8.315,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Banjar"
+   },
+   {
+    "x": 7.696,
+    "y": 8.57,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Metro"
+   },
+   {
+    "x": 5.248,
+    "y": 7.818,
+    "kota": false,
+    "flare": false,
+    "name": "Maluku Tenggara"
+   },
+   {
+    "x": 4.967,
+    "y": 9.208,
+    "kota": false,
+    "flare": false,
+    "name": "Mamuju"
+   },
+   {
+    "x": 8.367,
+    "y": 10.28,
+    "kota": false,
+    "flare": false,
+    "name": "Ogan Komering Ilir"
+   },
+   {
+    "x": 4.023,
+    "y": 7.838,
+    "kota": false,
+    "flare": false,
+    "name": "Mamasa"
+   },
+   {
+    "x": 6.235,
+    "y": 9.113,
+    "kota": false,
+    "flare": false,
+    "name": "Aceh Barat"
+   },
+   {
+    "x": 8.813,
+    "y": 9.418,
+    "kota": false,
+    "flare": false,
+    "name": "Merauke"
+   },
+   {
+    "x": 6.022,
+    "y": 8.279,
+    "kota": false,
+    "flare": false,
+    "name": "Aceh Tenggara"
+   },
+   {
+    "x": 8.932,
+    "y": 9.715,
+    "kota": false,
+    "flare": false,
+    "name": "Situbondo"
+   },
+   {
+    "x": 7.006,
+    "y": 9.003,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Magelang"
+   },
+   {
+    "x": 7.548,
+    "y": 8.939,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Gorontalo"
+   },
+   {
+    "x": 6.182,
+    "y": 9.665,
+    "kota": false,
+    "flare": false,
+    "name": "Natuna"
+   },
+   {
+    "x": 8.958,
+    "y": 10.8,
+    "kota": false,
+    "flare": false,
+    "name": "Garut"
+   },
+   {
+    "x": 8.724,
+    "y": 11.61,
+    "kota": true,
+    "flare": true,
+    "name": "Kota Balikpapan"
+   },
+   {
+    "x": 7.83,
+    "y": 9.184,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Binjai"
+   },
+   {
+    "x": 7.252,
+    "y": 8.862,
+    "kota": false,
+    "flare": false,
+    "name": "Bangka Tengah"
+   },
+   {
+    "x": 7.353,
+    "y": 9.002,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Baubau"
+   },
+   {
+    "x": 9.293,
+    "y": 10.98,
+    "kota": false,
+    "flare": false,
+    "name": "Sukabumi"
+   },
+   {
+    "x": 6.262,
+    "y": 8.123,
+    "kota": false,
+    "flare": false,
+    "name": "Timor Tengah Utara"
+   },
+   {
+    "x": 5.406,
+    "y": 6.815,
+    "kota": false,
+    "flare": false,
+    "name": "Sabu Raijua"
+   },
+   {
+    "x": 8.496,
+    "y": 9.022,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Banjar Baru"
+   },
+   {
+    "x": 5.121,
+    "y": 7.632,
+    "kota": false,
+    "flare": false,
+    "name": "Buton Tengah"
+   },
+   {
+    "x": 7.609,
+    "y": 9.333,
+    "kota": false,
+    "flare": false,
+    "name": "Balangan"
+   },
+   {
+    "x": 5.222,
+    "y": 7.132,
+    "kota": false,
+    "flare": false,
+    "name": "Pulau Morotai"
+   },
+   {
+    "x": 8.844,
+    "y": 10.32,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Pontianak"
+   },
+   {
+    "x": 10.82,
+    "y": 13.15,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Surabaya"
+   },
+   {
+    "x": 9.282,
+    "y": 10.2,
+    "kota": false,
+    "flare": false,
+    "name": "Jepara"
+   },
+   {
+    "x": 9.585,
+    "y": 10.7,
+    "kota": false,
+    "flare": false,
+    "name": "Sleman"
+   },
+   {
+    "x": 6.985,
+    "y": 5.221,
+    "kota": false,
+    "flare": false,
+    "name": "Tambrauw"
+   },
+   {
+    "x": 6.815,
+    "y": 8.189,
+    "kota": false,
+    "flare": false,
+    "name": "Konawe Utara"
+   },
+   {
+    "x": 5.625,
+    "y": 8.291,
+    "kota": false,
+    "flare": false,
+    "name": "Flores Timur"
+   },
+   {
+    "x": 8.731,
+    "y": 10.04,
+    "kota": false,
+    "flare": false,
+    "name": "Kubu Raya"
+   },
+   {
+    "x": 5.022,
+    "y": 7.832,
+    "kota": false,
+    "flare": false,
+    "name": "Lebong"
+   },
+   {
+    "x": 7.445,
+    "y": 10.04,
+    "kota": false,
+    "flare": false,
+    "name": "Kolaka"
+   },
+   {
+    "x": 8.168,
+    "y": 9.564,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Batu"
+   },
+   {
+    "x": 7.266,
+    "y": 8.443,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Langsa"
+   },
+   {
+    "x": 7.645,
+    "y": 9.473,
+    "kota": false,
+    "flare": false,
+    "name": "Tanggamus"
+   },
+   {
+    "x": 6.575,
+    "y": 8.538,
+    "kota": false,
+    "flare": false,
+    "name": "Halmahera Timur"
+   },
+   {
+    "x": 6.03,
+    "y": 8.727,
+    "kota": false,
+    "flare": false,
+    "name": "Muna"
+   },
+   {
+    "x": 6.756,
+    "y": 9.97,
+    "kota": false,
+    "flare": false,
+    "name": "Labuhan Batu Utara"
+   },
+   {
+    "x": 5.721,
+    "y": 8.508,
+    "kota": false,
+    "flare": false,
+    "name": "Nias Selatan"
+   },
+   {
+    "x": 8.593,
+    "y": 10.15,
+    "kota": false,
+    "flare": true,
+    "name": "Banyu Asin"
+   },
+   {
+    "x": 7.734,
+    "y": 9.364,
+    "kota": false,
+    "flare": false,
+    "name": "Jayapura"
+   },
+   {
+    "x": 6.338,
+    "y": 8.99,
+    "kota": false,
+    "flare": false,
+    "name": "Bantaeng"
+   },
+   {
+    "x": 5.274,
+    "y": 7.718,
+    "kota": false,
+    "flare": false,
+    "name": "Gayo Lues"
+   },
+   {
+    "x": 8.131,
+    "y": 9.452,
+    "kota": false,
+    "flare": false,
+    "name": "Merangin"
+   },
+   {
+    "x": 8.131,
+    "y": 9.408,
+    "kota": false,
+    "flare": false,
+    "name": "Bireuen"
+   },
+   {
+    "x": 9.44,
+    "y": 10.06,
+    "kota": false,
+    "flare": false,
+    "name": "Demak"
+   },
+   {
+    "x": 8.584,
+    "y": 10.86,
+    "kota": false,
+    "flare": true,
+    "name": "Rokan Hilir"
+   },
+   {
+    "x": 9.925,
+    "y": 12.41,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Bandung"
+   },
+   {
+    "x": 7.278,
+    "y": 9.683,
+    "kota": false,
+    "flare": false,
+    "name": "Pinrang"
+   },
+   {
+    "x": 6.487,
+    "y": 8.933,
+    "kota": false,
+    "flare": false,
+    "name": "Poso"
+   },
+   {
+    "x": 9.249,
+    "y": 10.12,
+    "kota": false,
+    "flare": false,
+    "name": "Grobogan"
+   },
+   {
+    "x": 7.251,
+    "y": 9.11,
+    "kota": false,
+    "flare": false,
+    "name": "Dharmasraya"
+   },
+   {
+    "x": 5.138,
+    "y": 8.138,
+    "kota": false,
+    "flare": false,
+    "name": "Paniai"
+   },
+   {
+    "x": 10.55,
+    "y": 12.1,
+    "kota": false,
+    "flare": false,
+    "name": "Sidoarjo"
+   },
+   {
+    "x": 7.07,
+    "y": 9.273,
+    "kota": false,
+    "flare": false,
+    "name": "Bulukumba"
+   },
+   {
+    "x": 8.24,
+    "y": 10.52,
+    "kota": false,
+    "flare": false,
+    "name": "Indragiri Hulu"
+   },
+   {
+    "x": 7.602,
+    "y": 8.811,
+    "kota": false,
+    "flare": false,
+    "name": "Klungkung"
+   },
+   {
+    "x": 8.153,
+    "y": 9.706,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Tanjung Pinang"
+   },
+   {
+    "x": 9.859,
+    "y": 11.55,
+    "kota": false,
+    "flare": false,
+    "name": "Bandung"
+   },
+   {
+    "x": 9.939,
+    "y": 11.03,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Depok"
+   },
+   {
+    "x": 7.805,
+    "y": 9.166,
+    "kota": false,
+    "flare": false,
+    "name": "Tulang Bawang Barat"
+   },
+   {
+    "x": 7.908,
+    "y": 9.64,
+    "kota": false,
+    "flare": false,
+    "name": "Maros"
+   },
+   {
+    "x": 3.448,
+    "y": 6.78,
+    "kota": false,
+    "flare": false,
+    "name": "Supiori"
+   },
+   {
+    "x": 8.733,
+    "y": 10.11,
+    "kota": false,
+    "flare": false,
+    "name": "Lebak"
+   },
+   {
+    "x": 9.678,
+    "y": 11.96,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Makassar"
+   },
+   {
+    "x": 5.77,
+    "y": 8.644,
+    "kota": false,
+    "flare": false,
+    "name": "Enrekang"
+   },
+   {
+    "x": 6.168,
+    "y": 8.552,
+    "kota": false,
+    "flare": false,
+    "name": "Barito Selatan"
+   },
+   {
+    "x": 7.71,
+    "y": 9.374,
+    "kota": false,
+    "flare": false,
+    "name": "Sintang"
+   },
+   {
+    "x": 5.762,
+    "y": 8.304,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Gunungsitoli"
+   },
+   {
+    "x": 11.01,
+    "y": 12.64,
+    "kota": false,
+    "flare": true,
+    "name": "Bekasi"
+   },
+   {
+    "x": 6.527,
+    "y": 8.709,
+    "kota": false,
+    "flare": false,
+    "name": "Lampung Barat"
+   },
+   {
+    "x": 8.27,
+    "y": 8.586,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Lubuklinggau"
+   },
+   {
+    "x": 5.78,
+    "y": 8.984,
+    "kota": false,
+    "flare": false,
+    "name": "Dairi"
+   },
+   {
+    "x": 7.256,
+    "y": 9.689,
+    "kota": false,
+    "flare": false,
+    "name": "Sanggau"
+   },
+   {
+    "x": 7.573,
+    "y": 10.28,
+    "kota": false,
+    "flare": false,
+    "name": "Labuhan Batu"
+   },
+   {
+    "x": 6.018,
+    "y": 8.363,
+    "kota": false,
+    "flare": false,
+    "name": "Pulang Pisau"
+   },
+   {
+    "x": 6.938,
+    "y": 8.597,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Payakumbuh"
+   },
+   {
+    "x": 9.273,
+    "y": 11.66,
+    "kota": false,
+    "flare": false,
+    "name": "Kutai Timur"
+   },
+   {
+    "x": 8.528,
+    "y": 10.22,
+    "kota": false,
+    "flare": false,
+    "name": "Lumajang"
+   },
+   {
+    "x": 10.11,
+    "y": 11.79,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Tangerang"
+   },
+   {
+    "x": 6.316,
+    "y": 6.827,
+    "kota": false,
+    "flare": false,
+    "name": "Nduga"
+   },
+   {
+    "x": 5.302,
+    "y": 6.879,
+    "kota": false,
+    "flare": false,
+    "name": "Dogiyai"
+   },
+   {
+    "x": 9.551,
+    "y": 10.6,
+    "kota": false,
+    "flare": false,
+    "name": "Badung"
+   },
+   {
+    "x": 9.931,
+    "y": 10.64,
+    "kota": false,
+    "flare": false,
+    "name": "Cirebon"
+   },
+   {
+    "x": 5.909,
+    "y": 8.023,
+    "kota": false,
+    "flare": false,
+    "name": "Pidie Jaya"
+   },
+   {
+    "x": 8.299,
+    "y": 9.555,
+    "kota": false,
+    "flare": false,
+    "name": "Konawe"
+   },
+   {
+    "x": 6.18,
+    "y": 8.38,
+    "kota": false,
+    "flare": false,
+    "name": "Bengkulu Selatan"
+   },
+   {
+    "x": 6.114,
+    "y": 7.182,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Sabang"
+   },
+   {
+    "x": 4.469,
+    "y": 7.579,
+    "kota": false,
+    "flare": false,
+    "name": "Banggai Laut"
+   },
+   {
+    "x": 5.331,
+    "y": 7.946,
+    "kota": false,
+    "flare": false,
+    "name": "Gorontalo Utara"
+   },
+   {
+    "x": 6.347,
+    "y": 7.656,
+    "kota": false,
+    "flare": false,
+    "name": "Maluku Tenggara Barat"
+   },
+   {
+    "x": 6.509,
+    "y": 8.242,
+    "kota": false,
+    "flare": false,
+    "name": "Fakfak"
+   },
+   {
+    "x": 6.223,
+    "y": 7.911,
+    "kota": false,
+    "flare": false,
+    "name": "Kaur"
+   },
+   {
+    "x": 10.05,
+    "y": 11.22,
+    "kota": false,
+    "flare": false,
+    "name": "Mojokerto"
+   },
+   {
+    "x": 7.813,
+    "y": 9.584,
+    "kota": false,
+    "flare": false,
+    "name": "Banjar"
+   },
+   {
+    "x": 5.614,
+    "y": 7.549,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Tual"
+   },
+   {
+    "x": 8.628,
+    "y": 10.05,
+    "kota": false,
+    "flare": false,
+    "name": "Pandeglang"
+   },
+   {
+    "x": 9.288,
+    "y": 10.56,
+    "kota": false,
+    "flare": false,
+    "name": "Bandung Barat"
+   },
+   {
+    "x": 7.861,
+    "y": 11.48,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Kediri"
+   },
+   {
+    "x": 7.748,
+    "y": 9.651,
+    "kota": false,
+    "flare": true,
+    "name": "Batang Hari"
+   },
+   {
+    "x": 7.426,
+    "y": 8.981,
+    "kota": false,
+    "flare": false,
+    "name": "Belitung"
+   },
+   {
+    "x": 5.673,
+    "y": 7.915,
+    "kota": false,
+    "flare": false,
+    "name": "Sumba Barat Daya"
+   },
+   {
+    "x": 7.995,
+    "y": 9.95,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Cirebon"
+   },
+   {
+    "x": 7.462,
+    "y": 9.349,
+    "kota": false,
+    "flare": false,
+    "name": "Mandailing Natal"
+   },
+   {
+    "x": 8.078,
+    "y": 9.158,
+    "kota": false,
+    "flare": false,
+    "name": "Pringsewu"
+   },
+   {
+    "x": 8.568,
+    "y": 9.928,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Kendari"
+   },
+   {
+    "x": 9.63,
+    "y": 11.8,
+    "kota": false,
+    "flare": false,
+    "name": "Pasuruan"
+   },
+   {
+    "x": 7.671,
+    "y": 8.569,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Padangsidimpuan"
+   },
+   {
+    "x": 5.889,
+    "y": 8.714,
+    "kota": false,
+    "flare": false,
+    "name": "Barru"
+   },
+   {
+    "x": 5.063,
+    "y": 7.597,
+    "kota": false,
+    "flare": false,
+    "name": "Kepulauan Sula"
+   },
+   {
+    "x": 6.489,
+    "y": 8.241,
+    "kota": false,
+    "flare": false,
+    "name": "Samosir"
+   },
+   {
+    "x": 7.613,
+    "y": 10.27,
+    "kota": false,
+    "flare": false,
+    "name": "Kuantan Singingi"
+   },
+   {
+    "x": 9.403,
+    "y": 10.48,
+    "kota": false,
+    "flare": false,
+    "name": "Kediri"
+   },
+   {
+    "x": 9.396,
+    "y": 10.61,
+    "kota": false,
+    "flare": false,
+    "name": "Brebes"
+   },
+   {
+    "x": 6.778,
+    "y": 9.039,
+    "kota": false,
+    "flare": false,
+    "name": "Nagan Raya"
+   },
+   {
+    "x": 7.441,
+    "y": 9.292,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Sukabumi"
+   },
+   {
+    "x": 7.157,
+    "y": 8.964,
+    "kota": false,
+    "flare": false,
+    "name": "Kapuas Hulu"
+   },
+   {
+    "x": 6.29,
+    "y": 8.909,
+    "kota": false,
+    "flare": false,
+    "name": "Pasaman"
+   },
+   {
+    "x": 4.758,
+    "y": 6.733,
+    "kota": false,
+    "flare": false,
+    "name": "Intan Jaya"
+   },
+   {
+    "x": 8.928,
+    "y": 10.39,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Manado"
+   },
+   {
+    "x": 7.922,
+    "y": 9.712,
+    "kota": false,
+    "flare": true,
+    "name": "Lahat"
+   },
+   {
+    "x": 8.799,
+    "y": 10.92,
+    "kota": false,
+    "flare": true,
+    "name": "Musi Banyuasin"
+   },
+   {
+    "x": 6.796,
+    "y": 9.962,
+    "kota": false,
+    "flare": false,
+    "name": "Pangkajene Dan Kepulauan"
+   },
+   {
+    "x": 7.902,
+    "y": 9.372,
+    "kota": false,
+    "flare": false,
+    "name": "Sumbawa"
+   },
+   {
+    "x": 8.212,
+    "y": 9.539,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Tegal"
+   },
+   {
+    "x": 6.935,
+    "y": 10.2,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Jayapura"
+   },
+   {
+    "x": 7.478,
+    "y": 9.258,
+    "kota": false,
+    "flare": false,
+    "name": "Jembrana"
+   },
+   {
+    "x": 8.75,
+    "y": 9.944,
+    "kota": false,
+    "flare": true,
+    "name": "Blora"
+   },
+   {
+    "x": 7.628,
+    "y": 9.982,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Baru"
+   },
+   {
+    "x": 10.16,
+    "y": 12.9,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Jakarta Utara"
+   },
+   {
+    "x": 6.425,
+    "y": 9.03,
+    "kota": false,
+    "flare": false,
+    "name": "Tapanuli Tengah"
+   },
+   {
+    "x": 8.298,
+    "y": 9.66,
+    "kota": false,
+    "flare": false,
+    "name": "Trenggalek"
+   },
+   {
+    "x": 3.901,
+    "y": 8.176,
+    "kota": false,
+    "flare": false,
+    "name": "Kepulauan Mentawai"
+   },
+   {
+    "x": 5.71,
+    "y": 8.802,
+    "kota": false,
+    "flare": false,
+    "name": "Toli-Toli"
+   },
+   {
+    "x": 5.222,
+    "y": 8.098,
+    "kota": false,
+    "flare": false,
+    "name": "Buton"
+   },
+   {
+    "x": 7.609,
+    "y": 8.907,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Pasuruan"
+   },
+   {
+    "x": 8.016,
+    "y": 9.982,
+    "kota": false,
+    "flare": false,
+    "name": "Purbalingga"
+   },
+   {
+    "x": 6.333,
+    "y": 8.182,
+    "kota": false,
+    "flare": false,
+    "name": "Pesisir Barat"
+   },
+   {
+    "x": 8.013,
+    "y": 9.369,
+    "kota": false,
+    "flare": false,
+    "name": "Way Kanan"
+   },
+   {
+    "x": 5.317,
+    "y": 7.471,
+    "kota": false,
+    "flare": false,
+    "name": "Yahukimo"
+   },
+   {
+    "x": 8.44,
+    "y": 9.896,
+    "kota": false,
+    "flare": false,
+    "name": "Sumbawa Barat"
+   },
+   {
+    "x": 8.875,
+    "y": 10.29,
+    "kota": false,
+    "flare": true,
+    "name": "Majalengka"
+   },
+   {
+    "x": 9.871,
+    "y": 11.79,
+    "kota": true,
+    "flare": true,
+    "name": "Kota Palembang"
+   },
+   {
+    "x": 6.107,
+    "y": 8.115,
+    "kota": false,
+    "flare": false,
+    "name": "Seluma"
+   },
+   {
+    "x": 9.439,
+    "y": 11.03,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Samarinda"
+   },
+   {
+    "x": 7.62,
+    "y": 9.727,
+    "kota": false,
+    "flare": false,
+    "name": "Sambas"
+   },
+   {
+    "x": 6.475,
+    "y": 9.047,
+    "kota": true,
+    "flare": true,
+    "name": "Kota Lhokseumawe"
+   },
+   {
+    "x": 6.38,
+    "y": 8.257,
+    "kota": false,
+    "flare": false,
+    "name": "Kolaka Timur"
+   },
+   {
+    "x": 9.361,
+    "y": 11.05,
+    "kota": false,
+    "flare": true,
+    "name": "Kampar"
+   },
+   {
+    "x": 6.452,
+    "y": 7.565,
+    "kota": false,
+    "flare": false,
+    "name": "Maluku Barat Daya"
+   },
+   {
+    "x": 9.931,
+    "y": 11.34,
+    "kota": false,
+    "flare": false,
+    "name": "Malang"
+   },
+   {
+    "x": 6.896,
+    "y": 8.865,
+    "kota": false,
+    "flare": false,
+    "name": "Barito Kuala"
+   },
+   {
+    "x": 7.078,
+    "y": 8.873,
+    "kota": false,
+    "flare": false,
+    "name": "Aceh Tengah"
+   },
+   {
+    "x": 9.11,
+    "y": 10.6,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Denpasar"
+   },
+   {
+    "x": 8.771,
+    "y": 10.32,
+    "kota": false,
+    "flare": false,
+    "name": "Tasikmalaya"
+   },
+   {
+    "x": 7.735,
+    "y": 9.768,
+    "kota": false,
+    "flare": false,
+    "name": "Agam"
+   },
+   {
+    "x": 7.073,
+    "y": 9.069,
+    "kota": false,
+    "flare": false,
+    "name": "Barito Utara"
+   },
+   {
+    "x": 6.959,
+    "y": 9.284,
+    "kota": false,
+    "flare": false,
+    "name": "Sidenreng Rappang"
+   },
+   {
+    "x": 5.966,
+    "y": 7.016,
+    "kota": false,
+    "flare": false,
+    "name": "Buru Selatan"
+   },
+   {
+    "x": 9.394,
+    "y": 10.46,
+    "kota": false,
+    "flare": true,
+    "name": "Subang"
+   },
+   {
+    "x": 7.389,
+    "y": 9.283,
+    "kota": false,
+    "flare": false,
+    "name": "Konawe Selatan"
+   },
+   {
+    "x": 5.016,
+    "y": 7.99,
+    "kota": false,
+    "flare": false,
+    "name": "Raja Ampat"
+   },
+   {
+    "x": 7.714,
+    "y": 9.4,
+    "kota": false,
+    "flare": false,
+    "name": "Minahasa Utara"
+   },
+   {
+    "x": 8.093,
+    "y": 9.394,
+    "kota": false,
+    "flare": false,
+    "name": "Aceh Besar"
+   },
+   {
+    "x": 4.729,
+    "y": 6.516,
+    "kota": false,
+    "flare": false,
+    "name": "Manokwari Selatan"
+   },
+   {
+    "x": 6.669,
+    "y": 8.257,
+    "kota": false,
+    "flare": false,
+    "name": "Lombok Utara"
+   },
+   {
+    "x": 6.921,
+    "y": 8.863,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Tanjung Balai"
+   },
+   {
+    "x": 7.96,
+    "y": 9.737,
+    "kota": false,
+    "flare": false,
+    "name": "Wonosobo"
+   },
+   {
+    "x": 8.022,
+    "y": 9.304,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Pangkal Pinang"
+   },
+   {
+    "x": 5.995,
+    "y": 7.813,
+    "kota": false,
+    "flare": false,
+    "name": "Seram Bagian Barat"
+   },
+   {
+    "x": 7.544,
+    "y": 7.528,
+    "kota": false,
+    "flare": false,
+    "name": "Kaimana"
+   },
+   {
+    "x": 8.314,
+    "y": 10.21,
+    "kota": false,
+    "flare": false,
+    "name": "Kutai Barat"
+   },
+   {
+    "x": 6.215,
+    "y": 8.103,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Sawah Lunto"
+   },
+   {
+    "x": 10.22,
+    "y": 13.18,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Jakarta Selatan"
+   },
+   {
+    "x": 8.469,
+    "y": 9.74,
+    "kota": true,
+    "flare": false,
+    "name": "Kotawaringin Barat"
+   },
+   {
+    "x": 6.61,
+    "y": 9.113,
+    "kota": false,
+    "flare": false,
+    "name": "Soppeng"
+   },
+   {
+    "x": 6.784,
+    "y": 8.029,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Kotamobagu"
+   },
+   {
+    "x": 4.718,
+    "y": 7.798,
+    "kota": false,
+    "flare": false,
+    "name": "Buton Selatan"
+   },
+   {
+    "x": 8.252,
+    "y": 9.998,
+    "kota": true,
+    "flare": false,
+    "name": "Kotawaringin Timur"
+   },
+   {
+    "x": 8.265,
+    "y": 9.529,
+    "kota": false,
+    "flare": false,
+    "name": "Pesawaran"
+   },
+   {
+    "x": 6.554,
+    "y": 8.377,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Pariaman"
+   },
+   {
+    "x": 6.799,
+    "y": 9.479,
+    "kota": false,
+    "flare": false,
+    "name": "Luwu"
+   },
+   {
+    "x": 8.306,
+    "y": 9.155,
+    "kota": false,
+    "flare": false,
+    "name": "Aceh Timur"
+   },
+   {
+    "x": 8.74,
+    "y": 9.752,
+    "kota": false,
+    "flare": false,
+    "name": "Rembang"
+   },
+   {
+    "x": 7.272,
+    "y": 9.526,
+    "kota": false,
+    "flare": false,
+    "name": "Pasaman Barat"
+   },
+   {
+    "x": 7.109,
+    "y": 8.866,
+    "kota": false,
+    "flare": false,
+    "name": "Bengkayang"
+   },
+   {
+    "x": 5.857,
+    "y": 8.108,
+    "kota": false,
+    "flare": false,
+    "name": "Kepulauan Yapen"
+   },
+   {
+    "x": 6.364,
+    "y": 9.927,
+    "kota": false,
+    "flare": false,
+    "name": "Morowali Utara"
+   },
+   {
+    "x": 7.922,
+    "y": 10.26,
+    "kota": false,
+    "flare": false,
+    "name": "Batu Bara"
+   },
+   {
+    "x": 4.996,
+    "y": 7.675,
+    "kota": false,
+    "flare": false,
+    "name": "Bolaang Mongondow Utara"
+   },
+   {
+    "x": 8.186,
+    "y": 9.502,
+    "kota": false,
+    "flare": true,
+    "name": "Penajam Paser Utara"
+   },
+   {
+    "x": 9.087,
+    "y": 11.11,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Malang"
+   },
+   {
+    "x": 5.224,
+    "y": 7.385,
+    "kota": false,
+    "flare": false,
+    "name": "Nagekeo"
+   },
+   {
+    "x": 8.452,
+    "y": 10.45,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Yogyakarta"
+   },
+   {
+    "x": 8.46,
+    "y": 10.5,
+    "kota": false,
+    "flare": true,
+    "name": "Tanjung Jabung Barat"
+   },
+   {
+    "x": 7.301,
+    "y": 9.501,
+    "kota": false,
+    "flare": false,
+    "name": "Lima Puluh Kota"
+   },
+   {
+    "x": 6.416,
+    "y": 10.26,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Tarakan"
+   },
+   {
+    "x": 6.051,
+    "y": 8.972,
+    "kota": false,
+    "flare": false,
+    "name": "Minahasa Selatan"
+   },
+   {
+    "x": 7.856,
+    "y": 9.154,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Pekalongan"
+   },
+   {
+    "x": 6.432,
+    "y": 8.776,
+    "kota": false,
+    "flare": false,
+    "name": "Belitung Timur"
+   },
+   {
+    "x": 5.248,
+    "y": 7.182,
+    "kota": false,
+    "flare": false,
+    "name": "Pulau Taliabu"
+   },
+   {
+    "x": 8.352,
+    "y": 9.567,
+    "kota": false,
+    "flare": false,
+    "name": "Lombok Tengah"
+   },
+   {
+    "x": 4.949,
+    "y": 7.335,
+    "kota": false,
+    "flare": false,
+    "name": "Sorong Selatan"
+   },
+   {
+    "x": 10.74,
+    "y": 12.18,
+    "kota": false,
+    "flare": false,
+    "name": "Bogor"
+   },
+   {
+    "x": 7.55,
+    "y": 11.11,
+    "kota": false,
+    "flare": false,
+    "name": "Mimika"
+   },
+   {
+    "x": 7.793,
+    "y": 9.409,
+    "kota": true,
+    "flare": false,
+    "name": "Kota Salatiga"
+   },
+   {
+    "x": 8.992,
+    "y": 10.09,
+    "kota": true,
+    "flare": true,
+    "name": "Kota Jambi"
+   },
+   {
+    "x": 7.236,
+    "y": 8.889,
+    "kota": false,
+    "flare": false,
+    "name": "Tapanuli Utara"
+   },
+   {
+    "x": 4.532,
+    "y": 9.409,
+    "kota": false,
+    "flare": false,
+    "name": "Kepulauan Anambas"
+   },
+   {
+    "x": 6.333,
+    "y": 8.772,
+    "kota": false,
+    "flare": false,
+    "name": "Toraja Utara"
+   },
+   {
+    "x": 6.938,
+    "y": 8.856,
+    "kota": false,
+    "flare": false,
+    "name": "Bolaang Mongondow"
+   }
+  ]
+ },
+ "ladder": [
+  {
+   "k": "Cross-section, one year",
+   "spec": "log PDRB ~ log lights, 514 regencies",
+   "b": 0.7181,
+   "lo": null,
+   "hi": null,
+   "r2": 0.7319,
+   "removes": "nothing"
+  },
+  {
+   "k": "Within regency (well-observed)",
+   "spec": "regency FE, \u22656 observed months",
+   "b": 0.15799095621955597,
+   "lo": 0.10387042080433137,
+   "hi": 0.21211149163478057,
+   "r2": 0.2021711240045948,
+   "removes": "all differences between places"
+  },
+  {
+   "k": "Within regency (all)",
+   "spec": "regency FE, annual",
+   "b": 0.10832814819127669,
+   "lo": 0.07640997630072507,
+   "hi": 0.1402463200818283,
+   "r2": 0.13220707861476133,
+   "removes": "all differences between places"
+  },
+  {
+   "k": "Within regency and year",
+   "spec": "regency + year FE, annual",
+   "b": 0.025113593133869263,
+   "lo": -0.005811026718132023,
+   "hi": 0.05603821298587055,
+   "r2": 0.016729979972767373,
+   "removes": "places and national shocks"
+  },
+  {
+   "k": "Growth, annual",
+   "spec": "\u0394log PDRB ~ \u0394log lights",
+   "b": 0.00708744108673896,
+   "lo": 0.003671015257447549,
+   "hi": 0.01050386691603037,
+   "r2": 0.005887151344615926,
+   "removes": "all levels"
+  },
+  {
+   "k": "Growth, quarterly YoY",
+   "spec": "\u0394log PDRB ~ \u0394log lights",
+   "b": 0.0011621733376671335,
+   "lo": -0.0009900888533380546,
+   "hi": 0.0033144355286723213,
+   "r2": 0.00048118201445190856,
+   "removes": "all levels"
+  }
+ ],
+ "coverage": {
+  "rows": [
+   {
+    "year": 2019,
+    "lights": 0.10929856800424963,
+    "cov": 0.4705459447779994,
+    "bps": 0.049105747503599695
+   },
+   {
+    "year": 2020,
+    "lights": -0.02068940057491103,
+    "cov": 0.2671688682195575,
+    "bps": -0.021222964529115592
+   },
+   {
+    "year": 2021,
+    "lights": 0.03323956263940593,
+    "cov": 0.22206972205477227,
+    "bps": 0.03604924739003937
+   },
+   {
+    "year": 2022,
+    "lights": 0.049725114785992806,
+    "cov": 0.18700698732240975,
+    "bps": 0.051973227255318076
+   },
+   {
+    "year": 2023,
+    "lights": 0.1872312889177664,
+    "cov": 0.34481465339392503,
+    "bps": 0.05021070384722811
+   },
+   {
+    "year": 2024,
+    "lights": 0.0478123204019184,
+    "cov": 0.2608350312181784,
+    "bps": 0.048826004820818114
+   },
+   {
+    "year": 2025,
+    "lights": -0.035705114003461165,
+    "cov": 0.17158593670468097,
+    "bps": 0.049795640154623094
+   },
+   {
+    "year": 2026,
+    "lights": 0.07895851090770936,
+    "cov": 0.3445677990789485,
+    "bps": null
+   }
+  ],
+  "corr": 0.6698543316085201
+ },
+ "national": {
+  "slope": 0.1580630390997993,
+  "intercept": 0.02944429638792432,
+  "r": 0.4538450836523402,
+  "r2": 0.2059753599553997,
+  "n": 7
+ },
+ "nowcast": {
+  "a": 0.0463774765677804,
+  "beta": 0.0011621733376671335,
+  "lo": -0.0009900888533380546,
+  "hi": 0.0033144355286723213,
+  "lightsGrowth": 0.1899071794754189,
+  "contribution": 0.00022070506061789893,
+  "published": 0.0465981816283983,
+  "band": [
+   0.03947205367676748,
+   0.05372430958002912
+  ],
+  "constantShare": 0.9952636550846998,
+  "bandVsContribution": 64.57602677238202,
+  "monthsBeyondBps": 7
+ },
+ "movers": {
+  "lightsRange": [
+   -0.4305331221606932,
+   0.8815023242521045
+  ],
+  "mappedRange": [
+   0.045877122452222655,
+   0.047401935066117805
+  ],
+  "top": [
+   {
+    "id": "22746128B69202393010200",
+    "name": "Kolaka",
+    "g": 0.047401935066117805,
+    "lo": -0.02642756914841008,
+    "hi": 0.1212314392806457,
+    "lights_growth": 0.8815023242521045
+   },
+   {
+    "id": "22746128B21241240008354",
+    "name": "Kendal",
+    "g": 0.04736338531738071,
+    "lo": -0.02646307667993089,
+    "hi": 0.12118984731469232,
+    "lights_growth": 0.8483319291934187
+   },
+   {
+    "id": "22746128B73491405172020",
+    "name": "Maros",
+    "g": 0.04725642315404228,
+    "lo": -0.026561958653440222,
+    "hi": 0.12107480496152478,
+    "lights_growth": 0.7562956039124212
+   },
+   {
+    "id": "22746128B27585215741432",
+    "name": "Bangka",
+    "g": 0.04721547191368694,
+    "lo": -0.026599956817292283,
+    "hi": 0.12103090064466616,
+    "lights_growth": 0.7210588289597814
+   },
+   {
+    "id": "22746128B99423643145371",
+    "name": "Bogor",
+    "g": 0.04713911902407591,
+    "lo": -0.02667101151616056,
+    "hi": 0.12094924956431238,
+    "lights_growth": 0.6553604626865521
+   }
+  ],
+  "bottom": [
+   {
+    "id": "22746128B54914598899185",
+    "name": "Tanah Laut",
+    "g": 0.045877122452222655,
+    "lo": -0.027884658228597523,
+    "hi": 0.11963890313304283,
+    "lights_growth": -0.4305331221606932
+   },
+   {
+    "id": "22746128B80903663444835",
+    "name": "Pringsewu",
+    "g": 0.04601309776781514,
+    "lo": -0.027750334575298012,
+    "hi": 0.11977653011092829,
+    "lights_growth": -0.3135322315143508
+   },
+   {
+    "id": "22746128B8708218473228",
+    "name": "Way Kanan",
+    "g": 0.046093456457594745,
+    "lo": -0.027671356104034234,
+    "hi": 0.11985826901922372,
+    "lights_growth": -0.24438704707834236
+   },
+   {
+    "id": "22746128B69666188283297",
+    "name": "Tanggamus",
+    "g": 0.04616537409122291,
+    "lo": -0.027600928268583652,
+    "hi": 0.11993167645102948,
+    "lights_growth": -0.18250502716165182
+   },
+   {
+    "id": "22746128B34069275840087",
+    "name": "Berau",
+    "g": 0.04618008422412977,
+    "lo": -0.027586552480590207,
+    "hi": 0.11994672092884974,
+    "lights_growth": -0.16984759265503724
+   }
+  ]
+ },
+ "oos": {
+  "annual": {
+   "year": 2025,
+   "n": 514,
+   "corr": 0.054334767463613924,
+   "mae_lights": 0.018006521943351,
+   "mae_naive": 0.012765459249340928,
+   "prov_win_rate": 0.23529411764705882,
+   "n_prov": 34,
+   "beta_train": 0.008716651404532571,
+   "a_train": 0.034725513859788344,
+   "regency_win_rate": 0.2704280155642023
+  },
+  "quarterly": {
+   "year": 2025,
+   "n": 2056,
+   "corr": 0.026354878198576834,
+   "mae_lights": 0.016549888228425486,
+   "mae_naive": 0.02190958484097253,
+   "prov_win_rate": 0.4411764705882353,
+   "n_prov": 34,
+   "regency_win_rate": 0.5768482490272373,
+   "beta_train": 0.0012114793936826795,
+   "a_train": 0.045537254309609795
+  }
+ },
+ "gates": {
+  "G-A1": {
+   "pass": true,
+   "min_r2": 0.6731297971557497,
+   "threshold": 0.65,
+   "years": [
+    2018,
+    2025
+   ],
+   "note": "levels cross-section only; scoped to 2018\u2192 (ledger start), spec says 2015\u2192"
+  },
+  "G-A2": {
+   "pass": false,
+   "prov_win_rate": 0.4411764705882353,
+   "threshold": 0.6,
+   "note": "one out-of-sample year (2025, quarterly YoY), not the 2016\u20132024 rolling backtest of the spec"
+  }
+ },
+ "deseason": {
+  "ramadan_beta_national": 0.003269877697006856,
+  "ramadan_effect_full_month": 0.003275229578826755,
+  "ramadan_beta_regency_quantiles": {
+   "0.1": -0.2147420907995235,
+   "0.25": -0.10135525300246064,
+   "0.5": 0.001262573072457764,
+   "0.75": 0.09975954898447442,
+   "0.9": 0.20456418939055052
+  },
+  "national_low_coverage_months": 62,
+  "months": 103,
+  "regency_months_no_data": 0.4423708964527219,
+  "weights": "w = min(1, coverage/0.6)\u00b2, zero below 5%; low-coverage flag < 30%"
+ },
+ "flares": {
+  "source": "Elvidge & Zhizhin (2021), Global Gas Flare Survey by Infrared Imaging, VIIRS Nightfire 2012\u20132019, ORNL DAAC",
+  "doi": "10.3334/ORNLDAAC/1874",
+  "buffer_km": 3.0,
+  "n_sites": 182,
+  "national_share": 0.053087942226914785,
+  "national_share_5km": 0.07111900266545249,
+  "national_share_15km": 0.04049363055563573,
+  "n_regencies_flagged": 45,
+  "top": [
+   {
+    "id": "22746128B11480476919105",
+    "name": "Teluk Bintuni",
+    "share": 0.9238203874746257,
+    "share_wide": 0.939856762456374,
+    "share_tight": 0.8642368834059467,
+    "sites": 1
+   },
+   {
+    "id": "22746128B25112391877259",
+    "name": "Sorong",
+    "share": 0.7093923766886225,
+    "share_wide": 0.766611687266685,
+    "share_tight": 0.6707787143766,
+    "sites": 3
+   },
+   {
+    "id": "22746128B88010078110453",
+    "name": "Kota Lhokseumawe",
+    "share": 0.6792220149624202,
+    "share_wide": 0.7450325860849937,
+    "share_tight": 0.5948805757804114,
+    "sites": 2
+   },
+   {
+    "id": "22746128B13468366985120",
+    "name": "Tanjung Jabung Timur",
+    "share": 0.6715636434447531,
+    "share_wide": 0.708276598164612,
+    "share_tight": 0.5934490017152566,
+    "sites": 6
+   },
+   {
+    "id": "22746128B48169474795911",
+    "name": "Banggai",
+    "share": 0.5425826386093642,
+    "share_wide": 0.5574805374540412,
+    "share_tight": 0.4999041729598231,
+    "sites": 2
+   },
+   {
+    "id": "22746128B18875576502901",
+    "name": "Kota Dumai",
+    "share": 0.5244508820494059,
+    "share_wide": 0.6221956666624299,
+    "share_tight": 0.4503953553161171,
+    "sites": 1
+   },
+   {
+    "id": "22746128B2679722836886",
+    "name": "Kota Bontang",
+    "share": 0.49870439812546963,
+    "share_wide": 0.7093682586942235,
+    "share_tight": 0.34624802145413863,
+    "sites": 2
+   },
+   {
+    "id": "22746128B13695709263199",
+    "name": "Kota Prabumulih",
+    "share": 0.4897564959711001,
+    "share_wide": 0.8818006635404085,
+    "share_tight": 0.24679679335161733,
+    "sites": 3
+   }
+  ]
+ },
+ "weakFit": [
+  {
+   "id": "22746128B68810971865676",
+   "name": "Tambrauw",
+   "std_resid": -5.704999392851502,
+   "resid": -3.792248081267328,
+   "lights_vs_fit": 43.35600417728675,
+   "tags": [
+    "low annual coverage"
+   ],
+   "pdrb": 185.08,
+   "L": 1079.7689792743774
+  },
+  {
+   "id": "22746128B30560862468368",
+   "name": "Pegunungan Arfak",
+   "std_resid": -3.653918023089095,
+   "resid": -2.428845764564029,
+   "lights_vs_fit": 10.34577881937032,
+   "tags": [
+    "low annual coverage"
+   ],
+   "pdrb": 230.74,
+   "L": 219.84125487217952
+  },
+  {
+   "id": "22746128B21128962092426",
+   "name": "Kota Jakarta Pusat",
+   "std_resid": 3.5556589846762265,
+   "resid": 2.3635306568437233,
+   "lights_vs_fit": -0.905912554403469,
+   "tags": [
+    "DKI service economy",
+    "small area (<500 px)",
+    "low annual coverage"
+   ],
+   "pdrb": 560760.04,
+   "L": 14406.02357273343
+  },
+  {
+   "id": "22746128B11480476919105",
+   "name": "Teluk Bintuni",
+   "std_resid": 3.540396404447182,
+   "resid": 2.353385258640648,
+   "lights_vs_fit": -0.9049531412168531,
+   "tags": [
+    "gas flares",
+    "low annual coverage"
+   ],
+   "pdrb": 37802.57,
+   "L": 341.65973670858557
+  },
+  {
+   "id": "22746128B99951880476592",
+   "name": "Kepulauan Anambas",
+   "std_resid": 3.244320395030968,
+   "resid": 2.156576529787002,
+   "lights_vs_fit": -0.8842793902596228,
+   "tags": [
+    "low annual coverage"
+   ],
+   "pdrb": 12193.55,
+   "L": 92.96375427350473
+  },
+  {
+   "id": "22746128B39960960221771",
+   "name": "Mamberamo Raya",
+   "std_resid": -3.0557607012725585,
+   "resid": -2.031236439872939,
+   "lights_vs_fit": 6.6235065412944865,
+   "tags": [
+    "low annual coverage"
+   ],
+   "pdrb": 1177.68,
+   "L": 1223.098113138945
+  },
+  {
+   "id": "22746128B5634485200629",
+   "name": "Mamuju Utara",
+   "std_resid": 2.890673627078821,
+   "resid": 1.921499155564426,
+   "lights_vs_fit": -0.8536126598478231,
+   "tags": [
+    "low annual coverage"
+   ],
+   "pdrb": 8762.02,
+   "L": 81.39806014307123
+  },
+  {
+   "id": "22746128B93097528927367",
+   "name": "Kaimana",
+   "std_resid": -2.838612113872233,
+   "resid": -1.886892635919053,
+   "lights_vs_fit": 5.598831816846961,
+   "tags": [
+    "low annual coverage"
+   ],
+   "pdrb": 1859.03,
+   "L": 1889.1110116030068
+  }
+ ],
+ "weakFitN": 29
+}

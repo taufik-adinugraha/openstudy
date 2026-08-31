@@ -209,6 +209,15 @@ const maxMean = summary.topMean[0].v;
     </section>
     <div id="chart-tip" hidden></div>
 
+    <section class="chapter review-cta">
+      <span class="eyebrow">06 · Review</span>
+      <h2>We had this instrument reviewed, adversarially.</h2>
+      <p>An independent read of the same data against the published literature — including a direct
+      replication of Gibson et al. (2021) on Indonesian kabupaten, the reason the growth nowcast should
+      not be trusted, and a correction to a claim made on this page.</p>
+      <a class="cta big" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/article`}>Read the review article →</a>
+    </section>
+
     <footer class="method">
       <span class="eyebrow">Methodology & sources</span>
       <p>Radiance: NASA Black Marble VJ146A3 monthly composites (Román et al. 2018),
@@ -1068,6 +1077,16 @@ const maxMean = summary.topMean[0].v;
       .annot { font-family: var(--font-data); font-size: 12px; fill: var(--ink-muted); letter-spacing: 0.06em; }
       #calib-tip { position: absolute; z-index: 30; pointer-events: none; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 4px; padding: 8px 11px; font-family: var(--font-data); font-size: 0.75rem; line-height: 1.6; color: var(--ink); max-width: 21rem; }
       #calib-flares { max-width: 34rem; }
+
+      /* Review hand-off — the article is a separate page, so it gets a real door. */
+      .review-cta { padding-top: 14vh; }
+      .review-cta p { color: var(--ink-muted); }
+      .cta.big { align-self: flex-start; margin-top: 8px; font-family: var(--font-data);
+        font-size: 0.82rem; letter-spacing: 0.08em; color: var(--accent);
+        border: 1px solid var(--accent); border-radius: 4px; padding: 13px 22px;
+        text-decoration: none; transition: background 0.18s ease, transform 0.18s ease; }
+      .cta.big:hover { background: var(--accent-ink); transform: translateY(-1px); }
+      @media (prefers-reduced-motion: reduce) { .cta.big { transition: none; } }
 
       .method { max-width: 44rem; margin: 0 auto; padding: 12vh 24px 12vh; display: flex; flex-direction: column; gap: 14px; }
       .method p { margin: 0; font-size: 0.9rem; line-height: 1.7; color: var(--ink-muted); }

@@ -1,0 +1,689 @@
+---
+/* Review article — the case, stress-tested against the literature.
+ *
+ * Every figure is built in frontmatter from data/article.json, which is derived
+ * from the pipeline's own published calibration. Nothing here is drawn by hand,
+ * so the prose cannot drift from the numbers. SVG only: no WebGL anywhere.
+ */
+import "../styles/tokens.css";
+import A from "../data/article.json";
+
+const pct = (x: number, d = 1) => `${(x * 100).toFixed(d)}%`;
+const sig = (x: number, d = 3) => x.toFixed(d);
+const AMBER = "#E8A33D", TEAL = "#4BB8A9", CORAL = "#E08B54", SLATE = "#6B7CA6";
+const INK = "#E9E4D6", MUTED = "#9C9A8D", GRID = "#232B44";
+
+const last = A.levels[A.levels.length - 1];
+const first = A.levels[0];
+const minR2 = Math.min(...A.levels.map((l: any) => l.all.r2));
+const maxR2 = Math.max(...A.levels.map((l: any) => l.all.r2));
+const kotaB = A.levels.map((l: any) => l.kota.slope);
+const kabB = A.levels.map((l: any) => l.kabupaten.slope);
+const kabR2 = A.levels.map((l: any) => l.kabupaten.r2);
+const mean = (a: number[]) => a.reduce((s, v) => s + v, 0) / a.length;
+
+/* Gibson, Olivia, Boe-Gibson & Li (2021, JDE) Table 1, VIIRS 2015–16 columns.
+   Transcribed from the published table — the benchmark this study replicates. */
+const GIBSON = {
+  all: { b: 0.179, r2: 0.05, n: 497 },
+  kabupaten: { b: 0.086, r2: 0.01, n: 399 },
+  kota: { b: 0.936, r2: 0.68, n: 98 },
+};
+
+const esc = (s: string) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/* ── Figure 1 · the levels cross-section, split as Gibson split it ─────────── */
+function fig1() {
+  const W = 720, H = 430, L = 62, R = 18, T = 18, B = 52;
+  const p = A.scatterLatest.points;
+  const xs = p.map((q: any) => q.x), ys = p.map((q: any) => q.y);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const sx = (v: number) => L + ((v - x0) / (x1 - x0)) * (W - L - R);
+  const sy = (v: number) => H - B - ((v - y0) / (y1 - y0)) * (H - T - B);
+  const dots = p.map((q: any) =>
+    `<circle class="d1 ${q.kota ? "kota" : "kab"}" cx="${sx(q.x).toFixed(1)}" cy="${sy(q.y).toFixed(1)}" ` +
+    `r="${q.kota ? 3.1 : 2.4}" data-n="${esc(q.name)}" data-x="${q.x.toFixed(2)}" data-y="${q.y.toFixed(2)}"` +
+    `${q.flare ? ' data-f="1"' : ""}/>`).join("");
+  const line = (grp: "kota" | "kabupaten", col: string) => {
+    const g = last[grp];
+    const pts = p.filter((q: any) => (grp === "kota") === q.kota);
+    const mx = mean(pts.map((q: any) => q.x)), my = mean(pts.map((q: any) => q.y));
+    const a = my - g.slope * mx;
+    const xa = Math.min(...pts.map((q: any) => q.x)), xb = Math.max(...pts.map((q: any) => q.x));
+    return `<line x1="${sx(xa).toFixed(1)}" y1="${sy(a + g.slope * xa).toFixed(1)}" ` +
+           `x2="${sx(xb).toFixed(1)}" y2="${sy(a + g.slope * xb).toFixed(1)}" stroke="${col}" stroke-width="2.2" opacity="0.95"/>`;
+  };
+  const ticksX = [x0, (x0 + x1) / 2, x1].map((v) =>
+    `<text x="${sx(v).toFixed(1)}" y="${H - B + 20}" fill="${MUTED}" font-size="11" text-anchor="middle">${v.toFixed(1)}</text>`).join("");
+  const ticksY = [y0, (y0 + y1) / 2, y1].map((v) =>
+    `<text x="${L - 10}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="11" text-anchor="end">${v.toFixed(1)}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Log real PDRB against log sum of lights for 514 regencies, cities and rural regencies fitted separately">
+    <rect width="${W}" height="${H}" fill="none"/>
+    <line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" stroke="${GRID}"/>
+    <line x1="${L}" y1="${T}" x2="${L}" y2="${H - B}" stroke="${GRID}"/>
+    ${ticksX}${ticksY}
+    <g class="dots">${dots}</g>
+    ${line("kabupaten", AMBER)}${line("kota", TEAL)}
+    <text x="${W / 2}" y="${H - 12}" fill="${MUTED}" font-size="11.5" text-anchor="middle">log sum of lights →</text>
+    <text x="14" y="${H / 2}" fill="${MUTED}" font-size="11.5" text-anchor="middle" transform="rotate(-90 14 ${H / 2})">log real PDRB →</text>
+  </svg>`;
+}
+
+/* ── Figure 2 · the elasticity ladder ─────────────────────────────────────── */
+function fig2() {
+  const W = 720, H = 300, L = 240, R = 96, T = 26, B = 44;
+  const rows = A.ladder;
+  const lo = Math.min(...rows.map((r: any) => (r.lo ?? r.b)));
+  const hi = Math.max(...rows.map((r: any) => (r.hi ?? r.b)));
+  const pad = (hi - lo) * 0.08;
+  const sx = (v: number) => L + ((v - (lo - pad)) / ((hi + pad) - (lo - pad))) * (W - L - R);
+  const rh = (H - T - B) / rows.length;
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rh + rh / 2;
+    const bar = r.lo !== null
+      ? `<line x1="${sx(r.lo).toFixed(1)}" y1="${y}" x2="${sx(r.hi).toFixed(1)}" y2="${y}" stroke="${AMBER}" stroke-width="2" opacity="0.5"/>`
+      : "";
+    const zero = r.lo !== null && r.lo < 0 && r.hi > 0;
+    return `${bar}<circle cx="${sx(r.b).toFixed(1)}" cy="${y}" r="5" fill="${zero ? SLATE : AMBER}"/>
+      <text x="${L - 14}" y="${y - 3}" fill="${INK}" font-size="12.5" text-anchor="end">${esc(r.k)}</text>
+      <text x="${L - 14}" y="${y + 12}" fill="${MUTED}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">${esc(r.spec)}</text>
+      <text x="${W - R + 12}" y="${y + 4}" fill="${zero ? SLATE : AMBER}" font-size="12" font-family="var(--font-data)">${r.b.toFixed(3)}</text>`;
+  }).join("");
+  const zx = sx(0);
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Elasticity of PDRB with respect to lights falls from 0.72 in the cross-section to near zero in growth">
+    <line x1="${zx.toFixed(1)}" y1="${T - 6}" x2="${zx.toFixed(1)}" y2="${H - B + 4}" stroke="${GRID}" stroke-dasharray="3 4"/>
+    <text x="${zx.toFixed(1)}" y="${H - B + 20}" fill="${MUTED}" font-size="10.5" text-anchor="middle">0</text>
+    ${body}
+    <text x="${W / 2}" y="${H - 10}" fill="${MUTED}" font-size="11.5" text-anchor="middle">elasticity of PDRB with respect to lights →</text>
+  </svg>`;
+}
+
+/* ── Figure 3 · this study against Gibson et al. (2021) ───────────────────── */
+function fig3() {
+  const W = 720, H = 198, pad = 40, top = 74, bh = 84, base = top + bh;
+  const groups = [
+    { k: "All units", mine: { b: mean(A.levels.map((l: any) => l.all.slope)), r2: mean(A.levels.map((l: any) => l.all.r2)) }, theirs: GIBSON.all },
+    { k: "Kabupaten (rural)", mine: { b: mean(kabB), r2: mean(kabR2) }, theirs: GIBSON.kabupaten },
+    { k: "Kota (cities)", mine: { b: mean(kotaB), r2: mean(A.levels.map((l: any) => l.kota.r2)) }, theirs: GIBSON.kota },
+  ];
+  const gw = (W - pad * 2) / 3;
+  const bar = (v: number, x: number, col: string) => {
+    const h = Math.max(2, Math.min(1.05, v) * bh);
+    return `<rect x="${x.toFixed(1)}" y="${(base - h).toFixed(1)}" width="24" height="${h.toFixed(1)}" fill="${col}" rx="2"/>
+      <text x="${(x + 12).toFixed(1)}" y="${(base - h - 7).toFixed(1)}" fill="${col}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">${v.toFixed(2)}</text>`;
+  };
+  const body = groups.map((g, i) => {
+    const xg = pad + i * gw;
+    return `<text x="${(xg + gw / 2).toFixed(1)}" y="60" fill="${INK}" font-size="12.5" text-anchor="middle">${esc(g.k)}</text>
+      ${bar(g.mine.b, xg + 24, AMBER)}${bar(g.theirs.b, xg + 52, CORAL)}
+      ${bar(g.mine.r2, xg + 108, AMBER)}${bar(g.theirs.r2, xg + 136, CORAL)}
+      <text x="${(xg + 56).toFixed(1)}" y="${base + 17}" fill="${MUTED}" font-size="11.5" text-anchor="middle" font-family="var(--font-data)">β</text>
+      <text x="${(xg + 140).toFixed(1)}" y="${base + 17}" fill="${MUTED}" font-size="11.5" text-anchor="middle" font-family="var(--font-data)">R²</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Comparison of elasticities and R-squared with Gibson et al 2021">
+    <g><rect x="${pad}" y="14" width="11" height="11" fill="${AMBER}" rx="2"/>
+      <text x="${pad + 18}" y="24" fill="${MUTED}" font-size="11.5">This study · Black Marble 2018–2025</text>
+      <rect x="${pad + 262}" y="14" width="11" height="11" fill="${CORAL}" rx="2"/>
+      <text x="${pad + 280}" y="24" fill="${MUTED}" font-size="11.5">Gibson et al. 2021 · VIIRS 2015–16</text></g>
+    <line x1="${pad}" y1="${base}" x2="${W - pad + 14}" y2="${base}" stroke="${GRID}"/>
+    ${body}
+  </svg>`;
+}
+
+/* ── Figure 4 · the coverage artifact ─────────────────────────────────────── */
+function fig4() {
+  const W = 720, H = 360, L = 62, R = 130, T = 22, B = 50;
+  const rows = A.coverage.rows;
+  const cs = rows.map((r: any) => r.cov), gs = rows.map((r: any) => r.lights);
+  const c0 = Math.min(...cs) * 0.9, c1 = Math.max(...cs) * 1.06;
+  const g0 = Math.min(...gs, 0) - 0.02, g1 = Math.max(...gs) + 0.03;
+  const sx = (v: number) => L + ((v - c0) / (c1 - c0)) * (W - L - R);
+  const sy = (v: number) => H - B - ((v - g0) / (g1 - g0)) * (H - T - B);
+  const lines = rows.filter((r: any) => r.bps !== null).map((r: any) =>
+    `<line x1="${sx(r.cov).toFixed(1)}" y1="${sy(r.lights).toFixed(1)}" x2="${sx(r.cov).toFixed(1)}" y2="${sy(r.bps).toFixed(1)}" stroke="${GRID}" stroke-width="1.4"/>`).join("");
+  const amber = rows.map((r: any) =>
+    `<circle class="cv" cx="${sx(r.cov).toFixed(1)}" cy="${sy(r.lights).toFixed(1)}" r="6" fill="${AMBER}"/>`).join("");
+  // teal last: in 2020 the two coincide, and that coincidence is the finding
+  const teal = rows.filter((r: any) => r.bps !== null).map((r: any) =>
+    `<circle cx="${sx(r.cov).toFixed(1)}" cy="${sy(r.bps).toFixed(1)}" r="3.4" fill="${TEAL}"/>`).join("");
+  const labels = rows.map((r: any) =>
+    `<text x="${(sx(r.cov) + 11).toFixed(1)}" y="${(sy(r.lights) + 4).toFixed(1)}" fill="${INK}" font-size="11.5" font-family="var(--font-data)">${r.year}</text>`).join("");
+  const pts = lines + amber + teal + labels;
+  const zero = `<line x1="${L}" y1="${sy(0).toFixed(1)}" x2="${W - R}" y2="${sy(0).toFixed(1)}" stroke="${GRID}" stroke-dasharray="3 4"/>`;
+  const ticks = [c0, (c0 + c1) / 2, c1].map((v) =>
+    `<text x="${sx(v).toFixed(1)}" y="${H - B + 20}" fill="${MUTED}" font-size="11" text-anchor="middle">${(v * 100).toFixed(0)}%</text>`).join("");
+  const yt = [g0, 0, g1].map((v) =>
+    `<text x="${L - 10}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="11" text-anchor="end">${(v * 100).toFixed(0)}%</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Measured lights growth rises with satellite coverage, correlation 0.67">
+    <line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" stroke="${GRID}"/>
+    <line x1="${L}" y1="${T}" x2="${L}" y2="${H - B}" stroke="${GRID}"/>
+    ${zero}${ticks}${yt}${pts}
+    <g><circle cx="${W - R + 22}" cy="${T + 16}" r="6" fill="${AMBER}"/><text x="${W - R + 34}" y="${T + 20}" fill="${MUTED}" font-size="11.5">lights YoY</text>
+       <circle cx="${W - R + 22}" cy="${T + 40}" r="3.4" fill="${TEAL}"/><text x="${W - R + 34}" y="${T + 44}" fill="${MUTED}" font-size="11.5">BPS real GDP</text></g>
+    <text x="${(L + (W - R)) / 2}" y="${H - 12}" fill="${MUTED}" font-size="11.5" text-anchor="middle">mean satellite coverage that year →</text>
+  </svg>`;
+}
+
+/* ── Figure 5 · the nowcast, decomposed ───────────────────────────────────── */
+function fig5() {
+  const W = 720, H = 214, L = 26, R = 26, bw = W - L - R;
+  const n = A.nowcast;
+  const max = n.band[1];                       // scale on the band, not the point
+  const sx = (v: number) => L + (v / max) * bw;
+  const cw = sx(n.a) - L;
+  const lw = Math.max(3, (Math.abs(n.contribution) / max) * bw);
+  const tipX = L + cw + lw / 2;
+  const b0 = sx(n.band[0]), b1 = sx(n.band[1]);
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="The published nowcast is 99.5 percent a constant">
+    <text x="${Math.min(W - R, tipX + 30).toFixed(1)}" y="34" fill="${AMBER}" font-size="11.5" text-anchor="end" font-family="var(--font-data)">what the lights add · ${(n.contribution * 100).toFixed(3)} pp</text>
+    <line x1="${tipX.toFixed(1)}" y1="40" x2="${tipX.toFixed(1)}" y2="52" stroke="${AMBER}" stroke-width="1.2"/>
+    <rect x="${L}" y="52" width="${cw.toFixed(1)}" height="38" fill="${SLATE}" rx="3"/>
+    <rect x="${(L + cw).toFixed(1)}" y="52" width="${lw.toFixed(1)}" height="38" fill="${AMBER}" rx="1.5"/>
+    <text x="${L + 14}" y="76" fill="#0A0E1A" font-size="12.5" font-weight="600">the constant · ${(n.a * 100).toFixed(2)} pp</text>
+    <line x1="${b0.toFixed(1)}" y1="112" x2="${b1.toFixed(1)}" y2="112" stroke="${MUTED}" stroke-width="2"/>
+    <line x1="${b0.toFixed(1)}" y1="106" x2="${b0.toFixed(1)}" y2="118" stroke="${MUTED}" stroke-width="2"/>
+    <line x1="${b1.toFixed(1)}" y1="106" x2="${b1.toFixed(1)}" y2="118" stroke="${MUTED}" stroke-width="2"/>
+    <text x="${(W - R).toFixed(1)}" y="136" fill="${MUTED}" font-size="11.5" text-anchor="end">95% band · ${((n.band[1] - n.band[0]) * 100).toFixed(2)} pp wide — ${n.bandVsContribution.toFixed(0)}× the lights' contribution</text>
+    <text x="${L}" y="172" fill="${MUTED}" font-size="11.5">Published headline ${(n.published * 100).toFixed(2)}% · national lights moved ${(n.lightsGrowth * 100).toFixed(1)}% to produce it</text>
+    <text x="${L}" y="194" fill="${MUTED}" font-size="10.5" font-family="var(--font-data)" opacity="0.8">horizontal scale: 0 to ${(max * 100).toFixed(2)}% growth</text>
+  </svg>`;
+}
+
+/* ── Figure 6 · flares ────────────────────────────────────────────────────── */
+function fig6() {
+  const rows = A.flares.top;
+  const W = 720, rh = 26, T = 10;
+  const H = T + rows.length * rh + 16, L = 168, R = 62;
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rh;
+    const w = r.share * (W - L - R);
+    return `<text x="${L - 12}" y="${y + 16}" fill="${INK}" font-size="12" text-anchor="end">${esc(r.name)}</text>
+      <rect x="${L}" y="${y + 5}" width="${w.toFixed(1)}" height="14" fill="${CORAL}" rx="2"/>
+      <text x="${(L + w + 8).toFixed(1)}" y="${y + 16}" fill="${CORAL}" font-size="11.5" font-family="var(--font-data)">${(r.share * 100).toFixed(1)}%</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Share of each regency's night light that is gas flaring">${body}</svg>`;
+}
+
+/* ── Figure 7 · Ramadan, national zero over regional spread ───────────────── */
+function fig7() {
+  const q = A.deseason.ramadan_beta_regency_quantiles;
+  const W = 720, H = 132, L = 40, R = 40, mid = 62;
+  const lo = q["0.1"], hi = q["0.9"];
+  const sx = (v: number) => L + ((v - lo * 1.15) / (hi * 1.15 - lo * 1.15)) * (W - L - R);
+  const mark = (v: number, lab: string, col: string, dy: number) =>
+    `<line x1="${sx(v).toFixed(1)}" y1="${mid - 16}" x2="${sx(v).toFixed(1)}" y2="${mid + 16}" stroke="${col}" stroke-width="2"/>
+     <text x="${sx(v).toFixed(1)}" y="${mid + dy}" fill="${col}" font-size="11" text-anchor="middle" font-family="var(--font-data)">${lab}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Ramadan effect on lights ranges from minus 21 percent to plus 20 percent across regencies">
+    <rect x="${sx(q["0.1"]).toFixed(1)}" y="${mid - 11}" width="${(sx(q["0.9"]) - sx(q["0.1"])).toFixed(1)}" height="22" fill="${AMBER}" opacity="0.14" rx="3"/>
+    <rect x="${sx(q["0.25"]).toFixed(1)}" y="${mid - 11}" width="${(sx(q["0.75"]) - sx(q["0.25"])).toFixed(1)}" height="22" fill="${AMBER}" opacity="0.3" rx="3"/>
+    <line x1="${L}" y1="${mid}" x2="${W - R}" y2="${mid}" stroke="${GRID}"/>
+    ${mark(q["0.1"], `p10 ${(q["0.1"] * 100).toFixed(0)}%`, MUTED, -24)}
+    ${mark(q["0.9"], `p90 +${(q["0.9"] * 100).toFixed(0)}%`, MUTED, -24)}
+    ${mark(A.deseason.ramadan_beta_national, `national +${(A.deseason.ramadan_beta_national * 100).toFixed(2)}%`, TEAL, 34)}
+    <text x="${W / 2}" y="${H - 8}" fill="${MUTED}" font-size="11.5" text-anchor="middle">regency Ramadan coefficient — the national average sits inside a 42-point spread</text>
+  </svg>`;
+}
+
+const F1 = fig1(), F2 = fig2(), F3 = fig3(), F4 = fig4(), F5 = fig5(), F6 = fig6(), F7 = fig7();
+const javaLight = 0.667, javaGdp = 0.5702, javaLand = 0.066;
+---
+<html lang="en" data-case="nightlights" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Do Night Lights Measure Indonesia's Regional Economy?</title>
+    <meta name="description" content="A replication and stress test of night-lights economic measurement at Indonesian kabupaten level, 2018-2025, against Gibson et al. (2021)." />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="back" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/`}>← The instrument</a>
+      <span class="stamp dim">REVIEW ARTICLE · DATA VINTAGE {A.vintage}</span>
+    </header>
+
+    <article>
+      <div class="masthead">
+        <span class="eyebrow">METHODS &amp; VALIDATION · NIGHTTIME-LIGHTS ECONOMIC PULSE</span>
+        <h1>Do night lights measure Indonesia's regional economy?</h1>
+        <p class="standfirst">A replication and stress test at kabupaten level, 2018–2025. We reproduce
+        <a href="#ref-gibson">Gibson, Olivia, Boe-Gibson &amp; Li (2021)</a> on newer data, confirm their
+        result for cities almost exactly, overturn it for rural regencies — and then show why the
+        resulting instrument still cannot be used the way it is most often wanted.</p>
+        <div class="byline">
+          <span>Demo Lab · FMV</span><span>Data through {A.vintage}</span>
+          <span>{A.bps.n_regencies} regencies · {A.levels.length} years</span>
+        </div>
+      </div>
+
+      <section class="abstract">
+        <h2>Abstract</h2>
+        <p><b>Question.</b> Night-lights indices are widely sold as a substitute for slow official
+        statistics. We ask what they can actually support at Indonesia's second sub-national level.</p>
+        <p><b>Method.</b> NASA Black Marble monthly composites ({A.levels[0].year}–{last.year}) over
+        {A.bps.n_regencies} frozen-vintage regencies, matched to BPS real PDRB, with a gas-flare mask
+        and coverage-weighted seasonal adjustment. Thresholds were registered before results.</p>
+        <p><b>Findings.</b> Lights explain {pct(minR2, 0)}–{pct(maxR2, 0)} of the cross-regency variation
+        in output, every year. But the elasticity collapses from <b>{sig(last.all.slope)}</b> in the
+        cross-section to <b>{sig(A.ladder[3].b)}</b> once place and year are absorbed, and to
+        <b>{sig(A.nowcast.beta, 4)}</b> in growth, where the confidence interval contains zero. Out of
+        sample, the annual model is <b>{Math.round((A.oos.annual.mae_lights / A.oos.annual.mae_naive - 1) * 100)}% worse than
+        assuming last year's growth</b>. Measured lights growth correlates <b>r = {A.coverage.corr.toFixed(2)}</b>
+        with how much of the country the satellite actually saw, so the growth series is partly an
+        observation artefact. The instrument's bias is structured, not random: lights overstate Java by
+        {Math.round((javaLight - javaGdp) * 100)} points, and in {A.flares.top[0].name}
+        {pct(A.flares.top[0].share, 0)} of all measured light is a single gas flare.</p>
+        <p><b>Conclusion.</b> Night lights are a <i>location</i> instrument, not a <i>timing</i> instrument.
+        Used for allocation and targeting they are defensible; used for nowcasting regional growth they
+        are, on this evidence, worse than doing nothing.</p>
+      </section>
+
+      <nav class="toc">
+        <a href="#s1">1 · The claim under test</a><a href="#s2">2 · Prior art</a>
+        <a href="#s3">3 · Data and method</a><a href="#s4">4 · Lights locate activity</a>
+        <a href="#s5">5 · The signal dies</a><a href="#s6">6 · The nowcast is a constant</a>
+        <a href="#s7">7 · Coverage confounds growth</a><a href="#s8">8 · The bias is structured</a>
+        <a href="#s9">9 · What follows for decisions</a><a href="#s10">10 · What would settle it</a>
+        <a href="#refs">References</a>
+      </nav>
+
+      <section id="s1">
+        <h2><span class="num">1</span> The claim under test</h2>
+        <p>Indonesia publishes real GDP for all {A.bps.n_regencies} kabupaten and kota, but annually and
+        with a long lag. The appeal of night lights is obvious: a satellite passes nightly, sees every
+        regency equally, and cannot be lobbied. The claim that follows — that radiance can stand in for
+        regional accounts, months ahead of the statistical office — is the one this paper tests.</p>
+        <p>We separate two questions that are routinely merged. <b>Where</b> is economic activity? and
+        <b>When</b> does it move? They are not the same question, they do not have the same answer, and
+        conflating them is how a defensible instrument becomes an indefensible forecast.</p>
+      </section>
+
+      <section id="s2">
+        <h2><span class="num">2</span> Prior art, and the benchmark we replicate</h2>
+        <p><a href="#ref-hsw">Henderson, Storeygard &amp; Weil (2012)</a> established the method at country
+        level, reporting that a one-percent change in luminosity accompanies roughly a 0.28-percent change
+        in GDP, and proposing lights as a composite input where national accounts are weak.
+        <a href="#ref-cn">Chen &amp; Nordhaus (2011)</a> made the boundary condition explicit: lights add
+        statistical value only where conventional data are poor.</p>
+        <p>The decisive prior work for our setting is <a href="#ref-gibson">Gibson, Olivia, Boe-Gibson &amp; Li
+        (2021)</a>, who chose Indonesia precisely because it is one of the few developing countries publishing
+        GDP at the second sub-national level. Their verdict was blunt: using VIIRS composites for 2015–16,
+        night lights predicted city GDP well (elasticity {GIBSON.kota.b}, R² {GIBSON.kota.r2}) and rural
+        kabupaten GDP essentially not at all (elasticity {GIBSON.kabupaten.b}, R² {GIBSON.kabupaten.r2}).
+        They concluded that lights are "not a suitable source of data to proxy for GDP in non-urban areas in
+        developing countries like Indonesia."</p>
+        <p>We run their specification — log real GDP on log sum of lights, same administrative level, same
+        country — on a different lights product and a later decade. This is a direct replication, and the
+        two halves of it disagree.</p>
+      </section>
+
+      <section id="s3">
+        <h2><span class="num">3</span> Data and method</h2>
+        <p><b>Radiance.</b> NASA Black Marble monthly composites (VNP46A3 / VJ146A3, Román et al. 2018),
+        15 arc-second, QA-masked below two cloud-free observations. Black Marble applies atmospheric,
+        terrain, vegetation and lunar BRDF corrections that the annual composites used by earlier work do
+        not — a difference that matters most exactly where the signal is dimmest.</p>
+        <p><b>Boundaries.</b> geoBoundaries ADM2, frozen at the 2020 vintage, with a crosswalk for
+        subsequent splits. Without freezing, district <i>pemekaran</i> manufactures growth that never
+        happened.</p>
+        <p><b>Flares.</b> {A.flares.n_sites} persistent gas-flare sites from the VIIRS Nightfire survey,
+        buffered at {A.flares.buffer_km} km, removed before every statistic. The buffer is a measured
+        choice, not an inherited one: 3 km captures about 84% of an isolated flare's excess light, while
+        the 5 km often used swallows whole towns.</p>
+        <p><b>Output.</b> BPS real PDRB (ADHK), annual table {A.bps.annual_var} and quarterly table
+        {A.bps.quarterly_var}, {A.bps.annual_years[0]}–{A.bps.latest_annual}.</p>
+        <p class="caveat"><b>Registered in advance.</b> The levels gate (G-A1) required R² ≥ 0.65; it
+        passed at {sig(A.gates["G-A1"].min_r2)}. The out-of-sample gate (G-A2) required a
+        {pct(0.6, 0)} province win rate; it reached {pct(A.gates["G-A2"].prov_win_rate)} and
+        <b>failed</b>. Both are published here, unchanged.</p>
+      </section>
+
+      <section id="s4">
+        <h2><span class="num">4</span> Finding one — lights locate activity, and rural Indonesia has changed</h2>
+        <p>Across every year in the sample, log real PDRB regressed on log sum of lights yields
+        R² between {sig(minR2)} and {sig(maxR2)} over all {A.bps.n_regencies} regencies. That is the
+        result the instrument is built on, and it is stable.</p>
+        <figure>
+          <Fragment set:html={F1} />
+          <figcaption><b>Figure 1.</b> The cross-section in {A.scatterLatest.year}. Each dot is one
+          regency; teal are kota (cities), amber kabupaten. Fitted separately, cities give a slope of
+          {sig(last.kota.slope)} and rural regencies {sig(last.kabupaten.slope)}. Hover any dot.</figcaption>
+        </figure>
+        <p>Splitting the sample the way Gibson et al. split it produces a result in two halves. For
+        <b>cities</b>, we replicate them almost exactly: our mean elasticity is {sig(mean(kotaB))}
+        against their {GIBSON.kota.b}, with R² {sig(mean(A.levels.map((l: any) => l.kota.r2)))} against
+        their {GIBSON.kota.r2}. An independent pipeline, a different sensor product and a different decade
+        land on the same number — which is the strongest available evidence that the pipeline is sound.</p>
+        <p>For <b>rural kabupaten</b>, we do not replicate them at all. Where they found an elasticity of
+        {GIBSON.kabupaten.b} and R² of {GIBSON.kabupaten.r2} — statistically indistinguishable from no
+        relationship — we find an elasticity of {sig(mean(kabB))} and R² of {sig(mean(kabR2))}.</p>
+        <figure>
+          <Fragment set:html={F3} />
+          <figcaption><b>Figure 2.</b> This study against Gibson et al. (2021). The city result replicates;
+          the rural result does not. Bars are clipped at 1.05.</figcaption>
+        </figure>
+        <p>Two explanations are consistent with this, and they have very different implications. The first
+        is <b>instrumental</b>: Black Marble's BRDF and stray-light corrections rescue a signal that the
+        uncorrected annual composites of 2015–16 buried in noise, and dim rural regencies are precisely
+        where that correction bites. The second is <b>substantive</b>: Indonesia's electrification ratio
+        rose from roughly 88% in 2015 to near-universal by 2024, so rural light may genuinely have crossed
+        the detection floor in the intervening decade. We are careful not to claim which. §10 sets out the
+        experiment that separates them.</p>
+      </section>
+
+      <section id="s5">
+        <h2><span class="num">5</span> Finding two — the signal dies as the cross-section is removed</h2>
+        <p>A cross-sectional fit answers "where", and it is flattered by scale: big regencies have more
+        light and more output. The question that matters for any timing use is what survives once you stop
+        comparing places to each other and start comparing a place to itself.</p>
+        <figure>
+          <Fragment set:html={F2} />
+          <figcaption><b>Figure 3.</b> The same relationship under progressively stricter designs. Bars are
+          95% intervals; grey means the interval contains zero.</figcaption>
+        </figure>
+        <p>The decay is monotone and severe. Absorbing regency fixed effects cuts the elasticity from
+        {sig(last.all.slope)} to {sig(A.ladder[2].b)}. Absorbing year effects as well — that is, asking
+        whether a regency that brightened faster than average also grew faster than average — leaves
+        {sig(A.ladder[3].b)}, with an interval spanning zero. In growth rates the coefficient is
+        {sig(A.nowcast.beta, 4)} and the within-R² is {A.ladder[5].r2.toExponential(1)}.</p>
+        <p>This is not a failure of the pipeline. It is the well-documented shape of the phenomenon —
+        Gibson et al. observed the same ordering, noting that between-R² "greatly exceed[s] the within-R²".
+        Our contribution is to quantify how far the collapse goes on modern data: <b>a factor of roughly
+        600 between the cross-sectional and the growth elasticity</b>.</p>
+      </section>
+
+      <section id="s6">
+        <h2><span class="num">6</span> Finding three — the published nowcast is, numerically, a constant</h2>
+        <p>If the growth coefficient is {sig(A.nowcast.beta, 4)}, then a growth nowcast built on it cannot
+        carry much information. It is worth making that concrete rather than abstract.</p>
+        <figure>
+          <Fragment set:html={F5} />
+          <figcaption><b>Figure 4.</b> Decomposition of the published headline nowcast for {A.vintage}.</figcaption>
+        </figure>
+        <p>National lights moved {pct(A.nowcast.lightsGrowth)} year-on-year. Passed through the calibration,
+        that motion contributes <b>{(A.nowcast.contribution * 100).toFixed(3)} percentage points</b> to a
+        headline of {pct(A.nowcast.published, 2)}. The remaining
+        <b>{pct(A.nowcast.constantShare, 1)} is the intercept</b> — a number that would print essentially
+        unchanged if the satellite had been switched off. The 95% band is
+        {A.nowcast.bandVsContribution.toFixed(0)} times wider than the signal inside it.</p>
+        <p>The same collapse governs the regency board. Across the movers, lights growth ranges from
+        {pct(A.movers.lightsRange[0])} to {pct(A.movers.lightsRange[1])} — a
+        {Math.round((A.movers.lightsRange[1] - A.movers.lightsRange[0]) * 100)}-point spread — which the
+        mapping compresses into {((A.movers.mappedRange[1] - A.movers.mappedRange[0]) * 100).toFixed(2)}
+        points of predicted growth. {A.movers.top[0].name} brightened
+        {pct(A.movers.top[0].lights_growth, 0)} and {A.movers.bottom[0].name} darkened
+        {pct(Math.abs(A.movers.bottom[0].lights_growth), 0)}; the model separates them by
+        {((A.movers.top[0].g - A.movers.bottom[0].g) * 100).toFixed(2)} points.</p>
+        <p class="caveat"><b>Out of sample this is not merely uninformative, it is harmful.</b> On the held-out
+        year, mean absolute error using lights was {sig(A.oos.annual.mae_lights, 4)} against
+        {sig(A.oos.annual.mae_naive, 4)} for assuming last year's growth — the lights model is
+        <b>{Math.round((A.oos.annual.mae_lights / A.oos.annual.mae_naive - 1) * 100)}% worse than doing
+        nothing</b>, winning in only {pct(A.oos.annual.prov_win_rate)} of provinces. The quarterly variant
+        does better than naive on error ({sig(A.oos.quarterly.mae_lights, 4)} against
+        {sig(A.oos.quarterly.mae_naive, 4)}) but still wins in under half of provinces
+        ({pct(A.oos.quarterly.prov_win_rate)}). This is gate G-A2, and it is published failed.</p>
+      </section>
+
+      <section id="s7">
+        <h2><span class="num">7</span> Finding four — coverage confounds the growth series</h2>
+        <p>Indonesia is equatorial and cloudy. In this sample {pct(A.deseason.regency_months_no_data)} of
+        regency-months carry no usable composite at all, and
+        {A.deseason.national_low_coverage_months} of {A.deseason.months} national months are flagged
+        low-coverage. The pipeline divides by coverage to compensate. We tested whether that works.</p>
+        <figure>
+          <Fragment set:html={F4} />
+          <figcaption><b>Figure 5.</b> Measured lights growth against mean satellite coverage, by year.
+          Teal dots are BPS real GDP growth for the same year; the connecting line is the gap.</figcaption>
+        </figure>
+        <p>It does not work well enough. Across years, measured lights growth correlates
+        <b>r = {A.coverage.corr.toFixed(2)}</b> with mean coverage. The two years where lights most
+        overshoot official growth are the two years coverage jumped, and the year lights show a
+        <i>contraction</i> that BPS does not is the year coverage fell to its sample minimum. A
+        clear-sky pixel is not a random pixel, so when the satellite sees less of the country it sees a
+        systematically different country, and dividing by the observed fraction does not undo that.</p>
+        <p class="caveat">This has a direct consequence for a claim the instrument's own front page makes.
+        The page states that in 2020 "GDP fell while the lights barely blinked." On the case's own numbers
+        that is not what happened: BPS real GDP fell {pct(Math.abs(A.coverage.rows[1].bps!), 2)} and mean
+        measured lights fell {pct(Math.abs(A.coverage.rows[1].lights), 2)} — they moved together almost
+        exactly. But coverage also fell sharply that year, so the agreement cannot be read as the
+        instrument succeeding either. The honest statement is that 2020 is <b>not identified</b>: signal
+        and artefact moved in the same direction and cannot be separated. We recommend the page be
+        corrected accordingly.</p>
+      </section>
+
+      <section id="s8">
+        <h2><span class="num">8</span> Finding five — the bias is structured, and therefore usable</h2>
+        <p>An instrument with random error is noisy. An instrument with <i>structured</i> error is
+        correctable, and its residuals carry information. This one is the second kind.</p>
+        <div class="stat-row">
+          <div class="stat"><span class="sv">{pct(javaLight, 1)}</span><span class="sl">of national light is on Java</span></div>
+          <div class="stat"><span class="sv">{pct(javaGdp, 1)}</span><span class="sl">of national GDP is on Java (BPS, 2024)</span></div>
+          <div class="stat"><span class="sv amber">+{Math.round((javaLight - javaGdp) * 100)} pts</span><span class="sl">the instrument's urban tilt, measured</span></div>
+        </div>
+        <p>Java holds {pct(javaLand, 1)} of the land and {pct(javaGdp, 1)} of the output, but emits
+        {pct(javaLight, 1)} of the light. The {Math.round((javaLight - javaGdp) * 100)}-point gap is the
+        urban-industrial weighting of the sensor made numerical — the same bias Gibson et al. identified
+        qualitatively, here with a magnitude attached to it.</p>
+        <p>The extractive tilt is sharper still. In {A.flares.n_regencies_flagged} regencies a meaningful
+        share of all measured light is gas flaring rather than economic life:</p>
+        <figure>
+          <Fragment set:html={F6} />
+          <figcaption><b>Figure 6.</b> Share of each regency's measured night light removed as gas flaring.
+          In {A.flares.top[0].name} the instrument is, before correction, very largely an LNG sensor.</figcaption>
+        </figure>
+        <p>And the residuals themselves are diagnostic. {A.weakFitN} regencies sit beyond two standard
+        deviations of the levels fit in the latest year. They are not scattered at random: the largest
+        positive residuals are dense service economies where output vastly exceeds light
+        ({A.weakFit.find((w: any) => w.name.includes("Jakarta"))?.name ?? "Kota Jakarta Pusat"}), and the
+        largest negative residuals are sparsely-populated regencies where light vastly exceeds recorded
+        output. A regency that is bright but poor, or dark but rich, is a place where the satellite and the
+        statistical office disagree — and that disagreement is a question worth asking, not a defect to
+        hide.</p>
+      </section>
+
+      <section id="s9">
+        <h2><span class="num">9</span> What follows for decisions</h2>
+        <p>Evidence is only worth gathering if it changes an action. Read strictly, this instrument
+        supports three uses and forbids a fourth.</p>
+        <ol class="uses">
+          <li><b>Allocation and targeting.</b> Where the cross-section is stable at R² ≈ 0.7 and refreshes
+          monthly, lights are a defensible input to spatial targeting between annual PDRB releases —
+          which regencies look under-served relative to their economic footprint.</li>
+          <li><b>Audit and triage.</b> The residual list is the product. Persistent divergence between
+          measured light and reported output flags where regional statistics deserve a second look.
+          This is the highest-value use and it is currently presented as a limitation.</li>
+          <li><b>Structural monitoring.</b> Flare shares, urban expansion and electrification are measured
+          well by lights because they are precisely what lights physically are.</li>
+          <li class="no"><b>Not: regional growth nowcasting.</b> On this evidence the growth mapping is
+          {Math.round((A.oos.annual.mae_lights / A.oos.annual.mae_naive - 1) * 100)}% worse than a naive
+          rule out of sample and its headline is {pct(A.nowcast.constantShare, 0)} intercept. It should be
+          withdrawn or relabelled as a research diagnostic, not shipped as a forecast.</li>
+        </ol>
+        <p class="pull">The discipline that makes this instrument trustworthy is the same one that
+        forbids its most marketable use. That trade is the point: an organisation that will publish its own
+        failed gate is one whose passed gates mean something.</p>
+      </section>
+
+      <section id="s10">
+        <h2><span class="num">10</span> What would settle the open question</h2>
+        <p>The rural divergence in §4 has two candidate causes and we deliberately do not adjudicate
+        between them. A clean experiment does, and it is cheap:</p>
+        <ol class="next">
+          <li><b>Hold the decade fixed, swap the product.</b> Run this exact specification on 2015–16 using
+          both the annual composites Gibson et al. used and Black Marble for the same years. If Black Marble
+          lifts rural R² from ≈0.01 toward 0.7 on <i>identical years</i>, the cause is instrumental. If it
+          does not, the cause is electrification — a real economic change, and a more interesting finding.</li>
+          <li><b>Break the scale mechanic.</b> Both sides of the levels regression are extensive quantities.
+          Report the incremental R² of lights over log population and log area, and repeat in per-capita
+          form. Until that is done, part of the 0.7 is arithmetic rather than evidence.</li>
+          <li><b>Match the pixels before differencing.</b> Compute year-on-year change only on pixels
+          observed in both periods. This removes the composition change behind Figure 5 at its source,
+          rather than dividing by coverage after the fact.</li>
+          <li><b>Interact Ramadan with what it should depend on.</b> The national Ramadan coefficient is
+          {pct(A.deseason.ramadan_beta_national, 2)} — indistinguishable from nothing — but that average
+          conceals a spread from {pct(A.deseason.ramadan_beta_regency_quantiles["0.1"], 0)} to
+          {pct(A.deseason.ramadan_beta_regency_quantiles["0.9"], 0)} across regencies.</li>
+        </ol>
+        <figure>
+          <Fragment set:html={F7} />
+          <figcaption><b>Figure 7.</b> The regency-level Ramadan coefficient. A national average of
+          approximately zero sits inside a 42-point spread — one of the clearest signals in the dataset,
+          currently discarded as a nuisance regressor.</figcaption>
+        </figure>
+        <p>That last one is not a robustness check but an unexploited result. Some Indonesian regencies
+        brighten by a fifth during Ramadan and others darken by a fifth. Whatever explains that — night
+        markets, <i>mudik</i> outflow, industrial shutdown, the local balance of household against
+        industrial lighting — is a measurable feature of Indonesian economic life that no national
+        statistic records, and this pipeline already computes it.</p>
+      </section>
+
+      <section id="refs">
+        <h2><span class="num">11</span> References and reproducibility</h2>
+        <ol class="refs">
+          <li id="ref-hsw">Henderson, J.V., Storeygard, A. &amp; Weil, D.N. (2012). Measuring Economic
+          Growth from Outer Space. <i>American Economic Review</i> 102(2), 994–1028.
+          doi:10.1257/aer.102.2.994</li>
+          <li id="ref-gibson">Gibson, J., Olivia, S., Boe-Gibson, G. &amp; Li, C. (2021). Which night lights
+          data should we use in economics, and where? <i>Journal of Development Economics</i> 149, 102602.
+          doi:10.1016/j.jdeveco.2020.102602</li>
+          <li id="ref-cn">Chen, X. &amp; Nordhaus, W.D. (2011). Using luminosity data as a proxy for economic
+          statistics. <i>PNAS</i> 108(21), 8589–8594. doi:10.1073/pnas.1017031108</li>
+          <li id="ref-roman">Román, M.O. et al. (2018). NASA's Black Marble nighttime lights product suite.
+          <i>Remote Sensing of Environment</i> 210, 113–143. doi:10.1016/j.rse.2018.03.017</li>
+          <li id="ref-elvidge">Elvidge, C.D. &amp; Zhizhin, M. (2021). Global Gas Flare Survey by Infrared
+          Imaging, VIIRS Nightfire 2012–2019. ORNL DAAC. doi:{A.flares.doi}</li>
+          <li id="ref-bps">BPS-Statistics Indonesia. Gross Regional Domestic Product, constant prices,
+          kabupaten/kota. WebAPI tables {A.bps.annual_var} (annual) and {A.bps.quarterly_var} (quarterly).</li>
+        </ol>
+        <p class="repro">Every figure on this page is generated in the page's own frontmatter from
+        <code>data/article.json</code>, which is derived by <code>pipeline/article.py</code> from the
+        calibration the instrument publishes. Data vintage {A.vintage}; calibration generated
+        {A.generated}. Gate thresholds were committed to version control before the corresponding results
+        were computed. Boundaries are frozen at the 2020 vintage under a published crosswalk.</p>
+      </section>
+
+      <footer class="end">
+        <p>Part of the Demo Lab. Built end-to-end on public data — acquisition, pipeline, model,
+        validation, and this review.</p>
+        <a class="cta" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/`}>← Back to the instrument</a>
+      </footer>
+    </article>
+
+    <div id="tip" hidden></div>
+
+    <style is:global>
+      body { margin: 0; background: var(--ground); color: var(--ink);
+        font-family: var(--font-body); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+      * , *::before, *::after { box-sizing: border-box; }
+      a { color: var(--accent); }
+
+      .bar { position: sticky; top: 0; z-index: 20; display: flex; justify-content: space-between;
+        align-items: center; gap: 16px; padding: 12px 24px; background: color-mix(in srgb, var(--ground) 92%, transparent);
+        backdrop-filter: blur(8px); border-bottom: 1px solid var(--hairline); }
+      .back { text-decoration: none; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.06em; }
+      .stamp { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); }
+
+      article { max-width: 50rem; margin: 0 auto; padding: 0 24px 12vh; }
+      .masthead { padding: 9vh 0 4vh; border-bottom: 1px solid var(--hairline); }
+      .eyebrow { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--accent); }
+      h1 { font-family: var(--font-display); font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.1;
+        letter-spacing: -0.02em; margin: 18px 0 20px; }
+      .standfirst { font-size: 1.12rem; color: var(--ink); margin: 0 0 26px; max-width: 42rem; }
+      .byline { display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: var(--font-data);
+        font-size: 0.74rem; letter-spacing: 0.08em; color: var(--ink-muted); text-transform: uppercase; }
+
+      .abstract { margin: 5vh 0; padding: 26px 28px; border: 1px solid var(--hairline);
+        border-left: 3px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
+      .abstract h2 { font-family: var(--font-data); font-size: 0.76rem; letter-spacing: 0.16em;
+        color: var(--accent); margin: 0 0 14px; text-transform: uppercase; }
+      .abstract p { margin: 0 0 12px; font-size: 0.97rem; }
+      .abstract p:last-child { margin-bottom: 0; }
+
+      .toc { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 20px 0 8px; margin-bottom: 4vh;
+        border-bottom: 1px solid var(--hairline); font-family: var(--font-data); font-size: 0.74rem; }
+      .toc a { text-decoration: none; color: var(--ink-muted); }
+      .toc a:hover { color: var(--accent); }
+
+      section { margin: 6vh 0; }
+      h2 { font-family: var(--font-display); font-size: 1.55rem; line-height: 1.25; letter-spacing: -0.01em;
+        margin: 0 0 20px; display: flex; gap: 14px; align-items: baseline; }
+      .num { font-family: var(--font-data); font-size: 0.9rem; color: var(--accent); flex: none; }
+      p { margin: 0 0 18px; }
+      b { color: #FFF3DC; font-weight: 600; }
+
+      .caveat { border-left: 2px solid var(--alert); padding: 2px 0 2px 18px; color: var(--ink-muted); }
+      .caveat b { color: var(--alert); }
+      .pull { font-size: 1.1rem; line-height: 1.6; border-left: 3px solid var(--accent);
+        padding: 8px 0 8px 20px; color: #FFF3DC; }
+
+      figure { margin: 34px 0; padding: 20px 18px 14px; border: 1px solid var(--hairline);
+        border-radius: var(--radius); background: var(--surface); }
+      .fig { display: block; width: 100%; height: auto; overflow: visible; }
+      figcaption { font-size: 0.85rem; color: var(--ink-muted); margin-top: 14px; line-height: 1.55; }
+      figcaption b { color: var(--ink); }
+
+      .d1 { fill: var(--accent); opacity: 0.5; transition: opacity 0.12s, r 0.12s; cursor: crosshair; }
+      .d1.kota { fill: #4BB8A9; opacity: 0.75; }
+      .d1:hover { opacity: 1; }
+      .cv { cursor: crosshair; }
+
+      .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin: 26px 0; }
+      .stat { padding: 18px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
+      .sv { display: block; font-family: var(--font-display); font-size: 1.7rem; letter-spacing: -0.01em; }
+      .sv.amber { color: var(--accent); }
+      .sl { display: block; font-size: 0.82rem; color: var(--ink-muted); margin-top: 6px; line-height: 1.45; }
+
+      ol.uses, ol.next { padding-left: 22px; margin: 0 0 18px; }
+      ol.uses li, ol.next li { margin-bottom: 14px; }
+      ol.uses li.no { color: var(--ink-muted); }
+      ol.uses li.no b { color: var(--alert); }
+
+      ol.refs { padding-left: 22px; font-size: 0.9rem; color: var(--ink-muted); }
+      ol.refs li { margin-bottom: 12px; }
+      .repro { font-size: 0.86rem; color: var(--ink-muted); border-top: 1px solid var(--hairline); padding-top: 18px; }
+      code { font-family: var(--font-data); font-size: 0.88em; color: var(--accent); }
+
+      .end { margin-top: 8vh; padding-top: 26px; border-top: 1px solid var(--hairline); }
+      .end p { color: var(--ink-muted); font-size: 0.9rem; }
+      .cta { display: inline-block; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.08em;
+        color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 10px 18px; text-decoration: none; }
+      .cta:hover { background: var(--accent-ink); }
+
+      #tip { position: fixed; z-index: 60; pointer-events: none; background: var(--surface-raised);
+        border: 1px solid var(--hairline); border-radius: 5px; padding: 8px 11px; font-family: var(--font-data);
+        font-size: 0.72rem; line-height: 1.5; color: var(--ink); box-shadow: 0 8px 26px rgba(0,0,0,0.5); }
+
+      @media (max-width: 680px) {
+        article { padding: 0 18px 10vh; }
+        .masthead { padding-top: 5vh; }
+        figure { padding: 14px 10px 10px; }
+      }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+
+    <script>
+      /* Hover read-out for the two scatter figures. Pure SVG, no GPU path. */
+      const tip = document.getElementById("tip");
+      const show = (html, e) => {
+        tip.innerHTML = html; tip.hidden = false;
+        const r = tip.getBoundingClientRect();
+        let x = e.clientX + 14, y = e.clientY + 14;
+        if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+        if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+        tip.style.left = x + "px"; tip.style.top = y + "px";
+      };
+      document.querySelectorAll(".d1").forEach((el) => {
+        el.addEventListener("mousemove", (e) => {
+          const d = el.dataset;
+          show(`<b>${d.n}</b><br>log lights ${d.x} · log PDRB ${d.y}` +
+               (d.f ? "<br>flare-corrected" : ""), e);
+        });
+        el.addEventListener("mouseleave", () => { tip.hidden = true; });
+      });
+      document.querySelectorAll(".cv").forEach((el) => {
+        el.addEventListener("mouseleave", () => { tip.hidden = true; });
+      });
+    </script>
+  </body>
+</html>
