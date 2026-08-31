@@ -206,8 +206,9 @@ def gate_h2(prov: gpd.GeoDataFrame, linked: pd.DataFrame) -> dict:
             "max_abs_pct_diff": float(df.pct_diff.abs().max()),
             "event_floor_keeps_share_of_ha": keep,
             "note": "compared on unfiltered alert hectares, because GFW's aggregation counts "
-                    "every alert pixel. The >= 0.5 ha event floor that the rest of the page uses "
-                    f"keeps {keep:.0%} of those hectares — stated rather than netted out",
+                    f"every alert pixel. The >= 0.5 ha event floor keeps {keep:.0%} of those "
+                    "hectares in these three provinces (the national figure is computed in "
+                    "pipeline/baserate.py and published on the page) — stated, not netted out",
             "comparator": f"{spec['dataset']} {spec['version']} raster analysis over the same "
                           "province geometry",
             "errors": fails, "rows": _nan_safe(df.to_dict("records"))}
@@ -298,12 +299,14 @@ def main(argv: list[str]) -> None:
             "primary_share": float(linked.loc[linked.in_primary].ha.sum() / linked.ha.sum()),
         },
         # Measured, not assumed: RADD's detection domain in Indonesia IS the UMD 2001 primary
-        # humid-tropical-forest mask.  Across every tile, 100 % of alert pixels fall inside a
-        # mask that covers only 6-28 % of the land, and provinces with no primary forest left
-        # (Java, Nusa Tenggara) produce no alerts at all.  Two consequences the page states
-        # rather than hides: the in-primary flag carries no information, and the palm-internal
-        # share is structurally suppressed, because an estate that was already plantation in
-        # 2001 is outside the domain and can never raise a RADD alert.
+        # humid-tropical-forest mask.  100 % of alert pixels fall inside it.  pipeline/baserate.py
+        # measures that mask at 94.6 Mha, 49.7 % of Indonesian land (close to Turubanova et al.
+        # 2018's published Indonesian primary-forest area), and finds only 13.7 % of the mapped
+        # oil-palm estate inside it.  Provinces with almost no primary forest left produce almost
+        # no alerts -- Java 2,590 ha and Nusa Tenggara 6,978 ha, not zero.  Two consequences the
+        # page states rather than hides: the in-primary flag carries no information, and the
+        # palm-internal share is structurally suppressed, because an estate that was already
+        # plantation in 2001 is outside the domain and can never raise a RADD alert.
         "radd_domain": {
             "primary_share_of_alert_ha": float(
                 linked.loc[linked.in_primary].ha.sum() / linked.ha.sum()),
