@@ -33,6 +33,51 @@ def chk(label: str, value, threshold, cmp: str, unit: str = "") -> dict:
             "cmp": cmp, "unit": unit, "ok": bool(ok)}
 
 
+def disaggregation(latest: int) -> dict:
+    """The shipped procedure, run one administrative level up, where truth exists.
+
+    Chapter 4 distributes an official regency rate among its kecamatan and cannot be
+    checked, because BPS publishes nothing below the regency. The identical rule CAN be
+    checked one level higher: take each province's official population-weighted rate as
+    given, let the held-out model distribute it among that province's regencies, and score
+    the result against the official regency rates. The null is the honest alternative any
+    agency already has — give every regency its province's rate.
+    """
+    if not config.CV_PREDICTIONS.exists():
+        return {}
+    cv = pd.read_parquet(config.CV_PREDICTIONS)
+    d = cv[(cv["year"] == latest) & np.isfinite(cv["pred_lopo"]) &
+           np.isfinite(cv["p0_pct"]) & (cv["pop"] > 0)].copy()
+    if len(d) < 50:
+        return {}
+    g = d.groupby("prov_code")
+    off = g.apply(lambda s: np.average(s["p0_pct"], weights=s["pop"]), include_groups=False)
+    pred = g.apply(lambda s: np.average(s["pred_lopo"], weights=s["pop"]), include_groups=False)
+    d["flat"] = d["prov_code"].map(off)
+    d["bench"] = (d["pred_lopo"] * d["prov_code"].map(off / pred)).clip(0, 100)
+
+    def sc(p):
+        e = d["p0_pct"] - p
+        return {"r2": round(1 - float((e ** 2).sum()) /
+                            float(((d["p0_pct"] - d["p0_pct"].mean()) ** 2).sum()), 4),
+                "mae": round(float(e.abs().mean()), 4),
+                "rmse": round(float(np.sqrt((e ** 2).mean())), 4)}
+
+    return {
+        "level": "province → regency",
+        "n": int(len(d)),
+        "flat_parent_rate": sc(d["flat"]),
+        "benchmarked_model": sc(d["bench"]),
+        "win_rate": round(float(((d["bench"] - d["p0_pct"]).abs()
+                                 < (d["flat"] - d["p0_pct"]).abs()).mean()), 4),
+        "mae_reduction_pp": round(float((d["flat"] - d["p0_pct"]).abs().mean()
+                                        - (d["bench"] - d["p0_pct"]).abs().mean()), 4),
+        "note": ("The kecamatan layer cannot be validated directly. This runs the identical "
+                 "benchmarking rule one level up, where the official regency rates supply "
+                 "the truth, against the null of giving every regency its province's rate."),
+    }
+
+
 def run() -> dict:
     ms_path = config.DATA_DIR / "model_stats.json"
     if not ms_path.exists():
@@ -53,9 +98,10 @@ def run() -> dict:
               f"inflation a non-spatial fold buys, and the reason this number is the one "
               f"published." +
               (f" Where the error lives: {dec['offset_share_of_sse']:.0%} of the squared error "
-               f"is a single constant offset for a whole province, and once that offset is "
-               f"removed the model orders regencies inside their province at ρ "
-               f"{dec['within_province_spearman']:.2f}."
+               f"is a single constant offset for a whole province. Remove those offsets and the "
+               f"model still orders regencies inside their province at ρ "
+               f"{dec['within_province_spearman']:.2f}, though it explains only R² "
+               f"{dec['within_province_r2']:.3f} of the within-province variation — read both."
                if dec.get("offset_share_of_sse") is not None else ""), g1c, hard=True)
 
     oj, kt = skill["lopo_offjava"], skill["lopo_kota"]
@@ -146,6 +192,7 @@ def run() -> dict:
         "skill": skill,
         "skill_panel_lopo": ms["skill_panel_lopo"],
         "decomposition": ms.get("decomposition", {}),
+        "disaggregation": disaggregation(latest),
         "folds": ms["folds"],
         "coverage": {
             "adm2_units": fm["adm2_units"], "adm3_units": fm["adm3_units"],
@@ -153,11 +200,13 @@ def run() -> dict:
             "reconciliation": recon, "inputs": cover,
         },
         "caveats": [
-            "The out-of-sample skill check fails on this run and is published as measured. The BPS "
-            "headcount is a count "
-            "of people under a nominal, region-specific poverty line, not an asset index, and "
-            "the satellite feature families cannot see the line — which is why the published "
-            "literature's asset-wealth R² values are not the right expectation here."
+            "The out-of-sample skill check fails on this run and is published as measured. The "
+            "thresholds were taken from studies that did not hold space out — an index correlated "
+            "with the official rates on the same units — while this number holds an entire "
+            "province out. On these same rows a random fold reports R² 0.65, which is where those "
+            "studies sit. A monetary headcount is also a genuinely harder target than the asset "
+            "indices most satellite-poverty papers predict: it is a threshold crossing of a "
+            "distribution, and a satellite reads a place's central tendency, not its lower tail."
             if hard_fail else
             "The headline skill number is leave-one-province-out; the random k-fold figure is "
             "published only to show how much a non-spatial fold flatters this kind of model.",

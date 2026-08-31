@@ -1,0 +1,1386 @@
+---
+/* Review article — the case, stress-tested against the literature.
+ *
+ * Every figure is built in frontmatter from data/article.json, which pipeline/article.py
+ * derives from the case's own published output (stats.json, model_stats.json) and from
+ * pipeline/review.py's independent recomputation and extra tests. Nothing here is typed
+ * by hand, so the prose cannot drift from the numbers. SVG only: no WebGL, no canvas.
+ */
+import "../styles/tokens.css";
+import A from "../data/article.json";
+
+const f1 = (x: number) => x.toFixed(1);
+const f2 = (x: number) => x.toFixed(2);
+const f3 = (x: number) => x.toFixed(3);
+const pct = (x: number, d = 0) => `${(x * 100).toFixed(d)}%`;
+const idr = (x: number) => `Rp ${Math.round(x).toLocaleString("en-US")}`;
+
+const OCHRE = "#D99A4E", TEAL = "#4BB8A9", CORAL = "#F26D5B", SAND = "#EBD9B8";
+const SLATE = "#8994A3", INK = "#F0EAE1", MUTED = "#A99C8B", GRID = "#3A2E24";
+
+const esc = (s: unknown) =>
+  String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+function ols(x: number[], y: number[]) {
+  const n = x.length;
+  const mx = x.reduce((s, v) => s + v, 0) / n, my = y.reduce((s, v) => s + v, 0) / n;
+  let sxx = 0, sxy = 0, syy = 0;
+  for (let i = 0; i < n; i++) { sxx += (x[i] - mx) ** 2; sxy += (x[i] - mx) * (y[i] - my); syy += (y[i] - my) ** 2; }
+  const b = sxy / sxx;
+  return { slope: b, intercept: my - b * mx, r2: (sxy * sxy) / (sxx * syy), n };
+}
+
+const S = A.skill, TH = A.thresholds, G1 = A.gates["G-F1"], G2 = A.gates["G-F2"];
+const sc = A.scatter;
+const attn = ols(sc.map((d: any) => d.y), sc.map((d: any) => d.p));   // predicted on official
+const lit = (k: string) => A.literature.find((l: any) => l.key === k)!;
+const PUTRI = lit("putri"), SART = lit("sartirano"), JEAN = lit("jean"), JEANC = lit("jean_cons");
+const YEH = lit("yeh"), CHI = lit("chi"), ENG = lit("engstrom");
+
+const ejPts = sc.filter((d: any) => d.pv === "Jawa Timur");
+const ejRmse = Math.sqrt(ejPts.reduce((s: number, d: any) => s + (d.p - d.y) ** 2, 0) / Math.max(1, ejPts.length));
+const ejR = Math.sqrt(ols(ejPts.map((d: any) => d.y), ejPts.map((d: any) => d.p)).r2);
+const EJ = A.eastJava;
+
+const tA = A.testA, tB = A.testB, tC = A.testC, tD = A.testD, tE = A.testE;
+const aFull = tA[tA.length - 1], aPop = tA.find((r: any) => r.label === "Population only")!;
+const aLights = tA.find((r: any) => r.label === "Night lights only")!;
+const aBld = tA.find((r: any) => r.label === "Buildings only")!;
+const aLc = tA.find((r: any) => r.label === "Land cover only")!;
+const bBase = tB[0], bProv = tB[1], bReg = tB[2];
+const oe = A.offsetExplained;
+const provSorted = [...A.provinces].sort((a: any, b: any) => a.offset - b.offset);
+
+/* ── Figure 1 · held out against the official rate ─────────────────────────── */
+function fig1() {
+  const W = 720, H = 470, L = 58, R = 20, T = 20, B = 54;
+  const hi = Math.max(...sc.map((d: any) => Math.max(d.y, d.p))) * 1.03;
+  const s = (v: number) => (v / hi);
+  const sx = (v: number) => L + s(v) * (W - L - R);
+  const sy = (v: number) => H - B - s(v) * (H - T - B);
+  const dots = sc.map((d: any) =>
+    `<circle class="d1 ${d.k ? "kota" : "kab"}" cx="${sx(d.y).toFixed(1)}" cy="${sy(d.p).toFixed(1)}" r="${d.k ? 3.2 : 2.6}" ` +
+    `data-n="${esc(d.n)}" data-v="${esc(d.pv)}" data-y="${f1(d.y)}" data-p="${f1(d.p)}"/>`).join("");
+  const ticks = [0, 10, 20, 30, 40].filter((v) => v <= hi).map((v) =>
+    `<line x1="${sx(v).toFixed(1)}" y1="${T}" x2="${sx(v).toFixed(1)}" y2="${H - B}" stroke="${GRID}" opacity="0.5"/>
+     <text x="${sx(v).toFixed(1)}" y="${H - B + 19}" fill="${MUTED}" font-size="11" text-anchor="middle">${v}</text>
+     <line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - R}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.5"/>
+     <text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="11" text-anchor="end">${v}</text>`).join("");
+  const fx0 = 0, fx1 = hi;
+  const fy0 = attn.intercept, fy1 = attn.intercept + attn.slope * hi;
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Predicted against official poverty rate for 514 regencies held out province by province">
+    ${ticks}
+    <line x1="${sx(0)}" y1="${sy(0)}" x2="${sx(hi).toFixed(1)}" y2="${sy(hi).toFixed(1)}" stroke="${TEAL}" stroke-width="1.6" stroke-dasharray="5 4" opacity="0.85"/>
+    <text x="${sx(hi * 0.86).toFixed(1)}" y="${(sy(hi * 0.86) - 10).toFixed(1)}" fill="${TEAL}" font-size="11" text-anchor="end" font-family="var(--font-data)">perfect agreement</text>
+    <g class="dots">${dots}</g>
+    <line x1="${sx(fx0).toFixed(1)}" y1="${sy(fy0).toFixed(1)}" x2="${sx(fx1).toFixed(1)}" y2="${sy(fy1).toFixed(1)}" stroke="${CORAL}" stroke-width="2.2"/>
+    <text x="${(W - R - 4).toFixed(1)}" y="${(H - B - 26).toFixed(1)}" fill="${CORAL}" font-size="11.5" text-anchor="end" font-family="var(--font-data)">fitted slope ${f2(attn.slope)}</text>
+    <text x="${(W - R - 4).toFixed(1)}" y="${(H - B - 11).toFixed(1)}" fill="${CORAL}" font-size="11.5" text-anchor="end" font-family="var(--font-data)">— the model compresses</text>
+    <line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" stroke="${GRID}"/>
+    <line x1="${L}" y1="${T}" x2="${L}" y2="${H - B}" stroke="${GRID}"/>
+    <g><circle cx="${L + 14}" cy="${T + 12}" r="3.2" fill="${OCHRE}" opacity="0.85"/><text x="${L + 24}" y="${T + 16}" fill="${MUTED}" font-size="11">kabupaten</text>
+       <circle cx="${L + 104}" cy="${T + 12}" r="3.2" fill="${SAND}" opacity="0.95"/><text x="${L + 114}" y="${T + 16}" fill="${MUTED}" font-size="11">kota (cities)</text></g>
+    <text x="${(L + W - R) / 2}" y="${H - 12}" fill="${MUTED}" font-size="11.5" text-anchor="middle">official BPS poverty rate ${A.latest_year} · % of population →</text>
+    <text x="14" y="${(H - B + T) / 2}" fill="${MUTED}" font-size="11.5" text-anchor="middle" transform="rotate(-90 14 ${(H - B + T) / 2})">held-out prediction · % →</text>
+  </svg>`;
+}
+
+/* ── Figure 2 · the published benchmarks, sorted by what they actually validated ── */
+function fig2() {
+  const rows = [
+    { ...JEAN, v: JEAN.r2 }, { ...YEH, v: YEH.r2 }, { ...ENG, v: ENG.r2 },
+    { ...CHI, v: CHI.r2 }, { ...PUTRI, v: PUTRI.r2 }, { ...JEANC, v: JEANC.r2 },
+  ].sort((a, b) => (b.v ?? 0) - (a.v ?? 0));
+  const W = 720, L = 200, R = 236, T = 62, rh = 36;
+  const H = T + rows.length * rh + 66;
+  const bw = W - L - R;
+  const DESIGN: Record<string, string> = { insample: "no hold-out", randomcv: "random CV", spatial: "spatial hold-out" };
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rh;
+    const w = (r.v ?? 0) * bw;
+    const col = r.target === "asset" ? SLATE : OCHRE;
+    return `<text x="${L - 12}" y="${y + 14}" fill="${INK}" font-size="12" text-anchor="end">${esc(r.short)}</text>
+      <text x="${L - 12}" y="${y + 27}" fill="${MUTED}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">${esc(DESIGN[r.design])}</text>
+      <rect x="${L}" y="${y + 5}" width="${w.toFixed(1)}" height="18" fill="${col}" rx="2"/>
+      <text x="${(W - R + 10).toFixed(1)}" y="${y + 14}" fill="${col}" font-size="11.5" font-family="var(--font-data)">${f2(r.v)}</text>
+      <text x="${(W - R + 48).toFixed(1)}" y="${y + 14}" fill="${MUTED}" font-size="10.5">${esc(r.target_label)}</text>`;
+  }).join("");
+  const mark = (v: number, lab: string, col: string, dy: number) =>
+    `<line x1="${(L + v * bw).toFixed(1)}" y1="${T - 8}" x2="${(L + v * bw).toFixed(1)}" y2="${T + rows.length * rh + 4}" stroke="${col}" stroke-width="1.5" stroke-dasharray="4 3"/>
+     <text x="${(L + v * bw).toFixed(1)}" y="${dy}" fill="${col}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">${esc(lab)}</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Published satellite poverty and wealth benchmarks, ordered by R squared and labelled by validation design">
+    ${body}
+    ${mark(S.lopo.r2, `this case, province held out ${f2(S.lopo.r2)}`, CORAL, T - 32)}
+    ${mark(S.random.r2, `this case, random fold ${f2(S.random.r2)}`, TEAL, T - 15)}
+    <g><rect x="${L}" y="${H - 44}" width="11" height="11" fill="${SLATE}" rx="2"/><text x="${L + 18}" y="${H - 34}" fill="${MUTED}" font-size="11">asset / wealth index</text>
+       <rect x="${L + 152}" y="${H - 44}" width="11" height="11" fill="${OCHRE}" rx="2"/><text x="${L + 170}" y="${H - 34}" fill="${MUTED}" font-size="11">monetary poverty or consumption</text></g>
+    <text x="${L}" y="${H - 11}" fill="${MUTED}" font-size="11">R² reported by the paper →</text>
+  </svg>`;
+}
+
+/* ── Figure 2b · same study, same data, two targets ────────────────────────── */
+function figPairs() {
+  const rows = A.pairs;
+  const W = 720, L = 40, T = 64, rh = 106, gap = 12;
+  const H = T + rows.length * rh + 30;
+  const bw = W - L - 232;
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rh;
+    const wa = r.asset * bw, wm = r.monetary * bw;
+    const drop = (r.asset - r.monetary) / r.asset;
+    const by = y + 22 + gap + 26;
+    return `<text x="${L}" y="${y - 8}" fill="${INK}" font-size="12.5">${esc(r.study)}</text>
+      <text x="${(L + 186).toFixed(1)}" y="${y - 8}" fill="${MUTED}" font-size="10.5" font-family="var(--font-data)">${esc(r.where)}</text>
+      <rect x="${L}" y="${y + 2}" width="${wa.toFixed(1)}" height="20" fill="${SLATE}" rx="2"/>
+      <text x="${(L + wa + 9).toFixed(1)}" y="${y + 17}" fill="${SLATE}" font-size="11.5" font-family="var(--font-data)">${f2(r.asset)}</text>
+      <text x="${(L + wa + 46).toFixed(1)}" y="${y + 17}" fill="${MUTED}" font-size="10.5">${esc(r.asset_label)}</text>
+      <rect x="${L}" y="${y + 2 + 20 + gap}" width="${wm.toFixed(1)}" height="20" fill="${OCHRE}" rx="2"/>
+      <text x="${(L + wm + 9).toFixed(1)}" y="${y + 37 + gap}" fill="${OCHRE}" font-size="11.5" font-family="var(--font-data)">${f2(r.monetary)}</text>
+      <text x="${(L + wm + 46).toFixed(1)}" y="${y + 37 + gap}" fill="${MUTED}" font-size="10.5">${esc(r.monetary_label)}</text>
+      <path d="M${(L + wm).toFixed(1)} ${by - 6} L${(L + wm).toFixed(1)} ${by} L${(L + wa).toFixed(1)} ${by} L${(L + wa).toFixed(1)} ${by - 6}" fill="none" stroke="${CORAL}" stroke-width="1.2"/>
+      <text x="${(L + (wa + wm) / 2).toFixed(1)}" y="${by + 14}" fill="${CORAL}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">−${pct(drop, 0)} of the explained variance</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Three studies that measured an asset target and a monetary target on the same data">
+    <g><rect x="${L}" y="14" width="11" height="11" fill="${SLATE}" rx="2"/><text x="${L + 18}" y="24" fill="${MUTED}" font-size="11.5">asset / wealth index</text>
+       <rect x="${L + 160}" y="14" width="11" height="11" fill="${OCHRE}" rx="2"/><text x="${L + 178}" y="24" fill="${MUTED}" font-size="11.5">monetary poverty or consumption — same features, same units, same paper</text></g>
+    ${body}
+    <text x="${L}" y="${H - 14}" fill="${MUTED}" font-size="11">r² reported by the paper. In Steele et al.'s urban subset, the consumption-poverty r² is 0.00.</text>
+  </svg>`;
+}
+
+/* ── Figure 4b · what holding space out costs, where it has been measured ──── */
+function figPenalty() {
+  const rows = [
+    ...A.spatialPenalty,
+    { study: "This case", field: `poverty headcount, Indonesia`, random: S.random.r2, spatial: S.lopo.r2, mine: true },
+  ];
+  const W = 720, L = 40, T = 64, rh = 98, gap = 12;
+  const H = T + rows.length * rh + 6;
+  const bw = W - L - 240;
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rh;
+    const wr = r.random * bw, ws = r.spatial * bw;
+    const drop = (r.random - r.spatial) / r.random;
+    const col = r.mine ? CORAL : OCHRE;
+    const by = y + 22 + gap + 26;
+    return `<text x="${L}" y="${y - 8}" fill="${r.mine ? INK : INK}" font-size="12.5">${esc(r.study)}</text>
+      <text x="${(L + 176).toFixed(1)}" y="${y - 8}" fill="${MUTED}" font-size="10.5" font-family="var(--font-data)">${esc(r.field)}</text>
+      <rect x="${L}" y="${y + 2}" width="${wr.toFixed(1)}" height="20" fill="${SLATE}" rx="2"/>
+      <text x="${(L + wr + 9).toFixed(1)}" y="${y + 17}" fill="${SLATE}" font-size="11.5" font-family="var(--font-data)">${f2(r.random)}</text>
+      <text x="${(L + wr + 46).toFixed(1)}" y="${y + 17}" fill="${MUTED}" font-size="10.5">random fold</text>
+      <rect x="${L}" y="${y + 2 + 20 + gap}" width="${ws.toFixed(1)}" height="20" fill="${col}" rx="2"/>
+      <text x="${(L + ws + 9).toFixed(1)}" y="${y + 37 + gap}" fill="${col}" font-size="11.5" font-family="var(--font-data)">${f2(r.spatial)}</text>
+      <text x="${(L + ws + 46).toFixed(1)}" y="${y + 37 + gap}" fill="${MUTED}" font-size="10.5">space held out</text>
+      <path d="M${(L + ws).toFixed(1)} ${by - 6} L${(L + ws).toFixed(1)} ${by} L${(L + wr).toFixed(1)} ${by} L${(L + wr).toFixed(1)} ${by - 6}" fill="none" stroke="${col}" stroke-width="1.2"/>
+      <text x="${(L + (wr + ws) / 2).toFixed(1)}" y="${by + 14}" fill="${col}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">−${pct(drop, 0)} of the explained variance</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="R squared falling from random cross-validation to spatially held-out validation in three studies">
+    <g><rect x="${L}" y="16" width="11" height="11" fill="${SLATE}" rx="2"/><text x="${L + 18}" y="26" fill="${MUTED}" font-size="11.5">random fold</text>
+       <rect x="${L + 118}" y="16" width="11" height="11" fill="${OCHRE}" rx="2"/><text x="${L + 136}" y="26" fill="${MUTED}" font-size="11.5">space held out — one model, one dataset, both designs</text>
+       <rect x="${L + 464}" y="16" width="11" height="11" fill="${CORAL}" rx="2"/><text x="${L + 482}" y="26" fill="${MUTED}" font-size="11.5">this case</text></g>
+    ${body}
+  </svg>`;
+}
+
+/* ── Figure 3 · what the fold design buys ──────────────────────────────────── */
+function fig3() {
+  const rows = [
+    { k: "Random 10-fold", s: S.random, note: `${A.folds.random} folds, space ignored` },
+    { k: "200 km blocks", s: S.block, note: `${A.folds.block_200km} blocks` },
+    { k: "Leave-one-province-out", s: S.lopo, note: `${A.folds.lopo} provinces · published` },
+    { k: "Ridge, same folds", s: S.lopo_ridge, note: "linear baseline" },
+  ];
+  const W = 720, L = 214, R = 108, T = 34, rh = 40, H = T + rows.length * rh + 46;
+  const bw = W - L - R;
+  const body = rows.map((r, i) => {
+    const y = T + i * rh;
+    const w = Math.max(0, r.s.r2) * bw;
+    const hero = r.k.startsWith("Leave");
+    const col = hero ? CORAL : OCHRE;
+    return `<text x="${L - 12}" y="${y + 15}" fill="${hero ? INK : MUTED}" font-size="12.5" text-anchor="end">${esc(r.k)}</text>
+      <text x="${L - 12}" y="${y + 29}" fill="${MUTED}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">${esc(r.note)}</text>
+      <rect x="${L}" y="${y + 5}" width="${w.toFixed(1)}" height="20" fill="${col}" opacity="${hero ? 1 : 0.6}" rx="2"/>
+      <text x="${(W - R + 12).toFixed(1)}" y="${y + 20}" fill="${col}" font-size="12" font-family="var(--font-data)">R² ${f3(r.s.r2)}</text>`;
+  }).join("");
+  const tx = L + TH.r2 * bw;
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="R squared under four cross-validation designs against the published threshold of 0.50">
+    <line x1="${tx.toFixed(1)}" y1="${T - 14}" x2="${tx.toFixed(1)}" y2="${T + rows.length * rh - 2}" stroke="${TEAL}" stroke-dasharray="4 3" stroke-width="1.5"/>
+    <text x="${tx.toFixed(1)}" y="${T - 20}" fill="${TEAL}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">threshold ${f2(TH.r2)}</text>
+    ${body}
+    <text x="${L}" y="${H - 14}" fill="${MUTED}" font-size="11">Identical model, identical rows, identical target — only the fold changes.</text>
+  </svg>`;
+}
+
+/* ── Figure 4 · the target's own shape ─────────────────────────────────────── */
+function fig4() {
+  const W = 720, H = 246, L = 26, R = 26, T = 30;
+  const bw = W - L - R;
+  const bshare = A.variance.between_share, wshare = A.variance.within_share;
+  const lines = provSorted.map((p: any) => p.line).sort((a: number, b: number) => a - b);
+  const lo = lines[0], hiv = lines[lines.length - 1];
+  const lx = (v: number) => L + ((v - lo) / (hiv - lo)) * bw;
+  const strips = provSorted.map((p: any) =>
+    `<line x1="${lx(p.line).toFixed(1)}" y1="139" x2="${lx(p.line).toFixed(1)}" y2="167" stroke="${OCHRE}" stroke-width="1.6" opacity="0.62"/>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Between-province and within-province share of the variance in regency poverty rates, and the spread of provincial poverty lines">
+    <text x="${L}" y="16" fill="${MUTED}" font-size="11.5">Where the variation in the ${A.skill.lopo.n} regency rates lives</text>
+    <rect x="${L}" y="${T}" width="${(bshare * bw).toFixed(1)}" height="30" fill="${SLATE}" rx="2"/>
+    <rect x="${(L + bshare * bw).toFixed(1)}" y="${T}" width="${(wshare * bw).toFixed(1)}" height="30" fill="${OCHRE}" rx="2"/>
+    <text x="${(L + 12).toFixed(1)}" y="${T + 20}" fill="#14100C" font-size="12.5" font-weight="600">between provinces · ${pct(bshare)}</text>
+    <text x="${(L + bshare * bw + 12).toFixed(1)}" y="${T + 20}" fill="#14100C" font-size="12.5" font-weight="600">within · ${pct(wshare)}</text>
+    <text x="${L}" y="${T + 50}" fill="${MUTED}" font-size="11">Standard deviation ${f1(A.variance.sd_total)} pp in total, ${f1(A.variance.sd_within)} pp once each province's own level is removed.</text>
+    <text x="${L}" y="${T + 82}" fill="${MUTED}" font-size="11.5">The nominal poverty line each province is judged against, ${A.latest_year}</text>
+    <line x1="${L}" y1="153" x2="${W - R}" y2="153" stroke="${GRID}"/>
+    ${strips}
+    <text x="${L}" y="188" fill="${INK}" font-size="11.5" font-family="var(--font-data)">${esc(idr(oe.line_range_idr[0]))}</text>
+    <text x="${W - R}" y="188" fill="${INK}" font-size="11.5" text-anchor="end" font-family="var(--font-data)">${esc(idr(oe.line_range_idr[1]))}</text>
+    <text x="${(W / 2).toFixed(1)}" y="188" fill="${MUTED}" font-size="11" text-anchor="middle">one tick per province mean · ${f2(oe.line_ratio)}× end to end (${f2(A.lineGeography.adm2_ratio)}× across all ${S.lopo.n} regencies)</text>
+    <text x="${L}" y="218" fill="${MUTED}" font-size="11.5">If the case's defence is right, the ${pct(bshare)} on the left is the part a satellite cannot reach,</text>
+    <text x="${L}" y="236" fill="${MUTED}" font-size="11.5">because it is set by a price level the satellite cannot observe. §7 and §8 put that to the test.</text>
+  </svg>`;
+}
+
+/* ── Figure 5 · the horse race, in level skill and in rank skill ───────────── */
+function fig5() {
+  const W = 720, L = 220, R = 176, T = 44, rh = 34;
+  const rows = tA;
+  const H = T + rows.length * rh + 42;
+  const bw = W - L - R;
+  const lo = Math.min(...rows.map((r: any) => r.r2), 0);
+  const hi = Math.max(...rows.map((r: any) => r.r2));
+  const sx = (v: number) => L + ((v - lo) / (hi - lo)) * bw;
+  const zero = sx(0);
+  const rw = 150;                                    // rank strip, right of the bars
+  const rx = (v: number) => W - R + 14 + Math.max(0, v) * (rw - 46);
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rh;
+    const v = r.r2 ?? 0, x = sx(v);
+    const hero = i === rows.length - 1;
+    const col = hero ? CORAL : (v < 0 ? SLATE : OCHRE);
+    const bar = v < 0
+      ? `<rect x="${x.toFixed(1)}" y="${y + 4}" width="${Math.max(1.5, zero - x).toFixed(1)}" height="17" fill="${col}" opacity="0.72" rx="2"/>`
+      : `<rect x="${zero.toFixed(1)}" y="${y + 4}" width="${Math.max(1.5, x - zero).toFixed(1)}" height="17" fill="${col}" opacity="${hero ? 1 : 0.72}" rx="2"/>`;
+    return `<text x="${L - 12}" y="${y + 13}" fill="${hero ? INK : MUTED}" font-size="11.5" text-anchor="end">${esc(r.label)}</text>
+      <text x="${L - 12}" y="${y + 25}" fill="${MUTED}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">${r.k} feature${r.k === 1 ? "" : "s"}</text>
+      ${bar}
+      <text x="${(v < 0 ? zero + 7 : x + 7).toFixed(1)}" y="${y + 17}" fill="${col}" font-size="11" font-family="var(--font-data)">${v >= 0 ? "" : "−"}${f3(Math.abs(v))}</text>
+      ${i === 0 ? "" : `<circle cx="${rx(r.spearman).toFixed(1)}" cy="${y + 12.5}" r="4" fill="${TEAL}" opacity="${hero ? 1 : 0.72}"/>
+      <text x="${(rx(r.spearman) + 9).toFixed(1)}" y="${y + 17}" fill="${TEAL}" font-size="10.5" font-family="var(--font-data)">${f2(r.spearman)}</text>`}`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Held-out R squared and Spearman rank correlation for single feature families against the full model">
+    <line x1="${zero.toFixed(1)}" y1="${T - 10}" x2="${zero.toFixed(1)}" y2="${T + rows.length * rh}" stroke="${GRID}"/>
+    <text x="${zero.toFixed(1)}" y="${T - 16}" fill="${MUTED}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">0</text>
+    <text x="${(L + bw / 2).toFixed(1)}" y="${T - 28}" fill="${OCHRE}" font-size="11" text-anchor="middle">R² — do the levels come out right?</text>
+    <line x1="${(W - R + 6).toFixed(1)}" y1="${T - 10}" x2="${(W - R + 6).toFixed(1)}" y2="${T + rows.length * rh}" stroke="${GRID}"/>
+    <text x="${(W - R + 60).toFixed(1)}" y="${T - 28}" fill="${TEAL}" font-size="11" text-anchor="middle">ρ — is the order right?</text>
+    ${body}
+    <text x="${L - 12}" y="${H - 12}" fill="${MUTED}" font-size="10.5" text-anchor="end">Leave-one-province-out, ${A.latest_year}</text>
+    <text x="${zero.toFixed(1)}" y="${H - 12}" fill="${MUTED}" font-size="10.5">bars left of the line are worse than predicting one number for the whole country</text>
+  </svg>`;
+}
+
+/* ── Figure 13 · error against how much the satellite can actually see ─────── */
+function fig13() {
+  const W = 720, H = 262, L = 62, R = 26, T = 30, B = 60;
+  const rows = A.coverageQuintiles;
+  const bw = (W - L - R) / rows.length;
+  const maxm = Math.max(...rows.map((r: any) => r.mae)) * 1.16;
+  const sy = (v: number) => H - B - (v / maxm) * (H - T - B);
+  const body = rows.map((r: any, i: number) => {
+    const x = L + i * bw + bw * 0.22;
+    const w = bw * 0.56;
+    const y = sy(r.mae);
+    const col = i === 0 ? CORAL : OCHRE;
+    return `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${(H - B - y).toFixed(1)}" fill="${col}" opacity="${i === 0 ? 1 : 0.78}" rx="2"/>
+      <text x="${(x + w / 2).toFixed(1)}" y="${(y - 8).toFixed(1)}" fill="${col}" font-size="11.5" text-anchor="middle" font-family="var(--font-data)">${f2(r.mae)}</text>
+      <text x="${(x + w / 2).toFixed(1)}" y="${H - B + 19}" fill="${INK}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">${r.bld_per_km2_median < 10 ? r.bld_per_km2_median.toFixed(1) : Math.round(r.bld_per_km2_median)}</text>
+      <text x="${(x + w / 2).toFixed(1)}" y="${H - B + 33}" fill="${MUTED}" font-size="10.5" text-anchor="middle">n = ${r.n}</text>`;
+  }).join("");
+  const gl = [0, 2, 4, 6].filter((v) => v < maxm).map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - R}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.55"/>
+     <text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">${v}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Mean absolute error by quintile of building density">
+    ${gl}${body}
+    <line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" stroke="${GRID}"/>
+    <text x="14" y="${(H - B + T) / 2}" fill="${MUTED}" font-size="11" text-anchor="middle" transform="rotate(-90 14 ${(H - B + T) / 2})">mean abs. error · pp →</text>
+    <text x="${(L + W - R) / 2}" y="${H - 12}" fill="${MUTED}" font-size="11.5" text-anchor="middle">median roofs per km², by quintile of the ${S.lopo.n} regencies →</text>
+  </svg>`;
+}
+
+/* ── Figure 6 · the oracle test ────────────────────────────────────────────── */
+function fig6() {
+  const W = 720, L = 252, R = 108, T = 42, rh = 42;
+  const rows = tB;
+  const H = T + rows.length * rh + 58;
+  const bw = W - L - R;
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rh;
+    const w = Math.max(0, r.r2) * bw;
+    const col = i === 0 ? CORAL : OCHRE;
+    return `<text x="${L - 12}" y="${y + 15}" fill="${i === 0 ? INK : MUTED}" font-size="12.5" text-anchor="end">${esc(r.label)}</text>
+      <text x="${L - 12}" y="${y + 29}" fill="${MUTED}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">ρ ${f2(r.spearman)} · RMSE ${f1(r.rmse)} pp</text>
+      <rect x="${L}" y="${y + 5}" width="${w.toFixed(1)}" height="20" fill="${col}" rx="2"/>
+      <text x="${(W - R + 12).toFixed(1)}" y="${y + 20}" fill="${col}" font-size="12" font-family="var(--font-data)">R² ${f3(r.r2)}</text>`;
+  }).join("");
+  const tx = L + TH.r2 * bw;
+  const gain = bReg.r2 - bBase.r2;
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Adding the official poverty line to the model as a diagnostic feature">
+    <line x1="${tx.toFixed(1)}" y1="${T - 16}" x2="${tx.toFixed(1)}" y2="${T + rows.length * rh - 4}" stroke="${TEAL}" stroke-dasharray="4 3" stroke-width="1.5"/>
+    <text x="${tx.toFixed(1)}" y="${T - 22}" fill="${TEAL}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">threshold ${f2(TH.r2)}</text>
+    ${body}
+    <text x="${L - 12}" y="${H - 30}" fill="${OCHRE}" font-size="11.5" text-anchor="end" font-family="var(--font-data)">total movement</text>
+    <text x="${L}" y="${H - 30}" fill="${OCHRE}" font-size="11.5" font-family="var(--font-data)">${gain >= 0 ? "+" : "−"}${f3(Math.abs(gain))} R², against the ${f3(TH.r2 - S.lopo.r2)} needed to clear the bar</text>
+    <text x="${L - 12}" y="${H - 12}" fill="${MUTED}" font-size="10.5" text-anchor="end">diagnostic only</text>
+    <text x="${L}" y="${H - 12}" fill="${MUTED}" font-size="10.5">the line comes from the survey being predicted, so it could never ship as a feature</text>
+  </svg>`;
+}
+
+/* ── Figure 7 · does the province offset track the price level? ─────────────── */
+function fig7() {
+  const W = 720, H = 380, L = 66, R = 22, T = 22, B = 56;
+  const xs = provSorted.map((p: any) => p.line), ys = provSorted.map((p: any) => p.offset);
+  const x0 = Math.min(...xs) * 0.97, x1 = Math.max(...xs) * 1.03;
+  const y0 = Math.min(...ys, 0) - 0.6, y1 = Math.max(...ys, 0) + 0.6;
+  const sx = (v: number) => L + ((v - x0) / (x1 - x0)) * (W - L - R);
+  const sy = (v: number) => H - B - ((v - y0) / (y1 - y0)) * (H - T - B);
+  const fit = ols(xs, ys);
+  const dots = provSorted.map((p: any) =>
+    `<circle class="d2" cx="${sx(p.line).toFixed(1)}" cy="${sy(p.offset).toFixed(1)}" r="5" fill="${p.offset >= 0 ? OCHRE : SLATE}" opacity="0.9" ` +
+    `data-n="${esc(p.name)}" data-o="${f2(p.offset)}" data-l="${esc(idr(p.line))}" data-r="${p.rho == null ? "—" : f2(p.rho)}" data-c="${p.n}"/>`).join("");
+  const xt = [x0, (x0 + x1) / 2, x1].map((v) =>
+    `<text x="${sx(v).toFixed(1)}" y="${H - B + 20}" fill="${MUTED}" font-size="11" text-anchor="middle" font-family="var(--font-data)">${(v / 1000).toFixed(0)}k</text>`).join("");
+  const yt = [-12, -10, -8, -6, -4, -2, 0, 2, 4, 6, 8, 10].filter((v) => v > y0 && v < y1).map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - R}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="${v === 0 ? 1 : 0.5}"/>
+     <text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="11" text-anchor="end">${v > 0 ? "+" : ""}${v}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Each province's constant prediction offset against its official poverty line">
+    ${yt}${xt}
+    <line x1="${sx(x0).toFixed(1)}" y1="${sy(fit.intercept + fit.slope * x0).toFixed(1)}" x2="${sx(x1).toFixed(1)}" y2="${sy(fit.intercept + fit.slope * x1).toFixed(1)}" stroke="${CORAL}" stroke-width="2"/>
+    <g class="dots">${dots}</g>
+    <line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" stroke="${GRID}"/>
+    <line x1="${L}" y1="${T}" x2="${L}" y2="${H - B}" stroke="${GRID}"/>
+    <text x="${W - R - 6}" y="${T + 16}" fill="${CORAL}" font-size="11.5" text-anchor="end" font-family="var(--font-data)">R² ${f3(fit.r2)} · ${provSorted.length} provinces</text>
+    <text x="${(L + W - R) / 2}" y="${H - 12}" fill="${MUTED}" font-size="11.5" text-anchor="middle">official provincial poverty line · rupiah per person per month →</text>
+    <text x="15" y="${(H - B + T) / 2}" fill="${MUTED}" font-size="11.5" text-anchor="middle" transform="rotate(-90 15 ${(H - B + T) / 2})">province offset · pp →</text>
+  </svg>`;
+}
+
+/* ── Figure 8 · can a satellite see the price level? ───────────────────────── */
+function fig8() {
+  const W = 720, H = 176, L = 234, R = 158, T = 26, rh = 44;
+  const bw = W - L - R;
+  const rows = [
+    { k: "The poverty line itself", sub: `log rupiah · MAPE ${pct(tC.mape, 1)}`, v: tC.log.r2, rho: tC.log.spearman, col: TEAL },
+    { k: "The poverty headcount", sub: "percentage points · published", v: S.lopo.r2, rho: S.lopo.spearman, col: CORAL },
+  ];
+  const body = rows.map((r, i) => {
+    const y = T + i * rh;
+    const w = Math.max(0, r.v) * bw;
+    return `<text x="${L - 12}" y="${y + 15}" fill="${INK}" font-size="12.5" text-anchor="end">${esc(r.k)}</text>
+      <text x="${L - 12}" y="${y + 29}" fill="${MUTED}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">${esc(r.sub)}</text>
+      <rect x="${L}" y="${y + 5}" width="${w.toFixed(1)}" height="20" fill="${r.col}" rx="2"/>
+      <text x="${(W - R + 12).toFixed(1)}" y="${y + 20}" fill="${r.col}" font-size="12" font-family="var(--font-data)">R² ${f3(r.v)} · ρ ${f2(r.rho)}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="The same features and folds predicting the poverty line compared with predicting the headcount">
+    ${body}
+    <text x="${L - 12}" y="${H - 30}" fill="${MUTED}" font-size="11" text-anchor="end">the only change</text>
+    <text x="${L}" y="${H - 30}" fill="${MUTED}" font-size="11">Same ${A.nFeatures} features, same ${A.folds.lopo} province folds, same year — only the target moves.</text>
+    <text x="${L}" y="${H - 12}" fill="${MUTED}" font-size="11">A held-out province's cost of living comes out within ${pct(tC.mape, 1)} of its true value.</text>
+  </svg>`;
+}
+
+/* ── Figure 9 · take the price level away and it is still short ────────────── */
+function fig9() {
+  const W = 720, H = 250, pad = 54, top = 96, bh = 96, base = top + bh;
+  const groups = [
+    { k: "Spearman ρ", mine: EJ?.rho ?? A.withinProvince.spearman, theirs: PUTRI.spearman, max: 1 },
+    { k: "Pearson r", mine: ejR, theirs: PUTRI.pearson, max: 1 },
+    { k: "RMSE, pp — lower is better", mine: ejRmse, theirs: PUTRI.rmse_pp, max: 8 },
+  ];
+  const gw = (W - pad * 2) / 3;
+  const bar = (v: number | null, x: number, col: string, max: number, invert = false) => {
+    if (v == null) return `<text x="${(x + 12).toFixed(1)}" y="${base - 6}" fill="${MUTED}" font-size="10.5" text-anchor="middle">n/a</text>`;
+    const frac = invert ? Math.min(1, v / max) : Math.min(1, v / max);
+    const h = Math.max(2, frac * bh);
+    return `<rect x="${x.toFixed(1)}" y="${(base - h).toFixed(1)}" width="26" height="${h.toFixed(1)}" fill="${col}" rx="2"/>
+      <text x="${(x + 13).toFixed(1)}" y="${(base - h - 7).toFixed(1)}" fill="${col}" font-size="11" text-anchor="middle" font-family="var(--font-data)">${v.toFixed(2)}</text>`;
+  };
+  const body = groups.map((g, i) => {
+    const xg = pad + i * gw;
+    return `<text x="${(xg + gw / 2).toFixed(1)}" y="82" fill="${INK}" font-size="12" text-anchor="middle">${esc(g.k)}</text>
+      ${bar(g.mine as any, xg + gw / 2 - 30, CORAL, g.max, g.invert)}
+      ${bar(g.theirs as any, xg + gw / 2 + 4, SLATE, g.max, g.invert)}`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="This case inside East Java compared with Putri et al 2022 on the same province">
+    <g><rect x="${pad}" y="22" width="11" height="11" fill="${CORAL}" rx="2"/>
+       <text x="${pad + 18}" y="32" fill="${MUTED}" font-size="11.5">This case · East Java, ${EJ?.n ?? "—"} regencies, held out entirely (${A.latest_year})</text>
+       <rect x="${pad}" y="44" width="11" height="11" fill="${SLATE}" rx="2"/>
+       <text x="${pad + 18}" y="54" fill="${MUTED}" font-size="11.5">Putri et al. 2022 · East Java, ${PUTRI.n} regencies, no hold-out (2020)</text></g>
+    <line x1="${pad}" y1="${base}" x2="${W - pad}" y2="${base}" stroke="${GRID}"/>
+    ${body}
+    <text x="${W / 2}" y="${H - 12}" fill="${MUTED}" font-size="11" text-anchor="middle">Correlation bars are scaled 0–1; the RMSE pair is scaled to 8 pp, where a shorter bar is the better result.</text>
+  </svg>`;
+}
+
+/* ── Figure 10 · the product, tested one level up ──────────────────────────── */
+function fig10() {
+  const W = 720, H = 268, L = 244, R = 96, T = 44, rh = 42;
+  const bw = W - L - R;
+  const rows = [
+    { k: "Give every regency its province's rate", sub: "the null this product must beat", s: tD.flat_null, col: SLATE },
+    { k: "Model, benchmarked to the province", sub: "the shipped procedure, one level up", s: tD.benchmarked_model, col: OCHRE },
+    { k: "Model, unbenchmarked", sub: "for reference", s: tD.unbenchmarked_model, col: CORAL },
+  ];
+  const maxm = Math.max(...rows.map((r) => r.s.mae));
+  const body = rows.map((r, i) => {
+    const y = T + i * rh;
+    const w = (r.s.mae / maxm) * bw;
+    return `<text x="${L - 12}" y="${y + 15}" fill="${INK}" font-size="12" text-anchor="end">${esc(r.k)}</text>
+      <text x="${L - 12}" y="${y + 28}" fill="${MUTED}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">${esc(r.sub)}</text>
+      <rect x="${L}" y="${y + 5}" width="${w.toFixed(1)}" height="20" fill="${r.col}" rx="2"/>
+      <text x="${(L + w + 9).toFixed(1)}" y="${y + 20}" fill="${r.col}" font-size="11.5" font-family="var(--font-data)">${f2(r.s.mae)} pp</text>`;
+  }).join("");
+  const win = tD.win_rate;
+  const wx = L, ww = bw, wy = T + rows.length * rh + 38;
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Mean absolute error of the benchmarked disaggregator against giving every regency its province rate">
+    <text x="${L - 12}" y="${T - 12}" fill="${MUTED}" font-size="11" text-anchor="end">mean absolute error</text>
+    ${body}
+    <text x="${L - 12}" y="${wy + 12}" fill="${MUTED}" font-size="11" text-anchor="end">placed closer</text>
+    <text x="${L - 12}" y="${wy + 26}" fill="${MUTED}" font-size="10.5" text-anchor="end">than the flat rate</text>
+    <rect x="${wx}" y="${wy}" width="${ww}" height="18" fill="${GRID}" rx="2"/>
+    <rect x="${wx}" y="${wy}" width="${(ww * win).toFixed(1)}" height="18" fill="${OCHRE}" rx="2"/>
+    <text x="${(wx + 10).toFixed(1)}" y="${wy + 13}" fill="#14100C" font-size="11.5" font-weight="600" font-family="var(--font-data)">${pct(win, 1)} of ${tD.n} regencies</text>
+    <line x1="${(wx + ww * 0.5).toFixed(1)}" y1="${wy - 5}" x2="${(wx + ww * 0.5).toFixed(1)}" y2="${wy + 24}" stroke="${TEAL}" stroke-width="1.5" stroke-dasharray="3 3"/>
+    <text x="${(wx + ww * 0.5 + 6).toFixed(1)}" y="${wy + 36}" fill="${TEAL}" font-size="10.5" font-family="var(--font-data)">coin toss</text>
+  </svg>`;
+}
+
+/* ── Figure 11 · the baseline nobody can avoid: last year's published number ── */
+function fig11() {
+  const W = 720, H = 250, L = 62, R = 30, T = 26, B = 56;
+  const rows = tE;
+  const pts = rows.map((r: any) => ({ x: r.lag, y: r.r2, rmse: r.rmse }));
+  const xmax = Math.max(...pts.map((p) => p.x));
+  const sx = (v: number) => L + ((v - 1) / (xmax - 1)) * (W - L - R);
+  const sy = (v: number) => H - B - Math.max(0, Math.min(1, v)) * (H - T - B);
+  const path = `<path fill="none" stroke="${TEAL}" stroke-width="2.4" d="${pts.map((p, i) => `${i ? "L" : "M"}${sx(p.x).toFixed(1)} ${sy(p.y).toFixed(1)}`).join("")}"/>`;
+  const dots = pts.map((p) =>
+    `<circle cx="${sx(p.x).toFixed(1)}" cy="${sy(p.y).toFixed(1)}" r="4.2" fill="${TEAL}"/>
+     <text x="${sx(p.x).toFixed(1)}" y="${(sy(p.y) - 11).toFixed(1)}" fill="${TEAL}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">${f3(p.y)}</text>
+     <text x="${sx(p.x).toFixed(1)}" y="${H - B + 19}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${p.x} yr</text>`).join("");
+  const gl = [0, 0.25, 0.5, 0.75, 1].map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - R}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.55"/>
+     <text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">${v.toFixed(2)}</text>`).join("");
+  const my = sy(S.lopo.r2);
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="R squared of an older published poverty rate as a predictor of the latest one, against the satellite model">
+    ${gl}
+    <line x1="${L}" y1="${my.toFixed(1)}" x2="${W - R}" y2="${my.toFixed(1)}" stroke="${CORAL}" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="${W - R}" y="${(my - 8).toFixed(1)}" fill="${CORAL}" font-size="11" text-anchor="end" font-family="var(--font-data)">the satellite model · R² ${f3(S.lopo.r2)}</text>
+    ${path}${dots}
+    <line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" stroke="${GRID}"/>
+    <text x="${(L + W - R) / 2}" y="${H - 12}" fill="${MUTED}" font-size="11.5" text-anchor="middle">how old the published rate you fall back on is · R² against ${A.latest_year} →</text>
+  </svg>`;
+}
+
+/* ── Figure 12 · who the model is worst for ────────────────────────────────── */
+function fig12() {
+  const W = 720, L = 146, T = 64, rh = 40;
+  const rows = [
+    { k: "Java", s: S.lopo_java }, { k: "off-Java", s: S.lopo_offjava },
+    { k: "kabupaten", s: S.lopo_kabupaten }, { k: "kota (cities)", s: S.lopo_kota },
+  ];
+  const H = T + rows.length * rh + 44;
+  const midGap = 34;
+  const colW = (W - L - 40 - midGap) / 2;            // two equal panels
+  const r2lo = Math.min(-0.7, ...rows.map((r) => r.s.r2));
+  const r2hi = 0.7;
+  const rx = (v: number) => L + ((v - r2lo) / (r2hi - r2lo)) * colW;
+  const x2 = L + colW + midGap;
+  const rmax = Math.max(...rows.map((r) => r.s.rmse)) * 1.2;
+  const ex = (v: number) => x2 + (v / rmax) * colW;
+  const zero = rx(0);
+  const body = rows.map((r, i) => {
+    const y = T + i * rh;
+    const v = r.s.r2, neg = v < 0;
+    const col = neg ? CORAL : OCHRE;
+    const x = rx(v);
+    return `<text x="${L - 14}" y="${y + 14}" fill="${INK}" font-size="12" text-anchor="end">${esc(r.k)}</text>
+      <text x="${L - 14}" y="${y + 27}" fill="${MUTED}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">n = ${r.s.n}</text>
+      <rect x="${(neg ? x : zero).toFixed(1)}" y="${y + 4}" width="${Math.max(1.5, Math.abs(x - zero)).toFixed(1)}" height="17" fill="${col}" rx="2"/>
+      <text x="${(neg ? zero + 8 : x + 7).toFixed(1)}" y="${y + 17}" fill="${col}" font-size="11" font-family="var(--font-data)">${v >= 0 ? "" : "−"}${f2(Math.abs(v))}</text>
+      <rect x="${x2}" y="${y + 4}" width="${(ex(r.s.rmse) - x2).toFixed(1)}" height="17" fill="${SLATE}" rx="2"/>
+      <text x="${(ex(r.s.rmse) + 7).toFixed(1)}" y="${y + 17}" fill="${SLATE}" font-size="11" font-family="var(--font-data)">${f1(r.s.rmse)}</text>`;
+  }).join("");
+  const ty = rx(TH.subgroup_r2);
+  const bot = T + rows.length * rh;
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Held-out R squared and RMSE for Java, off-Java, kabupaten and kota">
+    <text x="${(L + colW / 2).toFixed(1)}" y="18" fill="${OCHRE}" font-size="11.5" text-anchor="middle">R² — against each group's own mean</text>
+    <text x="${(x2 + colW / 2).toFixed(1)}" y="18" fill="${SLATE}" font-size="11.5" text-anchor="middle">RMSE — in percentage points</text>
+    <line x1="${zero.toFixed(1)}" y1="${T - 22}" x2="${zero.toFixed(1)}" y2="${bot}" stroke="${GRID}"/>
+    <text x="${zero.toFixed(1)}" y="${T - 26}" fill="${MUTED}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">0</text>
+    <line x1="${ty.toFixed(1)}" y1="${T - 22}" x2="${ty.toFixed(1)}" y2="${bot}" stroke="${TEAL}" stroke-dasharray="4 3"/>
+    <text x="${ty.toFixed(1)}" y="${T - 26}" fill="${TEAL}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">${f2(TH.subgroup_r2)} = "indicative"</text>
+    <line x1="${x2}" y1="${T - 22}" x2="${x2}" y2="${bot}" stroke="${GRID}"/>
+    ${body}
+    <text x="${L - 14}" y="${H - 14}" fill="${MUTED}" font-size="10.5" text-anchor="end">read both</text>
+    <text x="${L}" y="${H - 14}" fill="${MUTED}" font-size="11">Equal R² is not equal error: off-Java error is ${f1(S.lopo_offjava.rmse / S.lopo_java.rmse)}× Java's in percentage points.</text>
+  </svg>`;
+}
+
+const F1 = fig1(), F2 = fig2(), F3 = fig3(), F4 = fig4(), F5 = fig5(), F6 = fig6();
+const F7 = fig7(), F8 = fig8(), F9 = fig9(), F10 = fig10(), F11 = fig11(), F12 = fig12();
+const F13 = fig13(), FP = figPairs(), FQ = figPenalty();
+const ENGSP = lit("engstrom_sp"), STEELE = lit("steele"), STEELEP = lit("steele_ppi");
+/* Figure numbers, named once so a caption and a cross-reference can never disagree. */
+const N = {
+  pairs: 1, lit: 2, scatter: 3, variance: 4, folds: 5, penalty: 6, race: 7, oracle: 8,
+  offset: 9, price: 10, ej: 11, product: 12, persist: 13, subgroup: 14, coverage: 15,
+};
+const PLOTON = A.spatialPenalty[0], ENGPEN = A.spatialPenalty[1];
+const SAE = A.sae, lg = A.lineGeography;
+
+const oracleGain = bReg.r2 - bBase.r2;
+const gapToBar = TH.r2 - S.lopo.r2;
+const e1 = tE[0];
+const inflation = S.random.r2 - S.lopo.r2;
+const aPL = tA.find((r: any) => r.label === "Population + lights")!;
+const aPLB = tA.find((r: any) => r.label === "Population + lights + buildings")!;
+const aNull = tA[0];
+const cq = A.coverageQuintiles;
+
+/* the three provinces the model gets most wrong, named — from the same table as Figure 7 */
+const worstLow = provSorted[0], worstHigh = provSorted[provSorted.length - 1];
+const bali = A.provinces.find((p: any) => p.name === "Bali");
+---
+<html lang="en" data-case="poverty" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Can a Satellite Count Indonesia's Poor?</title>
+    <meta name="description" content="An adversarial review of satellite poverty mapping at Indonesian kabupaten level: what the failing out-of-sample check actually diagnoses, tested against Jean (2016), Yeh (2020), Chi (2022) and the Indonesian literature." />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="back" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/`}>← The instrument</a>
+      <span class="stamp dim">REVIEW ARTICLE · DATA VINTAGE {A.vintage}</span>
+    </header>
+
+    <article>
+      <div class="masthead">
+        <span class="eyebrow">METHODS &amp; VALIDATION · POVERTY MAPPING FROM SPACE</span>
+        <h1>Can a satellite count Indonesia's poor?</h1>
+        <p class="standfirst">This case publishes a failed out-of-sample check and blames the target:
+        a headcount against a nominal, region-specific poverty line, it argues, is not the asset index
+        the satellite-poverty literature reports high numbers for. We put that defence to the case's
+        own data, four ways. It does not survive any of them — and the real explanation is better
+        news than the one being offered.</p>
+        <div class="byline">
+          <span>Demo Lab · FMV</span><span>Data through {A.vintage}</span>
+          <span>{S.lopo.n} regencies · {A.folds.lopo} province folds · {A.nFeatures} features</span>
+        </div>
+      </div>
+
+      <section class="abstract">
+        <h2>Abstract</h2>
+        <p><b>Question.</b> A gradient-boosted model on roofs, night lights, population and land cover
+        predicts the BPS poverty headcount for {S.lopo.n} Indonesian regencies at leave-one-province-out
+        R² {f3(S.lopo.r2)}, against a published threshold of {f2(TH.r2)}. The case attributes the
+        shortfall to its target: a monetary headcount rather than an asset index. Is that diagnosis
+        correct?</p>
+        <p><b>Method.</b> We recompute every published skill statistic from the case's own
+        cross-validated predictions, then run five pre-specified tests on the identical folds: a
+        feature-family horse race; the official poverty line added as a diagnostic oracle; the same
+        features re-targeted onto the poverty line itself; the shipped disaggregation procedure
+        re-run one administrative level up where ground truth exists; and the operational baseline of
+        simply reusing an older published rate.</p>
+        <p><b>Findings.</b> Every published number reproduces exactly: the largest discrepancy across
+        {A.audit.rows.length} recomputed statistics is {A.audit.max_abs_diff_r2.toFixed(4)}. The diagnosis does
+        not. <b>One:</b> handing the model the official poverty line it says it cannot see moves R²
+        from {f3(bBase.r2)} to {f3(bReg.r2)} — {oracleGain >= 0 ? "+" : "−"}{f3(Math.abs(oracleGain))},
+        against the {f3(gapToBar)} it needs. <b>Two:</b> the same features predict that poverty line
+        in a province they have never seen at R² {f3(tC.log.r2)} and ρ {f2(tC.log.spearman)} —
+        <i>better</i> in rank than they predict the headcount — so the price level is not a blind
+        spot. <b>Three:</b> the province-level offsets the case attributes to the line are explained
+        by the line at R² {f3(oe.by_poverty_line.r2)}, and by ordinary regression-to-the-mean
+        compression at R² {f3(oe.by_official_level.r2)}. <b>Four:</b> the thresholds said to come from
+        an asset-wealth literature come, on the case's own configuration file, from
+        <a href="#ref-putri">Putri et al. (2022)</a>, a study of the BPS poverty rate in one
+        Indonesian province — where there is only one poverty line. Held out on that same province,
+        this model reaches ρ {EJ?.rho == null ? "—" : f2(EJ.rho)} against their {f2(PUTRI.spearman)},
+        at RMSE {f2(ejRmse)} pp against their {PUTRI.rmse_pp} pp.
+        Separately, {A.nFeatures - aPL.k} of the {A.nFeatures} features are not paying their
+        way: night lights and population alone score R² {f3(aPL.r2)}, <i>above</i> the published
+        {f3(aFull.r2)}, and the 110-million-footprint building layer adds rank skill
+        (ρ {f2(aPLB.spearman)} against {f2(aPL.spearman)}) while costing level skill.</p>
+        <p><b>Conclusion.</b> The case's <i>conclusion</i> — that a monetary headcount is harder than
+        an asset index — is right and well supported: every study that has measured both on one
+        dataset agrees. Its stated <i>mechanism</i> is wrong. What actually separates this case from
+        the three studies that set its thresholds is that none of them held space out, and a random
+        fold on these same rows scores R² {f3(S.random.r2)}. Measured against the one published
+        satellite model of a monetary headcount that <i>does</i> hold space out
+        (<a href="#ref-eng">Engstrom et al. 2022</a>, R² {f2(ENGSP.r2)} linear /
+        {f3(ENGSP.rf_r2)} random forest), {f3(S.lopo.r2)} over an archipelago is unremarkable rather
+        than damning. The product that survives is narrow and genuinely defensible: benchmarked
+        disaggregation beats the flat parental rate on {pct(tD.win_rate, 1)} of regencies and cuts
+        mean absolute error from {f2(tD.flat_null.mae)} to {f2(tD.benchmarked_model.mae)} pp. It must
+        never be used at a level BPS already publishes, where last year's official number scores
+        R² {f3(e1.r2)}, nor for household targeting, where the best-known satellite wealth index
+        still excludes {pct(SART.exclusion_error, 1)} of Indonesia's eligible poor.</p>
+      </section>
+
+      <nav class="toc">
+        <a href="#s1">1 · The claim under test</a><a href="#s2">2 · Prior art, and the thresholds</a>
+        <a href="#s3">3 · Data and folds</a><a href="#s4">4 · The numbers reproduce</a>
+        <a href="#s5">5 · Design, not target</a><a href="#s6">6 · The horse race</a>
+        <a href="#s7">7 · The oracle test</a><a href="#s8">8 · The price level is visible</a>
+        <a href="#s9">9 · Without the line, still short</a><a href="#s10">10 · The product, tested</a>
+        <a href="#s11">11 · The baseline nobody escapes</a><a href="#s12">12 · Who it fails</a>
+        <a href="#s13">13 · What follows for decisions</a><a href="#s14">14 · Corrections and open work</a>
+        <a href="#refs">References</a>
+      </nav>
+
+      <section id="s1">
+        <h2><span class="num">1</span> The claim under test</h2>
+        <p>BPS publishes a poverty headcount for each of {S.lopo.n} kabupaten and kota, once a year,
+        from the March Susenas. Below that line nothing official exists. Indonesia has
+        {A.coverage.adm3_units.toLocaleString("en-US")} kecamatan and no published poverty rate for
+        any of them. That gap is the case's reason to exist, and it is a real one: the social registry
+        that targets assistance, the village-fund formula and every provincial prioritisation exercise
+        all operate below the level at which the statistic is measured.</p>
+        <p>The case fits satellite features to the regency rate, holds out one province at a time, and
+        publishes the result: R² {f3(S.lopo.r2)}, Spearman ρ {f2(S.lopo.spearman)}, RMSE
+        {f1(S.lopo.rmse)} pp, against thresholds of {f2(TH.r2)}, {f2(TH.spearman)} and
+        {f1(TH.rmse)} pp. The check fails and the failure is published in red. That is the right
+        behaviour, and it is not what this review is about.</p>
+        <p>This review is about the <i>diagnosis</i> attached to the failure. The case argues that the
+        published literature's high R² values are "not the right expectation here" because they were
+        obtained on an asset index, while this target is a headcount against a nominal, region-specific
+        poverty line — and, in its words, "no satellite can see a price level." A failing model with a
+        correct diagnosis is a scientific result. A failing model with a comfortable diagnosis is a
+        rationalisation. The difference is testable, and the case's own data are enough to test it.</p>
+      </section>
+
+      <section id="s2">
+        <h2><span class="num">2</span> Prior art — and where these thresholds actually came from</h2>
+        <p>Begin by granting the case its general point, because the literature grants it. Three
+        studies have measured an asset target and a monetary target on the <i>same</i> data with the
+        <i>same</i> features, which is the only clean way to isolate what the choice of target costs.</p>
+        <figure>
+          <div class="figbox"><Fragment set:html={FP} /></div>
+          <figcaption><b>Figure {N.pairs}.</b> The three studies that report both. Each pair is one paper,
+          one dataset, one feature set, two target definitions. The coral bracket is the drop.</figcaption>
+        </figure>
+        <p><a href="#ref-steele">Steele et al. (2017)</a> is the cleanest: across {STEELE.n} Bangladeshi
+        survey clusters, identical mobile and remote-sensing features explain r² {f2(STEELE.r2)} of a
+        DHS wealth index and r² {f2(STEELEP.r2)} of a consumption-poverty measure. In their urban
+        subset the consumption-poverty r² is <b>{f2(STEELEP.urban_r2)}</b> — nothing at all.
+        <a href="#ref-jean">Jean et al. (2016)</a> report pooled cross-validated r² {f2(JEAN.r2)} for
+        a DHS asset index and {f2(JEANC.r2)} for consumption expenditure, and note that restricting
+        the sample to households below twice the international poverty line drops r² to about
+        <b>0.12</b>. <a href="#ref-eng">Engstrom et al. (2022)</a> find satellite features explain
+        68% of an asset index and 61% of a poverty headcount over the same Sri Lankan units.</p>
+        <p class="pull">The case is right that a monetary headcount is the harder target. Every study
+        that has measured both agrees, and the penalty runs from a tenth to two thirds of the
+        explained variance.</p>
+        <p>The rest of the literature is consistent, and worth stating precisely because the page
+        invokes it loosely. <a href="#ref-yeh">Yeh et al. (2020)</a> reach r² {f2(YEH.r2)} for asset
+        wealth over {YEH.n.toLocaleString("en-US")} African villages under held-out-<i>country</i>
+        validation — but fitted separately within urban and rural strata that becomes
+        {f2(YEH.urban_r2)} and {f2(YEH.rural_r2)}, so much of the headline is telling town from
+        country; for change over time it is {f2(YEH.change_r2)}; and their own asset index correlates
+        with log consumption at r² {f2(YEH.consumption_r2)}, which caps what even a perfect asset
+        model could reach against a monetary target.
+        <a href="#ref-chi">Chi et al. (2022)</a> explain {pct(CHI.lo, 0)}–{pct(CHI.hi, 0)} of
+        household wealth at 2.4 km, with an index defined as relative to others in the same country.</p>
+        <figure>
+          <div class="figbox"><Fragment set:html={F2} /></div>
+          <figcaption><b>Figure {N.lit}.</b> The same benchmarks by reported R², coloured by what was
+          predicted and labelled by validation design — the variable that decides whether a number is
+          comparable to this case's. The dashed lines are this case's own two results.</figcaption>
+        </figure>
+        <p>Now the thresholds. They did not come from any of that. The case's configuration file
+        records their provenance and names three studies:
+        <a href="#ref-putri">Putri, Wijayanto &amp; Sakti (2022)</a> — Pearson {f2(PUTRI.pearson)},
+        Spearman {f2(PUTRI.spearman)}, RMSE {PUTRI.rmse_pp} pp — <a href="#ref-sart">Sartirano et al.
+        (2023)</a> at ρ {f2(SART.spearman)} across {SART.n} regencies, and Chi et al. (2022).</p>
+        <p class="pull">Putri et al. did not predict an asset index. They validated against the
+        official poverty data published by BPS at regency level — the same P0 headcount, against the
+        same nominal poverty line, in the same country.</p>
+        <p>The R² ≥ {f2(TH.r2)} bar and the RMSE ≤ {f1(TH.rmse)} pp bar are therefore not asset-wealth
+        numbers imported by mistake. They are Indonesian monetary-poverty numbers, chosen for exactly
+        the right target. Sartirano et al. supplies the ρ ≥ {f2(TH.spearman)} bar and is an asset
+        index — but the case's stated defence, that its thresholds belong to a different <i>kind</i>
+        of outcome, is contradicted by the file that sets them.</p>
+        <p>There <i>is</i> a real mismatch between this case and its three benchmarks, and it is
+        specific: <b>none of them held space out.</b> Putri et al. correlated a constructed index
+        with official rates across the {PUTRI.n} regencies of a single province. Sartirano et al.
+        ranked a published index against a survey index on the units both already cover. Chi et al.'s
+        {f2(CHI.r2)} is the low end of a range whose upper end is a within-country census comparison.
+        Not one of them asked what a model knows about a region it has never seen — which is the only
+        question this case asks. §5 shows what that difference is worth.</p>
+      </section>
+
+      <section id="s3">
+        <h2><span class="num">3</span> Data, features and the fold design</h2>
+        <p><b>Target.</b> BPS poverty headcount P0 by kabupaten/kota, {A.coverage.years[0]}–{A.latest_year},
+        {A.panel.n.toLocaleString("en-US")} regency-years, from the March Susenas via the WebAPI.</p>
+        <p><b>Features.</b> {A.nFeatures} intensive features in four families —
+        {A.featureFamilies.buildings} from Google Open Buildings roof footprints (density, footprint
+        share, roof-size distribution), {A.featureFamilies.lights} from NASA Black Marble annual
+        radiance, {A.featureFamilies.population} from WorldPop, {A.featureFamilies.landcover} from ESA
+        WorldCover class shares, plus {A.featureFamilies.geography} binary geography flags. Coordinates
+        and unit identifiers are excluded by design.</p>
+        <p><b>Folds.</b> Leave-one-province-out over {A.folds.lopo} provinces. A held-out province
+        leaves the training set in <i>every</i> year, so no earlier copy of a test regency can leak
+        back through the panel. We verified this against the fold code, and it holds. A 200 km block
+        scheme and a random 10-fold are computed on the identical rows.</p>
+        <p class="caveat"><b>What the design cannot fix.</b> Two of the four feature families are
+        single-vintage — Open Buildings is dated 2023, WorldCover 2021 — and the model carries no year
+        term. Only lights and population vary over time. Any temporal claim this case makes is
+        therefore carried by two of thirty-one features, and the case says so.</p>
+      </section>
+
+      <section id="s4">
+        <h2><span class="num">4</span> Finding one — the published numbers are exactly right</h2>
+        <p>Before criticising a result it is worth confirming it. We reloaded the case's stored
+        cross-validated predictions and recomputed all {A.audit.rows.length} published skill
+        statistics from scratch. The largest disagreement with the published table is
+        <b>{A.audit.max_abs_diff_r2.toFixed(4)}</b> in R².</p>
+        <figure>
+          <div class="figbox"><Fragment set:html={F1} /></div>
+          <figcaption><b>Figure {N.scatter}.</b> The published headline. Each dot is one regency in
+          {A.latest_year}, predicted by a model that never saw its province. Cities are the pale
+          markers. The teal diagonal is perfect agreement; the coral line is the fit. Hover any dot.</figcaption>
+        </figure>
+        <p>The picture that emerges is not noise — it is <b>compression</b>. The fitted slope of
+        prediction on truth is {f2(attn.slope)}: the model pulls every regency toward the middle,
+        under-calling the poorest and over-calling the least poor. Bias overall is
+        {S.lopo.bias >= 0 ? "+" : ""}{f2(S.lopo.bias)} pp, so it is not a level error but a range
+        error. A compressed predictor is exactly what a booster produces when the informative signal
+        is weak relative to the target's spread — and it is also what a model produces when it is
+        missing a variable that separates the extremes.</p>
+        <figure>
+          <div class="figbox"><Fragment set:html={F4} /></div>
+          <figcaption><b>Figure {N.variance}.</b> Top: how the variance in the {S.lopo.n} regency rates splits
+          between and within provinces. Bottom: the mean poverty line in each of the
+          {provSorted.length} provinces, one tick each.</figcaption>
+        </figure>
+        <p>{pct(A.variance.between_share)} of the variance in regency poverty rates sits
+        <i>between</i> provinces. That is the structural fact behind everything that follows: a model
+        that cannot set a province's level cannot score well, no matter how well it orders regencies
+        inside one. The case knows this and reports it as
+        {pct(A.decomposition.offset_share_of_sse)} of the squared error being a constant
+        province-level offset.</p>
+      </section>
+
+      <section id="s5">
+        <h2><span class="num">5</span> Finding two — most of the gap to the literature is fold design</h2>
+        <p>The same model, the same rows and the same target, scored under four fold designs:</p>
+        <figure>
+          <div class="figbox"><Fragment set:html={F3} /></div>
+          <figcaption><b>Figure {N.folds}.</b> Held-out R² under four cross-validation designs. Only the
+          assignment of units to folds differs between the top three bars.</figcaption>
+        </figure>
+        <p>A random 10-fold reports R² <b>{f3(S.random.r2)}</b> and ρ {f2(S.random.spearman)} —
+        it would clear the R² bar outright and miss the rank bar by
+        {f3(TH.spearman - S.random.spearman)}. Blocking at 200 km gives {f3(S.block.r2)}. Holding out
+        whole provinces gives {f3(S.lopo.r2)}. <b>{f3(inflation)} of R² is pure fold design</b>, on
+        rows that never changed.</p>
+        <p>This is the documented consequence of spatial autocorrelation, and its size has been
+        measured elsewhere. <a href="#ref-roberts">Roberts et al. (2017)</a> established that
+        non-spatial cross-validation systematically understates predictive error where neighbours
+        resemble each other. <a href="#ref-ploton">Ploton et al. (2020)</a> put a number on it.</p>
+        <figure>
+          <div class="figbox"><Fragment set:html={FQ} /></div>
+          <figcaption><b>Figure {N.penalty}.</b> Studies that scored one model on one dataset under
+          both a random fold and a spatial hold-out. Ploton et al. map forest biomass; Engstrom et al.
+          predict a poverty headcount in Sri Lanka. This case's penalty is the smallest of the
+          three.</figcaption>
+        </figure>
+        <p>Ploton et al. lose {f2(PLOTON.random)} → {f2(PLOTON.spatial)} moving from random 10-fold
+        to spatial 44-fold — {pct((PLOTON.random - PLOTON.spatial) / PLOTON.random, 0)} of the
+        explained variance, after which their spatially-validated error is barely better than a null
+        model. Engstrom et al. lose {f2(ENGPEN.random)} → {f2(ENGPEN.spatial)} on a poverty headcount
+        under leave-one-Divisional-Secretariat-out. This case loses
+        {f3(S.random.r2)} → {f3(S.lopo.r2)}, or
+        {pct(inflation / S.random.r2, 0)}. <b>Its spatial penalty is the smallest of the three.</b></p>
+        <p class="pull">Putri et al. reported no hold-out at all. Sartirano et al. reported none. This
+        case's random-fold {f3(S.random.r2)} is the like-for-like comparison with the studies that set
+        its thresholds — and it sits squarely among them.</p>
+        <p>There is one more comparison, and it is the most important in this article.
+        <a href="#ref-eng">Engstrom et al. (2022)</a> is, as far as we can find, the <i>only</i>
+        published satellite model of a monetary poverty headcount validated with space held out. Its
+        result is R² {f2(ENGSP.r2)} for a linear model and {f3(ENGSP.rf_r2)} for a random forest,
+        with Spearman ρ {f2(ENGSP.spearman)}, over {ENGSP.n.toLocaleString("en-US")} village-sized
+        units in one small country — and against a ground truth that is a census imputation averaged
+        over a hundred simulations rather than a raw survey estimate. Against the raw survey estimate,
+        the same model scores {f3(ENG.survey_truth_r2)}.</p>
+        <p>This case reports R² {f3(S.lopo.r2)} and ρ {f2(S.lopo.spearman)} over
+        {S.lopo.n} regencies spanning 5,000 km of archipelago, against an unsmoothed published
+        survey statistic. It is below Engstrom's spatial number, and above the number Engstrom's
+        model achieves when scored against a survey rather than a census imputation. It is, in other
+        words, roughly where the state of the art for this exact problem sits.</p>
+        <p>So the honest statement is not that the thresholds came from the wrong <i>target</i>. It is
+        that they came from the wrong <i>validation design</i> — and that the case then chose,
+        correctly, to be scored under a harder one than any of its benchmarks used. That decision is
+        the most defensible thing on the page, and it is currently being explained away as somebody
+        else's measurement error.</p>
+      </section>
+
+      <section id="s6">
+        <h2><span class="num">6</span> Finding three — what 110 million rooftops actually buy</h2>
+        <p>A sceptic's first objection to any satellite poverty model is that it has rediscovered
+        population density. The case's own answer is its attribution chart, on which
+        {A.families[0].k} accounts for {pct(A.families[0].share)} of the model's gain. But gain is an
+        <i>in-sample</i> statistic: it records how often a feature was used to split, not whether
+        those splits transfer to a province the model has never seen. We refitted on single feature
+        families under the identical {A.folds.lopo} province folds and asked the out-of-sample
+        question instead.</p>
+        <figure>
+          <div class="figbox"><Fragment set:html={F5} /></div>
+          <figcaption><b>Figure {N.race}.</b> Held-out skill for each feature family alone and for the
+          published stack, in two currencies: R² on the left (are the levels right?) and Spearman ρ
+          on the right (is the order right?). The two disagree, and the disagreement is the finding.</figcaption>
+        </figure>
+        <p>The sceptic is refuted on the narrow point: population alone scores <b>{f3(aPop.r2)}</b>,
+        worse than predicting one number for the entire country ({f3(aNull.r2)}). But the wider
+        result is uncomfortable. <b>Night lights alone reach R² {f3(aLights.r2)}</b> against the full
+        thirty-one-feature stack's {f3(aFull.r2)}. Night lights and population together reach
+        <b>{f3(aPL.r2)}</b> — higher than the published model, on nine features instead of
+        thirty-one. Land cover alone gives {f3(aLc.r2)}. Buildings alone give {f3(aBld.r2)}, and
+        adding buildings to lights and population <i>lowers</i> R² from {f3(aPL.r2)} to
+        {f3(aPLB.r2)}.</p>
+        <p class="pull">In level accuracy, the entire Open Buildings layer — 110 million footprints,
+        315 partitions, 14 GB streamed through the box — is worth nothing at all.</p>
+        <p>The right-hand column rescues it. In <i>rank</i> terms roofs are the strongest single
+        family: ρ {f2(aBld.spearman)} alone against night lights' {f2(aLights.spearman)}, and adding
+        them to lights and population lifts ρ from {f2(aPL.spearman)} to {f2(aPLB.spearman)}, with
+        the full stack at {f2(aFull.spearman)} — the best rank score of any specification tested.
+        Roof geometry tells you which regency in a group is poorer. It does not tell you by how many
+        points.</p>
+        <p>That distinction happens to be exactly the right one for this product. A benchmarked
+        disaggregator takes the level from BPS and needs only the ordering (§10). So the buildings
+        layer earns its place — but not for the reason the page gives, and not in the currency the
+        failing check is measured in. The attribution chart, read as evidence of predictive
+        contribution, is misleading and should say what it is.</p>
+      </section>
+
+      <section id="s7">
+        <h2><span class="num">7</span> Finding four — hand the model the line it says it is missing</h2>
+        <p>The case's defence makes a sharp, falsifiable prediction. If the missing information is the
+        nominal poverty line, then supplying that line should restore the missing skill. BPS publishes
+        it per regency. We added it — as <code>log</code> rupiah, at province level and at regency
+        level — under the identical folds.</p>
+        <p>This is circular as a shipped feature: the line is computed from the same Susenas the
+        headcount comes from, and the case is right to refuse it in production. As a
+        <i>diagnostic</i> it is not circular at all. It is the experiment that separates "the model
+        is missing the price level" from "the model is missing the poor."</p>
+        <figure>
+          <div class="figbox"><Fragment set:html={F6} /></div>
+          <figcaption><b>Figure {N.oracle}.</b> The published model, then the same model with the official
+          poverty line supplied as a feature, under identical leave-one-province-out folds.</figcaption>
+        </figure>
+        <p>Adding the province's own poverty line moves R² from {f3(bBase.r2)} to
+        <b>{f3(bProv.r2)}</b>. Adding the regency's own line gives <b>{f3(bReg.r2)}</b>. The total
+        movement is <b>{oracleGain >= 0 ? "+" : "−"}{f3(Math.abs(oracleGain))}</b>, against the
+        {f3(gapToBar)} the model needs to clear its threshold. Spearman moves
+        {f2(bBase.spearman)} → {f2(bReg.spearman)}; RMSE {f1(bBase.rmse)} → {f1(bReg.rmse)} pp.</p>
+        <p class="pull">Give the model, for free, the one thing it says it is missing, and
+        {pct(oracleGain / gapToBar, 0)} of the shortfall closes. The nominal poverty line is not the
+        missing information.</p>
+        <figure>
+          <div class="figbox"><Fragment set:html={F7} /></div>
+          <figcaption><b>Figure {N.offset}.</b> Each province's constant prediction offset — the quantity the
+          case says the poverty line sets — against that province's official poverty line. Hover any
+          dot for the province, its offset and its internal rank correlation.</figcaption>
+        </figure>
+        <p>The offsets range from {f1(oe.offset_range_pp[0])} to +{f1(oe.offset_range_pp[1])} pp and
+        the poverty line varies {f2(oe.line_ratio)}-fold across provinces, from
+        {idr(oe.line_range_idr[0])} to {idr(oe.line_range_idr[1])} per person per month. There is
+        genuine variation on both axes. If the line set the offset, the two would move together.
+        They do not: <b>R² {f3(oe.by_poverty_line.r2)}</b> in levels,
+        {f3(oe.by_log_poverty_line.r2)} in logs — and the weak relationship that exists runs the
+        wrong way, with higher lines attached to more negative offsets.</p>
+        <p>The offset is far better explained by the province's own poverty <i>level</i>:
+        R² {f3(oe.by_official_level.r2)}, slope {f2(oe.by_official_level.slope)}. That is the
+        signature of compression, the same fact Figure {N.scatter} showed at regency level, not of an
+        unobserved price index. The model over-calls poverty where there is little and under-calls it
+        where there is a lot, and provinces differ in how much there is.</p>
+        <p>There is also a structural reason the line cannot produce a <i>province-level</i> offset.
+        BPS computes a poverty line for every regency, and separately for urban and rural, so it
+        varies <i>inside</i> a province as well as between them, and on the case's own BPS pull for
+        {A.latest_year} it varies inside them a great deal. The median province spans
+        <b>{f2(lg.median_within_province_ratio)}×</b> internally;
+        {lg.n_provinces_over_1_5x} of {lg.n_provinces} span at least 1.5×. The widest is
+        {lg.max_within_province}, where {lg.max_within_low_name} sits at {idr(lg.max_within_low)}
+        and {lg.max_within_high_name} at {idr(lg.max_within_high)} — a
+        {f2(lg.max_within_province_ratio)}× range inside a single leave-one-out fold, wider than the
+        {f2(oe.line_ratio)}× range across all {provSorted.length} province means.</p>
+        <p class="pull">A quantity whose median variation <i>within</i> a fold is larger than the
+        variation between folds cannot be what makes each fold's error a constant.</p>
+        <p>The named cases make the mechanism concrete, and none of them is about prices.
+        {worstLow.name} has the {oe.line_range_idr[1] > 900000 ? "second-highest" : "highest"} poverty
+        line in the country ({idr(worstLow.line)}) and the model still under-calls it by
+        {f1(Math.abs(worstLow.offset))} pp — official {f1(worstLow.official)}%, predicted
+        {f1(worstLow.pred)}%. {worstHigh.name}, on an ordinary line of {idr(worstHigh.line)}, is
+        over-called by {f1(worstHigh.offset)} pp.{bali ? ` Bali is over-called by ${f1(bali.offset)} pp — the model reads ${f1(bali.pred)}% against an official ${f1(bali.official)}% — because a tourism economy is invisible in roof geometry and radiance.` : ""} What the
+        model is missing in these places is not a price level. It is where the income comes from.</p>
+      </section>
+
+      <section id="s8">
+        <h2><span class="num">8</span> Finding five — a satellite can see the price level</h2>
+        <p>The strongest form of the case's claim is a physical one: "no satellite can see a price
+        level." It is cheap to check. We kept the {A.nFeatures} features and the {A.folds.lopo}
+        province folds and changed only the target, to the official poverty line itself.</p>
+        <figure>
+          <div class="figbox"><Fragment set:html={F8} /></div>
+          <figcaption><b>Figure {N.price}.</b> The same features and folds, two targets. The upper bar is the
+          nominal poverty line — the quantity the case says is invisible from orbit.</figcaption>
+        </figure>
+        <p>A model that has never seen a province predicts that province's official cost-of-living
+        line at R² <b>{f3(tC.log.r2)}</b>, ρ <b>{f2(tC.log.spearman)}</b>, to within
+        <b>{pct(tC.mape, 1)}</b> of its true value in rupiah. Poverty lines are not mysterious
+        quantities: they track urbanisation, market access and settlement density, which is precisely
+        what roofs, radiance and built-up land measure.</p>
+        <p class="pull">The price level is not a blind spot. This model sees it about as well as it
+        sees the headcount in R² ({f3(tC.log.r2)} against {f3(S.lopo.r2)}) and distinctly better in
+        rank (ρ {f2(tC.log.spearman)} against {f2(S.lopo.spearman)}).</p>
+        <p>Taken with §7 the argument closes from both ends. The model can already infer the line
+        roughly as well as it infers anything; and when the true line is handed to it outright, the
+        headcount barely improves. Both halves of "the satellite cannot see the line, and that is why
+        the headcount fails" are false on the case's own data.</p>
+        <p>So why <i>is</i> a headcount harder than an asset index? §2 already gave the answer the
+        case reaches past. An asset index is a smooth function of visible stock — roofs, walls,
+        vehicles, electrification. A headcount is a <i>threshold crossing of a distribution</i>. Two
+        regencies with identical roofs and identical median consumption differ by ten points of
+        headcount if one has more households bunched just below the line. Satellites read the central
+        tendency of a place; a headcount is a property of its lower tail, and no roof reveals a tail.</p>
+        <p>The literature says exactly this, in numbers. Jean et al. find their r² collapses to about
+        <b>0.12</b> once the sample is restricted to households below twice the international poverty
+        line — the satellite loses almost all its skill precisely among the poor. Steele et al. find
+        the same features that give r² {f2(STEELE.r2)} on a wealth index give
+        <b>{f2(STEELEP.urban_r2)}</b> on consumption poverty in Bangladesh's <i>urban</i> subset —
+        which is the same shape as this case's kota R² of {f2(S.lopo_kota.r2)} (§12). Yeh et al.'s
+        own asset index correlates with log consumption at only r² {f2(YEH.consumption_r2)}, so even
+        a perfect asset model is capped near there against anything monetary.</p>
+        <p class="pull">A tail statistic, not a price index. That limit is real, specific, citable,
+        and it survives every test in this article — which is more than can be said for the one
+        currently published.</p>
+      </section>
+
+      <section id="s9">
+        <h2><span class="num">9</span> Finding six — remove the line entirely and the model is still short</h2>
+        <p>There is one setting where the nominal-line problem simply does not exist: inside a single
+        province, where the line is essentially constant. The case computes this as its own defence:
+        strip the province offsets and regencies are ordered at ρ
+        {f2(A.decomposition.within_province_spearman)}. It reports that number as "real signal."</p>
+        <p>It is real. It is also, on the case's own decomposition, worth
+        <b>R² {f3(A.decomposition.within_province_r2)}</b>: once each province's level is removed, the
+        model explains {pct(A.decomposition.within_province_r2, 1)} of what remains. The page quotes
+        the rank correlation and not the R², and the two tell very different stories about how much
+        resolution is being added.</p>
+        <p>The comparison that settles it is direct, because <a href="#ref-putri">Putri et al.
+        (2022)</a> worked in exactly this setting: one Indonesian province, East Java, {PUTRI.n}
+        regencies, the same BPS headcount, one nominal line.</p>
+        <figure>
+          <div class="figbox"><Fragment set:html={F9} /></div>
+          <figcaption><b>Figure {N.ej}.</b> This case's held-out performance on East Java against Putri
+          et al. (2022) on the same province and the same target. Their design is more favourable —
+          no hold-out, and they add point-of-interest density and SO₂ that this case does not
+          ingest — so this is an upper bound on them and a lower bound on us.</figcaption>
+        </figure>
+        <p>Held out entirely, this model orders East Java's {EJ?.n ?? PUTRI.n} regencies at
+        ρ {EJ?.rho == null ? "—" : f2(EJ.rho)} and r {f2(ejR)}, against their {f2(PUTRI.spearman)}
+        and {f2(PUTRI.pearson)}. On error the two are close: RMSE <b>{f2(ejRmse)} pp</b> here
+        against their {PUTRI.rmse_pp} pp — and ours is out of sample while theirs is not.</p>
+        <p>That is the fair summary. This model is a little behind an in-sample Indonesian benchmark
+        on ordering and level with it on error, in the one province where the nominal poverty line
+        cannot possibly be the explanation for anything. Part of the ordering gap is the hold-out.
+        Part of it is that Putri et al. use features this case chose not to ingest: the case's own
+        documentation lists OSM road density, GHSL built-up surface and Sentinel-2 indices as
+        specified but not implemented. Neither part is the price level, because inside one province
+        there is only one price level.</p>
+      </section>
+
+      <section id="s10">
+        <h2><span class="num">10</span> Finding seven — the product, tested where it can be tested</h2>
+        <p>None of the above is quite the question a client asks. The case does not ship a regency
+        model; it ships a <i>disaggregator</i>. The official regency rate is taken as given and the
+        model decides only how it is distributed among that regency's kecamatan. There is no ground
+        truth below the regency, which is exactly why the product exists — and exactly why it cannot
+        be validated where it operates.</p>
+        <p>But it can be validated one level up. Take the province's official rate as given, let the
+        held-out model distribute it among that province's regencies by the same benchmarking rule the
+        case uses, and score the result against the official regency rates. The null is the honest
+        alternative any agency already has: give every regency its province's rate.</p>
+        <figure>
+          <div class="figbox"><Fragment set:html={F10} /></div>
+          <figcaption><b>Figure {N.product}.</b> The shipped procedure, run one administrative level up.
+          Mean absolute error against the official {A.latest_year} regency rates for
+          {tD.n} regencies, and the share the benchmarked model places closer than the flat
+          provincial rate does.</figcaption>
+        </figure>
+        <p>The benchmarked model cuts mean absolute error from <b>{f2(tD.flat_null.mae)} pp</b> to
+        <b>{f2(tD.benchmarked_model.mae)} pp</b>, a reduction of {f2(tD.mae_reduction_pp)} pp, and
+        places {pct(tD.win_rate, 1)} of regencies closer to the truth than the flat rate does.
+        Benchmarking matters: unbenchmarked, the same predictions give MAE
+        {f2(tD.unbenchmarked_model.mae)} pp.</p>
+        <p class="pull">This is the case's strongest result and it is not currently on the page. The
+        disaggregator beats the alternative an agency actually has, by a measurable margin, in the
+        only setting where the claim can be checked.</p>
+        <p class="caveat"><b>Read the margin honestly.</b> Winning {pct(tD.win_rate, 1)} of the time
+        means losing {pct(1 - tD.win_rate, 1)} of the time, and a {f2(tD.benchmarked_model.mae)} pp
+        typical error is large next to the differences that decide an allocation. The result licenses
+        exploration and prioritisation. It does not license household targeting, and the analogous
+        step down from regency to kecamatan is a longer one than province to regency, over units with
+        thinner feature coverage — {A.coverage.inputs.no_buildings} of
+        {A.coverage.adm3_units.toLocaleString("en-US")} kecamatan carry no building footprint at all
+        and {A.coverage.inputs.no_lights} are dark in every year.</p>
+      </section>
+
+      <section id="s11">
+        <h2><span class="num">11</span> Finding eight — the baseline nobody escapes</h2>
+        <p>At the regency level the model competes with something it can never beat: the number BPS
+        published last year.</p>
+        <figure>
+          <div class="figbox"><Fragment set:html={F11} /></div>
+          <figcaption><b>Figure {N.persist}.</b> R² of an older published regency rate as a predictor of the
+          {A.latest_year} rate, by how old it is, against the satellite model's held-out R².</figcaption>
+        </figure>
+        <p>Last year's official rate predicts this year's at R² <b>{f3(e1.r2)}</b> with RMSE
+        {f2(e1.rmse)} pp. Even the {tE[tE.length - 1].lag}-year-old rate manages
+        {f3(tE[tE.length - 1].r2)}. The satellite model's {f3(S.lopo.r2)} is not in the same
+        contest. Poverty rates are extremely persistent, and the year-to-year movement that remains
+        is close to survey noise: residual scatter about each regency's own smooth trend is
+        {f2(A.surveyNoise.rmse_about_quadratic_trend_pp)} pp, against the model's
+        {f1(S.lopo.rmse)} pp error.</p>
+        <p>This is why the case's temporal hold-out reads the way it does. Trained on
+        ≤ 2023 and asked for {A.latest_year}, it reports ρ {f2(S.temporal_2025.spearman)} — but the
+        same regencies are in its training set at earlier years and two feature families never change,
+        so it is largely reciting persistence. Hold the province out as well and ρ falls to
+        {f2(S.temporal_strict_2025.spearman)}. The case publishes both, which is right; the strict
+        number is the only one that means anything.</p>
+      </section>
+
+      <section id="s12">
+        <h2><span class="num">12</span> Finding nine — who the model fails, and by how much</h2>
+        <figure>
+          <div class="figbox"><Fragment set:html={F12} /></div>
+          <figcaption><b>Figure {N.subgroup}.</b> Held-out R² and RMSE by subgroup. R² is computed against each
+          subgroup's own mean, so equal R² across groups with unequal spread does not mean equal
+          error.</figcaption>
+        </figure>
+        <p>The Java / off-Java disclosure the case promises is made, and it looks reassuring:
+        R² {f2(S.lopo_java.r2)} on Java against {f2(S.lopo_offjava.r2)} off it. But R² is
+        normalised by each group's own variance, and the groups do not have the same variance. In
+        percentage points the off-Java error is {f1(S.lopo_offjava.rmse)} pp against Java's
+        {f1(S.lopo_java.rmse)} — <b>{f1(S.lopo_offjava.rmse / S.lopo_java.rmse)} times larger</b> —
+        with a bias of +{f2(S.lopo_offjava.bias)} pp against Java's {f2(S.lopo_java.bias)}. The
+        model systematically under-calls poverty outside Java, which is where Indonesia's poverty
+        actually concentrates. Reporting the split in R² alone understates that, and the page should
+        carry the percentage points beside it.</p>
+        <p>Cities are worse and the case says so: kota R² is {f2(S.lopo_kota.r2)}, below zero, so the
+        model does worse than the national mean, and every kota estimate is labelled indicative. That
+        disclosure is correct and unusually candid. It is also a structural result rather than a
+        blemish: cities have low, tightly-clustered rates ({f1(S.lopo_kota.rmse)} pp RMSE on a
+        narrow spread), and roof geometry cannot separate an 8% city from a 5% city.</p>
+        <p>The sharpest gradient in the whole dataset, though, is not administrative. It is how much
+        of a place the satellite can actually resolve.</p>
+        <figure>
+          <div class="figbox"><Fragment set:html={F13} /></div>
+          <figcaption><b>Figure {N.coverage}.</b> Held-out mean absolute error by quintile of building density.
+          The emptiest fifth of the country has a median of {f1(cq[0].bld_per_km2_median)} roofs per
+          km²; the densest has {Math.round(cq[cq.length - 1].bld_per_km2_median)}.</figcaption>
+        </figure>
+        <p>Error runs from <b>{f2(cq[cq.length - 1].mae)} pp</b> in the densest-built quintile to
+        <b>{f2(cq[0].mae)} pp</b> in the emptiest — a factor of
+        {f1(cq[0].mae / cq[cq.length - 1].mae)}. Those {cq[0].n} regencies are the interior of
+        Kalimantan, Papua and eastern Nusa Tenggara: the places with the highest poverty rates, the
+        thinnest feature coverage, and the least official data. This is a coverage failure with a
+        clear remedy — more and better features for sparsely-built terrain — and it is a far more
+        actionable diagnosis than a nominal poverty line, which admits none.</p>
+      </section>
+
+      <section id="s13">
+        <h2><span class="num">13</span> What follows for decisions</h2>
+        <p>Evidence is only worth gathering if it changes an action. Indonesia has specific
+        institutions that would act on a sub-regency poverty surface, and they have different
+        tolerances.</p>
+        <ol class="uses">
+          <li><b>Exploration and prioritisation, inside a benchmarked regency.</b> A provincial
+          planning agency choosing which kecamatan to visit first, or where to commission a survey,
+          is making a reversible decision under a flat-rate alternative that is demonstrably worse
+          (§10). This is the defensible use and it should be the headline.</li>
+          <li><b>Survey design.</b> The highest-value output of a model this compressed is not the
+          estimate but the <i>disagreement</i>. The regencies where the satellite and the official
+          rate diverge most — the {pct(1 - tD.win_rate, 0)} of {tD.n} where the model loses to the
+          flat provincial rate are a good place to start — are a stratification variable for the
+          next Susenas sample, and a cheaper way to allocate enumeration effort than uniform
+          sampling.</li>
+          <li><b>Auditing an existing allocation.</b> Village-fund formulas already distribute money
+          using variables of comparable precision. A satellite surface is a second opinion on those
+          formulas — not a replacement, but a place to look for anomalies.</li>
+          <li class="no"><b>Not: household or village targeting.</b> The social registry that
+          determines who receives assistance operates on households.
+          <a href="#ref-sart">Sartirano et al. (2023)</a> ran precisely this experiment on Indonesia,
+          simulating the Kartu Perlindungan Sosial allocation with the best-known satellite wealth
+          index — one that reaches ρ {f2(SART.spearman)} against Susenas at exactly this
+          administrative level. It still produced an <b>exclusion error of
+          {pct(SART.exclusion_error, 2)}</b>, and <b>{pct(SART.untargeted_share, 2)}</b> of the people
+          living in genuinely eligible regencies would not have been targeted. Good rank correlation
+          and unusable allocations are not in tension; they are the normal result. Nothing in this
+          case's numbers suggests it would do better, and its {f2(S.lopo_kota.r2)} urban R² suggests
+          it would do worse in the cities where registries are largest.</li>
+          <li class="no"><b>Not: anything at regency level.</b> BPS publishes that number and its
+          own prior year predicts it at R² {f3(e1.r2)} (§11).</li>
+          <li class="no"><b>Not: a substitute for small-area estimation where survey microdata
+          exist.</b> <a href="#ref-sae">Feriyanto et al. (2024)</a> estimate per-capita expenditure
+          for {SAE.n} kecamatan in West Java by EBLUP on Susenas plus PODES with night lights as an
+          auxiliary, reaching a mean relative standard error of {pct(SAE.mean_rse, 1)} against BPS's
+          own {pct(SAE.bps_good, 0)} acceptability threshold. That is the right instrument for this
+          job and it is far more precise than this one. It also requires microdata this case does not
+          have — which is the honest reason this case exists, and should be stated as such.</li>
+        </ol>
+        <p>This also fixes the case's position on the axis FMV works along — <i>see clearly, connect
+        wisely, act with evidence</i>, with the stated priority of closing the gap between
+        accumulating data and acting on it. Presented as an <b>Insight</b> product, this case is a
+        poverty map that fails its own accuracy check. Presented as a <b>Systems &amp; Learning</b>
+        product it is something better: a standing instrument that says where the official statistic
+        is least informative, at a resolution the statistic does not reach, with its own error
+        published beside every number. The deliverable is not the map. It is the shortlist of places
+        where the map and the survey disagree, handed to the institution that can go and look.</p>
+      </section>
+
+      <section id="s14">
+        <h2><span class="num">14</span> Corrections applied, and what remains open</h2>
+        <p>Five things the case page said did not survive this review, and have been changed.</p>
+        <ol class="uses">
+          <li><b>The threshold provenance.</b> The page said the thresholds "were set from an
+          asset-wealth literature." The case's own configuration file cites Putri et al. (2022), a
+          study of the BPS poverty rate in East Java, for the R² and RMSE bars. Corrected to name the
+          real mismatch: none of the three source studies held space out, and this one does.</li>
+          <li><b>"No satellite can see a price level."</b> False on the case's own data. The same
+          features predict a held-out province's poverty line at R² {f3(tC.log.r2)} and
+          ρ {f2(tC.log.spearman)} (§8), and supplying the true line raises headcount R² by only
+          {f3(oracleGain)} (§7). Withdrawn, and replaced by the tail-statistic explanation, which the
+          evidence supports.</li>
+          <li><b>The province offset as evidence for the line.</b> The offsets are explained by the
+          poverty line at R² {f3(oe.by_poverty_line.r2)} and by prediction compression at
+          R² {f3(oe.by_official_level.r2)}. The page now says which, and names the provinces.</li>
+          <li><b>ρ {f2(A.decomposition.within_province_spearman)} reported without its R².</b> The
+          within-province R² of {f3(A.decomposition.within_province_r2)} is now published beside the
+          rank correlation, and the disaggregation test of §10 replaces both as the headline evidence
+          that the product works.</li>
+          <li><b>Attribution read as predictive contribution.</b> The chapter that ranks feature
+          families is computed from in-sample gain. Out of sample the buildings family adds rank
+          skill and costs level skill (§6), and the chart now says so.</li>
+        </ol>
+        <p>Four questions this review opened remain open, and we state them as work not done rather
+        than as caveats.</p>
+        <ol class="next">
+          <li><b>The missing feature families.</b> Putri et al.'s advantage over this model in East
+          Java is most plausibly point-of-interest density and road access. OSM road density, GHSL
+          built-up surface and Sentinel-2 indices are specified in this case and not implemented.
+          Figure {N.coverage} says where they would pay: the sparsely-built quintile, at
+          {f2(cq[0].mae)} pp of error.</li>
+          <li><b>Predict the distribution, not the crossing.</b> If §8 is right that headcounts fail
+          because they are a tail statistic, the fix is to predict a location parameter — the poverty
+          gap P1, or median consumption — and derive the headcount from a fitted distribution. P1 and
+          P2 are already ingested by this pipeline and unused by the model.</li>
+          <li><b>Drop the dead weight, or explain it.</b> Nine features (lights and population) score
+          R² {f3(aPL.r2)} against thirty-one features' {f3(aFull.r2)}. Either the extra twenty-two
+          are kept for the rank skill they demonstrably add, and the page says so, or the model is
+          simplified. Both are defensible; the current silence is not.</li>
+          <li><b>An independent surface to validate the kecamatan layer.</b> The planned check was
+          dropped on licence grounds — Meta's RWI and the SMERU map are both CC BY-NC. Until
+          something replaces it, §10 is the only evidence the disaggregation works, and it is
+          evidence from one level up.</li>
+        </ol>
+      </section>
+
+      <section id="refs">
+        <h2><span class="num">15</span> References and reproducibility</h2>
+        <ol class="refs">
+          <li id="ref-jean">Jean, N., Burke, M., Xie, M., Davis, W.M., Lobell, D.B. &amp; Ermon, S.
+          (2016). Combining satellite imagery and machine learning to predict poverty.
+          <i>Science</i> 353(6301), 790–794. doi:{JEAN.doi}</li>
+          <li id="ref-yeh">Yeh, C., Perez, A., Driscoll, A., Azzari, G., Tang, Z., Lobell, D.,
+          Ermon, S. &amp; Burke, M. (2020). Using publicly available satellite imagery and deep
+          learning to understand economic well-being in Africa. <i>Nature Communications</i> 11,
+          2583. doi:{YEH.doi}</li>
+          <li id="ref-chi">Chi, G., Fang, H., Chatterjee, S. &amp; Blumenstock, J.E. (2022).
+          Microestimates of wealth for all low- and middle-income countries. <i>PNAS</i> 119(3),
+          e2113658119. doi:{CHI.doi}</li>
+          <li id="ref-eng">Engstrom, R., Hersh, J. &amp; Newhouse, D. (2022). Poverty from space:
+          using high resolution satellite imagery for estimating economic well-being.
+          <i>World Bank Economic Review</i> 36(2), 382–412. doi:{ENG.doi}</li>
+          <li id="ref-steele">Steele, J.E., Sundsøy, P.R., Pezzulo, C., Alegana, V.A., Bird, T.J.,
+          Blumenstock, J., Bjelland, J., Engø-Monsen, K., de Montjoye, Y.-A., Iqbal, A.M. et al.
+          (2017). Mapping poverty using mobile phone and satellite data. <i>Journal of the Royal
+          Society Interface</i> 14(127), 20160690. doi:{STEELE.doi}</li>
+          <li id="ref-sae">Feriyanto, N., Wijayanto, A.W., Wulansari, I.Y. &amp; Parwanto, N.B.
+          (2024). Small area estimation approaches using satellite imageries auxiliary data for
+          estimating per capita expenditure in West Java, Indonesia. <i>Jurnal Aplikasi Statistika
+          &amp; Komputasi Statistik</i> 16(2), 205–221. doi:{SAE.doi}</li>
+          <li id="ref-putri">Putri, S.R., Wijayanto, A.W. &amp; Sakti, A.D. (2022). Developing
+          relative spatial poverty index using integrated remote sensing and geospatial big data
+          approach: a case study of East Java, Indonesia. <i>ISPRS International Journal of
+          Geo-Information</i> 11(5), 275. doi:{PUTRI.doi}</li>
+          <li id="ref-sart">Sartirano, D., Kalimeri, K., Cattuto, C., Delamónica, E.,
+          Garcia-Herranz, M., Mockler, A., Paolotti, D. &amp; Schifanella, R. (2023). Strengths and
+          limitations of relative wealth indices derived from big data in Indonesia.
+          <i>Frontiers in Big Data</i> 6, 1054156. doi:{SART.doi}</li>
+          <li id="ref-roberts">Roberts, D.R. et al. (2017). Cross-validation strategies for data with
+          temporal, spatial, hierarchical, or phylogenetic structure. <i>Ecography</i> 40(8),
+          913–929. doi:10.1111/ecog.02881</li>
+          <li id="ref-ploton">Ploton, P. et al. (2020). Spatial validation reveals poor predictive
+          performance of large-scale ecological mapping models. <i>Nature Communications</i> 11,
+          4540. doi:10.1038/s41467-020-18321-y</li>
+          <li id="ref-bps">BPS-Statistics Indonesia. Percentage of poor population (P0), poverty gap
+          (P1), poverty severity (P2) and the poverty line by kabupaten/kota. WebAPI variables
+          621–624, {A.coverage.years[0]}–{A.latest_year}, March Susenas.</li>
+        </ol>
+        <p class="repro">Every figure on this page is generated in the page's own frontmatter from
+        <code>web/src/data/article.json</code>, written by <code>pipeline/article.py</code> from the
+        case's published <code>stats.json</code> and <code>model_stats.json</code> together with
+        <code>pipeline/review.py</code>, which performs the independent recomputation of §4 and the
+        five tests of §6–§11 on the case's own stored features and folds. Data vintage {A.vintage};
+        review generated {A.generated}. Literature values in Figures {N.pairs} and {N.lit} and in §2 are transcribed from the
+        published papers with their DOIs above and are the only numbers on this page not computed by
+        this pipeline. Gate thresholds were committed before the results they judge.</p>
+      </section>
+
+      <footer class="end">
+        <p>Part of the Demo Lab. Built end-to-end on public data — acquisition, pipeline, model,
+        validation, and this review.</p>
+        <a class="cta" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/`}>← Back to the instrument</a>
+      </footer>
+    </article>
+
+    <div id="tip" hidden></div>
+
+    <style is:global>
+      body { margin: 0; background: var(--ground); color: var(--ink);
+        font-family: var(--font-body); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+      *, *::before, *::after { box-sizing: border-box; }
+      a { color: var(--accent); }
+
+      .bar { position: sticky; top: 0; z-index: 20; display: flex; justify-content: space-between;
+        align-items: center; gap: 16px; padding: 12px 24px;
+        background: color-mix(in srgb, var(--ground) 92%, transparent);
+        backdrop-filter: blur(8px); border-bottom: 1px solid var(--hairline); }
+      .back { text-decoration: none; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.06em; }
+      .stamp { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); }
+
+      article { max-width: 50rem; margin: 0 auto; padding: 0 24px 12vh; }
+      .masthead { padding: 9vh 0 4vh; border-bottom: 1px solid var(--hairline); }
+      .eyebrow { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--accent); }
+      h1 { font-family: var(--font-display); font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.1;
+        letter-spacing: -0.02em; margin: 18px 0 20px; }
+      .standfirst { font-size: 1.12rem; color: var(--ink); margin: 0 0 26px; max-width: 42rem; }
+      .byline { display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: var(--font-data);
+        font-size: 0.74rem; letter-spacing: 0.08em; color: var(--ink-muted); text-transform: uppercase; }
+
+      .abstract { margin: 5vh 0; padding: 26px 28px; border: 1px solid var(--hairline);
+        border-left: 3px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
+      .abstract h2 { font-family: var(--font-data); font-size: 0.76rem; letter-spacing: 0.16em;
+        color: var(--accent); margin: 0 0 14px; text-transform: uppercase; }
+      .abstract p { margin: 0 0 12px; font-size: 0.97rem; }
+      .abstract p:last-child { margin-bottom: 0; }
+
+      .toc { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 20px 0 8px; margin-bottom: 4vh;
+        border-bottom: 1px solid var(--hairline); font-family: var(--font-data); font-size: 0.74rem; }
+      .toc a { text-decoration: none; color: var(--ink-muted); }
+      .toc a:hover { color: var(--accent); }
+
+      section { margin: 6vh 0; }
+      h2 { font-family: var(--font-display); font-size: 1.55rem; line-height: 1.25; letter-spacing: -0.01em;
+        margin: 0 0 20px; display: flex; gap: 14px; align-items: baseline; }
+      .num { font-family: var(--font-data); font-size: 0.9rem; color: var(--accent); flex: none; }
+      p { margin: 0 0 18px; }
+      b { color: #FFF1DC; font-weight: 600; }
+
+      .caveat { border-left: 2px solid var(--alert); padding: 2px 0 2px 18px; color: var(--ink-muted); }
+      .caveat b { color: var(--alert); }
+      .pull { font-size: 1.1rem; line-height: 1.6; border-left: 3px solid var(--accent);
+        padding: 8px 0 8px 20px; color: #FFF1DC; }
+
+      figure { margin: 34px 0; padding: 20px 18px 14px; border: 1px solid var(--hairline);
+        border-radius: var(--radius); background: var(--surface); }
+      .fig { display: block; width: 100%; height: auto; overflow: visible; }
+      figcaption { font-size: 0.85rem; color: var(--ink-muted); margin-top: 14px; line-height: 1.55; }
+      figcaption b { color: var(--ink); }
+
+      .d1 { fill: var(--accent); opacity: 0.55; transition: opacity 0.12s; cursor: crosshair; }
+      .d1.kota { fill: #EBD9B8; opacity: 0.85; }
+      .d1:hover { opacity: 1; }
+      .d2 { cursor: crosshair; transition: opacity 0.12s; }
+      .d2:hover { opacity: 1; }
+
+      ol.uses, ol.next { padding-left: 22px; margin: 0 0 18px; }
+      ol.uses li, ol.next li { margin-bottom: 14px; }
+      ol.uses li.no { color: var(--ink-muted); }
+      ol.uses li.no b { color: var(--alert); }
+
+      ol.refs { padding-left: 22px; font-size: 0.9rem; color: var(--ink-muted); }
+      ol.refs li { margin-bottom: 12px; }
+      .repro { font-size: 0.86rem; color: var(--ink-muted); border-top: 1px solid var(--hairline);
+        padding-top: 18px; }
+      code { font-family: var(--font-data); font-size: 0.88em; color: var(--accent); }
+
+      .end { margin-top: 8vh; padding-top: 26px; border-top: 1px solid var(--hairline); }
+      .end p { color: var(--ink-muted); font-size: 0.9rem; }
+      .cta { display: inline-block; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.08em;
+        color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 10px 18px;
+        text-decoration: none; }
+      .cta:hover { background: var(--accent-ink); }
+
+      #tip { position: fixed; z-index: 60; pointer-events: none; background: var(--surface-raised);
+        border: 1px solid var(--hairline); border-radius: 5px; padding: 8px 11px;
+        font-family: var(--font-data); font-size: 0.72rem; line-height: 1.5; color: var(--ink);
+        box-shadow: 0 8px 26px rgba(0,0,0,0.55); max-width: 17rem; }
+
+      @media (max-width: 780px) {
+        article { padding: 0 18px 10vh; }
+        .masthead { padding-top: 5vh; }
+        /* A 720-unit chart squeezed into a 350-pixel column renders its labels at 5px.
+           The figure scrolls inside its own box instead, so the page itself never does. */
+        .figbox { overflow-x: auto; overscroll-behavior-x: contain; }
+        figure { padding: 14px 10px 10px; }
+        .fig { min-width: 600px; }
+        .figbox + figcaption::before { content: "◂ scroll the chart ▸"; display: block;
+          font-family: var(--font-data); font-size: 0.66rem; letter-spacing: 0.06em;
+          color: var(--ink-muted); opacity: 0.7; margin: 2px 0 10px; }
+      }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+
+    <script>
+      /* Hover read-outs. Pure SVG, no GPU path. */
+      const tip = document.getElementById("tip");
+      const show = (html, e) => {
+        tip.innerHTML = html; tip.hidden = false;
+        const r = tip.getBoundingClientRect();
+        let x = e.clientX + 14, y = e.clientY + 14;
+        if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+        if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+        tip.style.left = x + "px"; tip.style.top = y + "px";
+      };
+      const hide = () => { tip.hidden = true; };
+      document.querySelectorAll(".d1").forEach((el) => {
+        el.addEventListener("mousemove", (e) => {
+          const d = el.dataset;
+          show(`<b>${d.n}</b><br>${d.v}<br>official ${d.y}% · predicted ${d.p}%`, e);
+        });
+        el.addEventListener("mouseleave", hide);
+      });
+      document.querySelectorAll(".d2").forEach((el) => {
+        el.addEventListener("mousemove", (e) => {
+          const d = el.dataset;
+          show(`<b>${d.n}</b><br>${d.c} regencies · offset ${d.o} pp<br>poverty line ${d.l}<br>internal rank ρ ${d.r}`, e);
+        });
+        el.addEventListener("mouseleave", hide);
+      });
+    </script>
+  </body>
+</html>
