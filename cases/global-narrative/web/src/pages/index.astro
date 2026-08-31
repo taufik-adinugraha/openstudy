@@ -8,6 +8,16 @@ const summary = (await import("../data/summary.json").catch(() => null))?.defaul
 const fmtPct = (v) => (v == null ? "—" : (v * 1).toFixed(2) + "%");
 const apiLast = summary.apiLast ?? "—";
 const eventsLast = summary.eventsLast ?? "pending";
+// The share has two halves. After the review of this case, the page states both
+// wherever it would otherwise invite a reader to hear "attention" and think "the world".
+const chg = (v) => (v == null ? "—" : `${v > 0 ? "+" : "−"}${Math.abs(v * 100).toFixed(0)}%`);
+const nInt = (v) => (v == null ? "—" : Math.round(v).toLocaleString("en-US"));
+// The review's own numbers, read from the same file the review article draws on, so
+// the two pages can never disagree. (pipeline/article.py writes it.)
+const rv = (await import("../data/article.json").catch(() => null))?.default ?? null;
+const flipped = rv
+  ? rv.attr.anchor_foreign.filter((a) => (a.published_api_ratio >= 1.5) !== (a.foreign.ratio >= 1.5)).length
+  : null;
 ---
 <html lang="en" data-case="narrative" data-theme="dark">
   <head>
@@ -29,7 +39,10 @@ const eventsLast = summary.eventsLast ?? "pending";
           <h1>Every time the world’s news turned to Indonesia — a decade, one pulse.</h1>
           <p>GDELT machine-reads the world’s news every fifteen minutes in 65 languages. This is the share of
           all of it that mentioned Indonesia, day by day{summary.volMean ? ` — on average ${fmtPct(summary.volMean)} of everything monitored` : ""}.
-          The flares are the days the world could not look away.</p>
+          The flares are the days Indonesia took an unusually large slice of the world’s coverage — which
+          happens both when Indonesia is covered more and when everything else is covered less. Our review
+          found that most of the biggest spikes are partly the second; read the marked days as
+          <em>events worth looking up</em>, not as a ranking of how much the world cared.</p>
         </div>
         <aside class="hero-figures" id="hero-figures" aria-label="Headline figures for the attention pulse">
           <div class="figs-pending" id="hero-status">
@@ -44,10 +57,15 @@ const eventsLast = summary.eventsLast ?? "pending";
 
     <section class="chapter wide">
       <span class="eyebrow">01 · The eras</span>
-      <h2>Five regimes of attention</h2>
-      <p>Attention to a country is not a slope; it is a series of plateaus broken by shocks. Each era below
-      carries its average share of world coverage, its mean tone, and the themes that defined it — all
-      computed, none asserted.</p>
+      <h2>Five regimes of coverage</h2>
+      <p>Each era below carries its average share of world coverage, its mean tone, and the themes that
+      defined it — all computed, none asserted. Read the share against the two numbers underneath it.
+      Between {summary.firstYear ?? "—"} and {summary.lastYear ?? "—"} the articles GDELT saw naming
+      Indonesia fell {chg(summary.idnChange)} — from {nInt(summary.idnFirst)} a day to
+      {nInt(summary.idnLast)} — while everything it monitored fell {chg(summary.monitoredChange)}.
+      The share rose {chg(summary.shareChange)} because the second fell faster than the first.
+      <b>These are five regimes of what Indonesia’s slice looked like, not five regimes of how much the
+      world was watching</b> — a distinction the review article takes apart in detail.</p>
       <div id="eras" class="era-grid"></div>
     </section>
 
@@ -62,19 +80,25 @@ const eventsLast = summary.eventsLast ?? "pending";
       <p class="footnote" id="g20-note"></p>
       <h3>When it’s loud, is it dark?</h3>
       <p class="footnote">Each dot is a month: how much the world talked about Indonesia against how it
-      sounded. We expected loud to mean dark — the data says otherwise: across the decade the two barely
-      correlate (the r is on the chart). Sustained attention comes from summits and elections as often as
-      from catastrophe; the truly dark moments are single <em>days</em>, listed above. Notice also the colour
-      drift: months after 2023 sit warmer — a real shift in coverage, though GDELT’s shrinking source mix
-      (methodology) deserves part of the credit.</p>
+      sounded. At this resolution the two barely correlate (the r is on the chart) — sustained attention
+      comes from summits and elections as often as from catastrophe. <b>But the answer depends on the
+      timescale, and this is the one scale at which it vanishes.</b> Measured day by day the correlation is
+      negative, and the loudest tenth of days is about a fifth of a tone point darker than the rest: loud
+      days are dark, loud months are not. The review article shows both. Notice also the colour drift:
+      months after 2023 sit warmer — the review decomposes that rise and finds roughly two-thirds is the
+      same outlets writing more warmly and one-third is GDELT reading a different set of outlets.</p>
       <div id="scatter" class="chart"></div>
     </section>
 
     <section class="chapter wide">
       <span class="eyebrow">03 · What the world reads about</span>
-      <h2>Twenty threads in the story</h2>
+      <h2>The threads in the story</h2>
       <p>Each panel is a keyword theme’s share of all Indonesia coverage, month by month, on its own
-      scale. Hover to read one month across every theme.</p>
+      scale. Because both halves of that ratio share the same denominator, this is the one layer on the
+      page the crawl’s size cannot move. Hover to read one month across every theme.</p>
+      <p class="footnote">Twenty theme queries were registered; the ones below are those the rate-limited
+      API has returned so far, and each panel states how many months it holds. A panel with a short window
+      is <b>not</b> comparable with a full one — its mean is a mean of those months only.</p>
       <div id="themes" class="theme-grid"></div>
       <div id="era-rank" class="rank-wrap"></div>
     </section>
@@ -85,9 +109,16 @@ const eventsLast = summary.eventsLast ?? "pending";
       <p>For each publishing country, the share of its <em>own</em> monitored output that mentioned
       Indonesia — a measure of interest, not of volume. Neighbours watch closely; the Anglophone giants
       barely glance, and when they do the tone is different.</p>
+      <p class="footnote">Two cautions on this chapter. The intensity below is <b>not size-controlled</b>:
+      a country GDELT barely indexes can float to the top on a handful of articles, so read the large
+      neighbours and ignore the tail. And this measure cannot tell you who supplies the bulk of the
+      coverage. Counting publishers directly in the event layer — which the review article does — shows
+      that {summary.translatedShare ? `${Math.round(summary.translatedShare * 100)}%` : "most"} of the
+      kept events come from the translated feed and that the great majority of all Indonesia coverage
+      here is published in Indonesia. This is substantially Indonesia’s own press, not the world’s.</p>
       <div id="sources-heat" class="chart"></div>
       <div class="two-up">
-        <div><h3>Foreign vs domestic press</h3><p class="footnote">Share of Indonesia coverage published outside Indonesia (<code>-sourcecountry:ID</code>). See the language-honesty check.</p><div id="press-chart" class="chart"></div></div>
+        <div><h3>Foreign vs domestic press</h3><p class="footnote">Share of Indonesia coverage published outside Indonesia (<code>-sourcecountry:ID</code>). This is the query the API refuses most often, so the curve is still pending; the review article builds the same split from the event layer instead, and finds foreign-published coverage of Indonesia <em>falling</em> across the decade while the share above rises.</p><div id="press-chart" class="chart"></div></div>
         <div><h3>Languages</h3><p class="footnote">Intensity of Indonesia coverage by language — the world’s narrative is not only the English one.</p><div id="lang-bars" class="chart"></div></div>
       </div>
       <div id="outlets" class="two-up"></div>
@@ -122,14 +153,36 @@ const eventsLast = summary.eventsLast ?? "pending";
       </div>
     </section>
 
+    <section class="chapter review-cta">
+      <span class="eyebrow">06 · Review</span>
+      <h2>We had this instrument reviewed, adversarially.</h2>
+      <p>An independent read of the same archive against the published literature. It finds that
+      {rv ? `${Math.round(rv.crawl.elasticity.attributable * 100)}%` : "most"} of the decade’s apparent
+      rise in attention is predicted by GDELT’s shrinking crawl; that {rv ? rv.spikes.weekend_mon : "24"}
+      of the {rv ? rv.spikes.n_top : "30"} loudest days fall on a Saturday, Sunday or Monday, when the
+      world’s newsroom is quiet; that {rv ? rv.attr.publishers.indonesian_in_top25 : "23"} of the
+      {rv ? rv.attr.publishers.top.length : "25"} largest publishers here are based in Indonesia; and it
+      rebuilds the anchor test on foreign publishers only, which changes {flipped ?? "five"} of
+      {rv ? rv.attr.anchor_foreign.length : "nine"} verdicts. The corrections it asked for have been
+      applied to this page.</p>
+      <a class="cta big" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/article`}>Read the review article →</a>
+    </section>
+
     <footer class="method">
       <span class="eyebrow">Methodology &amp; sources</span>
-      <h3>Normalization</h3>
+      <h3>Normalization, and what it cannot fix</h3>
       <p>GDELT’s crawl is not a constant: the number of articles it monitors per day has drifted by a factor
-      of about four across the decade — mostly <em>shrinking</em> since 2017. Every attention chart on this
-      page is therefore a <b>share</b> of everything monitored, never a raw count: a raw count would show
-      “the world losing interest in Indonesia” when what actually declined is the crawl. The raw count
-      appears once — here — next to the normalized share, so the drift is visible and the reason is plain.
+      of about {summary.crawlDrift ?? "four"} across the decade — mostly <em>shrinking</em> since
+      {summary.firstYear ?? 2017}. Every attention chart on this page is therefore a <b>share</b> of
+      everything monitored, never a raw count, which is what the API's own documentation recommends and
+      what keeps one day comparable with the next.</p>
+      <p><b>It does not make one decade comparable with another, and this page used to imply it did.</b>
+      Over the window the raw count fell {chg(summary.idnChange)} and the crawl fell
+      {chg(summary.monitoredChange)}, so the share rose {chg(summary.shareChange)}. Our review estimates
+      that {rv ? `${Math.round(rv.crawl.elasticity.attributable * 100)}%` : "most"} of that rise is
+      predicted by the crawl’s shrinkage alone, and that counting only
+      publishers outside Indonesia gives a series moving the other way. Neither the raw count nor the
+      share identifies the world’s interest on its own; both are plotted here so the gap is visible.
       (The API itself went dark 15 Jun – 1 Jul 2025; that gap is left visible, not interpolated.)</p>
       <div id="norm-chart" class="chart"></div>
       <h3>Sources, coding, cadence</h3>
@@ -147,7 +200,7 @@ const eventsLast = summary.eventsLast ?? "pending";
       itself biased — toward disaster, toward the Anglophone press, toward what is online — and this page
       measures that coverage, not Indonesia.</p>
       <h3>Validation gates</h3>
-      <div id="gates" class="gates"></div>
+      <div id="gates" class="gates" data-flipped={flipped == null ? "" : String(flipped)}></div>
       <p class="footnote">Data: <a href="https://www.gdeltproject.org/" rel="noopener">The GDELT Project</a> — free for any use
       with attribution. A demo-lab case; refreshed nightly (API) and by month (events).</p>
       <span class="stamp dim" id="foot-stamp"></span>
@@ -337,6 +390,8 @@ const eventsLast = summary.eventsLast ?? "pending";
             <span class="stamp" style="color:var(--c)">${fYear(P(e.start))}${fYear(P(e.start)) !== fYear(P(e.end)) ? "–" + fYear(P(e.end)) : ""}</span>
             <h3>${e.label}</h3>
             <div class="era-stat"><span class="stamp dim">SHARE OF WORLD NEWS</span><b>${pct(e.vol_mean, 3)}</b><div class="bar"><i style="width:${(100 * e.vol_mean / maxVol).toFixed(1)}%"></i></div></div>
+            ${e.idn_mean != null ? `<div class="era-row split"><div><span class="stamp dim">ARTICLES/DAY</span><b>${Math.round(e.idn_mean).toLocaleString()}</b></div>
+              <div><span class="stamp dim">CRAWL/DAY</span><b>${d3.format(".2s")(e.monitored_mean)}</b></div></div>` : ""}
             <div class="era-row"><div><span class="stamp dim">TONE</span><b style="color:${e.tone_mean < (pulse.eras.reduce((s, x) => s + x.tone_mean, 0) / pulse.eras.length) ? NEG : POS}">${sgn(e.tone_mean)}</b></div>
               <div><span class="stamp dim">PEAK DAY</span><b>${fDay(P(e.peak_day))}</b></div></div>
             <div class="chips">${e.top_themes.map((t) => `<span class="chip">${t.label} <i>${pct(100 * t.share, 0)}</i></span>`).join("")}</div>
@@ -425,7 +480,9 @@ const eventsLast = summary.eventsLast ?? "pending";
         for (const k of keys) {
           const th = themes.themes[k];
           const wrap = document.createElement("div"); wrap.className = "panel"; wrap.dataset.theme = k;
-          wrap.innerHTML = `<div class="panel-head"><b>${th.label}</b><span class="stamp dim">${pct(100 * th.share_mean, 1)} MEAN</span></div>`;
+          const nMo = th.share.filter((v) => v != null).length;
+          const short = nMo < themes.months.length - 12;
+          wrap.innerHTML = `<div class="panel-head"><b>${th.label}</b><span class="stamp ${short ? "warn" : "dim"}">${pct(100 * th.share_mean, 1)} MEAN · ${nMo} MO</span></div>`;
           el.appendChild(wrap);
           const M = { t: 6, r: 8, b: 18, l: 8 }, { svg, W, H } = mkSvg(wrap, 96);
           const x = d3.scaleTime(d3.extent(months), [M.l, W - M.r]);
@@ -694,6 +751,7 @@ const eventsLast = summary.eventsLast ?? "pending";
           el.innerHTML = `
             <div class="gate">${V(d1.verdict)}<div><b>Normalization honesty.</b> Crawl size drifts <b>${num(d1.crawl_size_drift_max_over_min, 2)}×</b> across years (${Object.entries(d1.monitored_articles_per_day_by_year ?? {}).map(([y, v]) => `${y}: ${d3.format(".2s")(v)}`).join(" · ")} articles/day). All attention charts are shares.</div></div>
             <div class="gate">${V(d2.verdict)}<div><b>Anchor events.</b> ${d2.pass ?? 0} pass · ${d2.fail ?? 0} fail · ${d2.pending ?? 0} pending of ${d2.anchors?.length ?? 0}, each against a trailing ${d2.baseline_days}-day baseline.
+              <br><span class="caution">Read the attention column with care: it is a share, so a quiet world news day inflates it. Our review recomputes every one of these on foreign publishers only and ${el.dataset.flipped || "several"} of them change verdict.</span>
               <div class="table-scroll"><table class="rank small anchors"><thead><tr><th>Anchor</th><th>Attention ×</th><th>Δ tone</th><th>Protest ×</th><th>Verdict</th></tr></thead><tbody>${(d2.anchors ?? []).map((a) => { const s = a.signatures; const mark = (k) => (a.gated?.includes(k) ? (s[k].verdict === "PASS" ? "✓" : s[k].verdict === "FAIL" ? "✗" : "…") : "<i>info</i>"); const th = a.gated?.find((k) => k.startsWith("theme_")); return `<tr><td>${a.day} · ${a.label}</td><td class="num">${s.attention ? `${num(s.attention.ratio, 1)} ${mark("attention")}` : "—"}${th && s[th] ? `<br><i>${th.replace("theme_", "")} ${s[th].ratio != null ? num(s[th].ratio, 1) + "×" : "…"} ${mark(th)}</i>` : ""}</td><td class="num">${s.tone_drop ? `${sgn(-s.tone_drop.delta)} ${s.tone_drop.verdict === "PASS" ? "✓" : s.tone_drop.verdict === "FAIL" ? "✗" : "…"}` : a.report_only?.tone_rise ? `<i>${sgn(a.report_only.tone_rise.delta)} (report only)</i>` : "—"}</td><td class="num">${s.protest ? `${num(s.protest.ratio, 1)} ${s.protest.verdict === "PASS" ? "✓" : s.protest.verdict === "FAIL" ? "✗" : "…"}` : "—"}</td><td>${V(a.verdict)}</td></tr>`; }).join("")}</tbody></table></div></div></div>
             <div class="gate">${V(d3g.verdict)}<div><b>Two-source coherence.</b> Event-layer Indonesia share (own denominator) vs the API’s normalized volume: Spearman ρ = <b>${d3g.share_all?.spearman_rho ?? "pending"}</b> over ${d3g.share_all?.n_days ?? 0} shared days (threshold ${d3g.threshold}).${d3g.share_en ? ` English feed ρ ${d3g.share_en.spearman_rho ?? "—"}, translated ρ ${d3g.share_trans?.spearman_rho ?? "—"}.` : ""}</div></div>
             <div class="gate">${V(d4.verdict)}<div><b>Language honesty.</b> Foreign press carries <b>${d4.api_foreign_share_mean != null ? d3.format(".0%")(d4.api_foreign_share_mean) : "—"}</b> of Indonesia coverage; the translated (non-English) feed supplies <b>${d4.event_layer_translated_share != null ? d3.format(".0%")(d4.event_layer_translated_share) : "—"}</b> of kept events. Both are charted in chapter 04.</div></div>`;
@@ -793,7 +851,9 @@ const eventsLast = summary.eventsLast ?? "pending";
       .panel { border: 1px solid var(--hairline); border-radius: 6px; padding: 8px 8px 2px; background: var(--surface); cursor: crosshair; }
       .panel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.86rem; } .panel-head b { font-family: var(--font-display); }
       .panel svg { display: block; width: 100%; }
-      .table-scroll { overflow-x: auto; }
+      /* a wide table must scroll inside its own box, never widen its grid cell —
+         without min-width:0 the anchors table pushed the gate past the viewport */
+      .table-scroll { overflow-x: auto; min-width: 0; max-width: 100%; }
       table.rank { border-collapse: collapse; width: 100%; font-family: var(--font-data); font-size: 0.78rem; }
       table.rank th { text-align: left; font-weight: 600; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); padding: 8px 10px 8px 0; border-bottom: 1px solid var(--ink-muted); }
       table.rank td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--hairline); vertical-align: top; }
@@ -816,11 +876,25 @@ const eventsLast = summary.eventsLast ?? "pending";
       #map-tip { position: absolute; z-index: 5; pointer-events: none; background: var(--surface-raised); border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--hairline)); border-radius: 6px; padding: 9px 12px; font-family: var(--font-data); font-size: 0.78rem; line-height: 1.55; color: var(--ink); box-shadow: 0 10px 30px rgba(0,0,0,0.55); }
       .map-note { position: absolute; right: 12px; top: 10px; }
 
+      .stamp.warn { color: var(--alert); }
+      .caution { color: var(--alert); }
+      .era-row.split b { font-size: 0.9rem; font-family: var(--font-data); letter-spacing: -0.01em; }
+
+      .review-cta { padding-top: 14vh; }
+      .review-cta p { color: var(--ink-muted); }
+      .cta.big { align-self: flex-start; margin-top: 8px; font-family: var(--font-data);
+        font-size: 0.82rem; letter-spacing: 0.08em; color: var(--accent);
+        border: 1px solid var(--accent); border-radius: 4px; padding: 13px 22px;
+        text-decoration: none; transition: background 0.18s ease, transform 0.18s ease; }
+      .cta.big:hover { background: var(--accent-ink); transform: translateY(-1px); }
+      @media (prefers-reduced-motion: reduce) { .cta.big { transition: none; } }
+
       .method { max-width: 72rem; margin: 0 auto; padding: 12vh 24px 10vh; display: flex; flex-direction: column; gap: 14px; }
       .method p { margin: 0; font-size: 0.9rem; line-height: 1.7; color: var(--ink-muted); max-width: 72rem; }
       .method code { font-size: 0.86em; background: var(--surface-raised); padding: 1px 5px; border-radius: 3px; color: var(--ink); }
       .gates { display: flex; flex-direction: column; gap: 10px; }
       .gate { display: grid; grid-template-columns: 82px 1fr; gap: 14px; border: 1px solid var(--hairline); border-radius: 8px; padding: 12px 14px; background: var(--surface); font-size: 0.88rem; line-height: 1.6; color: var(--ink-muted); }
+      .gate > * { min-width: 0; }
       .gate b { color: var(--ink); }
       .verdict { font-family: var(--font-data); font-size: 0.75rem; letter-spacing: 0.08em; border-radius: 4px; padding: 4px 8px; height: fit-content; text-align: center; border: 1px solid var(--hairline); }
       .verdict.PASS { color: var(--tone-pos); border-color: var(--tone-pos); } .verdict.FAIL { color: var(--tone-neg); border-color: var(--tone-neg); } .verdict.PENDING { color: var(--ink-muted); }
@@ -834,6 +908,9 @@ const eventsLast = summary.eventsLast ?? "pending";
         .hero { min-height: auto; padding-bottom: 4vh; }
         .fig { min-height: 74px; padding: 12px 13px 13px; }
         .chapter { padding-top: 9vh; }
+        /* legend labels are nowrap so a swatch never separates from its text; on a
+           narrow screen a long one must be allowed to break instead of running off */
+        .sw { white-space: normal; }
       }
       /* nothing may push the document sideways at any width */
       html, body { max-width: 100%; overflow-x: hidden; }

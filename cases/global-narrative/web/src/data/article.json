@@ -1,0 +1,2835 @@
+{
+ "vintage": "2026-08-30",
+ "generated": "2026-08-31T02:26+00:00",
+ "window": {
+  "first": "2017-01-01",
+  "last": "2026-08-30"
+ },
+ "days": 3529,
+ "coverage": {
+  "api_days": 3504,
+  "event_days": 3512,
+  "event_first": "2017-01-01",
+  "event_last": "2026-08-30",
+  "event_rows": 8051627
+ },
+ "streamed": {
+  "files": 658416,
+  "gb": 49.58,
+  "rows_scanned": 707272763,
+  "rows_kept": 8051627,
+  "missing": 174,
+  "failed": 0
+ },
+ "api_timelines": 161,
+ "crawl": {
+  "by_year": [
+   {
+    "year": 2017,
+    "monitored": 627593.9,
+    "idn": 5378.5,
+    "share": 0.8554,
+    "tone": -0.4407,
+    "ev_tone": -1.2661
+   },
+   {
+    "year": 2018,
+    "monitored": 528800.6,
+    "idn": 5302.6,
+    "share": 1.0163,
+    "tone": -0.2387,
+    "ev_tone": -1.0273
+   },
+   {
+    "year": 2019,
+    "monitored": 467227.3,
+    "idn": 5230.5,
+    "share": 1.1152,
+    "tone": -0.2034,
+    "ev_tone": -1.1177
+   },
+   {
+    "year": 2020,
+    "monitored": 377426.8,
+    "idn": 4640.1,
+    "share": 1.2539,
+    "tone": -0.8252,
+    "ev_tone": -1.5784
+   },
+   {
+    "year": 2021,
+    "monitored": 329706.9,
+    "idn": 4280.0,
+    "share": 1.3077,
+    "tone": -0.3342,
+    "ev_tone": -1.1286
+   },
+   {
+    "year": 2022,
+    "monitored": 282418.7,
+    "idn": 3445.0,
+    "share": 1.2263,
+    "tone": 0.0011,
+    "ev_tone": -0.6126
+   },
+   {
+    "year": 2023,
+    "monitored": 187046.3,
+    "idn": 2579.6,
+    "share": 1.4022,
+    "tone": 0.4365,
+    "ev_tone": -0.3412
+   },
+   {
+    "year": 2024,
+    "monitored": 163328.1,
+    "idn": 1808.3,
+    "share": 1.1121,
+    "tone": 0.6732,
+    "ev_tone": -0.0585
+   },
+   {
+    "year": 2025,
+    "monitored": 160975.3,
+    "idn": 1731.8,
+    "share": 1.0725,
+    "tone": 0.5354,
+    "ev_tone": -0.3101
+   },
+   {
+    "year": 2026,
+    "monitored": 142709.0,
+    "idn": 1572.4,
+    "share": 1.1024,
+    "tone": 0.3143,
+    "ev_tone": -0.4017
+   }
+  ],
+  "drift": 4.4,
+  "spearman_raw_vs_norm": 0.0836,
+  "share_change": 0.2888282869740182,
+  "idn_change": -0.7076574949768146,
+  "monitored_change": -0.7726093025077114,
+  "elasticity": {
+   "share_on_crawl": {
+    "b": -0.1024,
+    "se": 0.0065,
+    "r2": 0.0663,
+    "n": 3504
+   },
+   "idn_on_crawl": {
+    "b": 0.8977,
+    "se": 0.0065,
+    "r2": 0.8451,
+    "n": 3504
+   },
+   "dlog_crawl": -1.4811,
+   "dlog_share": 0.2537,
+   "attributable": 0.5979,
+   "attributable_lo": 0.5236,
+   "attributable_hi": 0.6722
+  }
+ },
+ "anchors": [
+  {
+   "day": "2018-09-28",
+   "label": "Palu earthquake & tsunami",
+   "verdict": "PASS",
+   "gated": [
+    "attention",
+    "tone_drop"
+   ],
+   "ratio": 3.0698,
+   "numer": 1.802,
+   "denom": 1.722,
+   "denom_share": 0.4799,
+   "peak_day": "2018-09-30",
+   "dow": "Sun",
+   "tone_delta": 4.0
+  },
+  {
+   "day": "2018-12-22",
+   "label": "Anak Krakatau tsunami",
+   "verdict": "PASS",
+   "gated": [
+    "attention",
+    "tone_drop"
+   ],
+   "ratio": 4.073,
+   "numer": 2.203,
+   "denom": 1.884,
+   "denom_share": 0.445,
+   "peak_day": "2018-12-23",
+   "dow": "Sun",
+   "tone_delta": 4.218
+  },
+  {
+   "day": "2019-05-22",
+   "label": "post-election riots, Jakarta",
+   "verdict": "PASS",
+   "gated": [
+    "theme_protest",
+    "protest",
+    "tone_drop"
+   ],
+   "ratio": 1.2408,
+   "numer": 1.324,
+   "denom": 0.937,
+   "denom_share": -0.3032,
+   "peak_day": "2019-05-22",
+   "dow": "Wed",
+   "tone_delta": 1.7861
+  },
+  {
+   "day": "2020-03-02",
+   "label": "first COVID-19 cases announced",
+   "verdict": "PASS",
+   "gated": [
+    "attention"
+   ],
+   "ratio": 1.5106,
+   "numer": 1.484,
+   "denom": 1.032,
+   "denom_share": 0.0746,
+   "peak_day": "2020-03-02",
+   "dow": "Mon",
+   "tone_delta": null
+  },
+  {
+   "day": "2022-10-01",
+   "label": "Kanjuruhan stadium disaster",
+   "verdict": "PASS",
+   "gated": [
+    "tone_drop",
+    "attention",
+    "quarter_min_tone"
+   ],
+   "ratio": 1.7854,
+   "numer": 1.031,
+   "denom": 1.817,
+   "denom_share": 0.9512,
+   "peak_day": "2022-10-02",
+   "dow": "Sun",
+   "tone_delta": 4.3993
+  },
+  {
+   "day": "2022-11-15",
+   "label": "G20 Bali summit",
+   "verdict": "PASS",
+   "gated": [
+    "attention"
+   ],
+   "ratio": 3.1523,
+   "numer": 3.363,
+   "denom": 0.916,
+   "denom_share": -0.0778,
+   "peak_day": "2022-11-15",
+   "dow": "Tue",
+   "tone_delta": null
+  },
+  {
+   "day": "2024-02-14",
+   "label": "presidential election",
+   "verdict": "PASS",
+   "gated": [
+    "theme_election"
+   ],
+   "ratio": 1.4831,
+   "numer": 1.841,
+   "denom": 0.764,
+   "denom_share": -0.788,
+   "peak_day": "2024-02-14",
+   "dow": "Wed",
+   "tone_delta": null
+  },
+  {
+   "day": "2024-06-20",
+   "label": "PDNS ransomware attack",
+   "verdict": "PENDING",
+   "gated": [
+    "theme_cyber"
+   ],
+   "ratio": 1.2597,
+   "numer": 0.841,
+   "denom": 1.514,
+   "denom_share": 1.7154,
+   "peak_day": "2024-06-23",
+   "dow": "Sun",
+   "tone_delta": null
+  },
+  {
+   "day": "2025-08-28",
+   "label": "Aug\u2013Sep 2025 protests",
+   "verdict": "PASS",
+   "gated": [
+    "theme_protest",
+    "protest",
+    "tone_drop"
+   ],
+   "ratio": 1.3034,
+   "numer": 0.77,
+   "denom": 1.62,
+   "denom_share": 2.1803,
+   "peak_day": "2025-08-31",
+   "dow": "Sun",
+   "tone_delta": 2.7039
+  }
+ ],
+ "spikes": {
+  "top": [
+   {
+    "day": "2018-12-23",
+    "share": 3.9981,
+    "numer": 2.203,
+    "denom": 1.884,
+    "dow": "Sun",
+    "denom_share": 0.445
+   },
+   {
+    "day": "2022-11-14",
+    "share": 3.7922,
+    "numer": 3.174,
+    "denom": 1.002,
+    "dow": "Mon",
+    "denom_share": 0.002
+   },
+   {
+    "day": "2022-11-15",
+    "share": 3.7251,
+    "numer": 3.363,
+    "denom": 0.916,
+    "dow": "Tue",
+    "denom_share": -0.0778
+   },
+   {
+    "day": "2022-11-16",
+    "share": 3.5977,
+    "numer": 3.243,
+    "denom": 0.905,
+    "dow": "Wed",
+    "denom_share": -0.0925
+   },
+   {
+    "day": "2018-09-30",
+    "share": 2.9904,
+    "numer": 1.78,
+    "denom": 1.722,
+    "dow": "Sun",
+    "denom_share": 0.4852
+   },
+   {
+    "day": "2018-12-24",
+    "share": 2.9283,
+    "numer": 2.088,
+    "denom": 1.455,
+    "dow": "Mon",
+    "denom_share": 0.3372
+   },
+   {
+    "day": "2022-11-13",
+    "share": 2.8626,
+    "numer": 1.371,
+    "denom": 1.761,
+    "dow": "Sun",
+    "denom_share": 0.642
+   },
+   {
+    "day": "2026-08-15",
+    "share": 2.8487,
+    "numer": 1.627,
+    "denom": 1.347,
+    "dow": "Sat",
+    "denom_share": 0.3798
+   },
+   {
+    "day": "2019-03-11",
+    "share": 2.8343,
+    "numer": 2.626,
+    "denom": 1.047,
+    "dow": "Mon",
+    "denom_share": 0.045
+   },
+   {
+    "day": "2021-01-10",
+    "share": 2.6692,
+    "numer": 1.18,
+    "denom": 1.588,
+    "dow": "Sun",
+    "denom_share": 0.7369
+   },
+   {
+    "day": "2019-03-12",
+    "share": 2.588,
+    "numer": 2.645,
+    "denom": 0.949,
+    "dow": "Tue",
+    "denom_share": -0.0573
+   },
+   {
+    "day": "2018-05-13",
+    "share": 2.5821,
+    "numer": 1.907,
+    "denom": 1.531,
+    "dow": "Sun",
+    "denom_share": 0.3975
+   },
+   {
+    "day": "2018-09-29",
+    "share": 2.5315,
+    "numer": 1.673,
+    "denom": 1.57,
+    "dow": "Sat",
+    "denom_share": 0.4671
+   },
+   {
+    "day": "2018-10-29",
+    "share": 2.5081,
+    "numer": 2.231,
+    "denom": 1.01,
+    "dow": "Mon",
+    "denom_share": 0.0124
+   },
+   {
+    "day": "2018-08-06",
+    "share": 2.4669,
+    "numer": 2.324,
+    "denom": 1.052,
+    "dow": "Mon",
+    "denom_share": 0.0568
+   },
+   {
+    "day": "2019-03-17",
+    "share": 2.4666,
+    "numer": 1.34,
+    "denom": 1.763,
+    "dow": "Sun",
+    "denom_share": 0.6595
+   },
+   {
+    "day": "2023-09-10",
+    "share": 2.4381,
+    "numer": 0.963,
+    "denom": 1.716,
+    "dow": "Sun",
+    "denom_share": 1.0756
+   },
+   {
+    "day": "2018-07-29",
+    "share": 2.4347,
+    "numer": 1.586,
+    "denom": 1.691,
+    "dow": "Sun",
+    "denom_share": 0.5324
+   },
+   {
+    "day": "2023-09-09",
+    "share": 2.3942,
+    "numer": 1.294,
+    "denom": 1.261,
+    "dow": "Sat",
+    "denom_share": 0.473
+   },
+   {
+    "day": "2018-08-05",
+    "share": 2.3926,
+    "numer": 1.409,
+    "denom": 1.699,
+    "dow": "Sun",
+    "denom_share": 0.6071
+   },
+   {
+    "day": "2018-08-19",
+    "share": 2.2946,
+    "numer": 1.025,
+    "denom": 1.772,
+    "dow": "Sun",
+    "denom_share": 0.9584
+   },
+   {
+    "day": "2019-03-13",
+    "share": 2.2768,
+    "numer": 2.276,
+    "denom": 0.964,
+    "dow": "Wed",
+    "denom_share": -0.0472
+   },
+   {
+    "day": "2022-07-08",
+    "share": 2.2761,
+    "numer": 1.7,
+    "denom": 1.014,
+    "dow": "Fri",
+    "denom_share": 0.0259
+   },
+   {
+    "day": "2026-08-16",
+    "share": 2.227,
+    "numer": 1.175,
+    "denom": 1.405,
+    "dow": "Sun",
+    "denom_share": 0.6777
+   },
+   {
+    "day": "2021-04-24",
+    "share": 2.2196,
+    "numer": 1.185,
+    "denom": 1.584,
+    "dow": "Sat",
+    "denom_share": 0.7301
+   },
+   {
+    "day": "2020-11-15",
+    "share": 2.2032,
+    "numer": 0.396,
+    "denom": 3.419,
+    "dow": "Sun",
+    "denom_share": 4.0487
+   },
+   {
+    "day": "2021-01-09",
+    "share": 2.1828,
+    "numer": 1.094,
+    "denom": 1.417,
+    "dow": "Sat",
+    "denom_share": 0.7954
+   },
+   {
+    "day": "2026-08-17",
+    "share": 2.1807,
+    "numer": 1.286,
+    "denom": 1.255,
+    "dow": "Mon",
+    "denom_share": 0.4746
+   },
+   {
+    "day": "2018-10-01",
+    "share": 2.1379,
+    "numer": 2.022,
+    "denom": 1.065,
+    "dow": "Mon",
+    "denom_share": 0.0822
+   },
+   {
+    "day": "2018-12-25",
+    "share": 2.1006,
+    "numer": 1.216,
+    "denom": 1.746,
+    "dow": "Tue",
+    "denom_share": 0.74
+   }
+  ],
+  "weekend_mon": 24,
+  "expected": 12.9,
+  "n_top": 30,
+  "n_spikes": 67,
+  "spike_rate": 0.018985548313969963,
+  "denom_median": 0.3372,
+  "numer_fell": 7,
+  "dow": [
+   {
+    "dow": "Mon",
+    "monitored": 347861.0,
+    "idn": 4047.0,
+    "share": 1.2058,
+    "tone": -0.1029
+   },
+   {
+    "dow": "Tue",
+    "monitored": 382320.0,
+    "idn": 4221.0,
+    "share": 1.1531,
+    "tone": -0.1001
+   },
+   {
+    "dow": "Wed",
+    "monitored": 389375.0,
+    "idn": 4258.0,
+    "share": 1.1381,
+    "tone": -0.0498
+   },
+   {
+    "dow": "Thu",
+    "monitored": 387781.0,
+    "idn": 4236.0,
+    "share": 1.1392,
+    "tone": -0.0287
+   },
+   {
+    "dow": "Fri",
+    "monitored": 363697.0,
+    "idn": 3893.0,
+    "share": 1.1178,
+    "tone": -0.0224
+   },
+   {
+    "dow": "Sat",
+    "monitored": 244018.0,
+    "idn": 2569.0,
+    "share": 1.1058,
+    "tone": 0.0826
+   },
+   {
+    "dow": "Sun",
+    "monitored": 223381.0,
+    "idn": 2525.0,
+    "share": 1.179,
+    "tone": 0.0659
+   }
+  ]
+ },
+ "loud_dark": {
+  "daily_r": -0.1357,
+  "daily_slope": -0.3629,
+  "daily_r_yearfe": -0.2445,
+  "daily_slope_yearfe": -0.6129,
+  "monthly_r": 0.1423,
+  "n_months": 116,
+  "by_year": [
+   {
+    "year": 2017,
+    "r": -0.4172
+   },
+   {
+    "year": 2018,
+    "r": -0.6043
+   },
+   {
+    "year": 2019,
+    "r": -0.4515
+   },
+   {
+    "year": 2020,
+    "r": 0.2935
+   },
+   {
+    "year": 2021,
+    "r": -0.372
+   },
+   {
+    "year": 2022,
+    "r": -0.273
+   },
+   {
+    "year": 2023,
+    "r": 0.284
+   },
+   {
+    "year": 2024,
+    "r": 0.0192
+   },
+   {
+    "year": 2025,
+    "r": -0.23
+   },
+   {
+    "year": 2026,
+    "r": 0.0078
+   }
+  ],
+  "deciles": [
+   {
+    "q": 1,
+    "share": 0.7321,
+    "tone": -0.0823
+   },
+   {
+    "q": 2,
+    "share": 0.8798,
+    "tone": -0.0102
+   },
+   {
+    "q": 3,
+    "share": 0.971,
+    "tone": 0.0261
+   },
+   {
+    "q": 4,
+    "share": 1.0409,
+    "tone": 0.1231
+   },
+   {
+    "q": 5,
+    "share": 1.0975,
+    "tone": 0.0838
+   },
+   {
+    "q": 6,
+    "share": 1.1494,
+    "tone": -0.0085
+   },
+   {
+    "q": 7,
+    "share": 1.2113,
+    "tone": -0.0216
+   },
+   {
+    "q": 8,
+    "share": 1.2874,
+    "tone": -0.057
+   },
+   {
+    "q": 9,
+    "share": 1.3941,
+    "tone": -0.0456
+   },
+   {
+    "q": 10,
+    "share": 1.691,
+    "tone": -0.2111
+   }
+  ],
+  "top_decile_tone": -0.2219,
+  "rest_tone": -0.0
+ },
+ "layers": {
+  "api_vs_event_tone_r": 0.9304,
+  "api_tone_vs_crawl_r": -0.6667,
+  "event_tone_vs_crawl_r": -0.69,
+  "rho_all": 0.635,
+  "rho_en": 0.207,
+  "rho_trans": 0.719,
+  "translated_share": 0.6586,
+  "lang": {
+   "Indonesian": 33.8824,
+   "Malay": 5.8951,
+   "Urdu": 3.1057,
+   "Thai": 1.2787,
+   "Chinese": 0.9695,
+   "Korean": 0.8351,
+   "Mongolian": 0.6591,
+   "English": 0.6567,
+   "Sinhalese": 0.6311,
+   "Persian": 0.5782,
+   "Bengali": 0.5444,
+   "Japanese": 0.5324
+  },
+  "top_countries": [
+   {
+    "name": "Indonesia",
+    "mean": 33.864
+   },
+   {
+    "name": "Singapore",
+    "mean": 4.798
+   },
+   {
+    "name": "Malaysia",
+    "mean": 4.513
+   },
+   {
+    "name": "Brunei",
+    "mean": 3.764
+   },
+   {
+    "name": "Myanmar",
+    "mean": 3.695
+   },
+   {
+    "name": "Cambodia",
+    "mean": 3.062
+   },
+   {
+    "name": "North Korea",
+    "mean": 2.597
+   },
+   {
+    "name": "Philippines",
+    "mean": 2.583
+   },
+   {
+    "name": "Qatar",
+    "mean": 1.732
+   },
+   {
+    "name": "Sierra Leone",
+    "mean": 1.723
+   },
+   {
+    "name": "Thailand",
+    "mean": 1.673
+   },
+   {
+    "name": "Pakistan",
+    "mean": 1.635
+   }
+  ]
+ },
+ "themes": {
+  "rows": [
+   {
+    "key": "covid",
+    "label": "COVID-19",
+    "query": "Indonesia (COVID OR coronavirus OR pandemic)",
+    "months": 116,
+    "first": "2017-01",
+    "last": "2026-08",
+    "share_mean": 0.0919
+   },
+   {
+    "key": "election",
+    "label": "Elections",
+    "query": "Indonesia election",
+    "months": 116,
+    "first": "2017-01",
+    "last": "2026-08",
+    "share_mean": 0.0681
+   },
+   {
+    "key": "earthquake",
+    "label": "Quakes & volcanoes",
+    "query": "Indonesia (earthquake OR tsunami OR volcano OR eruption)",
+    "months": 116,
+    "first": "2017-01",
+    "last": "2026-08",
+    "share_mean": 0.0359
+   },
+   {
+    "key": "coal",
+    "label": "Coal & mining",
+    "query": "Indonesia (coal OR mining)",
+    "months": 13,
+    "first": "2017-01",
+    "last": "2018-01",
+    "share_mean": 0.0353
+   },
+   {
+    "key": "protest",
+    "label": "Protests",
+    "query": "Indonesia (protest OR protests OR protesters OR demonstration)",
+    "months": 104,
+    "first": "2018-01",
+    "last": "2026-08",
+    "share_mean": 0.0313
+   },
+   {
+    "key": "papua",
+    "label": "Papua",
+    "query": "Indonesia Papua",
+    "months": 105,
+    "first": "2017-01",
+    "last": "2026-08",
+    "share_mean": 0.0276
+   },
+   {
+    "key": "flood",
+    "label": "Floods",
+    "query": "Indonesia (flood OR floods OR flooding OR banjir)",
+    "months": 105,
+    "first": "2017-01",
+    "last": "2026-08",
+    "share_mean": 0.0259
+   },
+   {
+    "key": "terror",
+    "label": "Terrorism",
+    "query": "Indonesia (terrorism OR terrorist OR bombing)",
+    "months": 116,
+    "first": "2017-01",
+    "last": "2026-08",
+    "share_mean": 0.0247
+   },
+   {
+    "key": "palm_oil",
+    "label": "Palm oil",
+    "query": "Indonesia (\"palm oil\" OR sawit)",
+    "months": 116,
+    "first": "2017-01",
+    "last": "2026-08",
+    "share_mean": 0.0095
+   },
+   {
+    "key": "nickel",
+    "label": "Nickel",
+    "query": "Indonesia nickel",
+    "months": 116,
+    "first": "2017-01",
+    "last": "2026-08",
+    "share_mean": 0.0077
+   },
+   {
+    "key": "ikn",
+    "label": "New capital (IKN)",
+    "query": "Indonesia (Nusantara OR IKN) capital",
+    "months": 105,
+    "first": "2017-01",
+    "last": "2026-08",
+    "share_mean": 0.0008
+   }
+  ],
+  "n_requested": 20,
+  "n_landed": 11,
+  "full_months": 116,
+  "n_full": 10,
+  "era_rank": [
+   {
+    "era": "Pre-pandemic",
+    "themes": [
+     {
+      "key": "election",
+      "share": 0.0869
+     },
+     {
+      "key": "earthquake",
+      "share": 0.0561
+     },
+     {
+      "key": "terror",
+      "share": 0.0427
+     },
+     {
+      "key": "protest",
+      "share": 0.039
+     },
+     {
+      "key": "papua",
+      "share": 0.029
+     },
+     {
+      "key": "flood",
+      "share": 0.0246
+     }
+    ],
+    "excluded": [
+     "coal"
+    ]
+   },
+   {
+    "era": "Pandemic",
+    "themes": [
+     {
+      "key": "covid",
+      "share": 0.2956
+     },
+     {
+      "key": "election",
+      "share": 0.0367
+     },
+     {
+      "key": "papua",
+      "share": 0.0285
+     },
+     {
+      "key": "protest",
+      "share": 0.0276
+     },
+     {
+      "key": "flood",
+      "share": 0.0242
+     },
+     {
+      "key": "earthquake",
+      "share": 0.0235
+     }
+    ],
+    "excluded": [
+     "coal"
+    ]
+   },
+   {
+    "era": "G20 & ASEAN chair",
+    "themes": [
+     {
+      "key": "covid",
+      "share": 0.118
+     },
+     {
+      "key": "election",
+      "share": 0.077
+     },
+     {
+      "key": "protest",
+      "share": 0.0334
+     },
+     {
+      "key": "earthquake",
+      "share": 0.0301
+     },
+     {
+      "key": "terror",
+      "share": 0.0231
+     },
+     {
+      "key": "nickel",
+      "share": 0.0123
+     }
+    ],
+    "excluded": [
+     "coal",
+     "flood",
+     "papua"
+    ]
+   },
+   {
+    "era": "Election year",
+    "themes": [
+     {
+      "key": "election",
+      "share": 0.1115
+     },
+     {
+      "key": "papua",
+      "share": 0.03
+     },
+     {
+      "key": "covid",
+      "share": 0.0296
+     },
+     {
+      "key": "flood",
+      "share": 0.0269
+     },
+     {
+      "key": "earthquake",
+      "share": 0.0268
+     },
+     {
+      "key": "protest",
+      "share": 0.0235
+     }
+    ],
+    "excluded": [
+     "coal"
+    ]
+   },
+   {
+    "era": "Prabowo era & 2025 protests",
+    "themes": [
+     {
+      "key": "election",
+      "share": 0.0336
+     },
+     {
+      "key": "flood",
+      "share": 0.0334
+     },
+     {
+      "key": "protest",
+      "share": 0.0285
+     },
+     {
+      "key": "earthquake",
+      "share": 0.0266
+     },
+     {
+      "key": "papua",
+      "share": 0.0235
+     },
+     {
+      "key": "covid",
+      "share": 0.0153
+     }
+    ],
+    "excluded": [
+     "coal"
+    ]
+   }
+  ],
+  "crawl_corr": [
+   {
+    "key": "covid",
+    "label": "COVID-19",
+    "r": -0.061,
+    "months": 116
+   },
+   {
+    "key": "election",
+    "label": "Elections",
+    "r": 0.174,
+    "months": 116
+   },
+   {
+    "key": "earthquake",
+    "label": "Quakes & volcanoes",
+    "r": 0.581,
+    "months": 116
+   },
+   {
+    "key": "protest",
+    "label": "Protests",
+    "r": 0.595,
+    "months": 104
+   },
+   {
+    "key": "papua",
+    "label": "Papua",
+    "r": 0.33,
+    "months": 105
+   },
+   {
+    "key": "flood",
+    "label": "Floods",
+    "r": -0.326,
+    "months": 105
+   },
+   {
+    "key": "terror",
+    "label": "Terrorism",
+    "r": 0.782,
+    "months": 116
+   },
+   {
+    "key": "palm_oil",
+    "label": "Palm oil",
+    "r": 0.404,
+    "months": 116
+   },
+   {
+    "key": "nickel",
+    "label": "Nickel",
+    "r": -0.884,
+    "months": 116
+   },
+   {
+    "key": "ikn",
+    "label": "New capital (IKN)",
+    "r": -0.636,
+    "months": 105
+   }
+  ],
+  "crawl_corr_mean_abs": 0.477,
+  "share_crawl_corr": -0.521
+ },
+ "eras": [
+  {
+   "label": "Pre-pandemic",
+   "start": "2017-01-01",
+   "end": "2019-12-31",
+   "share": 0.9959,
+   "tone": -0.294,
+   "idn": 5304.0,
+   "monitored": 541049.0,
+   "top": [
+    "Elections",
+    "Quakes & volcanoes",
+    "Terrorism"
+   ]
+  },
+  {
+   "label": "Pandemic",
+   "start": "2020-01-01",
+   "end": "2021-12-31",
+   "share": 1.2808,
+   "tone": -0.5797,
+   "idn": 4460.0,
+   "monitored": 353567.0,
+   "top": [
+    "COVID-19",
+    "Elections",
+    "Papua"
+   ]
+  },
+  {
+   "label": "G20 & ASEAN chair",
+   "start": "2022-01-01",
+   "end": "2023-12-31",
+   "share": 1.3141,
+   "tone": 0.2185,
+   "idn": 3013.0,
+   "monitored": 234798.0,
+   "top": [
+    "COVID-19",
+    "Elections",
+    "Protests"
+   ]
+  },
+  {
+   "label": "Election year",
+   "start": "2024-01-01",
+   "end": "2024-12-31",
+   "share": 1.1121,
+   "tone": 0.6732,
+   "idn": 1808.0,
+   "monitored": 163328.0,
+   "top": [
+    "Elections",
+    "Papua",
+    "COVID-19"
+   ]
+  },
+  {
+   "label": "Prabowo era & 2025 protests",
+   "start": "2025-01-01",
+   "end": "2026-08-30",
+   "share": 1.0846,
+   "tone": 0.4456,
+   "idn": 1667.0,
+   "monitored": 153557.0,
+   "top": [
+    "Elections",
+    "Floods",
+    "Protests"
+   ]
+  }
+ ],
+ "attr": {
+  "publishers": {
+   "n_sites": 22657,
+   "n_rows": 8051596,
+   "top": [
+    {
+     "site": "tribunnews.com",
+     "n": 964783,
+     "share": 0.11982506325453984,
+     "tone": -0.822,
+     "trans_share": 0.9982,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-30"
+    },
+    {
+     "site": "antaranews.com",
+     "n": 776181,
+     "share": 0.09640088747622211,
+     "tone": 0.3616,
+     "trans_share": 0.6525,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-30"
+    },
+    {
+     "site": "kompas.com",
+     "n": 380151,
+     "share": 0.047214365946825945,
+     "tone": -1.5428,
+     "trans_share": 0.9977,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-23"
+    },
+    {
+     "site": "republika.co.id",
+     "n": 341244,
+     "share": 0.042382156283052454,
+     "tone": -0.1683,
+     "trans_share": 0.9202,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-30"
+    },
+    {
+     "site": "tempo.co",
+     "n": 311212,
+     "share": 0.038652212555125715,
+     "tone": -1.4409,
+     "trans_share": 0.5461,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-30"
+    },
+    {
+     "site": "liputan6.com",
+     "n": 295521,
+     "share": 0.03670340638054865,
+     "tone": -0.4223,
+     "trans_share": 0.9984,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-30"
+    },
+    {
+     "site": "pikiran-rakyat.com",
+     "n": 235431,
+     "share": 0.02924028975124932,
+     "tone": -0.0014,
+     "trans_share": 0.9938,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2025-06-14"
+    },
+    {
+     "site": "bisnis.com",
+     "n": 232387,
+     "share": 0.028862228060126217,
+     "tone": -0.2693,
+     "trans_share": 0.9989,
+     "origin": "indonesia",
+     "first": "2017-01-02",
+     "last": "2026-08-27"
+    },
+    {
+     "site": "okezone.com",
+     "n": 190278,
+     "share": 0.023632333266597083,
+     "tone": -0.9215,
+     "trans_share": 0.9977,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-30"
+    },
+    {
+     "site": "cnnindonesia.com",
+     "n": 157605,
+     "share": 0.01957438003595809,
+     "tone": -2.2774,
+     "trans_share": 0.9999,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-30"
+    },
+    {
+     "site": "thejakartapost.com",
+     "n": 153165,
+     "share": 0.019022936570587994,
+     "tone": -1.3336,
+     "trans_share": 0.0,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-30"
+    },
+    {
+     "site": "merdeka.com",
+     "n": 137574,
+     "share": 0.017086550293879624,
+     "tone": -0.8435,
+     "trans_share": 0.9999,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-29"
+    },
+    {
+     "site": "jpnn.com",
+     "n": 109636,
+     "share": 0.013616679227323378,
+     "tone": -0.7294,
+     "trans_share": 0.9947,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-30"
+    },
+    {
+     "site": "sindonews.com",
+     "n": 109430,
+     "share": 0.013591094237713864,
+     "tone": -0.9114,
+     "trans_share": 0.9997,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-30"
+    },
+    {
+     "site": "viva.co.id",
+     "n": 107585,
+     "share": 0.013361947122036427,
+     "tone": -0.7442,
+     "trans_share": 0.9521,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-30"
+    },
+    {
+     "site": "beritasatu.com",
+     "n": 78641,
+     "share": 0.009767131882921101,
+     "tone": -0.7328,
+     "trans_share": 0.9972,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-07-15"
+    },
+    {
+     "site": "metrotvnews.com",
+     "n": 76084,
+     "share": 0.009449555094418548,
+     "tone": -1.6862,
+     "trans_share": 0.956,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-29"
+    },
+    {
+     "site": "mediaindonesia.com",
+     "n": 62509,
+     "share": 0.007763553958743086,
+     "tone": -0.4651,
+     "trans_share": 1.0,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-05-12"
+    },
+    {
+     "site": "thestar.com.my",
+     "n": 61183,
+     "share": 0.00759886611300418,
+     "tone": -2.0375,
+     "trans_share": 0.0,
+     "origin": "foreign",
+     "first": "2017-01-01",
+     "last": "2026-08-30"
+    },
+    {
+     "site": "jawapos.com",
+     "n": 60614,
+     "share": 0.0075281968941313,
+     "tone": -1.0424,
+     "trans_share": 1.0,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-30"
+    },
+    {
+     "site": "beritajatim.com",
+     "n": 58868,
+     "share": 0.0073113454773438705,
+     "tone": 0.0051,
+     "trans_share": 1.0,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-30"
+    },
+    {
+     "site": "rri.co.id",
+     "n": 56102,
+     "share": 0.006967811102295744,
+     "tone": 0.2413,
+     "trans_share": 1.0,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-29"
+    },
+    {
+     "site": "kontan.co.id",
+     "n": 49414,
+     "share": 0.0061371683328373654,
+     "tone": 0.9992,
+     "trans_share": 0.9395,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-08-29"
+    },
+    {
+     "site": "inilah.com",
+     "n": 48753,
+     "share": 0.006055072807925286,
+     "tone": -0.5975,
+     "trans_share": 1.0,
+     "origin": "indonesia",
+     "first": "2017-01-01",
+     "last": "2026-03-10"
+    },
+    {
+     "site": "msn.com",
+     "n": 45814,
+     "share": 0.005690052009564315,
+     "tone": -2.2561,
+     "trans_share": 0.0107,
+     "origin": "foreign",
+     "first": "2017-01-01",
+     "last": "2023-06-23"
+    }
+   ],
+   "top10_share": 0.48248732301024544,
+   "top25_share": 0.6334352841349715,
+   "top100_share": 0.7634056651625343,
+   "hhi": 0.035283940997058706,
+   "indonesian_in_top25": 23,
+   "state_share": 0.10336869857851785,
+   "curated_list_size": 98,
+   "curated_covers": 0.6843949944830814
+  },
+  "origin_by_year": [
+   {
+    "year": 2017,
+    "n": 1119133,
+    "indonesia": 708071,
+    "foreign": 411062,
+    "indonesia_share": 0.6326960245118319,
+    "tone_indonesia": -0.9352,
+    "tone_foreign": -1.9482,
+    "tone_all": -1.3073,
+    "n_sites": 11444
+   },
+   {
+    "year": 2018,
+    "n": 978151,
+    "indonesia": 629681,
+    "foreign": 348470,
+    "indonesia_share": 0.643746210963338,
+    "tone_indonesia": -0.6978,
+    "tone_foreign": -1.9464,
+    "tone_all": -1.1426,
+    "n_sites": 10924
+   },
+   {
+    "year": 2019,
+    "n": 927420,
+    "indonesia": 636688,
+    "foreign": 290732,
+    "indonesia_share": 0.6865152789458929,
+    "tone_indonesia": -0.7516,
+    "tone_foreign": -2.2361,
+    "tone_all": -1.217,
+    "n_sites": 9202
+   },
+   {
+    "year": 2020,
+    "n": 794390,
+    "indonesia": 583317,
+    "foreign": 211073,
+    "indonesia_share": 0.7342954971739322,
+    "tone_indonesia": -1.3855,
+    "tone_foreign": -2.2671,
+    "tone_all": -1.6197,
+    "n_sites": 6768
+   },
+   {
+    "year": 2021,
+    "n": 722865,
+    "indonesia": 522641,
+    "foreign": 200224,
+    "indonesia_share": 0.7230132874049788,
+    "tone_indonesia": -0.8992,
+    "tone_foreign": -1.9347,
+    "tone_all": -1.186,
+    "n_sites": 6175
+   },
+   {
+    "year": 2022,
+    "n": 672865,
+    "indonesia": 443591,
+    "foreign": 229274,
+    "indonesia_share": 0.659257057507821,
+    "tone_indonesia": -0.4884,
+    "tone_foreign": -1.0352,
+    "tone_all": -0.6747,
+    "n_sites": 5817
+   },
+   {
+    "year": 2023,
+    "n": 891936,
+    "indonesia": 599765,
+    "foreign": 292171,
+    "indonesia_share": 0.6724305331324221,
+    "tone_indonesia": -0.2276,
+    "tone_foreign": -0.5297,
+    "tone_all": -0.3265,
+    "n_sites": 7183
+   },
+   {
+    "year": 2024,
+    "n": 785436,
+    "indonesia": 548870,
+    "foreign": 236566,
+    "indonesia_share": 0.6988093237386623,
+    "tone_indonesia": 0.0947,
+    "tone_foreign": -0.4283,
+    "tone_all": -0.0628,
+    "n_sites": 6742
+   },
+   {
+    "year": 2025,
+    "n": 709249,
+    "indonesia": 505619,
+    "foreign": 203630,
+    "indonesia_share": 0.7128934972061998,
+    "tone_indonesia": -0.159,
+    "tone_foreign": -0.7459,
+    "tone_all": -0.3275,
+    "n_sites": 6106
+   },
+   {
+    "year": 2026,
+    "n": 450151,
+    "indonesia": 342235,
+    "foreign": 107916,
+    "indonesia_share": 0.7602671103696316,
+    "tone_indonesia": -0.2048,
+    "tone_foreign": -1.0295,
+    "tone_all": -0.4025,
+    "n_sites": 4501
+   }
+  ],
+  "tone_decomp": {
+   "year_a": 2017,
+   "year_b": 2026,
+   "T_a": -1.3072842016644053,
+   "T_b": -0.40249180287578956,
+   "delta": 0.9047923987886157,
+   "within": 0.6024835126869656,
+   "between": 0.16154637011069856,
+   "entry": -0.016852644321640714,
+   "exit": 0.15761516031259212,
+   "residual": 1.1102230246251565e-16,
+   "n_common": 2998,
+   "n_entry": 1503,
+   "n_exit": 8446,
+   "rows_a": 1119133,
+   "rows_b": 450151,
+   "common_share_a": 0.7590983377310829,
+   "common_share_b": 0.9681151435851525
+  },
+  "tone_decomp_by_origin": {
+   "indonesia": {
+    "T_a": -0.9352065105356114,
+    "T_b": -0.2047654553784032,
+    "delta": 0.7304410551572083,
+    "within": 0.6012592735336215,
+    "between": 0.11658530918835486,
+    "entry": -0.004242429274261041,
+    "exit": 0.01683890170949285,
+    "residual": 0.0,
+    "n_common": 45,
+    "n_entry": 2,
+    "n_exit": 31,
+    "rows_a": 708071,
+    "rows_b": 342235,
+    "common_share_a": 0.9083764198787975,
+    "common_share_b": 0.9977413181001359
+   },
+   "foreign": {
+    "T_a": -1.948203145364519,
+    "T_b": -1.0295431811308031,
+    "delta": 0.9186599642337159,
+    "within": 0.6421324546433423,
+    "between": 0.12630871036604085,
+    "entry": 0.02089553276429939,
+    "exit": 0.12932326646003317,
+    "residual": 2.220446049250313e-16,
+    "n_common": 2953,
+    "n_entry": 1501,
+    "n_exit": 8415,
+    "rows_a": 411062,
+    "rows_b": 107916,
+    "common_share_a": 0.5019607747736351,
+    "common_share_b": 0.8741613847807554
+   }
+  },
+  "tone_decomp_path": [
+   {
+    "year": 2018,
+    "delta": 0.16466238638905395,
+    "within": 0.10555116208969881,
+    "between": 0.07388020711705587,
+    "entry": -0.002037970462306633,
+    "exit": -0.012731012355394233
+   },
+   {
+    "year": 2019,
+    "delta": 0.09032753739072219,
+    "within": 8.907554814447068e-06,
+    "between": 0.10421489414860996,
+    "entry": -0.01261551121526056,
+    "exit": -0.0012807530974417725
+   },
+   {
+    "year": 2020,
+    "delta": -0.3124449031132306,
+    "within": -0.37681934533460254,
+    "between": 0.10518827389888061,
+    "entry": -0.0070937426765737555,
+    "exit": -0.033720089000934886
+   },
+   {
+    "year": 2021,
+    "delta": 0.1212547611461805,
+    "within": -0.07801107558787226,
+    "between": 0.16419493516214226,
+    "entry": 0.005553125614679811,
+    "exit": 0.02951777595723058
+   },
+   {
+    "year": 2022,
+    "delta": 0.6325611913100532,
+    "within": 0.39954532813622107,
+    "between": 0.11477279845932306,
+    "entry": 0.016965300733822505,
+    "exit": 0.10127776398068648
+   },
+   {
+    "year": 2023,
+    "delta": 0.9807507714739856,
+    "within": 0.6644080199422779,
+    "between": 0.16762663567489625,
+    "entry": 0.09268854718642483,
+    "exit": 0.05602756867038647
+   },
+   {
+    "year": 2024,
+    "delta": 1.2444895835292873,
+    "within": 1.0018764739495438,
+    "between": 0.07911162090130869,
+    "entry": 0.04305759072930919,
+    "exit": 0.12044389794912531
+   },
+   {
+    "year": 2025,
+    "delta": 0.9797655932919417,
+    "within": 0.622372071579457,
+    "between": 0.2180099853595864,
+    "entry": 0.019926804369937566,
+    "exit": 0.11945673198296074
+   },
+   {
+    "year": 2026,
+    "delta": 0.9047923987886157,
+    "within": 0.6024835126869656,
+    "between": 0.16154637011069856,
+    "entry": -0.016852644321640714,
+    "exit": 0.15761516031259212
+   }
+  ],
+  "stable_publishers": [
+   {
+    "site": "tribunnews.com",
+    "origin": "indonesia",
+    "n": 964783,
+    "tone": [
+     -0.857,
+     -0.4832,
+     -0.5242,
+     -1.336,
+     -1.0421,
+     -1.1065,
+     -0.5715,
+     1.3173,
+     -0.9475,
+     -0.7797
+    ],
+    "share": [
+     0.1273,
+     0.16547,
+     0.16468,
+     0.17464,
+     0.19397,
+     0.05892,
+     0.08795,
+     0.0001,
+     0.05372,
+     0.16109
+    ]
+   },
+   {
+    "site": "antaranews.com",
+    "origin": "indonesia",
+    "n": 776181,
+    "tone": [
+     -0.0131,
+     0.1671,
+     -0.3756,
+     -0.9853,
+     -0.1959,
+     0.6388,
+     0.8642,
+     0.9331,
+     0.9564,
+     1.0181
+    ],
+    "share": [
+     0.03347,
+     0.05183,
+     0.09038,
+     0.08954,
+     0.1166,
+     0.14732,
+     0.10605,
+     0.11225,
+     0.14842,
+     0.1369
+    ]
+   },
+   {
+    "site": "kompas.com",
+    "origin": "indonesia",
+    "n": 380151,
+    "tone": [
+     -1.1675,
+     -1.3477,
+     -1.7086,
+     -2.2771,
+     -1.5351,
+     -1.7764,
+     -1.5878,
+     -1.1091,
+     -1.5123,
+     -1.4561
+    ],
+    "share": [
+     0.02541,
+     0.00501,
+     0.03015,
+     0.03544,
+     0.04677,
+     0.07525,
+     0.05549,
+     0.06412,
+     0.08991,
+     0.09471
+    ]
+   },
+   {
+    "site": "republika.co.id",
+    "origin": "indonesia",
+    "n": 341244,
+    "tone": [
+     -0.3867,
+     -0.4614,
+     -0.3967,
+     -0.8613,
+     -0.4314,
+     0.1818,
+     0.1166,
+     0.5846,
+     0.2999,
+     0.5345
+    ],
+    "share": [
+     0.03937,
+     0.04609,
+     0.04183,
+     0.04558,
+     0.04662,
+     0.06283,
+     0.04437,
+     0.03572,
+     0.03042,
+     0.02646
+    ]
+   },
+   {
+    "site": "liputan6.com",
+    "origin": "indonesia",
+    "n": 295521,
+    "tone": [
+     -1.2825,
+     -0.926,
+     -0.7277,
+     -1.2212,
+     -0.6809,
+     -0.1945,
+     0.2221,
+     0.6368,
+     0.4061,
+     -0.3439
+    ],
+    "share": [
+     0.03006,
+     0.03118,
+     0.03246,
+     0.03898,
+     0.04302,
+     0.05015,
+     0.03215,
+     0.04203,
+     0.04082,
+     0.03294
+    ]
+   },
+   {
+    "site": "bisnis.com",
+    "origin": "indonesia",
+    "n": 232387,
+    "tone": [
+     0.0067,
+     -0.1633,
+     -0.404,
+     -1.024,
+     -0.4812,
+     -0.1506,
+     -0.2879,
+     0.0082,
+     0.1756,
+     0.7072
+    ],
+    "share": [
+     0.00998,
+     0.02997,
+     0.03219,
+     0.04216,
+     0.04466,
+     0.02361,
+     0.02595,
+     0.02755,
+     0.03253,
+     0.02783
+    ]
+   },
+   {
+    "site": "cnnindonesia.com",
+    "origin": "indonesia",
+    "n": 157605,
+    "tone": [
+     -2.0357,
+     -1.6686,
+     -2.4796,
+     -2.6796,
+     -2.5219,
+     -2.5009,
+     -2.0478,
+     -2.0058,
+     -2.4836,
+     -2.4964
+    ],
+    "share": [
+     0.01342,
+     0.01907,
+     0.02089,
+     0.02513,
+     0.02494,
+     0.02832,
+     0.02261,
+     0.01783,
+     0.01179,
+     0.01105
+    ]
+   },
+   {
+    "site": "merdeka.com",
+    "origin": "indonesia",
+    "n": 137574,
+    "tone": [
+     -1.5509,
+     -0.851,
+     -1.0737,
+     -1.5435,
+     -1.4852,
+     -1.0574,
+     -0.8262,
+     -0.1859,
+     0.3061,
+     0.8709
+    ],
+    "share": [
+     0.02219,
+     0.018,
+     0.0163,
+     0.01387,
+     0.02122,
+     0.01541,
+     0.01057,
+     0.01141,
+     0.01948,
+     0.02464
+    ]
+   },
+   {
+    "site": "sindonews.com",
+    "origin": "indonesia",
+    "n": 109430,
+    "tone": [
+     -1.6621,
+     -1.1351,
+     -0.6182,
+     -1.6548,
+     -1.9326,
+     0.5184,
+     -0.2404,
+     -0.3574,
+     -0.617,
+     -1.0792
+    ],
+    "share": [
+     0.00892,
+     0.00997,
+     0.02418,
+     0.02784,
+     0.00179,
+     2e-05,
+     0.01742,
+     0.01943,
+     0.01266,
+     0.00906
+    ]
+   },
+   {
+    "site": "viva.co.id",
+    "origin": "indonesia",
+    "n": 107585,
+    "tone": [
+     -1.0723,
+     -1.2346,
+     -1.1919,
+     -1.9053,
+     -1.5627,
+     -2.59,
+     -0.3254,
+     -0.0722,
+     -0.56,
+     -0.1989
+    ],
+    "share": [
+     0.01183,
+     0.00711,
+     0.01076,
+     0.0112,
+     0.00964,
+     0.00017,
+     0.01361,
+     0.0282,
+     0.02458,
+     0.02156
+    ]
+   }
+  ],
+  "stable_publishers_share": [
+   0.5271643316746089,
+   0.5811362458352545,
+   0.6427497789566755,
+   0.677586575863241,
+   0.7423225636875489,
+   0.6910851359485186,
+   0.6121661195422093,
+   0.5816909334433359,
+   0.678262500193867,
+   0.7314323415920435
+  ],
+  "years": [
+   2017,
+   2018,
+   2019,
+   2020,
+   2021,
+   2022,
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "survivorship": {
+   "present_2017": 11444,
+   "still_present_2026": 2998,
+   "new_since_2025": 762,
+   "sites_total": 22657,
+   "survival_rate": 0.2619713386927648
+  },
+  "geocoding": {
+   "in_indonesia": 6683770,
+   "country_centroid_only": 939568,
+   "located": 5744202,
+   "outside_indonesia": 1367826,
+   "total": 8051596,
+   "centroid_share": 0.14057455597664192,
+   "outside_share": 0.16988259222146765
+  },
+  "foreign_pulse": {
+   "months": [
+    "2017-01",
+    "2017-02",
+    "2017-03",
+    "2017-04",
+    "2017-05",
+    "2017-06",
+    "2017-07",
+    "2017-08",
+    "2017-09",
+    "2017-10",
+    "2017-11",
+    "2017-12",
+    "2018-01",
+    "2018-02",
+    "2018-03",
+    "2018-04",
+    "2018-05",
+    "2018-06",
+    "2018-07",
+    "2018-08",
+    "2018-09",
+    "2018-10",
+    "2018-11",
+    "2018-12",
+    "2019-01",
+    "2019-02",
+    "2019-03",
+    "2019-04",
+    "2019-05",
+    "2019-06",
+    "2019-07",
+    "2019-08",
+    "2019-09",
+    "2019-10",
+    "2019-11",
+    "2019-12",
+    "2020-01",
+    "2020-02",
+    "2020-03",
+    "2020-04",
+    "2020-05",
+    "2020-06",
+    "2020-07",
+    "2020-08",
+    "2020-09",
+    "2020-10",
+    "2020-11",
+    "2020-12",
+    "2021-01",
+    "2021-02",
+    "2021-03",
+    "2021-04",
+    "2021-05",
+    "2021-06",
+    "2021-07",
+    "2021-08",
+    "2021-09",
+    "2021-10",
+    "2021-11",
+    "2021-12",
+    "2022-01",
+    "2022-02",
+    "2022-03",
+    "2022-04",
+    "2022-05",
+    "2022-06",
+    "2022-07",
+    "2022-08",
+    "2022-09",
+    "2022-10",
+    "2022-11",
+    "2022-12",
+    "2023-01",
+    "2023-02",
+    "2023-03",
+    "2023-04",
+    "2023-05",
+    "2023-06",
+    "2023-07",
+    "2023-08",
+    "2023-09",
+    "2023-10",
+    "2023-11",
+    "2023-12",
+    "2024-01",
+    "2024-02",
+    "2024-03",
+    "2024-04",
+    "2024-05",
+    "2024-06",
+    "2024-07",
+    "2024-08",
+    "2024-09",
+    "2024-10",
+    "2024-11",
+    "2024-12",
+    "2025-01",
+    "2025-02",
+    "2025-03",
+    "2025-04",
+    "2025-05",
+    "2025-06",
+    "2025-07",
+    "2025-08",
+    "2025-09",
+    "2025-10",
+    "2025-11",
+    "2025-12",
+    "2026-01",
+    "2026-02",
+    "2026-03",
+    "2026-04",
+    "2026-05",
+    "2026-06",
+    "2026-07",
+    "2026-08"
+   ],
+   "foreign": [
+    0.37731,
+    0.44194,
+    0.47638,
+    0.39657,
+    0.44801,
+    0.35089,
+    0.34463,
+    0.34278,
+    0.37612,
+    0.3423,
+    0.37758,
+    0.33655,
+    0.33718,
+    0.3031,
+    0.27007,
+    0.27334,
+    0.44374,
+    0.29419,
+    0.30103,
+    0.46685,
+    0.33744,
+    0.61556,
+    0.42324,
+    0.38679,
+    0.27664,
+    0.28152,
+    0.45274,
+    0.36679,
+    0.34559,
+    0.27517,
+    0.33006,
+    0.38618,
+    0.44653,
+    0.3493,
+    0.32782,
+    0.31001,
+    0.34407,
+    0.33828,
+    0.36365,
+    0.38359,
+    0.28999,
+    0.2616,
+    0.27795,
+    0.28269,
+    0.25382,
+    0.36039,
+    0.33818,
+    0.32489,
+    0.47792,
+    0.29939,
+    0.33941,
+    0.51262,
+    0.26697,
+    0.2759,
+    0.31057,
+    0.27061,
+    0.29607,
+    0.28782,
+    0.3482,
+    0.37143,
+    0.29463,
+    0.22373,
+    0.23787,
+    0.31983,
+    0.30436,
+    0.4126,
+    0.63573,
+    0.35994,
+    0.37918,
+    0.29117,
+    0.95596,
+    0.45552,
+    0.30073,
+    0.32271,
+    0.28217,
+    0.33082,
+    0.42059,
+    0.42476,
+    0.48272,
+    0.53261,
+    0.6315,
+    0.32502,
+    0.50291,
+    0.31662,
+    0.31876,
+    0.31819,
+    0.26784,
+    0.29638,
+    0.2764,
+    0.29761,
+    0.30408,
+    0.37384,
+    0.50951,
+    0.33488,
+    0.39383,
+    0.42132,
+    0.38821,
+    0.26012,
+    0.24681,
+    0.30305,
+    0.3379,
+    0.30452,
+    0.35379,
+    0.31574,
+    0.36486,
+    0.33496,
+    0.3265,
+    0.29422,
+    0.25541,
+    0.30289,
+    0.24787,
+    0.26342,
+    0.22294,
+    0.21972,
+    0.3731,
+    0.31989
+   ],
+   "all": [
+    1.01793,
+    1.12896,
+    1.19387,
+    1.06795,
+    1.14554,
+    0.9871,
+    1.03633,
+    1.00585,
+    1.03073,
+    1.02449,
+    1.00471,
+    0.9703,
+    0.9474,
+    0.95953,
+    0.91052,
+    0.90407,
+    1.1447,
+    0.8718,
+    0.987,
+    1.13075,
+    1.01787,
+    1.36279,
+    1.10947,
+    1.1373,
+    0.99441,
+    1.00975,
+    1.17091,
+    1.02814,
+    1.05837,
+    0.93739,
+    1.19583,
+    1.27899,
+    1.31035,
+    1.17219,
+    1.15766,
+    1.12186,
+    1.08076,
+    1.17594,
+    1.24954,
+    1.32569,
+    1.16401,
+    1.10949,
+    1.22559,
+    1.19436,
+    1.0816,
+    1.16229,
+    1.36984,
+    1.33931,
+    1.29785,
+    1.05653,
+    1.21281,
+    1.44121,
+    1.11513,
+    1.20493,
+    1.20474,
+    1.17653,
+    1.27175,
+    1.2398,
+    1.26155,
+    1.20822,
+    1.11386,
+    0.90775,
+    0.92206,
+    1.11508,
+    1.0038,
+    1.27059,
+    1.57043,
+    1.2573,
+    1.15733,
+    1.02869,
+    1.69423,
+    1.23525,
+    1.01235,
+    1.07994,
+    0.9542,
+    1.12802,
+    1.37888,
+    1.37779,
+    1.5597,
+    1.52489,
+    1.42147,
+    1.07551,
+    1.32946,
+    1.19496,
+    1.13205,
+    1.0169,
+    0.97167,
+    1.00686,
+    1.04786,
+    1.09475,
+    1.20361,
+    1.26413,
+    1.37424,
+    1.14908,
+    1.27862,
+    1.19895,
+    1.14054,
+    1.03681,
+    0.98237,
+    1.14124,
+    1.24744,
+    1.17224,
+    1.1573,
+    1.1214,
+    1.15217,
+    1.0716,
+    1.13519,
+    1.1181,
+    1.00453,
+    1.18127,
+    0.96258,
+    1.07583,
+    1.08931,
+    1.20449,
+    1.47256,
+    1.36173
+   ],
+   "api": [
+    0.8327,
+    0.90567,
+    0.8161,
+    0.80287,
+    0.88067,
+    0.74707,
+    0.88042,
+    0.95693,
+    0.87156,
+    0.85369,
+    0.91006,
+    0.80568,
+    0.76242,
+    0.77882,
+    0.78866,
+    0.84404,
+    0.92043,
+    0.72892,
+    0.98771,
+    1.45763,
+    1.12281,
+    1.39992,
+    1.12099,
+    1.25205,
+    0.95352,
+    1.01833,
+    1.43987,
+    1.12895,
+    1.02521,
+    0.95058,
+    1.16581,
+    1.13935,
+    1.15678,
+    1.14767,
+    1.10782,
+    1.13581,
+    1.05441,
+    1.11609,
+    1.22303,
+    1.18779,
+    1.12631,
+    1.19529,
+    1.22316,
+    1.29367,
+    1.29635,
+    1.38235,
+    1.56423,
+    1.38707,
+    1.44372,
+    1.15683,
+    1.20879,
+    1.30934,
+    1.13432,
+    1.32245,
+    1.51007,
+    1.46276,
+    1.29803,
+    1.30995,
+    1.30377,
+    1.21816,
+    1.10455,
+    1.01265,
+    1.11103,
+    1.19895,
+    1.15737,
+    1.28851,
+    1.41894,
+    1.31572,
+    1.12065,
+    1.173,
+    1.64431,
+    1.16002,
+    1.15038,
+    1.21548,
+    1.24893,
+    1.29763,
+    1.50783,
+    1.47247,
+    1.5201,
+    1.56175,
+    1.59477,
+    1.53805,
+    1.47038,
+    1.23259,
+    1.15687,
+    1.08501,
+    1.08505,
+    1.00193,
+    1.08902,
+    1.08331,
+    1.07818,
+    1.1859,
+    1.11028,
+    1.13278,
+    1.20375,
+    1.12969,
+    0.97735,
+    0.99146,
+    0.98216,
+    1.02199,
+    1.15944,
+    1.17002,
+    1.22343,
+    1.16737,
+    1.05875,
+    1.11287,
+    1.07272,
+    0.98053,
+    0.99492,
+    1.06747,
+    0.91583,
+    0.99445,
+    1.03314,
+    1.22784,
+    1.24038,
+    1.36914
+   ],
+   "r_all_api": 0.7292,
+   "r_foreign_api": 0.4065,
+   "by_year": [
+    {
+     "year": 2017,
+     "foreign": 0.38426,
+     "all": 1.05115,
+     "foreign_share": 0.3656
+    },
+    {
+     "year": 2018,
+     "foreign": 0.37104,
+     "all": 1.04027,
+     "foreign_share": 0.3567
+    },
+    {
+     "year": 2019,
+     "foreign": 0.3457,
+     "all": 1.11965,
+     "foreign_share": 0.3088
+    },
+    {
+     "year": 2020,
+     "foreign": 0.31826,
+     "all": 1.20653,
+     "foreign_share": 0.2638
+    },
+    {
+     "year": 2021,
+     "foreign": 0.33808,
+     "all": 1.22425,
+     "foreign_share": 0.2761
+    },
+    {
+     "year": 2022,
+     "foreign": 0.40588,
+     "all": 1.1897,
+     "foreign_share": 0.3412
+    },
+    {
+     "year": 2023,
+     "foreign": 0.4061,
+     "all": 1.2531,
+     "foreign_share": 0.3241
+    },
+    {
+     "year": 2024,
+     "foreign": 0.34272,
+     "all": 1.14489,
+     "foreign_share": 0.2993
+    },
+    {
+     "year": 2025,
+     "foreign": 0.31922,
+     "all": 1.12303,
+     "foreign_share": 0.2843
+    },
+    {
+     "year": 2026,
+     "foreign": 0.27566,
+     "all": 1.16904,
+     "foreign_share": 0.2358
+    }
+   ]
+  },
+  "anchor_foreign": [
+   {
+    "day": "2018-09-28",
+    "label": "Palu earthquake & tsunami",
+    "window": 4,
+    "foreign": {
+     "peak": 1.16427,
+     "baseline": 0.2872,
+     "ratio": 4.054,
+     "peak_day": "2018-09-30"
+    },
+    "all": {
+     "peak": 1.86636,
+     "baseline": 0.96506,
+     "ratio": 1.934,
+     "peak_day": "2018-09-30"
+    },
+    "indonesian": {
+     "ratio": 1.036
+    },
+    "published_api_ratio": 3.0698,
+    "published_verdict": "PASS",
+    "dow": "Sun"
+   },
+   {
+    "day": "2018-12-22",
+    "label": "Anak Krakatau tsunami",
+    "window": 4,
+    "foreign": {
+     "peak": 1.28516,
+     "baseline": 0.30041,
+     "ratio": 4.278,
+     "peak_day": "2018-12-23"
+    },
+    "all": {
+     "peak": 1.9629,
+     "baseline": 1.03051,
+     "ratio": 1.905,
+     "peak_day": "2018-12-23"
+    },
+    "indonesian": {
+     "ratio": 0.928
+    },
+    "published_api_ratio": 4.073,
+    "published_verdict": "PASS",
+    "dow": "Sun"
+   },
+   {
+    "day": "2019-05-22",
+    "label": "post-election riots, Jakarta",
+    "window": 3,
+    "foreign": {
+     "peak": 0.65118,
+     "baseline": 0.32396,
+     "ratio": 2.01,
+     "peak_day": "2019-05-22"
+    },
+    "all": {
+     "peak": 1.5093,
+     "baseline": 1.02818,
+     "ratio": 1.468,
+     "peak_day": "2019-05-22"
+    },
+    "indonesian": {
+     "ratio": 1.219
+    },
+    "published_api_ratio": 1.2408,
+    "published_verdict": "PASS",
+    "dow": "Wed"
+   },
+   {
+    "day": "2020-03-02",
+    "label": "first COVID-19 cases announced",
+    "window": 3,
+    "foreign": {
+     "peak": 0.41938,
+     "baseline": 0.30864,
+     "ratio": 1.359,
+     "peak_day": "2020-03-02"
+    },
+    "all": {
+     "peak": 1.41413,
+     "baseline": 1.14628,
+     "ratio": 1.234,
+     "peak_day": "2020-03-02"
+    },
+    "indonesian": {
+     "ratio": 1.188
+    },
+    "published_api_ratio": 1.5106,
+    "published_verdict": "PASS",
+    "dow": "Mon"
+   },
+   {
+    "day": "2022-10-01",
+    "label": "Kanjuruhan stadium disaster",
+    "window": 3,
+    "foreign": {
+     "peak": 0.23811,
+     "baseline": 0.31897,
+     "ratio": 0.746,
+     "peak_day": "2022-10-03"
+    },
+    "all": {
+     "peak": 0.98067,
+     "baseline": 1.08274,
+     "ratio": 0.906,
+     "peak_day": "2022-10-01"
+    },
+    "indonesian": {
+     "ratio": 0.972
+    },
+    "published_api_ratio": 1.7854,
+    "published_verdict": "PASS",
+    "dow": "Sat"
+   },
+   {
+    "day": "2022-11-15",
+    "label": "G20 Bali summit",
+    "window": 3,
+    "foreign": {
+     "peak": 3.20429,
+     "baseline": 0.36632,
+     "ratio": 8.747,
+     "peak_day": "2022-11-15"
+    },
+    "all": {
+     "peak": 4.15312,
+     "baseline": 1.16717,
+     "ratio": 3.558,
+     "peak_day": "2022-11-15"
+    },
+    "indonesian": {
+     "ratio": 1.185
+    },
+    "published_api_ratio": 3.1523,
+    "published_verdict": "PASS",
+    "dow": "Tue"
+   },
+   {
+    "day": "2024-02-14",
+    "label": "presidential election",
+    "window": 3,
+    "foreign": {
+     "peak": 0.65284,
+     "baseline": 0.29452,
+     "ratio": 2.217,
+     "peak_day": "2024-02-14"
+    },
+    "all": {
+     "peak": 1.25306,
+     "baseline": 1.07283,
+     "ratio": 1.168,
+     "peak_day": "2024-02-14"
+    },
+    "indonesian": {
+     "ratio": 0.771
+    },
+    "published_api_ratio": 1.4831,
+    "published_verdict": "PASS",
+    "dow": "Wed"
+   },
+   {
+    "day": "2024-06-20",
+    "label": "PDNS ransomware attack",
+    "window": 8,
+    "foreign": {
+     "peak": 0.31942,
+     "baseline": 0.29324,
+     "ratio": 1.089,
+     "peak_day": "2024-06-20"
+    },
+    "all": {
+     "peak": 1.16263,
+     "baseline": 1.06626,
+     "ratio": 1.09,
+     "peak_day": "2024-06-24"
+    },
+    "indonesian": {
+     "ratio": 1.091
+    },
+    "published_api_ratio": 1.2597,
+    "published_verdict": "PENDING",
+    "dow": "Mon"
+   },
+   {
+    "day": "2025-08-28",
+    "label": "Aug\u2013Sep 2025 protests",
+    "window": 7,
+    "foreign": {
+     "peak": 0.89464,
+     "baseline": 0.29249,
+     "ratio": 3.059,
+     "peak_day": "2025-08-31"
+    },
+    "all": {
+     "peak": 2.23952,
+     "baseline": 1.05022,
+     "ratio": 2.132,
+     "peak_day": "2025-08-31"
+    },
+    "indonesian": {
+     "ratio": 1.775
+    },
+    "published_api_ratio": 1.3034,
+    "published_verdict": "PASS",
+    "dow": "Sun"
+   }
+  ]
+ },
+ "gates": {
+  "G-D1": {
+   "verdict": "PASS"
+  },
+  "G-D2": {
+   "verdict": "PENDING",
+   "pass": 8,
+   "fail": 0,
+   "pending": 1,
+   "n": 9
+  },
+  "G-D3": {
+   "verdict": "PASS"
+  },
+  "G-D4": {
+   "verdict": "PENDING"
+  }
+ },
+ "darkest": [
+  {
+   "day": "2018-05-13",
+   "tone": -5.7912,
+   "vol": 2.5821,
+   "title": null
+  },
+  {
+   "day": "2022-10-02",
+   "tone": -4.2395,
+   "vol": 1.954,
+   "title": null
+  },
+  {
+   "day": "2018-12-23",
+   "tone": -4.2355,
+   "vol": 3.9981,
+   "title": null
+  },
+  {
+   "day": "2021-03-28",
+   "tone": -3.7089,
+   "vol": 1.9161,
+   "title": null
+  },
+  {
+   "day": "2018-09-29",
+   "tone": -3.4947,
+   "vol": 2.5315,
+   "title": null
+  },
+  {
+   "day": "2019-03-17",
+   "tone": -3.1094,
+   "vol": 2.4666,
+   "title": null
+  }
+ ],
+ "g20": {
+  "day": "2022-11-15",
+  "label": "G20 Bali summit",
+  "window_days": 3,
+  "verdict": "PASS",
+  "gated": [
+   "attention"
+  ],
+  "signatures": {
+   "attention": {
+    "verdict": "PASS",
+    "peak": 3.7251,
+    "peak_day": "2022-11-15",
+    "baseline_median": 1.1817,
+    "ratio": 3.1523,
+    "threshold": 1.5
+   }
+  },
+  "report_only": {
+   "tone_rise": {
+    "verdict": "FAIL",
+    "extreme": 0.1315,
+    "extreme_day": "2022-11-17",
+    "baseline_mean": -0.1421,
+    "delta": 0.2736,
+    "threshold": 1.0
+   }
+  }
+ }
+}

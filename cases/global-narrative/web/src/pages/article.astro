@@ -1,0 +1,1327 @@
+---
+/* Review article — the case, stress-tested against its own archive and the literature.
+ *
+ * Every figure is built here in frontmatter from data/article.json, which
+ * pipeline/article.py derives from exactly what the dashboard serves plus the
+ * publisher-attribution study (pipeline/attribution.py). Nothing is drawn by
+ * hand and no statistic is typed into the prose, so the two cannot drift apart.
+ * SVG only — no WebGL, no canvas.
+ */
+import "../styles/tokens.css";
+import A from "../data/article.json";
+
+const VIOLET = "#B26DF2", TEAL = "#4BB8A9", CORAL = "#F26D5B", AMBER = "#E0A63F", SLATE = "#6B7CA6";
+const INK = "#EAE6F2", MUTED = "#9C93B3", GRID = "#2A2142", DEEP = "#0E0A16";
+
+const esc = (s: any) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const pc = (x: number, d = 1) => `${x < 0 ? "−" : ""}${(Math.abs(x) * 100).toFixed(d)}%`;
+const sg = (x: number, d = 1) => `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(d)}`;
+const nf = (x: number) => Math.round(x).toLocaleString("en-US");
+
+const cy = A.crawl.by_year;
+const first = cy[0], last = cy[cy.length - 1];
+const el = A.crawl.elasticity;
+const attr = A.attr;
+const pub = attr.publishers;
+const dec = attr.tone_decomp;
+const composition = dec.between + dec.entry + dec.exit;
+const fp = attr.foreign_pulse.by_year;
+const fpFirst = fp[0], fpLast = fp[fp.length - 1];
+const foreignChange = fpLast.foreign / fpFirst.foreign - 1;
+const af = attr.anchor_foreign;
+const kanj = af.find((a: any) => a.day === "2022-10-01");
+const prot25 = af.find((a: any) => a.day === "2025-08-28");
+const g20a = af.find((a: any) => a.day === "2022-11-15");
+const kanjA = A.anchors.find((a: any) => a.day === "2022-10-01");
+const missed = af.filter((a: any) => (a.published_api_ratio ?? 0) < 1.5 && (a.foreign.ratio ?? 0) >= 1.5);
+const flipped = af.filter((a: any) => ((a.published_api_ratio ?? 0) >= 1.5) !== ((a.foreign.ratio ?? 0) >= 1.5));
+// a flip where both sides sit on the threshold is a coin-toss, not a finding
+const marginal = (a: any) => Math.abs(a.published_api_ratio - 1.5) < 0.15 && Math.abs(a.foreign.ratio - 1.5) < 0.2;
+const decisive = flipped.filter((a: any) => !marginal(a));
+const WORDS = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+const word = (n: number) => WORDS[n] ?? String(n);
+const antara = attr.stable_publishers.find((s: any) => s.site === "antaranews.com");
+const coal = A.themes.rows.find((r: any) => r.key === "coal");
+
+/* Published benchmarks, transcribed from the source tables. These are the only
+   numbers on this page that do not come from the case's own data; each is quoted
+   with its citation so it can be checked against the paper. */
+const LIT = {
+  gdelt_icews: 0.317,      // Wang et al. 2016, p.1502 — LatAm average, GDELT vs ICEWS
+  gdelt_gsr: 0.222,        // Wang et al. 2016 — GDELT vs the human-coded ground truth
+  acled_national: 0.64,    // Hammond & Weidmann 2014, p.3 — national time series
+  acled_cell: 0.26,        // Hammond & Weidmann 2014, p.3 — 55 km cell-month
+  tone_daily_hi: 0.82,     // GDELT's own dictionary comparison, 3 Nov 2019, daily aggregate
+  tone_doc_hi: 0.50,       // ibid., document level, best of seven dictionaries
+  protest_true: 0.21,      // Wang et al. 2016, p.1503 — share of valid protest URLs that are true protests
+  redundancy: 0.206,       // Hong et al. 2025, Table 6 — semantic duplicate rate, US 2015-day sample
+  acc_noneng: 0.532,       // Hong et al. 2025, Table 4 — event-type accuracy, non-English
+  acc_eng: 0.562,          // ibid., English
+  reported: 0.285,         // Weidmann 2016, p.211 — Afghan events with casualties reaching intl news
+  asia_ratio: 43,          // Eisensee & Strömberg 2007, Table IX — casualties for equal coverage vs Europe
+  olympics_ratio: 3,       // ibid., conclusions — casualties needed during the Olympics
+  news_share_asia: 0.13,   // ibid., Table IX — share of Asian disasters covered
+  news_share_europe: 0.18, // ibid.
+  idn_share_2015: 0.0112,  // Grasland 2020, Table 3 — Indonesia's share of international news, 31 dailies
+  idn_rank_2015: 26,       // ibid.
+  idn_r2_wu: 0.373,        // Wu 2000, Table 3 — adjusted R2 of Indonesia's own coverage model
+  gdp_r: 0.895,            // Blondheim, Segev & Cabrera 2015 — country share of economic news vs GDP
+  sheafer_vol: 0.09,       // Sheafer 2007, Table 1 — media salience coefficient
+  sheafer_tone: -0.23,     // ibid. — media valence coefficient
+  dict_alpha_hi: 0.34,     // van Atteveldt et al. 2021, Table 2 — best English dictionary on translated text
+  wire_r2: 0.18,           // Kwak & An 2014, Table 1 — variance added by wire-service pickup
+  disaster_reach: 1,       // ibid. — median number of countries a disaster's coverage reaches
+};
+
+/* ── Fig L · how well does this agree with anything? ─────────────────────── */
+function figL() {
+  const rows = [
+    { k: "Event layer vs API volume, all", v: A.layers.rho_all, g: 0, s: "this case · Spearman, daily" },
+    { k: "…translated feed only", v: A.layers.rho_trans, g: 0, s: "this case" },
+    { k: "…English feed only", v: A.layers.rho_en, g: 0, s: "this case" },
+    { k: "GDELT vs ACLED, national series", v: LIT.acled_national, g: 1, s: "Hammond & Weidmann 2014" },
+    { k: "GDELT vs ICEWS, cross-national", v: LIT.gdelt_icews, g: 1, s: "Wang et al. 2016" },
+    { k: "GDELT vs human-coded protests", v: LIT.gdelt_gsr, g: 1, s: "Wang et al. 2016" },
+    { k: "GDELT vs ACLED, 55 km cell-month", v: LIT.acled_cell, g: 1, s: "Hammond & Weidmann 2014" },
+    { k: "GDELT tone vs neural, daily mean", v: LIT.tone_daily_hi, g: 2, s: "GDELT, 2019 · best of seven" },
+    { k: "GDELT tone vs neural, per article", v: LIT.tone_doc_hi, g: 2, s: "GDELT, 2019 · best of seven" },
+  ];
+  const W = 720, L = 244, R = 62, T = 44, rh = 27;
+  const H = T + rows.length * rh + 30;
+  const bw = W - L - R;
+  const cols = [VIOLET, SLATE, TEAL];
+  const body = rows.map((r, i) => {
+    const y = T + i * rh;
+    return `<text x="${L - 12}" y="${y + 12}" fill="${INK}" font-size="11.5" text-anchor="end">${esc(r.k)}</text>
+      <text x="${L - 12}" y="${y + 23}" fill="${MUTED}" font-size="9" text-anchor="end">${esc(r.s)}</text>
+      <rect x="${L}" y="${y + 4}" width="${(r.v * bw).toFixed(1)}" height="14" fill="${cols[r.g]}" rx="1.5" opacity="0.88"/>
+      <text x="${(L + r.v * bw + 8).toFixed(1)}" y="${y + 15}" fill="${cols[r.g]}" font-size="11" font-family="var(--font-data)">${r.v.toFixed(2)}</text>`;
+  }).join("");
+  const thr = L + 0.6 * bw;
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="The case's own coherence check reaches 0.64 while GDELT agrees with an independent event dataset at only 0.32">
+    <rect x="${L - 232}" y="12" width="11" height="11" fill="${VIOLET}" rx="2"/><text x="${L - 216}" y="22" fill="${MUTED}" font-size="10.5">inside this case — same crawl</text>
+    <rect x="${L - 40}" y="12" width="11" height="11" fill="${SLATE}" rx="2"/><text x="${L - 24}" y="22" fill="${MUTED}" font-size="10.5">GDELT vs an independent dataset</text>
+    <rect x="${L + 208}" y="12" width="11" height="11" fill="${TEAL}" rx="2"/><text x="${L + 224}" y="22" fill="${MUTED}" font-size="10.5">GDELT tone vs a better model</text>
+    <line x1="${thr.toFixed(1)}" y1="${T - 4}" x2="${thr.toFixed(1)}" y2="${H - 24}" stroke="${AMBER}" stroke-dasharray="3 4" opacity="0.8"/>
+    <text x="${thr.toFixed(1)}" y="${H - 8}" fill="${AMBER}" font-size="10" text-anchor="middle">the case's own 0.60 bar</text>
+    ${body}
+  </svg>`;
+}
+
+/* ── Fig 1 · three series, one crawl ─────────────────────────────────────── */
+function fig1() {
+  const W = 720, H = 360, L = 52, R = 158, T = 42, B = 46;
+  const base = { mon: first.monitored, idn: first.idn, sh: first.share };
+  const rows = cy.map((r: any) => ({
+    y: r.year, mon: 100 * r.monitored / base.mon, idn: 100 * r.idn / base.idn, sh: 100 * r.share / base.sh }));
+  const hi = 150, lo = 0;
+  const sx = (i: number) => L + (i / (rows.length - 1)) * (W - L - R);
+  const sy = (v: number) => H - B - ((v - lo) / (hi - lo)) * (H - T - B);
+  const path = (k: string, col: string, w = 2.4) =>
+    `<path fill="none" stroke="${col}" stroke-width="${w}" stroke-linejoin="round" d="${rows.map((r: any, i: number) =>
+      `${i ? "L" : "M"}${sx(i).toFixed(1)} ${sy(r[k]).toFixed(1)}`).join("")}"/>` +
+    rows.map((r: any, i: number) => `<circle cx="${sx(i).toFixed(1)}" cy="${sy(r[k]).toFixed(1)}" r="2.8" fill="${col}"/>`).join("");
+  const end = (k: string, col: string, lab: string, dy: number) => {
+    const v = rows[rows.length - 1][k];
+    return `<text x="${(W - R + 10).toFixed(1)}" y="${(sy(v) + dy).toFixed(1)}" fill="${col}" font-size="11.5" font-family="var(--font-data)">${v.toFixed(0)}</text>` +
+           `<text x="${(W - R + 44).toFixed(1)}" y="${(sy(v) + dy).toFixed(1)}" fill="${MUTED}" font-size="10.5">${esc(lab)}</text>`;
+  };
+  const gl = [0, 25, 50, 75, 100, 125, 150].map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - R}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="${v === 100 ? 1 : 0.5}" ${v === 100 ? 'stroke-dasharray="3 4"' : ""}/>
+     <text x="${L - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10" text-anchor="end">${v}</text>`).join("");
+  const xt = rows.map((r: any, i: number) => i % 2 === 0
+    ? `<text x="${sx(i).toFixed(1)}" y="${H - B + 18}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${String(r.y).slice(2)}</text>` : "").join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Indexed to 2017, the number of articles GDELT monitors falls 77 percent and Indonesia articles fall 71 percent while the published share rises 29 percent">
+    <text x="${L}" y="18" fill="${MUTED}" font-size="11">Each series indexed to its own ${first.year} level = 100</text>
+    ${gl}${xt}
+    ${path("mon", SLATE)}${path("idn", INK, 1.8)}${path("sh", VIOLET, 2.8)}
+    ${end("mon", SLATE, "all articles monitored", 4)}
+    ${end("idn", INK, "articles naming Indonesia", -8)}
+    ${end("sh", VIOLET, "the share the page charts", 4)}
+  </svg>`;
+}
+
+/* ── Fig 2 · what the decade's rise is made of ───────────────────────────── */
+function fig2() {
+  const W = 720, H = 268, L = 258, R = 74, T = 26, rh = 46;
+  const rows = [
+    { k: "Articles naming Indonesia", s: "per day, GDELT's own count", v: A.crawl.idn_change, col: INK },
+    { k: "All articles GDELT monitored", s: "per day — the denominator", v: A.crawl.monitored_change, col: SLATE },
+    { k: "The share the dashboard charts", s: "the first divided by the second", v: A.crawl.share_change, col: VIOLET },
+  ];
+  const span = 0.85;
+  const zx = L + (span / (span + 0.45)) * (W - L - R);
+  const sx = (v: number) => zx + (v / (span + 0.45)) * (W - L - R);
+  const body = rows.map((r, i) => {
+    const y = T + i * rh, x0 = Math.min(zx, sx(r.v)), w = Math.abs(sx(r.v) - zx);
+    const txt = `${r.v > 0 ? "+" : "−"}${Math.abs(r.v * 100).toFixed(1)}%`;
+    // negative bars carry their label inside, so it can never reach the label column
+    const inside = r.v < 0 && w > 70;
+    const lx = inside ? x0 + 10 : (r.v < 0 ? x0 + w + 8 : x0 + w + 8);
+    return `<text x="${L - 14}" y="${y + 17}" fill="${INK}" font-size="12.5" text-anchor="end">${esc(r.k)}</text>
+      <text x="${L - 14}" y="${y + 31}" fill="${MUTED}" font-size="10" text-anchor="end">${esc(r.s)}</text>
+      <rect x="${x0.toFixed(1)}" y="${y + 8}" width="${w.toFixed(1)}" height="19" fill="${r.col}" rx="2" opacity="0.92"/>
+      <text x="${lx.toFixed(1)}" y="${y + 22}" fill="${inside ? DEEP : r.col}" font-size="12"
+        text-anchor="start" font-family="var(--font-data)" font-weight="${inside ? 600 : 400}">${txt}</text>`;
+  }).join("");
+  const by = T + 3 * rh + 12;
+  const a0 = el.attributable_lo, a1 = el.attributable_hi, am = el.attributable;
+  const bx = (v: number) => L + v * (W - L - R);
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Indonesia articles fell 71 percent and monitored articles fell 77 percent, so the published share rose 29 percent">
+    <line x1="${zx.toFixed(1)}" y1="${T}" x2="${zx.toFixed(1)}" y2="${T + 3 * rh - 8}" stroke="${GRID}"/>
+    <text x="${zx.toFixed(1)}" y="${T - 8}" fill="${MUTED}" font-size="10" text-anchor="middle">no change</text>
+    ${body}
+    <line x1="${L - 240}" y1="${by}" x2="${W - R}" y2="${by}" stroke="${GRID}"/>
+    <text x="${L - 240}" y="${by + 24}" fill="${MUTED}" font-size="11">Share of that rise predicted by the shrinking crawl alone</text>
+    <rect x="${bx(0).toFixed(1)}" y="${by + 36}" width="${(bx(1) - bx(0)).toFixed(1)}" height="16" fill="${GRID}" rx="3"/>
+    <rect x="${bx(a0).toFixed(1)}" y="${by + 36}" width="${(bx(a1) - bx(a0)).toFixed(1)}" height="16" fill="${AMBER}" opacity="0.35" rx="3"/>
+    <line x1="${bx(am).toFixed(1)}" y1="${by + 32}" x2="${bx(am).toFixed(1)}" y2="${by + 56}" stroke="${AMBER}" stroke-width="2.4"/>
+    <text x="${bx(am).toFixed(1)}" y="${by + 70}" fill="${AMBER}" font-size="12" text-anchor="middle" font-family="var(--font-data)">${(am * 100).toFixed(0)}% (${(a0 * 100).toFixed(0)}–${(a1 * 100).toFixed(0)}%)</text>
+  </svg>`;
+}
+
+/* ── Fig 3 · every anchor spike, split into coverage and news hole ───────── */
+function fig3() {
+  const rows = A.anchors;
+  const W = 720, L = 214, R = 74, T = 34, rh = 30;
+  const H = T + rows.length * rh + 34;
+  const parts = rows.map((r: any) => ({ n: Math.log(r.numer), d: Math.log(r.denom) }));
+  const lo = Math.min(0, ...parts.map((p: any) => Math.min(p.n, p.n + p.d, p.d)));
+  const hi = Math.max(...parts.map((p: any) => Math.max(p.n, p.n + p.d)));
+  const pad = (hi - lo) * 0.06;
+  const sx = (v: number) => L + ((v - lo + pad) / (hi - lo + 2 * pad)) * (W - L - R);
+  const zx = sx(0);
+  const body = rows.map((r: any, i: number) => {
+    const p = parts[i], y = T + i * rh;
+    const seg = (from: number, to: number, col: string) =>
+      `<rect x="${Math.min(sx(from), sx(to)).toFixed(1)}" y="${y + 5}" width="${Math.abs(sx(to) - sx(from)).toFixed(1)}" height="16" fill="${col}" rx="1.5" opacity="0.9"/>`;
+    return `<text x="${L - 12}" y="${y + 13}" fill="${INK}" font-size="11.5" text-anchor="end">${esc(r.label)}</text>
+      <text x="${L - 12}" y="${y + 25}" fill="${MUTED}" font-size="9.5" text-anchor="end" font-family="var(--font-data)">${esc(r.peak_day)} · ${esc(r.dow)}</text>
+      ${seg(0, p.n, VIOLET)}${seg(p.n, p.n + p.d, AMBER)}
+      <text x="${(W - R + 10)}" y="${y + 18}" fill="${r.ratio >= 1.5 ? INK : MUTED}" font-size="11.5" font-family="var(--font-data)">${r.ratio.toFixed(2)}×</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Each anchor's attention spike split into more Indonesia coverage and a smaller world crawl">
+    <rect x="${L - 200}" y="8" width="11" height="11" fill="${VIOLET}" rx="2"/><text x="${L - 184}" y="18" fill="${MUTED}" font-size="11">more coverage of Indonesia</text>
+    <rect x="${L + 24}" y="8" width="11" height="11" fill="${AMBER}" rx="2"/><text x="${L + 40}" y="18" fill="${MUTED}" font-size="11">a smaller world news crawl</text>
+    <text x="${W - R + 10}" y="18" fill="${MUTED}" font-size="10">published</text>
+    <line x1="${zx.toFixed(1)}" y1="${T - 4}" x2="${zx.toFixed(1)}" y2="${H - 28}" stroke="${GRID}"/>
+    ${body}
+    <text x="${zx.toFixed(1)}" y="${H - 10}" fill="${MUTED}" font-size="10.5" text-anchor="middle">baseline</text>
+    <text x="${W - R}" y="${H - 10}" fill="${MUTED}" font-size="10.5" text-anchor="end">log contribution to the published attention ratio →</text>
+  </svg>`;
+}
+
+/* ── Fig 4 · the thirty loudest days ─────────────────────────────────────── */
+function fig4() {
+  const W = 720, H = 420, L = 62, R = 34, T = 34, B = 82;
+  const pts = A.spikes.top;
+  const lx = pts.map((p: any) => Math.log(p.numer)), ly = pts.map((p: any) => Math.log(p.denom));
+  const x0 = Math.min(...lx) - 0.16, x1 = Math.max(...lx) + 0.16;
+  const y0 = Math.min(...ly, -0.12) - 0.05, y1 = Math.max(...ly) + 0.18;
+  const sx = (v: number) => L + ((v - x0) / (x1 - x0)) * (W - L - R);
+  const sy = (v: number) => H - B - ((v - y0) / (y1 - y0)) * (H - T - B);
+  const diag = [2, 3, 4].map((k) => {
+    const c = Math.log(k);
+    const ax = Math.max(x0, c - y1), bx = Math.min(x1, c - y0);
+    if (bx <= ax) return "";
+    return `<line x1="${sx(ax).toFixed(1)}" y1="${sy(c - ax).toFixed(1)}" x2="${sx(bx).toFixed(1)}" y2="${sy(c - bx).toFixed(1)}" stroke="${GRID}" stroke-dasharray="2 5"/>
+      <text x="${(sx(ax) + 5).toFixed(1)}" y="${(sy(c - ax) + 12).toFixed(1)}" fill="${MUTED}" font-size="9.5" font-family="var(--font-data)">${k}×</text>`;
+  }).join("");
+  const dots = pts.map((p: any) => {
+    const wk = p.dow === "Sat" || p.dow === "Sun" || p.dow === "Mon";
+    return `<circle class="dd" cx="${sx(Math.log(p.numer)).toFixed(1)}" cy="${sy(Math.log(p.denom)).toFixed(1)}" r="${wk ? 6 : 4.6}"
+      fill="${wk ? VIOLET : SLATE}" opacity="${wk ? 0.85 : 0.7}" data-d="${esc(p.day)}" data-w="${esc(p.dow)}"
+      data-s="${p.share.toFixed(2)}" data-n="${p.numer.toFixed(2)}" data-m="${p.denom.toFixed(2)}"/>`;
+  }).join("");
+  const tickx = [-0.4, -0.2, 0, 0.4, 0.8, 1.2].filter((v) => v > x0 && v < x1).map((v) =>
+    `<text x="${sx(v).toFixed(1)}" y="${H - B + 17}" fill="${MUTED}" font-size="10" text-anchor="middle">${Math.exp(v).toFixed(1)}×</text>`).join("");
+  const ticky = [0, 0.3, 0.6, 0.9, 1.2].filter((v) => v > y0 && v < y1).map((v) =>
+    `<text x="${L - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10" text-anchor="end">${Math.exp(v).toFixed(1)}×</text>`).join("");
+  // call out the single most denominator-driven day in the top thirty
+  const worst = pts.reduce((a: any, b: any) => (b.numer < a.numer ? b : a), pts[0]);
+  const wx = sx(Math.log(worst.numer)), wy = sy(Math.log(worst.denom));
+  const note = `<line x1="${(wx + 9).toFixed(1)}" y1="${wy.toFixed(1)}" x2="${(wx + 42).toFixed(1)}" y2="${wy.toFixed(1)}" stroke="${AMBER}" stroke-width="1.2"/>
+    <text x="${(wx + 48).toFixed(1)}" y="${(wy - 3).toFixed(1)}" fill="${AMBER}" font-size="10" font-family="var(--font-data)">${esc(worst.day)} · share ${worst.share.toFixed(2)}%</text>
+    <text x="${(wx + 48).toFixed(1)}" y="${(wy + 10).toFixed(1)}" fill="${AMBER}" font-size="10">Indonesia coverage ${worst.numer.toFixed(2)}× · crawl ${worst.denom.toFixed(1)}× smaller</text>`;
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Of the thirty loudest days, twenty-four fall on a Saturday, Sunday or Monday">
+    <line x1="${L}" y1="${sy(0).toFixed(1)}" x2="${W - R}" y2="${sy(0).toFixed(1)}" stroke="${GRID}"/>
+    <line x1="${sx(0).toFixed(1)}" y1="${T}" x2="${sx(0).toFixed(1)}" y2="${H - B}" stroke="${GRID}"/>
+    ${diag}${tickx}${ticky}${note}${dots}
+    <text x="${L}" y="${T - 14}" fill="${MUTED}" font-size="10">↑ world crawl smaller than usual · → Indonesia covered more than usual · dotted: equal published ratio</text>
+    <text x="${((L + W - R) / 2).toFixed(1)}" y="${H - B + 36}" fill="${MUTED}" font-size="11" text-anchor="middle">Indonesia coverage vs its own trailing median →</text>
+    <g><circle cx="${L + 14}" cy="${H - 18}" r="6" fill="${VIOLET}" opacity="0.85"/><text x="${L + 26}" y="${H - 14}" fill="${MUTED}" font-size="10.5">Sat / Sun / Mon (${A.spikes.weekend_mon} of ${A.spikes.n_top})</text>
+       <circle cx="${L + 236}" cy="${H - 18}" r="4.6" fill="${SLATE}" opacity="0.7"/><text x="${L + 246}" y="${H - 14}" fill="${MUTED}" font-size="10.5">Tue–Fri (${A.spikes.n_top - A.spikes.weekend_mon})</text></g>
+  </svg>`;
+}
+
+/* ── Fig 5 · who publishes "the world's news about Indonesia" ─────────────── */
+function fig5() {
+  const rows = pub.top;
+  const W = 720, L = 172, R = 78, T = 30, rh = 20;
+  const H = T + rows.length * rh + 26;
+  const max = Math.max(...rows.map((r: any) => r.share));
+  const bw = W - L - R;
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rh, w = (r.share / max) * bw;
+    const state = r.site === "antaranews.com" || r.site === "rri.co.id";
+    return `<text x="${L - 10}" y="${y + 14}" fill="${r.origin === "indonesia" ? INK : TEAL}" font-size="10.5" text-anchor="end" font-family="var(--font-data)">${esc(r.site)}</text>
+      <rect class="pb" x="${L}" y="${y + 4}" width="${w.toFixed(1)}" height="12" rx="1.5"
+        fill="${r.origin === "indonesia" ? VIOLET : TEAL}" opacity="${state ? 1 : 0.72}"
+        data-s="${esc(r.site)}" data-n="${nf(r.n)}" data-p="${(r.share * 100).toFixed(2)}" data-t="${r.tone.toFixed(2)}"/>
+      ${state ? `<rect x="${(L + w + 5).toFixed(1)}" y="${y + 6}" width="8" height="8" fill="${AMBER}" rx="1.5"/>` : ""}
+      <text x="${(L + w + (state ? 18 : 7)).toFixed(1)}" y="${y + 14}" fill="${MUTED}" font-size="10" font-family="var(--font-data)">${(r.share * 100).toFixed(2)}%</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Twenty-three of the twenty-five largest publishers are based in Indonesia">
+    <rect x="${L}" y="8" width="11" height="11" fill="${VIOLET}" rx="2"/><text x="${L + 16}" y="18" fill="${MUTED}" font-size="11">published in Indonesia</text>
+    <rect x="${L + 168}" y="8" width="11" height="11" fill="${TEAL}" rx="2"/><text x="${L + 184}" y="18" fill="${MUTED}" font-size="11">published abroad</text>
+    <rect x="${L + 316}" y="8" width="11" height="11" fill="${AMBER}" rx="2"/><text x="${L + 332}" y="18" fill="${MUTED}" font-size="11">Indonesian state media</text>
+    ${body}
+    <text x="${W - R}" y="${H - 6}" fill="${MUTED}" font-size="10.5" text-anchor="end">share of all ${nf(pub.n_rows)} Indonesia events kept →</text>
+  </svg>`;
+}
+
+/* ── Fig 6 · two attention series that point opposite ways ────────────────── */
+function fig6() {
+  const W = 720, H = 320, L = 52, R = 176, T = 40, B = 46;
+  const rows = fp.map((r: any, i: number) => ({
+    y: r.year, f: 100 * r.foreign / fpFirst.foreign,
+    a: 100 * cy[i].share / first.share }));
+  const hi = 150, lo = 50;
+  const sx = (i: number) => L + (i / (rows.length - 1)) * (W - L - R);
+  const sy = (v: number) => H - B - ((v - lo) / (hi - lo)) * (H - T - B);
+  const line = (k: string, col: string) =>
+    `<path fill="none" stroke="${col}" stroke-width="2.6" d="${rows.map((r: any, i: number) =>
+      `${i ? "L" : "M"}${sx(i).toFixed(1)} ${sy(r[k]).toFixed(1)}`).join("")}"/>` +
+    rows.map((r: any, i: number) => `<circle cx="${sx(i).toFixed(1)}" cy="${sy(r[k]).toFixed(1)}" r="3" fill="${col}"/>`).join("");
+  const gl = [50, 75, 100, 125, 150].map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - R}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="${v === 100 ? 1 : 0.5}" ${v === 100 ? 'stroke-dasharray="3 4"' : ""}/>
+     <text x="${L - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10" text-anchor="end">${v}</text>`).join("");
+  const xt = rows.map((r: any, i: number) => i % 2 === 0
+    ? `<text x="${sx(i).toFixed(1)}" y="${H - B + 18}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${String(r.y).slice(2)}</text>` : "").join("");
+  const lastRow = rows[rows.length - 1];
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="The published attention share rises 29 percent while foreign-published coverage of Indonesia falls 28 percent">
+    <text x="${L}" y="18" fill="${MUTED}" font-size="11">Both indexed to ${first.year} = 100</text>
+    ${gl}${xt}${line("a", VIOLET)}${line("f", TEAL)}
+    <text x="${(W - R + 10).toFixed(1)}" y="${(sy(lastRow.a) - 4).toFixed(1)}" fill="${VIOLET}" font-size="11.5" font-family="var(--font-data)">${lastRow.a.toFixed(0)}</text>
+    <text x="${(W - R + 10).toFixed(1)}" y="${(sy(lastRow.a) + 12).toFixed(1)}" fill="${MUTED}" font-size="10">the published share</text>
+    <text x="${(W - R + 10).toFixed(1)}" y="${(sy(lastRow.f) - 4).toFixed(1)}" fill="${TEAL}" font-size="11.5" font-family="var(--font-data)">${lastRow.f.toFixed(0)}</text>
+    <text x="${(W - R + 10).toFixed(1)}" y="${(sy(lastRow.f) + 12).toFixed(1)}" fill="${MUTED}" font-size="10">coverage published</text>
+    <text x="${(W - R + 10).toFixed(1)}" y="${(sy(lastRow.f) + 25).toFixed(1)}" fill="${MUTED}" font-size="10">outside Indonesia</text>
+  </svg>`;
+}
+
+/* ── Fig 7 · the anchors, re-tested on foreign publishers only ────────────── */
+function fig7() {
+  const W = 720, L = 208, R = 96, T = 34, rh = 30;
+  const H = T + af.length * rh + 32;
+  const vals = af.flatMap((a: any) => [a.published_api_ratio ?? 1, a.foreign.ratio ?? 1]);
+  const lo = Math.log(Math.min(...vals) * 0.9), hi = Math.log(Math.max(...vals) * 1.08);
+  const sx = (v: number) => L + ((Math.log(v) - lo) / (hi - lo)) * (W - L - R);
+  const body = af.map((a: any, i: number) => {
+    const y = T + i * rh + 14;
+    const p = a.published_api_ratio, f = a.foreign.ratio;
+    const col = f > p ? TEAL : CORAL;
+    return `<text x="${L - 12}" y="${y - 2}" fill="${INK}" font-size="11.5" text-anchor="end">${esc(a.label)}</text>
+      <text x="${L - 12}" y="${y + 10}" fill="${MUTED}" font-size="9.5" text-anchor="end" font-family="var(--font-data)">${esc(a.day)}</text>
+      <line x1="${sx(p).toFixed(1)}" y1="${y}" x2="${sx(f).toFixed(1)}" y2="${y}" stroke="${col}" stroke-width="2" opacity="0.55"/>
+      <circle cx="${sx(p).toFixed(1)}" cy="${y}" r="4" fill="${SLATE}"/>
+      <circle cx="${sx(f).toFixed(1)}" cy="${y}" r="6.5" fill="${col}"/>
+      <text x="${W - R + 10}" y="${y + 4}" fill="${col}" font-size="11" font-family="var(--font-data)">${f.toFixed(2)}×</text>`;
+  }).join("");
+  const thr = sx(1.5), one = sx(1);
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Re-running each anchor on foreign publishers only changes four failed verdicts to large spikes and turns one passed verdict into a fall">
+    <circle cx="${L - 190}" cy="14" r="4" fill="${SLATE}"/><text x="${L - 180}" y="18" fill="${MUTED}" font-size="11">published, all publishers</text>
+    <circle cx="${L + 20}" cy="14" r="6.5" fill="${TEAL}"/><text x="${L + 32}" y="18" fill="${MUTED}" font-size="11">foreign publishers only</text>
+    <line x1="${one.toFixed(1)}" y1="${T}" x2="${one.toFixed(1)}" y2="${H - 26}" stroke="${GRID}"/>
+    <line x1="${thr.toFixed(1)}" y1="${T}" x2="${thr.toFixed(1)}" y2="${H - 26}" stroke="${AMBER}" stroke-dasharray="3 4" opacity="0.75"/>
+    <text x="${thr.toFixed(1)}" y="${H - 10}" fill="${AMBER}" font-size="10" text-anchor="middle">1.5× threshold</text>
+    <text x="${one.toFixed(1)}" y="${H - 10}" fill="${MUTED}" font-size="10" text-anchor="middle">no change</text>
+    ${body}
+  </svg>`;
+}
+
+/* ── Fig 8 · where the warming came from ─────────────────────────────────── */
+function fig8() {
+  const W = 720, H = 300, T = 54, B = 74, L = 40, R = 30;
+  const steps = [
+    { k: `${dec.year_a} tone`, v: dec.T_a, abs: true, col: SLATE },
+    { k: "same outlets,", k2: "warmer copy", v: dec.within, col: VIOLET },
+    { k: "survivors", k2: "reweighted", v: dec.between, col: AMBER },
+    { k: "new outlets", k2: "arriving", v: dec.entry, col: AMBER },
+    { k: "outlets that", k2: "dropped out", v: dec.exit, col: AMBER },
+    { k: `${dec.year_b} tone`, v: dec.T_b, abs: true, col: SLATE },
+  ];
+  const lo = -1.6, hi = 0.35;
+  const sy = (v: number) => H - B - ((v - lo) / (hi - lo)) * (H - T - B);
+  const bw = (W - L - R) / steps.length;
+  let run = 0;
+  const links: string[] = [];
+  const body = steps.map((s: any, i: number) => {
+    const x = L + i * bw + bw * 0.18, w = bw * 0.64;
+    let y0v: number, y1v: number;
+    if (s.abs) { y0v = 0; y1v = s.v; run = s.v; }
+    else { y0v = run; y1v = run + s.v; run = y1v; }
+    const yTop = sy(Math.max(y0v, y1v)), yBot = sy(Math.min(y0v, y1v));
+    const h = Math.max(3, yBot - yTop);
+    const lab = s.abs ? s.v.toFixed(2) : sg(s.v, 3);
+    // connector from this bar's running total to the next bar's start
+    if (i < steps.length - 1) {
+      links.push(`<line x1="${x.toFixed(1)}" y1="${sy(run).toFixed(1)}" x2="${(x + bw).toFixed(1)}" y2="${sy(run).toFixed(1)}" stroke="${GRID}" stroke-dasharray="2 3"/>`);
+    }
+    return `<rect x="${x.toFixed(1)}" y="${yTop.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="${s.col}" rx="2" opacity="0.92"/>
+      <text x="${(x + w / 2).toFixed(1)}" y="${(yTop - 7).toFixed(1)}" fill="${s.col}" font-size="11.5" text-anchor="middle" font-family="var(--font-data)">${lab}</text>
+      <text x="${(x + w / 2).toFixed(1)}" y="${H - B + 18}" fill="${INK}" font-size="10.5" text-anchor="middle">${esc(s.k)}</text>
+      ${s.k2 ? `<text x="${(x + w / 2).toFixed(1)}" y="${H - B + 31}" fill="${INK}" font-size="10.5" text-anchor="middle">${esc(s.k2)}</text>` : ""}`;
+  }).join("");
+  const cx0 = L + 2 * bw + bw * 0.1, cx1 = L + 5 * bw - bw * 0.1;
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Two thirds of the tone rise is the same outlets writing more warmly, one third is a change of which outlets GDELT reads">
+    ${[0, -0.5, -1, -1.5].map((v) => `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - R}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="${v === 0 ? 1 : 0.5}"/>
+      <text x="${L - 6}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="9.5" text-anchor="end" font-family="var(--font-data)">${v === 0 ? "0" : v.toFixed(1)}</text>`).join("")}
+    ${links.join("")}${body}
+    <path d="M${cx0.toFixed(1)} ${T - 22} L${cx0.toFixed(1)} ${T - 30} L${cx1.toFixed(1)} ${T - 30} L${cx1.toFixed(1)} ${T - 22}" fill="none" stroke="${AMBER}" stroke-width="1.3"/>
+    <text x="${((cx0 + cx1) / 2).toFixed(1)}" y="${T - 36}" fill="${AMBER}" font-size="11" text-anchor="middle" font-family="var(--font-data)">source mix ${sg(composition, 3)} · ${(100 * composition / dec.delta).toFixed(0)}% of the move</text>
+    <text x="${L + bw * 0.5}" y="${H - 12}" fill="${MUTED}" font-size="10" text-anchor="middle">start</text>
+    <text x="${(L + 5.5 * bw).toFixed(1)}" y="${H - 12}" fill="${MUTED}" font-size="10" text-anchor="middle">end</text>
+  </svg>`;
+}
+
+/* ── Fig 9 · the biggest continuous voices, and their own tone ────────────── */
+function fig9() {
+  const W = 720, H = 340, L = 52, R = 168, T = 26, B = 46;
+  const yrs = attr.years;
+  const shown = attr.stable_publishers.slice(0, 6);
+  const agg = A.crawl.by_year.map((r: any) => r.ev_tone);
+  const all = shown.flatMap((s: any) => s.tone).concat(agg.filter((v: any) => v != null));
+  const lo = Math.min(...all) - 0.3, hi = Math.max(...all) + 0.3;
+  const sx = (i: number) => L + (i / (yrs.length - 1)) * (W - L - R);
+  const sy = (v: number) => H - B - ((v - lo) / (hi - lo)) * (H - T - B);
+  const draw = (vals: number[], col: string, w: number, op: number) =>
+    `<path fill="none" stroke="${col}" stroke-width="${w}" opacity="${op}" d="${vals.map((v, i) =>
+      `${i ? "L" : "M"}${sx(i).toFixed(1)} ${sy(v).toFixed(1)}`).join("")}"/>`;
+  const others = shown.filter((s: any) => s.site !== "antaranews.com");
+  const body = others.map((s: any) => draw(s.tone, SLATE, 1.6, 0.55)).join("")
+    + draw(agg as number[], INK, 1.8, 0.85)
+    + (antara ? draw(antara.tone, VIOLET, 3, 1) : "")
+    + (antara ? antara.tone.map((v: number, i: number) => `<circle cx="${sx(i).toFixed(1)}" cy="${sy(v).toFixed(1)}" r="3.2" fill="${VIOLET}"/>`).join("") : "");
+  // right-edge labels, nudged apart so none can sit on another
+  const av0 = antara ? antara.tone[antara.tone.length - 1] : 0;
+  const ag0 = agg[agg.length - 1] as number;
+  const items = [
+    { y: sy(av0), t: "antaranews.com", c: VIOLET, big: true, sub: `state wire · ${pc(pub.top.find((p: any) => p.site === "antaranews.com").share, 1)} of all rows` },
+    { y: sy(ag0), t: "all publishers", c: INK, big: false, sub: "" },
+    ...others.map((s: any) => ({ y: sy(s.tone[s.tone.length - 1]), t: s.site, c: MUTED, big: false, sub: "" })),
+  ].sort((a, b) => a.y - b.y);
+  for (let i = 1; i < items.length; i++) {
+    const gap = items[i - 1].sub ? 30 : 15;      // the highlighted row carries a second line
+    if (items[i].y - items[i - 1].y < gap) items[i].y = items[i - 1].y + gap;
+  }
+  const over = items[items.length - 1].y - (H - B);
+  if (over > 0) items.forEach((it) => { it.y -= over; });
+  const labs = items.map((it) =>
+    `<text x="${(W - R + 8).toFixed(1)}" y="${(it.y + 3.5).toFixed(1)}" fill="${it.c}" font-size="${it.big ? 11 : 9.5}" font-family="var(--font-data)">${esc(it.t)}</text>` +
+    (it.sub ? `<text x="${(W - R + 8).toFixed(1)}" y="${(it.y + 15).toFixed(1)}" fill="${MUTED}" font-size="9">${esc(it.sub)}</text>` : "")).join("");
+  const gl = [-3, -2, -1, 0, 1].filter((v) => v > lo && v < hi).map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - R}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="${v === 0 ? 1 : 0.45}"/>
+     <text x="${L - 8}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10" text-anchor="end">${sg(v, 0)}</text>`).join("");
+  const xt = yrs.map((y: number, i: number) => i % 2 === 0
+    ? `<text x="${sx(i).toFixed(1)}" y="${H - B + 18}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${String(y).slice(2)}</text>` : "").join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="The state news agency ANTARA's own tone rises from zero to plus one across the decade">
+    ${gl}${xt}${body}${labs}
+    <text x="${L}" y="${H - 10}" fill="${MUTED}" font-size="10.5">mean tone of every Indonesia event a publisher carried that year</text>
+  </svg>`;
+}
+
+/* ── Fig 10 · loud and dark, at two resolutions ──────────────────────────── */
+function fig10() {
+  const W = 720, H = 300, T = 44, B = 62;
+  const midX = 356;
+  const d1 = A.loud_dark.deciles;
+  const L1 = 46, R1 = midX - 24;
+  const ext = Math.max(...d1.map((r: any) => Math.abs(r.tone))) * 1.25;
+  const sy1 = (v: number) => (T + (H - T - B) / 2) - (v / ext) * ((H - T - B) / 2);
+  const bw1 = (R1 - L1) / d1.length;
+  const bars1 = d1.map((r: any, i: number) => {
+    const x = L1 + i * bw1 + bw1 * 0.14, w = bw1 * 0.72;
+    const y0 = sy1(0), y1 = sy1(r.tone);
+    return `<rect x="${x.toFixed(1)}" y="${Math.min(y0, y1).toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(2, Math.abs(y1 - y0)).toFixed(1)}"
+      fill="${r.tone < 0 ? CORAL : TEAL}" rx="1.5" opacity="${i === 9 ? 1 : 0.7}"/>`;
+  }).join("");
+  const yr = A.loud_dark.by_year;
+  const L2 = midX + 46, R2 = W - 22;
+  const ext2 = Math.max(...yr.map((r: any) => Math.abs(r.r)), Math.abs(A.loud_dark.monthly_r)) * 1.2;
+  const sy2 = (v: number) => (T + (H - T - B) / 2) - (v / ext2) * ((H - T - B) / 2);
+  const bw2 = (R2 - L2) / yr.length;
+  const bars2 = yr.map((r: any, i: number) => {
+    const x = L2 + i * bw2 + bw2 * 0.14, w = bw2 * 0.72;
+    const y0 = sy2(0), y1 = sy2(r.r);
+    return `<rect x="${x.toFixed(1)}" y="${Math.min(y0, y1).toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(2, Math.abs(y1 - y0)).toFixed(1)}"
+      fill="${r.r < 0 ? CORAL : TEAL}" rx="1.5" opacity="0.8"/>
+      <text x="${(x + w / 2).toFixed(1)}" y="${H - B + 16}" fill="${MUTED}" font-size="9" text-anchor="middle">${String(r.year).slice(2)}</text>`;
+  }).join("");
+  const mline = sy2(A.loud_dark.monthly_r);
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="The quietest and loudest days differ in tone; within every early year the correlation is negative while the monthly figure the page prints is positive">
+    <text x="${L1}" y="18" fill="${INK}" font-size="11.5">Mean tone by attention decile, daily</text>
+    <text x="${L1}" y="32" fill="${MUTED}" font-size="10">quietest tenth of days → loudest tenth</text>
+    <line x1="${L1}" y1="${sy1(0).toFixed(1)}" x2="${R1}" y2="${sy1(0).toFixed(1)}" stroke="${GRID}"/>
+    ${bars1}
+    <text x="${(L1 + 9.5 * bw1).toFixed(1)}" y="${(sy1(d1[9].tone) + 14).toFixed(1)}" fill="${CORAL}" font-size="10.5" text-anchor="middle" font-family="var(--font-data)">${d1[9].tone.toFixed(2)}</text>
+    <text x="${L1}" y="${H - B + 18}" fill="${MUTED}" font-size="10">quietest</text>
+    <text x="${R1}" y="${H - B + 18}" fill="${MUTED}" font-size="10" text-anchor="end">loudest</text>
+    <line x1="${midX}" y1="14" x2="${midX}" y2="${H - 34}" stroke="${GRID}"/>
+    <text x="${L2}" y="18" fill="${INK}" font-size="11.5">Daily correlation of attention with tone, by year</text>
+    <text x="${L2}" y="32" fill="${MUTED}" font-size="10">negative = louder days are darker</text>
+    <line x1="${L2}" y1="${sy2(0).toFixed(1)}" x2="${R2}" y2="${sy2(0).toFixed(1)}" stroke="${GRID}"/>
+    <line x1="${L2}" y1="${mline.toFixed(1)}" x2="${R2}" y2="${mline.toFixed(1)}" stroke="${VIOLET}" stroke-dasharray="4 4"/>
+    <line x1="${R2 - 234}" y1="${T + 8}" x2="${R2 - 218}" y2="${T + 8}" stroke="${VIOLET}" stroke-dasharray="4 4"/>
+    <text x="${R2 - 212}" y="${T + 12}" fill="${VIOLET}" font-size="10" font-family="var(--font-data)">monthly r ${sg(A.loud_dark.monthly_r, 2)} — what the page prints</text>
+    ${bars2}
+    <text x="${L2 - 8}" y="${(sy2(0) + 4).toFixed(1)}" fill="${MUTED}" font-size="10" text-anchor="end">0</text>
+    <text x="${L2 - 8}" y="${(sy2(-0.6) + 4).toFixed(1)}" fill="${MUTED}" font-size="10" text-anchor="end">−0.6</text>
+  </svg>`;
+}
+
+/* ── Fig 11 · what actually landed ───────────────────────────────────────── */
+function fig11() {
+  const rows = A.themes.rows;
+  const missing = A.themes.n_requested - A.themes.n_landed;
+  const W = 720, L = 156, R = 92, T = 30, rh = 22;
+  const H = T + (rows.length + 1) * rh + 26;
+  const bw = W - L - R;
+  const full = A.themes.full_months;
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rh, w = (r.months / full) * bw;
+    const short = r.months < full - 12;
+    return `<text x="${L - 10}" y="${y + 14}" fill="${short ? CORAL : INK}" font-size="11" text-anchor="end">${esc(r.label)}</text>
+      <rect x="${L}" y="${y + 4}" width="${bw.toFixed(1)}" height="13" fill="${GRID}" rx="1.5" opacity="0.6"/>
+      <rect x="${L}" y="${y + 4}" width="${w.toFixed(1)}" height="13" fill="${short ? CORAL : VIOLET}" rx="1.5" opacity="0.85"/>
+      <text x="${(L + bw + 8).toFixed(1)}" y="${y + 14}" fill="${MUTED}" font-size="10" font-family="var(--font-data)">${r.months} mo · ${(r.share_mean * 100).toFixed(2)}%</text>`;
+  }).join("");
+  const y9 = T + rows.length * rh;
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Eleven of the twenty theme curves landed, and one of them holds only thirteen months">
+    <text x="${L}" y="18" fill="${MUTED}" font-size="11">months of data out of ${full} in the window</text>
+    ${body}
+    <text x="${L - 10}" y="${y9 + 14}" fill="${MUTED}" font-size="11" text-anchor="end">${missing} never landed</text>
+    <rect x="${L}" y="${y9 + 4}" width="${bw.toFixed(1)}" height="13" fill="${GRID}" rx="1.5" opacity="0.6"/>
+    <text x="${(L + bw + 8).toFixed(1)}" y="${y9 + 14}" fill="${MUTED}" font-size="10" font-family="var(--font-data)">0 mo</text>
+    <text x="${L}" y="${H - 6}" fill="${MUTED}" font-size="10">coral = window too short to compare against the others</text>
+  </svg>`;
+}
+
+const FL = figL();
+const F1 = fig1(), F2 = fig2(), F3 = fig3(), F4 = fig4(), F5 = fig5(), F6 = fig6();
+const F7 = fig7(), F8 = fig8(), F9 = fig9(), F10 = fig10(), F11 = fig11();
+---
+<html lang="en" data-case="narrative" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Whose Attention? Measuring Indonesia in the World's News</title>
+    <meta name="description" content="An adversarial review of a GDELT-derived attention, tone and theme index for Indonesia, 2017-2026: the denominator problem, the news-hole artefact, and who is actually speaking." />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="back" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/`}>← The instrument</a>
+      <span class="stamp dim">REVIEW ARTICLE · DATA VINTAGE {A.vintage}</span>
+    </header>
+
+    <article>
+      <div class="masthead">
+        <span class="eyebrow">METHODS &amp; VALIDATION · INDONESIA IN THE GLOBAL NARRATIVE</span>
+        <h1>Whose attention? Measuring Indonesia in the world's news</h1>
+        <p class="standfirst">A stress test of a GDELT-derived attention, tone and theme index over
+        {A.days.toLocaleString()} days. The measured signal survives; three of the four things it is
+        most naturally read to mean do not. We then rebuild the headline test from the case's own
+        archive and show that it changes {word(flipped.length)} of {word(af.length)} verdicts.</p>
+        <div class="byline">
+          <span>Demo Lab · FMV</span><span>Data through {A.vintage}</span>
+          <span>{nf(A.coverage.event_rows)} coded events · {A.api_timelines} timelines</span>
+        </div>
+      </div>
+
+      <section class="abstract">
+        <h2>Abstract</h2>
+        <p><b>Question.</b> A country-level media index built on GDELT is routinely read as
+        "how much the world is paying attention to Indonesia, and how warmly." We ask whether the
+        published series can carry that reading.</p>
+        <p><b>Method.</b> Two independent layers over one window, {A.window.first} to {A.window.last}:
+        the GDELT DOC 2.0 API's normalized volume and tone curves, and {nf(A.coverage.event_rows)} CAMEO-coded
+        Indonesia events extracted from {nf(A.streamed.files)} raw 15-minute export files
+        ({A.streamed.gb} GB). Every headline statistic is re-derived from the case's own published
+        output; the publisher layer is re-derived from the raw archive.</p>
+        <p><b>Findings.</b> First, <b>the denominator is doing most of the work</b>. GDELT's crawl fell
+        from {nf(first.monitored)} to {nf(last.monitored)} articles a day
+        ({pc(A.crawl.monitored_change, 1)}); articles naming Indonesia fell {pc(A.crawl.idn_change, 1)};
+        the published share therefore <i>rose</i> {pc(A.crawl.share_change, 1)}.
+        {pc(el.attributable, 0)} of that rise ({pc(el.attributable_lo, 0)}–{pc(el.attributable_hi, 0)})
+        is predicted by crawl shrinkage alone. Second, <b>spikes are partly a news hole</b>:
+        {A.spikes.weekend_mon} of the {A.spikes.n_top} loudest days fall on a Saturday, Sunday or Monday
+        against {A.spikes.expected} expected, and in the median attention spike
+        {pc(A.spikes.denom_median, 0)} of the move is a smaller world crawl rather than more Indonesia
+        coverage. The Kanjuruhan stadium disaster passes the attention gate at
+        {kanjA.ratio.toFixed(2)}× on a numerator that moved {kanjA.numer.toFixed(2)}×. Third,
+        <b>the "global" narrative is mostly domestic</b>: {pub.indonesian_in_top25} of the
+        {pub.top.length} largest publishers are based in Indonesia, Indonesian outlets carry
+        {pc(attr.origin_by_year[0].indonesia_share, 0)} of the archive in {attr.origin_by_year[0].year}
+        rising to {pc(attr.origin_by_year[attr.origin_by_year.length - 1].indonesia_share, 0)} by
+        {attr.origin_by_year[attr.origin_by_year.length - 1].year}, and the state wire alone is
+        {pc(pub.state_share, 1)} of everything. Fourth, <b>rebuilding the anchor test on foreign
+        publishers only changes {word(flipped.length)} of {word(af.length)} verdicts</b>: the disaster
+        that passes turns into a {kanj.foreign.ratio.toFixed(2)}× <i>fall</i>, while {word(missed.length)}
+        events the case records as failing show foreign spikes of
+        {Math.min(...missed.map((m: any) => m.foreign.ratio)).toFixed(1)}–{Math.max(...missed.map((m: any) => m.foreign.ratio)).toFixed(1)}×.
+        Fifth, <b>the tone rise is two-thirds real</b>: an exact decomposition splits the
+        {sg(dec.delta, 2)}-point warming into {sg(dec.within, 2)} from the same outlets and
+        {sg(composition, 2)} from a change in which outlets GDELT reads.</p>
+        <p><b>Conclusion.</b> The instrument measures <i>what is being said about Indonesia and by whom</i>
+        well, and <i>how much the world is looking</i> badly. Its level series should be withdrawn as a
+        measure of global attention and republished as two: a composition series, which is sound, and a
+        foreign-attention series, which the archive can already produce and which disagrees with the
+        published one in both directions.</p>
+      </section>
+
+      <nav class="toc">
+        <a href="#s1">1 · The claim under test</a><a href="#s2">2 · Prior art</a>
+        <a href="#s3">3 · Data and method</a><a href="#s4">4 · The denominator</a>
+        <a href="#s5">5 · The news hole</a><a href="#s6">6 · Whose narrative</a>
+        <a href="#s7">7 · The anchors, re-tested</a><a href="#s8">8 · Where the warmth came from</a>
+        <a href="#s9">9 · Attention is not sentiment</a><a href="#s10">10 · What survives</a>
+        <a href="#s11">11 · What follows for decisions</a><a href="#s12">12 · What remains open</a>
+        <a href="#refs">References</a>
+      </nav>
+
+      <section id="s1">
+        <h2><span class="num">1</span> The claim under test</h2>
+        <p>The instrument's front page opens with a sentence that contains three separate claims:
+        GDELT machine-reads <i>the world's</i> news; this is the share of all of it that
+        <i>mentioned Indonesia</i>; and the flares are the days <i>the world could not look away</i>.
+        The first is a claim about the sample, the second about the measure, the third about what the
+        measure means.</p>
+        <p>Each is testable, and they fail in different ways. This review takes them one at a time and
+        then rebuilds the headline test with the correction applied — because the archive needed to do
+        that is already on disk.</p>
+        <p class="pull">A share has a numerator and a denominator. When a series is presented as
+        attention, the reader assumes the numerator moved. Over this decade, mostly, the denominator did.</p>
+      </section>
+
+      <section id="s2">
+        <h2><span class="num">2</span> Prior art, and what it says this instrument can bear</h2>
+        <p><a href="#ref-leetaru">Leetaru &amp; Schrodt (2013)</a> introduced GDELT as a machine-coded
+        event archive over global news; the DOC 2.0 API added the normalized volume, tone and facet
+        timelines this case uses. Its scale is unmatched and its cost is zero, which is exactly why its
+        measurement properties deserve care. There is, as far as we can find, <b>no published
+        longitudinal GDELT study of Indonesia's media profile</b> — so there is no direct replication
+        target, and the benchmarks below have to be assembled from four separate literatures.</p>
+        <p><b>How accurate is the event layer?</b> <a href="#ref-wang">Wang et al. (2016)</a> audited
+        GDELT's protest records and found that after de-duplication and classification only
+        <b>{pc(LIT.protest_true, 0)} of valid protest URLs indicate a true protest event</b>; of the
+        filtered, de-duplicated set, 49.5% referred to actual protests. They report the same problems
+        across the other nineteen CAMEO categories. <a href="#ref-hong">Hong et al. (2025)</a>, hand-auditing
+        2021 records, put key-field accuracy near 55% and semantic redundancy at
+        <b>{pc(LIT.redundancy, 1)}</b> — and, directly relevant here, event-type accuracy at
+        {LIT.acc_noneng.toFixed(3)} for non-English sources against {LIT.acc_eng.toFixed(3)} for English.
+        Since {pc(A.layers.translated_share, 0)} of this case's kept rows come from the translated feed,
+        it sits on the weaker side of that gap.</p>
+        <p><b>How well does GDELT agree with anything else?</b> Badly, and the pattern is instructive.</p>
+        <figure>
+          <Fragment set:html={FL} />
+          <figcaption><b>Figure 1.</b> Agreement coefficients. The top three are this case's own
+          two-source coherence check; the rest are published benchmarks. The comparison is indicative,
+          not exact — the case's are Spearman rank correlations on daily series, the published ones
+          Pearson correlations on counts — but the ordering is the point.</figcaption>
+        </figure>
+        <p>Two things follow. First, <b>scale rescues GDELT</b>: <a href="#ref-hammond">Hammond &amp;
+        Weidmann (2014)</a> find GDELT correlates with ACLED at {LIT.acled_national.toFixed(2)} as a
+        national time series but only {LIT.acled_cell.toFixed(2)} at 55 km cell-months, and Wang et al.
+        note agreement improves as time scales get rougher. A national, daily-or-coarser Indonesia
+        series — which is what this case builds — is the regime where GDELT is defensible. Second,
+        <b>the case's own coherence check is not an external validation</b>. Its
+        ρ = {A.layers.rho_all} compares the event export against the DOC API, both drawn from the same
+        crawl of the same articles; that is an internal-consistency test, and it clears its own 0.60 bar
+        by {(A.layers.rho_all - 0.6).toFixed(3)}. Two genuinely independent pipelines aimed at the same
+        events agree at {LIT.gdelt_icews.toFixed(2)}.</p>
+        <p><b>Is volume a measure of what happened?</b> No. <a href="#ref-weidmann">Weidmann (2016)</a>
+        found that only <b>{pc(LIT.reported, 1)}</b> of Afghan insurgent events with casualties reached
+        the international press, with reporting probability rising in mobile coverage
+        (β = 0.419) and falling in distance from a town (β = −0.407).
+        <a href="#ref-kwak">Kwak &amp; An (2014)</a>, on {"195,513"} GDELT-coded disasters, found the
+        median disaster's coverage reaches <b>{LIT.disaster_reach} country</b>, and that wire-service
+        pickup alone adds {pc(LIT.wire_r2, 0)} of explained variance — more than every national and
+        disaster attribute combined.</p>
+        <p><b>Is the level informative at all?</b> Mostly it is structural.
+        <a href="#ref-wu">Wu (2000)</a> models coverage of 38 countries and reaches adjusted
+        R² = {LIT.idn_r2_wu.toFixed(3)} for Indonesia from trade volume and news-agency presence alone;
+        <a href="#ref-blondheim">Blondheim et al. (2015)</a> find a country's share of world economic
+        news correlates r = {LIT.gdp_r.toFixed(3)} with its GDP. The informative quantity is the
+        residual from that baseline, not the level. <a href="#ref-grasland">Grasland (2020)</a>, from an
+        entirely independent sample of 320,000 stories in 31 dailies in 2015, puts Indonesia at
+        <b>{pc(LIT.idn_share_2015, 2)} of international news, rank {LIT.idn_rank_2015}</b>. This case
+        measures a decade band of {first.share.toFixed(2)}–{Math.max(...cy.map((r: any) => r.share)).toFixed(2)}%
+        of all monitored articles. The denominators differ, so this is an order-of-magnitude check
+        rather than a replication — but it is the one available, and the case passes it.</p>
+        <p><b>And the interpretation?</b> The benchmark that matters most is
+        <a href="#ref-eisensee">Eisensee &amp; Strömberg (2007)</a>. Studying US disaster relief, they
+        showed that coverage depends on what else is in the news that day — a disaster occurring during
+        the Olympics needs <b>{LIT.olympics_ratio}× the casualties</b> for the same chance of relief —
+        and that relief then follows coverage. Their Table IX prices the geography of attention
+        directly: an <b>Asian disaster needs {LIT.asia_ratio}× the casualties of a European one</b> for
+        equal coverage ({pc(LIT.news_share_asia, 0)} of Asian disasters make the news against
+        {pc(LIT.news_share_europe, 0)} of European ones). Their crowd-out mechanism is precisely the one
+        that appears in §5 of this review, running the other way: an <i>empty</i> agenda inflates a
+        coverage share exactly as a crowded one deflates it.</p>
+        <p class="pull">The literature's verdict on this method is not that it is unusable. It is that
+        national, coarse-grained, <i>relative</i> claims survive and everything finer does not — and
+        that a coverage share is a measure of the news agenda at least as much as of its subject.</p>
+      </section>
+
+      <section id="s3">
+        <h2><span class="num">3</span> Data and method</h2>
+        <p><b>Curves.</b> GDELT DOC 2.0 API, {A.api_timelines} cached timelines: <code>TimelineVol</code>
+        (pre-normalized share of monitored articles), <code>TimelineVolRaw</code> (raw counts plus the
+        monitored total), <code>TimelineTone</code>, <code>TimelineSourceCountry</code>,
+        <code>TimelineLang</code>. Daily resolution, {A.window.first} → {A.window.last}. The window's
+        start is not an analytical choice: the DOC 2.0 API searches back to 1 January 2017 and no
+        further, so the sample begins where the instrument does.</p>
+        <p><b>Events.</b> The raw 15-minute export feed, English and translated, streamed in full:
+        {nf(A.streamed.files)} files, {A.streamed.gb} GB, {nf(A.streamed.rows_scanned)} rows scanned,
+        {nf(A.streamed.rows_kept)} kept where Indonesia is the action location (FIPS <code>ID</code>) or
+        an actor (ISO3 <code>IDN</code>). Every kept row carries a distinct event id, so nothing is
+        double-counted at the identifier level. That is a weaker guarantee than it sounds:
+        <a href="#ref-hong">Hong et al. (2025)</a> measure {pc(LIT.redundancy, 1)} <i>semantic</i>
+        redundancy in GDELT — the same event re-emitted under a new id — which this check cannot detect
+        and which no analysis here corrects for.</p>
+        <p><b>Publishers.</b> For this review each row's source domain is collapsed to its site
+        (<code>nasional.kompas.com</code> → <code>kompas.com</code>) and classified as Indonesia-based
+        or not, using the <code>.id</code> country domain plus a published list of
+        {pub.curated_list_size} Indonesian outlets curated from the busiest sites in the archive. The
+        list covers {pc(pub.curated_covers, 0)} of all rows on its own; everything not on it and not
+        <code>.id</code> is counted as foreign, which biases the foreign share <i>up</i> and therefore
+        makes §6's finding conservative.</p>
+        <p class="caveat"><b>Published state of the pipeline.</b> The case's own gates stand at
+        {A.gates["G-D1"].verdict} on normalization, {A.gates["G-D2"].verdict} on the anchor events
+        ({A.gates["G-D2"].pass} pass, {A.gates["G-D2"].fail} fail, {A.gates["G-D2"].pending} pending of
+        {A.gates["G-D2"].n}), {A.gates["G-D3"].verdict} on two-source coherence, and
+        {A.gates["G-D4"].verdict} on language honesty — the foreign/domestic curves the API keeps
+        refusing have not landed. {A.themes.n_landed} of {A.themes.n_requested} theme curves are in
+        hand. This review is written against that state, not a hoped-for one.</p>
+      </section>
+
+      <section id="s4">
+        <h2><span class="num">4</span> Finding one — the attention series is mostly its denominator</h2>
+        <p>GDELT's crawl is not a fixed instrument. Across this window the number of articles it
+        monitors per day fell from {nf(first.monitored)} to {nf(last.monitored)} — a factor of
+        {A.crawl.drift} — and it fell in almost every year. The case knows this: its normalization gate
+        publishes the drift and states the rule that every attention chart is a share. The question no
+        chart on the page asks is what that rule does to the trend.</p>
+        <figure>
+          <Fragment set:html={F1} />
+          <figcaption><b>Figure 2.</b> The three series, each indexed to its own {first.year} level.
+          The crawl and the Indonesia count fall together; the ratio between them rises. Nothing here
+          is a claim about the world's interest in Indonesia.</figcaption>
+        </figure>
+        <p>The numbers are stark. Articles naming Indonesia fell <b>{pc(A.crawl.idn_change, 1)}</b>,
+        from {nf(first.idn)} a day to {nf(last.idn)}. Everything GDELT monitored fell
+        <b>{pc(A.crawl.monitored_change, 1)}</b>. Because the second fell faster than the first, the
+        published share <b>rose {pc(A.crawl.share_change, 1)}</b>. The case's own normalization check
+        already records that the raw and normalized series are effectively unrelated day to day
+        (Spearman ρ = {A.crawl.spearman_raw_vs_norm}); what it does not say is which of them the page
+        then plots as a decade of attention.</p>
+        <figure>
+          <Fragment set:html={F2} />
+          <figcaption><b>Figure 3.</b> The same three quantities as percentage changes over the window,
+          and the share of the published rise that crawl shrinkage alone predicts.</figcaption>
+        </figure>
+        <p>Normalizing is the right instinct, and at daily frequency it works: regressed on crawl size,
+        the share has an elasticity of only <b>{el.share_on_crawl.b.toFixed(3)}</b>
+        (R² {el.share_on_crawl.r2.toFixed(3)}), against <b>{el.idn_on_crawl.b.toFixed(3)}</b>
+        (R² {el.idn_on_crawl.r2.toFixed(3)}) for the raw count — dividing by the denominator removes
+        most of the mechanical co-movement. But a small elasticity applied to a very large change in the
+        denominator is not small. The crawl's log change over the window is
+        {el.dlog_crawl.toFixed(2)}; multiplied by that elasticity it accounts for
+        <b>{pc(el.attributable, 0)}</b> of the observed log rise in the share
+        ({pc(el.attributable_lo, 0)}–{pc(el.attributable_hi, 0)} at 95%).</p>
+        <p>This propagates into the page's first chapter. The five "regimes of attention" read as a rise
+        to a plateau; underneath them, the number of articles about Indonesia falls in every regime:</p>
+        <div class="table-scroll">
+          <table class="tbl">
+            <thead><tr><th>Era</th><th class="n">Published share</th><th class="n">Indonesia articles/day</th><th class="n">Monitored articles/day</th><th class="n">Mean tone</th></tr></thead>
+            <tbody>{A.eras.map((e: any) => (
+              <tr><td>{e.label}</td><td class="n">{e.share.toFixed(2)}%</td><td class="n">{nf(e.idn)}</td><td class="n">{nf(e.monitored)}</td><td class="n">{sg(e.tone, 2)}</td></tr>
+            ))}</tbody>
+          </table>
+        </div>
+        <p class="caveat"><b>What this does and does not overturn.</b> The share is the right thing to
+        plot for comparing one <i>day</i> with the next. It is the wrong thing to read as a decade-long
+        trend in the world's interest, because over a decade the denominator changed by more than the
+        numerator did. Neither series is a clean attention measure on its own; §6 and §7 build one that
+        is closer.</p>
+      </section>
+
+      <section id="s5">
+        <h2><span class="num">5</span> Finding two — the loudest days are partly a news hole</h2>
+        <p>If a share can drift because its denominator drifts, it can also spike because its
+        denominator dips. The world's news volume is strongly periodic: in this archive GDELT monitors
+        {nf(A.spikes.dow[6].monitored)} articles on an average Sunday against
+        {nf(A.spikes.dow[2].monitored)} on a Wednesday, a fall of
+        {pc(1 - A.spikes.dow[6].monitored / A.spikes.dow[2].monitored, 0)}. Coverage of Indonesia falls
+        on weekends too, which is why the weekly cycle mostly cancels in the share. Individual days are
+        another matter.</p>
+        <figure>
+          <Fragment set:html={F4} />
+          <figcaption><b>Figure 4.</b> The {A.spikes.n_top} highest-share days in the window. Horizontal
+          axis: coverage of Indonesia against its own trailing {28}-day median. Vertical axis: how much
+          <i>smaller</i> the world crawl was than its own trailing median. Dashed diagonals mark equal
+          published attention ratios. Hover any day.</figcaption>
+        </figure>
+        <p><b>{A.spikes.weekend_mon} of the {A.spikes.n_top} loudest days in the decade fall on a
+        Saturday, Sunday or Monday</b>, against {A.spikes.expected} expected if loud days were spread
+        evenly. Across every day whose share reaches {1.5}× its trailing median
+        ({A.spikes.n_spikes} days, {pc(A.spikes.spike_rate, 1)} of the window), the median spike is
+        <b>{pc(A.spikes.denom_median, 0)}</b> attributable to the crawl being smaller rather than to
+        Indonesia being covered more; on {A.spikes.numer_fell} of them coverage of Indonesia
+        <i>fell</i> while the published share rose.</p>
+        <p>The same split can be applied to the case's own pre-registered anchor events, which is where
+        it stops being a curiosity.</p>
+        <figure>
+          <Fragment set:html={F3} />
+          <figcaption><b>Figure 5.</b> Each anchor's published attention ratio decomposed into the part
+          contributed by more coverage of Indonesia (violet) and the part contributed by a smaller world
+          crawl (amber). Bars extending left are contributions that worked <i>against</i> the ratio.</figcaption>
+        </figure>
+        <p>Two anchors are clean: the Anak Krakatau tsunami and the G20 Bali summit are carried by real
+        increases in coverage ({A.anchors[1].numer.toFixed(2)}× and {A.anchors[5].numer.toFixed(2)}×).
+        One is not. <b>The Kanjuruhan stadium disaster passes the attention check at
+        {kanjA.ratio.toFixed(2)}× on coverage that moved {kanjA.numer.toFixed(2)}×</b> — the peak fell on
+        a {kanjA.dow}, the world crawl was {kanjA.denom.toFixed(2)}× smaller than its own baseline, and
+        {pc(kanjA.denom_share, 0)} of the published ratio is that. The two most recent anchors invert it:
+        for the {A.anchors[8].label} the published ratio is {A.anchors[8].ratio.toFixed(2)}× while
+        coverage of Indonesia <i>fell</i> to {A.anchors[8].numer.toFixed(2)}× of baseline.</p>
+        <p class="caveat"><b>This is not a threshold problem.</b> Moving the 1.5× bar would change which
+        anchors pass without changing what the number means. The defect is in the measure: a share whose
+        denominator is the volume of unrelated world news cannot separate "Indonesia was covered more"
+        from "everything else was covered less" — which is exactly the crowd-out mechanism
+        <a href="#ref-eisensee">Eisensee &amp; Strömberg (2007)</a> identified, running the other way.</p>
+      </section>
+
+      <section id="s6">
+        <h2><span class="num">6</span> Finding three — the global narrative is mostly Indonesia's own</h2>
+        <p>The API's curves carry no publisher breakdown, so this question cannot be asked of them. The
+        event archive can answer it directly: every one of the {nf(pub.n_rows)} kept rows carries the
+        domain that published it. Collapsed to sites, the archive holds {nf(pub.n_sites)} distinct
+        publishers — and is extremely concentrated. The ten largest carry
+        <b>{pc(pub.top10_share, 1)}</b> of everything.</p>
+        <figure>
+          <Fragment set:html={F5} />
+          <figcaption><b>Figure 6.</b> The {pub.top.length} largest publishers of Indonesia events,
+          {A.window.first}–{A.window.last}. Hover any bar for its mean tone.</figcaption>
+        </figure>
+        <p><b>{pub.indonesian_in_top25} of the {pub.top.length} largest publishers are based in
+        Indonesia.</b> The two that are not sit at ranks {pub.top.findIndex((p: any) => p.origin !== "indonesia") + 1} and
+        {pub.top.length - [...pub.top].reverse().findIndex((p: any) => p.origin !== "indonesia")}. The
+        single largest voice in "the world's news about Indonesia" is
+        <code>{pub.top[0].site}</code> at {pc(pub.top[0].share, 1)}; the Indonesian state news agency and
+        state radio together carry <b>{pc(pub.state_share, 1)}</b> of the entire archive.</p>
+        <p>Across the window, Indonesian publishers carry
+        {pc(attr.origin_by_year[0].indonesia_share, 1)} of kept rows in {attr.origin_by_year[0].year},
+        rising to <b>{pc(attr.origin_by_year[attr.origin_by_year.length - 1].indonesia_share, 1)}</b> in
+        {attr.origin_by_year[attr.origin_by_year.length - 1].year}. The API's own facets agree from a
+        different direction: of the languages GDELT reads, Indonesian coverage of Indonesia runs at
+        {A.layers.lang["Indonesian"].toFixed(1)} intensity against {A.layers.lang["English"].toFixed(2)}
+        for English, and {pc(A.layers.translated_share, 1)} of kept event rows come from the translated
+        feed. The case's two-source coherence check records the same thing without naming it: the
+        API's volume tracks the translated event share at ρ = {A.layers.rho_trans} but the English one
+        at only ρ = {A.layers.rho_en}.</p>
+        <p>That composition changes what a rising share can mean. Foreign coverage of Indonesia,
+        measured against the feed's own denominator, moved in the opposite direction to the published
+        series:</p>
+        <figure>
+          <Fragment set:html={F6} />
+          <figcaption><b>Figure 7.</b> The published attention share against foreign-published Indonesia
+          coverage as a share of the whole 15-minute feed, both indexed to {first.year}. Two measures of
+          the same thing, {pc(A.crawl.share_change, 0)} apart in one direction and
+          {pc(foreignChange, 0)} in the other.</figcaption>
+        </figure>
+        <p class="pull">Over the decade the world's press published {pc(Math.abs(foreignChange), 0)}
+        <i>less</i> about Indonesia relative to everything else it published. The page's headline series
+        shows the opposite because three-quarters of what it counts is Indonesia talking to itself.</p>
+        <p class="caveat"><b>Why this is understated, not overstated.</b> Any site not on the curated
+        Indonesian list and not under <code>.id</code> is counted as foreign, so the foreign share here
+        is an upper bound and the domestic share a lower bound. Note also that a domestic-heavy sample
+        is not a defect of the pipeline — GDELT indexes Indonesian media heavily and that is a real
+        feature of the source. It is a defect of the <i>label</i>.</p>
+      </section>
+
+      <section id="s7">
+        <h2><span class="num">7</span> Finding four — the decisive test: re-running the anchors on foreign publishers only</h2>
+        <p>Findings one to three converge on a single experiment. If the published attention measure is
+        contaminated by a drifting denominator and dominated by domestic publishers, then rebuilding it
+        from foreign publishers only, against the feed's own denominator, should change what it says
+        about specific events. The archive needed for that is already on disk, so we ran it: for each
+        pre-registered anchor, the peak of foreign-published Indonesia coverage in the anchor window
+        against its own trailing {28}-day median — the identical test statistic the case uses, computed
+        on a cleaner sample.</p>
+        <figure>
+          <Fragment set:html={F7} />
+          <figcaption><b>Figure 8.</b> Each anchor's published attention ratio (small grey dot) against
+          the same ratio computed from foreign publishers only (large dot). Teal means the foreign
+          measure is larger, coral smaller.</figcaption>
+        </figure>
+        <p>The result changes the verdict on {word(flipped.length)} of the {word(af.length)} anchors — {word(decisive.length)} of them by a wide margin, one where both measures sit on the threshold — and it changes them in both directions.</p>
+        <div class="table-scroll">
+          <table class="tbl">
+            <thead><tr><th>Anchor</th><th class="n">Published</th><th class="n">All publishers</th><th class="n">Foreign only</th><th>Reading</th></tr></thead>
+            <tbody>{af.map((a: any) => {
+              const p = a.published_api_ratio, f = a.foreign.ratio;
+              const flip = (p >= 1.5) !== (f >= 1.5);
+              const read = !flip ? "agrees"
+                : marginal(a) ? "on the threshold either way"
+                : f >= 1.5 ? "missed by the published measure"
+                : "artefact of the published measure";
+              return (
+                <tr class={flip && !marginal(a) ? "flip" : ""}>
+                  <td>{a.label}<span class="dim"> · {a.day}</span></td>
+                  <td class="n">{p.toFixed(2)}×</td>
+                  <td class="n">{a.all.ratio.toFixed(2)}×</td>
+                  <td class="n"><b>{f.toFixed(2)}×</b></td>
+                  <td>{read}</td>
+                </tr>);
+            })}</tbody>
+          </table>
+        </div>
+        <p>The disaster that <i>passes</i> the published attention check is the one event where foreign
+        coverage of Indonesia actually <b>fell</b> — {kanj.foreign.ratio.toFixed(2)}× its own baseline.
+        Meanwhile {word(missed.length)} events the case records as failing to lift attention produce large
+        foreign spikes: {missed.map((m: any) => `${m.label} ${m.foreign.ratio.toFixed(1)}×`).join(", ")}.
+        The G20 summit, which the published measure scores at {g20a.published_api_ratio.toFixed(2)}×,
+        reaches <b>{g20a.foreign.ratio.toFixed(2)}×</b> among foreign publishers — the world did look,
+        far harder than the page reports.</p>
+        <p class="pull">The published instrument does not merely add noise to the world's attention. It
+        systematically mis-ranks events: it credits Indonesia's quiet Sundays and discounts the days the
+        foreign press actually arrived.</p>
+        <p class="caveat"><b>What this test is and is not.</b> It counts coded <i>events</i>, not
+        articles, so its ratios are not directly comparable in level with the API's article-share ratios;
+        the comparison that carries the finding is foreign against all publishers <i>within</i> the same
+        measure, which is exactly like-for-like. It also inherits the event layer's known coding error
+        (<a href="#ref-wang">Wang et al. 2016</a>) — but that error has no reason to differ between
+        domestic and foreign publishers on the same day, which is what the test compares. Monthly, the
+        all-publisher event share tracks the API's volume at r = {attr.foreign_pulse.r_all_api.toFixed(2)} while
+        the foreign-only series tracks it at r = {attr.foreign_pulse.r_foreign_api.toFixed(2)}: the published curve
+        is, quantitatively, the domestic one.</p>
+      </section>
+
+      <section id="s8">
+        <h2><span class="num">8</span> Finding five — the warming is two-thirds real</h2>
+        <p>Tone in this dataset rises sharply and monotonically enough to be the page's most eye-catching
+        feature: from {sg(first.tone, 2)} in {first.year} to {sg(last.tone, 2)} in {last.year} on the API
+        curve, and {sg(first.ev_tone, 2)} to {sg(last.ev_tone, 2)} on the independent event layer, which
+        tracks it at r = {A.layers.api_vs_event_tone_r}. The page attributes it to "a real shift in
+        coverage" while conceding that the shrinking source mix "deserves part of the credit". Both
+        layers also correlate with crawl size at r = {A.layers.api_tone_vs_crawl_r} and
+        {A.layers.event_tone_vs_crawl_r} respectively, so the concession is not idle — but neither is it
+        quantified, and it is quantifiable.</p>
+        <p>With a publisher for every row, the change in mean tone decomposes exactly
+        (<a href="#ref-gr">Griliches &amp; Regev 1995</a>) into four parts: the same outlets writing
+        differently, a reweighting among outlets present in both years, outlets arriving, and outlets
+        dropping out. The four sum to the observed change with no residual.</p>
+        <figure>
+          <Fragment set:html={F8} />
+          <figcaption><b>Figure 9.</b> Decomposition of the {dec.year_a}–{dec.year_b} change in mean
+          event tone across {nf(dec.rows_a)} and {nf(dec.rows_b)} rows. The residual is zero by
+          construction.</figcaption>
+        </figure>
+        <p>Mean tone moved {sg(dec.delta, 3)}. <b>{sg(dec.within, 3)} of that
+        ({pc(dec.within / dec.delta, 0)}) is the same publishers writing more warmly</b> — a real change
+        in what is said about Indonesia. The remaining {sg(composition, 3)}
+        ({pc(composition / dec.delta, 0)}) is a change in who is speaking: {sg(dec.between, 3)} from
+        reweighting among survivors and {sg(dec.exit, 3)} from outlets leaving the archive altogether.
+        Of the {nf(attr.survivorship.present_2017)} sites present in {dec.year_a}, only
+        {nf(attr.survivorship.still_present_2026)} ({pc(attr.survivorship.survival_rate, 0)}) are still
+        there in {dec.year_b}, and the ones that left were harsher than average.</p>
+        <p>The gap between publisher types is structural, not incidental: Indonesian outlets ran at
+        {sg(attr.origin_by_year[0].tone_indonesia, 2)} in {attr.origin_by_year[0].year} against
+        {sg(attr.origin_by_year[0].tone_foreign, 2)} for foreign ones, a
+        {Math.abs(attr.origin_by_year[0].tone_indonesia - attr.origin_by_year[0].tone_foreign).toFixed(2)}-point
+        difference. Any drift toward domestic publishers therefore raises measured tone by itself, and
+        §6 showed that drift is large.</p>
+        <figure>
+          <Fragment set:html={F9} />
+          <figcaption><b>Figure 10.</b> The tone of the largest publishers present in every year of the
+          window, against the archive as a whole. The state wire is highlighted.</figcaption>
+        </figure>
+        <p>The within-publisher component is not evenly spread either. The largest single voice in the
+        archive is the state news agency, and its own tone rises from {sg(antara.tone[0], 2)} in
+        {attr.years[0]} to {sg(antara.tone[antara.tone.length - 1], 2)} in
+        {attr.years[attr.years.length - 1]} — a publisher-level movement of
+        {sg(antara.tone[antara.tone.length - 1] - antara.tone[0], 2)} points on
+        {pc(pub.top[0].share, 1)} of all rows, while other large outlets in the same panel are flat.
+        We report this without interpreting it: what a state wire's tone measures is a question about
+        that wire, not about the world.</p>
+        <p class="caveat"><b>Scope, and a serious threat to the within component.</b> This decomposition
+        runs on the event layer, which is where publisher identity exists; it cannot be run on the API's
+        tone curve directly. The two move together (r = {A.layers.api_vs_event_tone_r}) and by nearly the
+        same amount ({sg(last.tone - first.tone, 2)} against {sg(last.ev_tone - first.ev_tone, 2)}),
+        which is the basis for reading the split across. The harder problem is what tone <i>is</i>.
+        GDELT's score is a dictionary count, and <a href="#ref-atteveldt">van Atteveldt et al. (2021)</a>
+        found English sentiment dictionaries applied to machine-translated news reach Krippendorff's
+        α of at most {LIT.dict_alpha_hi.toFixed(2)} against human coders — no better than dictionaries in
+        the original language, and far below the ~0.8 a hand-coded benchmark reaches. Worse for a
+        decade-long comparison, GDELT's own documentation states that its translation engine
+        "dynamically modulate[s] the quality of translations" and that accuracy "linearly degraded as
+        needed to cope with increases in volume". {pc(A.layers.translated_share, 0)} of these rows are
+        machine-translated, so if that pipeline improved as ingest volume fell — and volume fell
+        {pc(Math.abs(A.crawl.monitored_change), 0)} — part of the {sg(dec.within, 2)} within-publisher
+        warming could be the translator rather than the copy. Nothing on disk separates the two. This is
+        the single largest unresolved threat in this review, and we flag it rather than net it out.</p>
+      </section>
+
+      <section id="s9">
+        <h2><span class="num">9</span> Finding six — attention is not sentiment, and the page tests it at the wrong resolution</h2>
+        <p>The page asks a good question — "when it's loud, is it dark?" — and answers it with a
+        monthly scatter, reporting r = {sg(A.loud_dark.monthly_r, 2)} over {A.loud_dark.n_months} months
+        and concluding that the two "barely correlate". That number is right and the conclusion does not
+        follow from it, because the relationship changes sign with the resolution you look at.</p>
+        <figure>
+          <Fragment set:html={F10} />
+          <figcaption><b>Figure 11.</b> Left: mean tone by decile of daily attention. Right: the daily
+          attention–tone correlation computed separately within each year, against the pooled monthly
+          figure the page reports.</figcaption>
+        </figure>
+        <p>At daily resolution the correlation is <b>{sg(A.loud_dark.daily_r, 3)}</b>, and once
+        year-to-year drift is removed <b>{sg(A.loud_dark.daily_r_yearfe, 3)}</b>, with a slope of
+        {A.loud_dark.daily_slope_yearfe.toFixed(2)} tone points per point of share. The loudest tenth of
+        days average {sg(A.loud_dark.top_decile_tone, 3)} against {sg(A.loud_dark.rest_tone, 3)} for the
+        rest. In {A.loud_dark.by_year.filter((r: any) => r.r < 0).length} of the
+        {A.loud_dark.by_year.length} years the within-year daily correlation is negative, reaching
+        {sg(Math.min(...A.loud_dark.by_year.map((r: any) => r.r)), 2)}.</p>
+        <p>So loud <i>days</i> are dark and loud <i>months</i> are not, and both are true: days spike on
+        catastrophe, months rise on summits and campaigns. The page half-sees this — it notes that the
+        truly dark moments are single days — but it prints the aggregate correlation as the finding, and
+        the aggregate is the one resolution at which the effect vanishes. The honest headline is that
+        <b>the sign of the attention–tone relationship depends on the timescale</b>, which is a more
+        useful result than either half.</p>
+        <p>The literature would predict exactly this and warns against collapsing the two into one
+        index. <a href="#ref-sheafer">Sheafer (2007)</a> put volume and tone in the same model of what
+        the public calls the most important problem and found them opposite in sign and unequal in size
+        — salience {sg(LIT.sheafer_vol, 2)} against valence {sg(LIT.sheafer_tone, 2)}, with tone roughly
+        two and a half times the larger — while <a href="#ref-kiousis">Kiousis (2004)</a> found
+        visibility and valence load on separate factors. Volume and tone are two measurements, not two
+        views of one.</p>
+        <p>Attention is not importance either, and the ranking says so plainly. The single loudest day of
+        the decade is the {A.spikes.top[0].day} Anak Krakatau tsunami at {A.spikes.top[0].share.toFixed(2)}%
+        of world coverage; the next three are the G20 Bali summit. A stadium crush that killed 135 people
+        reaches {kanjA.ratio.toFixed(2)}× and, as §7 showed, none of that was foreign attention. What the
+        series ranks is the coincidence of an event with an empty news agenda.</p>
+        <p class="pull">That coincidence is not a nuisance term. It is the quantity
+        <a href="#ref-eisensee">Eisensee &amp; Strömberg (2007)</a> showed decides whether a disaster
+        gets relief — and on their numbers an Indonesian disaster already needs {LIT.asia_ratio} times
+        the casualties of a European one to be covered at all.</p>
+        <p>Read next to that benchmark, this index is measuring a real and consequential thing: the
+        news agenda's willingness to make room. It is simply not measuring what its label says, and the
+        difference matters most for exactly the events an Indonesian user would care about.</p>
+      </section>
+
+      <section id="s10">
+        <h2><span class="num">10</span> What survives, and why it is the more useful half</h2>
+        <p>Three things in this case come through the review intact.</p>
+        <ol class="uses">
+          <li><b>The theme mix.</b> A theme's share is one API share divided by another with the same
+          denominator, so crawl <i>size</i> cancels algebraically. It is the only layer immune to
+          §4 by construction — and it is where the case's substantive results live: COVID at
+          {pc(A.themes.rows[0].share_mean, 1)} of all Indonesia coverage across the window, elections at
+          {pc(A.themes.rows[1].share_mean, 1)}, and an era ranking that reorders itself sensibly around
+          the pandemic, the G20 chairmanship and the {A.eras[3].label.toLowerCase()}.</li>
+          <li><b>The event typology and the map.</b> Cooperation-versus-conflict mix, protest counts and
+          the self-drawn 0.25° grid are all relative structures within the Indonesia sample. They do not
+          depend on the world denominator at all.</li>
+          <li><b>The publisher layer</b> — which the case computes and then does not use. It is the
+          answer to §6 and §7, and on the evidence here it is the most valuable thing in the archive.</li>
+        </ol>
+        <p>Two caveats attach even to the theme layer. Crawl size cancels; crawl <i>composition</i> does
+        not, and §8 showed composition changed a great deal. And the panel is less complete than it
+        looks:</p>
+        <figure>
+          <Fragment set:html={F11} />
+          <figcaption><b>Figure 12.</b> Months of data behind each theme curve. {coal.label} holds
+          {coal.months} months and is nonetheless ranked and averaged against curves holding
+          {A.themes.full_months}.</figcaption>
+        </figure>
+        <p>{A.themes.n_landed} of {A.themes.n_requested} theme queries have landed, and one of those —
+        <b>{coal.label}, {coal.months} months from {coal.first} to {coal.last}</b> — is presented in the
+        theme grid with a decade-mean stamp and ranked against series holding
+        {A.themes.full_months} months. Its apparent {pc(coal.share_mean, 2)} mean is a
+        {coal.months}-month figure. That is a presentation defect with an easy fix: label the window, or
+        withhold the curve until it is comparable.</p>
+        <p class="caveat"><b>One more presentation defect.</b> The "who's talking" heat map ranks
+        publishing countries by the share of their own output that mentions Indonesia. That statistic is
+        not size-controlled, so countries with a tiny GDELT footprint float to the top: the published
+        ranking places {A.layers.top_countries[6].name} seventh and {A.layers.top_countries[9].name}
+        tenth, above {A.layers.top_countries[10].name}. The ordering among the large neighbours
+        ({A.layers.top_countries.slice(1, 4).map((c: any) => c.name).join(", ")}) is informative; the tail
+        is small-sample noise and should be cut or given a minimum-volume floor.</p>
+      </section>
+
+      <section id="s11">
+        <h2><span class="num">11</span> What follows for decisions</h2>
+        <p>An Indonesian institution acting on this dashboard today would be acting on the wrong series.
+        Concretely:</p>
+        <ol class="uses">
+          <li><b>Kementerian Luar Negeri / BKPM — international perception.</b> The published series says
+          global attention to Indonesia rose {pc(A.crawl.share_change, 0)} across the decade. Measured
+          from foreign publishers it fell {pc(Math.abs(foreignChange), 0)}. A ministry benchmarking its
+          diplomatic communications against the first number would conclude its reach was growing while
+          it was shrinking.</li>
+          <li><b>BNPB — disaster communications.</b> §5 and §7 show that whether a disaster registers in
+          this index depends heavily on what day of the week it happened. An agency using the index to
+          judge whether an emergency "broke through" internationally would systematically over-rate
+          weekend events and under-rate weekday ones.</li>
+          <li><b>Kominfo / Dewan Pers — media monitoring.</b> The one thing the archive measures
+          unambiguously well is <i>who is publishing</i>. That {pc(pub.top10_share, 0)} of Indonesia
+          coverage comes from ten sites and {pc(pub.state_share, 1)} from the state wire is a
+          structural fact about the Indonesian information environment, computed from a decade of
+          primary data. Following this review the case page now says so; the table itself still lives
+          only here, and it deserves a chapter of its own.</li>
+          <li class="no"><b>Not: a global attention index.</b> On this evidence the level series should
+          be withdrawn as a measure of the world's interest. It should be republished as a
+          foreign-publisher series with the feed's own denominator — which §7 shows the pipeline can
+          already produce and which disagrees with the current one on {word(flipped.length)} of {word(af.length)} anchors.</li>
+        </ol>
+        <p class="pull">The case's most marketable claim — that this measures the world's attention —
+        is the one its own archive refuses. The claim the archive does support, that it measures who
+        speaks about Indonesia and in what proportions, is the more decision-relevant of the two.</p>
+        <p>That reframing is also where this case sits on FMV's own axis. <i>See clearly</i> is not a
+        volume chart; it is knowing that {pc(1 - fpLast.foreign_share, 0)} of what you are reading is
+        your own reflection. <i>Connect wisely</i> needs the publisher graph, not the pulse.
+        <i>Act with evidence</i> requires a series whose movements survive a change of denominator —
+        and the one built in §7 does, while the published one does not. A media-intelligence product
+        aimed at closing the gap between accumulated data and action should ship §6's publisher
+        concentration and §7's foreign-attention series as its primary screens, and keep the total-volume
+        pulse as a diagnostic behind them.</p>
+      </section>
+
+      <section id="s12">
+        <h2><span class="num">12</span> What remains open</h2>
+        <ol class="next">
+          <li><b>The foreign/domestic API curves.</b> The case's language-honesty gate is
+          {A.gates["G-D4"].verdict} because <code>-sourcecountry:ID</code> is the query the API refuses
+          most often. §7's test is a substitute built from the event layer; the direct curve would let
+          the same split be applied to the article-share measure the page actually plots.</li>
+          <li><b>A publisher-weighted attention index.</b> §7 counts foreign publishers equally. A
+          reach-weighted version — one that knows the difference between Reuters and a syndication
+          mirror — would be a better instrument still, and the archive already carries the
+          domain, the article count and the mention count needed to build it.</li>
+          <li><b>Tone validity on translated text.</b> {pc(A.layers.translated_share, 0)} of kept rows
+          come from GDELT's machine-translated feed, and §8's headline quantity is a dictionary tone
+          score computed downstream of that translation. Whether the {sg(dec.within, 2)} within-publisher
+          warming partly reflects an improving translation pipeline rather than warmer copy is not
+          separable with what is on disk, and it is the largest unresolved threat to §8.</li>
+          <li><b>The nine missing themes.</b> {A.themes.n_requested - A.themes.n_landed} theme curves
+          have never landed, including the one gating the {A.anchors[7].label} anchor, which is why the
+          anchor gate stands {A.gates["G-D2"].verdict} rather than resolved.</li>
+        </ol>
+      </section>
+
+      <section id="refs">
+        <h2><span class="num">13</span> References and reproducibility</h2>
+        <ol class="refs">
+          <li id="ref-leetaru">Leetaru, K. &amp; Schrodt, P.A. (2013). GDELT: Global Data on Events,
+          Location and Tone, 1979–2012. <i>ISA Annual Convention</i>. Dataset:
+          <a href="https://www.gdeltproject.org/" rel="noopener">gdeltproject.org</a> — free for any use
+          with attribution. DOC 2.0 API documentation (20 June 2017) for the normalization rule quoted in
+          §4; GDELT Translingual documentation (19 February 2015) for the translation-quality statement
+          quoted in §8.</li>
+          <li id="ref-wang">Wang, W., Kennedy, R., Lazer, D. &amp; Ramakrishnan, N. (2016). Growing pains
+          for global monitoring of societal events. <i>Science</i> 353(6307), 1502–1503.
+          doi:10.1126/science.aaf6758 — {pc(LIT.protest_true, 0)} of valid protest URLs are true protests
+          (p. 1503); GDELT vs ICEWS r = {LIT.gdelt_icews.toFixed(3)}, GDELT vs human-coded ground truth
+          r = {LIT.gdelt_gsr.toFixed(3)} (p. 1502).</li>
+          <li id="ref-hong">Hong, D., Fu, Z., Zhang, X. &amp; Pan, Y. (2025). Research on the Development
+          and Application of the GDELT Event Database. <i>Data</i> 10(10), 158. doi:10.3390/data10100158
+          — event-type accuracy {LIT.acc_noneng.toFixed(3)} non-English vs {LIT.acc_eng.toFixed(3)}
+          English (Table 4); redundancy {LIT.redundancy.toFixed(3)} (Table 6).</li>
+          <li id="ref-hammond">Hammond, J. &amp; Weidmann, N.B. (2014). Using machine-coded event data for
+          the micro-level study of political violence. <i>Research &amp; Politics</i> 1(2).
+          doi:10.1177/2053168014539924 — GDELT vs ACLED r = {LIT.acled_national.toFixed(2)} as a national
+          time series, {LIT.acled_cell.toFixed(2)} at 55 km cell-months (p. 3).</li>
+          <li id="ref-weidmann">Weidmann, N.B. (2016). A Closer Look at Reporting Bias in Conflict Event
+          Data. <i>American Journal of Political Science</i> 60(1), 206–218. doi:10.1111/ajps.12196 —
+          {pc(LIT.reported, 1)} of events with casualties reach the international press (p. 211);
+          Table 1 for the accessibility coefficients.</li>
+          <li id="ref-eisensee">Eisensee, T. &amp; Strömberg, D. (2007). News Droughts, News Floods, and
+          U.S. Disaster Relief. <i>Quarterly Journal of Economics</i> 122(2), 693–728.
+          doi:10.1162/qjec.122.2.693 — Olympics {LIT.olympics_ratio}× casualties for equal relief
+          probability (conclusions); Asia {LIT.asia_ratio}× Europe for equal coverage, news shares
+          {LIT.news_share_asia.toFixed(2)} and {LIT.news_share_europe.toFixed(2)} (Table IX).</li>
+          <li id="ref-kwak">Kwak, H. &amp; An, J. (2014). A First Look at Global News Coverage of
+          Disasters by Using the GDELT Dataset. <i>Social Informatics</i>, LNCS 8851, 300–308.
+          doi:10.1007/978-3-319-13734-6_22 — median disaster reach {LIT.disaster_reach} country
+          (pp. 303–304); wire-service pickup adds R² {LIT.wire_r2.toFixed(2)} (Table 1).</li>
+          <li id="ref-wu">Wu, H.D. (2000). Systemic determinants of international news coverage: a
+          comparison of 38 countries. <i>Journal of Communication</i> 50(2), 110–130.
+          doi:10.1111/j.1460-2466.2000.tb02844.x — Indonesia adjusted R² = {LIT.idn_r2_wu.toFixed(3)},
+          trade β = 0.464 (Table 3, p. 122).</li>
+          <li id="ref-blondheim">Blondheim, M., Segev, E. &amp; Cabrera, M.-A. (2015). The Prominence of
+          Weak Economies. <i>International Journal of Communication</i> 9, 46–65 — country share of world
+          economic news vs GDP, r = {LIT.gdp_r.toFixed(3)}.</li>
+          <li id="ref-grasland">Grasland, C. (2020). International news flows theory revisited through a
+          space-time interaction model. <i>International Communication Gazette</i>. arXiv:1810.04912 —
+          Indonesia {pc(LIT.idn_share_2015, 2)} of international news, rank {LIT.idn_rank_2015} of all
+          countries, 320,000 stories in 31 dailies, 2015 (Table 3).</li>
+          <li id="ref-sheafer">Sheafer, T. (2007). How to Evaluate It: The Role of Story-Evaluative Tone
+          in Agenda Setting and Priming. <i>Journal of Communication</i> 57(1), 21–39 — salience
+          {LIT.sheafer_vol.toFixed(2)} vs valence {LIT.sheafer_tone.toFixed(2)} (Table 1, N = 4,346).</li>
+          <li id="ref-kiousis">Kiousis, S. (2004). Explicating Media Salience. <i>Journal of
+          Communication</i> 54(1), 71–87. doi:10.1111/j.1460-2466.2004.tb02614.x — visibility and valence
+          emerge as separate dimensions.</li>
+          <li id="ref-atteveldt">van Atteveldt, W., van der Velden, M.A.C.G. &amp; Boukes, M. (2021). The
+          Validity of Sentiment Analysis. <i>Communication Methods and Measures</i> 15(2), 121–140.
+          doi:10.1080/19312458.2020.1869198 — English dictionaries on machine-translated news reach
+          α ≤ {LIT.dict_alpha_hi.toFixed(2)} against a 0.80 human benchmark (Table 2).</li>
+          <li id="ref-gr">Griliches, Z. &amp; Regev, H. (1995). Firm productivity in Israeli industry
+          1979–1988. <i>Journal of Econometrics</i> 65(1), 175–203. doi:10.1016/0304-4076(94)01601-U
+          — the decomposition used in §8.</li>
+        </ol>
+        <p class="repro">Every figure and every statistic on this page is generated in the page's own
+        frontmatter from <code>web/src/data/article.json</code>, written by
+        <code>pipeline/article.py</code> from exactly what the dashboard serves, plus
+        <code>pipeline/attribution.py</code>, which produces §6–§8 from the raw event archive.
+        Data vintage {A.vintage}; generated {A.generated}. Window {A.window.first} → {A.window.last},
+        {A.days.toLocaleString()} days, {nf(A.coverage.event_rows)} coded events from
+        {nf(A.streamed.files)} feed files ({A.streamed.gb} GB). The Indonesian-publisher list used in
+        §6 is a literal constant in <code>pipeline/attribution.py</code> and can be audited there.
+        Gate thresholds were fixed before results and are unchanged by this review.</p>
+      </section>
+
+      <footer class="end">
+        <p>Part of the Demo Lab. Built end-to-end on public data — acquisition, pipeline, model,
+        validation, and this review.</p>
+        <a class="cta" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/`}>← Back to the instrument</a>
+      </footer>
+    </article>
+
+    <div id="tip" hidden></div>
+
+    <style is:global>
+      body { margin: 0; background: var(--ground); color: var(--ink);
+        font-family: var(--font-body); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+      *, *::before, *::after { box-sizing: border-box; }
+      a { color: var(--accent); }
+
+      .bar { position: sticky; top: 0; z-index: 20; display: flex; justify-content: space-between;
+        align-items: center; gap: 16px; padding: 12px 24px;
+        background: color-mix(in srgb, var(--ground) 92%, transparent);
+        backdrop-filter: blur(8px); border-bottom: 1px solid var(--hairline); }
+      .back { text-decoration: none; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.06em; }
+      .stamp { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); }
+
+      article { max-width: 50rem; margin: 0 auto; padding: 0 24px 12vh; }
+      .masthead { padding: 9vh 0 4vh; border-bottom: 1px solid var(--hairline); }
+      .eyebrow { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--accent); }
+      h1 { font-family: var(--font-display); font-size: clamp(1.9rem, 5vw, 3.1rem); line-height: 1.1;
+        letter-spacing: -0.02em; margin: 18px 0 20px; }
+      .standfirst { font-size: 1.12rem; color: var(--ink); margin: 0 0 26px; max-width: 42rem; }
+      .byline { display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: var(--font-data);
+        font-size: 0.74rem; letter-spacing: 0.08em; color: var(--ink-muted); text-transform: uppercase; }
+
+      .abstract { margin: 5vh 0; padding: 26px 28px; border: 1px solid var(--hairline);
+        border-left: 3px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
+      .abstract h2 { font-family: var(--font-data); font-size: 0.76rem; letter-spacing: 0.16em;
+        color: var(--accent); margin: 0 0 14px; text-transform: uppercase; }
+      .abstract p { margin: 0 0 12px; font-size: 0.97rem; }
+      .abstract p:last-child { margin-bottom: 0; }
+
+      .toc { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 20px 0 8px; margin-bottom: 4vh;
+        border-bottom: 1px solid var(--hairline); font-family: var(--font-data); font-size: 0.74rem; }
+      .toc a { text-decoration: none; color: var(--ink-muted); }
+      .toc a:hover { color: var(--accent); }
+
+      section { margin: 6vh 0; }
+      h2 { font-family: var(--font-display); font-size: 1.5rem; line-height: 1.25; letter-spacing: -0.01em;
+        margin: 0 0 20px; display: flex; gap: 14px; align-items: baseline; }
+      .num { font-family: var(--font-data); font-size: 0.9rem; color: var(--accent); flex: none; }
+      p { margin: 0 0 18px; }
+      b { color: #F5EEFF; font-weight: 600; }
+
+      .caveat { border-left: 2px solid var(--alert); padding: 2px 0 2px 18px; color: var(--ink-muted); }
+      .caveat b { color: var(--alert); }
+      .pull { font-size: 1.08rem; line-height: 1.6; border-left: 3px solid var(--accent);
+        padding: 8px 0 8px 20px; color: #F5EEFF; }
+
+      figure { margin: 34px 0; padding: 20px 18px 14px; border: 1px solid var(--hairline);
+        border-radius: var(--radius); background: var(--surface); }
+      .fig { display: block; width: 100%; height: auto; overflow: visible; }
+      figcaption { font-size: 0.85rem; color: var(--ink-muted); margin-top: 14px; line-height: 1.55; }
+      figcaption b { color: var(--ink); }
+
+      .dd, .pb { cursor: crosshair; transition: opacity 0.12s; }
+      .dd:hover, .pb:hover { opacity: 1 !important; }
+
+      .table-scroll { overflow-x: auto; margin: 0 0 22px; -webkit-overflow-scrolling: touch; }
+      table.tbl { border-collapse: collapse; width: 100%; min-width: 34rem; font-size: 0.84rem; }
+      table.tbl th { text-align: left; font-family: var(--font-data); font-size: 0.68rem;
+        letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-muted);
+        border-bottom: 1px solid var(--hairline); padding: 8px 10px 8px 0; font-weight: 500; }
+      table.tbl td { padding: 8px 10px 8px 0; border-bottom: 1px solid var(--hairline); color: var(--ink); }
+      table.tbl td.n, table.tbl th.n { text-align: right; font-family: var(--font-data); white-space: nowrap; }
+      table.tbl tr.flip td { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+      .dim { color: var(--ink-muted); font-size: 0.86em; }
+
+      ol.uses, ol.next { padding-left: 22px; margin: 0 0 18px; }
+      ol.uses li, ol.next li { margin-bottom: 14px; }
+      ol.uses li.no { color: var(--ink-muted); }
+      ol.uses li.no b { color: var(--alert); }
+
+      ol.refs { padding-left: 22px; font-size: 0.9rem; color: var(--ink-muted); }
+      ol.refs li { margin-bottom: 12px; }
+      .repro { font-size: 0.86rem; color: var(--ink-muted); border-top: 1px solid var(--hairline); padding-top: 18px; }
+      code { font-family: var(--font-data); font-size: 0.88em; color: var(--accent); overflow-wrap: anywhere; }
+
+      .end { margin-top: 8vh; padding-top: 26px; border-top: 1px solid var(--hairline); }
+      .end p { color: var(--ink-muted); font-size: 0.9rem; }
+      .cta { display: inline-block; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.08em;
+        color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 10px 18px; text-decoration: none; }
+      .cta:hover { background: var(--accent-ink); }
+
+      #tip { position: fixed; z-index: 60; pointer-events: none; background: var(--surface-raised);
+        border: 1px solid var(--hairline); border-radius: 5px; padding: 8px 11px; font-family: var(--font-data);
+        font-size: 0.72rem; line-height: 1.5; color: var(--ink); box-shadow: 0 8px 26px rgba(0,0,0,0.55); }
+
+      @media (max-width: 680px) {
+        article { padding: 0 16px 10vh; }
+        .masthead { padding-top: 5vh; }
+        figure { padding: 12px 8px 10px; }
+        .abstract { padding: 20px 18px; }
+      }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+
+    <script>
+      /* Hover read-outs. Pure SVG + DOM, no GPU path anywhere. */
+      const tip = document.getElementById("tip");
+      const show = (html, e) => {
+        tip.innerHTML = html; tip.hidden = false;
+        const r = tip.getBoundingClientRect();
+        let x = e.clientX + 14, y = e.clientY + 14;
+        if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+        if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+        tip.style.left = x + "px"; tip.style.top = y + "px";
+      };
+      const hide = () => { tip.hidden = true; };
+      document.querySelectorAll(".dd").forEach((el) => {
+        el.addEventListener("mousemove", (e) => {
+          const d = el.dataset;
+          show(`<b>${d.d}</b> · ${d.w}<br>share of world news ${d.s}%<br>` +
+               `Indonesia coverage ${d.n}× baseline<br>world crawl ${d.m}× smaller`, e);
+        });
+        el.addEventListener("mouseleave", hide);
+      });
+      document.querySelectorAll(".pb").forEach((el) => {
+        el.addEventListener("mousemove", (e) => {
+          const d = el.dataset;
+          show(`<b>${d.s}</b><br>${d.n} events · ${d.p}% of the archive<br>mean tone ${d.t}`, e);
+        });
+        el.addEventListener("mouseleave", hide);
+      });
+    </script>
+  </body>
+</html>

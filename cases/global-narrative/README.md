@@ -15,9 +15,28 @@ pipeline/events.py      stream   — 15-min export zips → Indonesia rows → m
                         ledger   — DuckDB daily aggregation + denominators + curves
 pipeline/validate.py    gates G-D1..G-D4 → data/stats.json
 pipeline/export_web.py  NaN-safe view-models → web/public/data, web/src/data/summary.json
+pipeline/attribution.py review study — publisher origin + tone decomposition + the
+                        foreign-only anchor re-test → data/attribution.json
+pipeline/article.py     review-article data layer → web/src/data/article.json
 web/                    Astro + d3 dashboard, port 4326, base /narrative
+web/src/pages/article.astro  the review article, served at /narrative/article
 data/                   (server only, never synced) raw/docapi cache, events/, ledger
 ```
+
+## The review (2026-08-31)
+
+`article.astro` is an adversarial review of this case, built entirely from the
+case's own output. Run order after an export:
+
+```
+uv run python pipeline/attribution.py     # needs data/events/*.parquet only, no API
+uv run python pipeline/article.py         # needs web/public/data/*.json + attribution.json
+```
+
+`web/src/data/article.json` and `summary.json` are committed so the pages build
+from a fresh checkout. Both are derived; regenerate them, never hand-edit them.
+The Indonesian-publisher list §6 depends on is a literal constant in
+`attribution.py` — it is meant to be audited and extended.
 
 ## Running (dev server only — never on the laptop)
 
