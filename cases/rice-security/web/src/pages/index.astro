@@ -1686,7 +1686,7 @@ const CHAPTERS = [
           transfers out of sample, which is the thing a calibration has to prove. But its monthly
           <b>MAPE is ${f2b(g5?.calibrated?.mape)} %</b> against
           <b>${f2b(g5?.uncalibrated?.mape)} %</b> uncalibrated, because a per-month scaling built
-          on a damped detector flattens the seasonality it is scaling. The forecast issued at
+          on a detector that finds a third of the fields flattens the seasonality it is scaling. The forecast issued at
           transplanting keeps the shape and misses the date by
           <b>${f2b(g5?.timing?.median_abs_error_weeks)} weeks</b>.
           <br><br>
@@ -1694,7 +1694,7 @@ const CHAPTERS = [
           otherwise.</b> What is earned is the lead itself: the shaded band is real — we hold a
           number for months in which BPS has not published one — and the seasonal <em>structure</em>
           is reproduced from radar alone — with a systematic
-          <b>${f2b(RVW2?.timing_lag_months)}-month</b> late bias that, once removed, lifts the
+          <b>${RVW2 ? (+RVW2.timing_lag_months).toFixed(0) : "—"}-month</b> late bias that, once removed, lifts the
           correlation between our monthly curve and BPS's from
           <b>${f2b(RVW2?.timing_corr_at_zero)}</b> to <b>${f2b(RVW2?.timing_corr_at_lag)}</b>.
           A one-signed bias is a calibration constant, not an error. Closing the area gap is a
