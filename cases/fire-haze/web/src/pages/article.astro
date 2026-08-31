@@ -1,0 +1,1545 @@
+---
+/* Review article — the case, stress-tested against the published literature.
+ *
+ * Every figure is built in frontmatter from data/article.json, which pipeline/article.py
+ * derives from the case's own published stats.json and from pipeline/review.py — the
+ * adversarial re-scoring. Nothing here is drawn by hand, so the prose cannot drift from the
+ * numbers. SVG only: no WebGL, no canvas, anywhere on this page.
+ */
+import "../styles/tokens.css";
+import A from "../data/article.json";
+
+/* The case's validated chart palette, unchanged: model / climatology / persistence / CEMS FWI.
+   --fire is never used for a series here either, so a hot dot still means "something burned". */
+const MODEL = "#E2569E", CLIM = "#E0A63F", PERSIST = "#6B7CA6", FWI = "#4BB8A9";
+const BLOCKED = "#F6C9DE", ALERT = "#E08B54", CLEAN = "#7FB2C9";
+const INK = "#EFEAE6", MUTED = "#A79C93", GRID = "#2C2724";
+
+const pct = (x: number, d = 1) => `${(x * 100).toFixed(d)}%`;
+const sig = (x: number, d = 3) => x.toFixed(d);
+const esc = (s: any) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+const nf = (n: number) => n.toLocaleString("en-US");
+const title = (s: string) => s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+/* Published benchmarks, transcribed from the papers cited in §2 and the reference list.
+   These are the only numbers on this page that do not come from the case's own data, and each
+   one is a value read out of a named table or figure rather than a recollection. */
+const LIT = {
+  /* Mortelmans et al. (2025, IJWF 34, WF24057) Fig. 3 — ROC-AUC for fire occurrence over
+     peninsular Malaysia, Sumatra and Borneo (7°S 95°E to 7.4°N 120°E), 2002–2018, 9 km. */
+  mortelmans: { fwi_undrained: 0.79, fwi_drained: 0.75, dc_undrained: 0.83, dc_drained: 0.79,
+                tau_days: 42, box: "7°S 95°E to 7.4°N 120°E" },
+  /* Shmuel et al. (2025, npj Nat. Hazards 2:74) Supp. Table 1 — Indonesia, 0.25° daily
+     ignition grid, but class-balanced by random undersampling and a random 20% holdout. */
+  shmuel: { fwi_indonesia: 0.89, calibrated: 0.91, lightgbm: 0.96, n: 68025, global_fwi: 0.69 },
+  /* Di Giuseppe et al. (2020, NHESS 20:2365) §3.2 — ECMWF operational FWI over equatorial Asia. */
+  digiuseppe: { eqas_pod: 0.2 },
+  /* Ploton et al. (2020, Nat. Commun. 11:4540) — random vs spatially blocked cross-validation. */
+  ploton: { random_r2: 0.53, spatial_r2: 0.14 },
+  /* Saito & Rehmsmeier (2015, PLoS ONE 10:e0118432) Table 5, dataset T2 (prevalence 0.0082). */
+  saito: { rnamicro_roc: 0.886, rnamicro_prc: 0.054, mirfinder_roc: 0.772, mirfinder_prc: 0.106 },
+  /* Stohl (1998, Atmos. Environ. 32:947) — error as a share of travel distance, from Stohl (1996a),
+     one year of 96-hour back trajectories at 800 m AGL. */
+  stohl: { h24: 0.16, h48: 0.26, h72: 0.36, typical: 0.20 },
+  /* Hansen et al. (2019, ACP 19:5363) p.15 — NAME source attribution of Singapore PM10, ASO 2015,
+     at two stations 25 km apart (NTU west, Temasek Poly east). */
+  hansen: { s_sumatra: [0.3822, 0.2182], c_kalimantan: [0.3119, 0.4145],
+            bangka: [0.1132, 0.1364], w_kalimantan: [0.0664, 0.0941], jambi: [0.0653, 0.0598],
+            r_ntu: 0.35, r_tp: 0.32 },
+  /* Crippa et al. (2016, Sci. Rep. 6:37074) — WRF-Chem at 10 km, full chemistry, Sep–Nov 2015. */
+  crippa: { singapore_r_daily: 0.55, singapore_r_hourly: 0.45 },
+  /* de Groot et al. (2007, Mitig. Adapt. Strateg. Glob. Change 12:165) Tables 1–2 — the
+     Indonesian/Malaysian FDRS in operational use, unchanged, at METMalaysia and BMKG today. */
+  degroot: { dc_extreme: 350, ffmc_extreme: 83, hotspots_above_ffmc78: 0.85 },
+};
+
+const L1 = A.rescore.per_lead["1"], L3 = A.rescore.per_lead["3"], L7 = A.rescore.per_lead["7"];
+const P1 = A.published.per_lead["1"], P7 = A.published.per_lead["7"];
+const S1 = A.spatial.per_lead["1"], S7 = A.spatial.per_lead["7"];
+const FW1 = A.fwi.per_lead["1"], FW3 = A.fwi.per_lead["3"], FW7 = A.fwi.per_lead["7"];
+const RB = A.fwi.reviewed_build;   // the CEMS record as the reviewed build had it
+const TR = A.traj, SG = A.traj.singapore;
+const cellsPerDay = Math.round(L1.scores.model.k1 / (L1.n / A.rescore.n_cells));
+
+/* ── Figure 1 · the two metrics rank the baselines in opposite orders ──────────────── */
+function fig1() {
+  const W = 700, H = 292, T = 62, rowH = 62, xa = 232, xb = 470;
+  const rows = [
+    { k: "our model", col: MODEL, auc: L1.scores.model.auc, ap: L1.scores.model.ap },
+    { k: "day-of-year climatology", col: CLIM, auc: L1.scores.climatology.auc, ap: L1.scores.climatology.ap },
+    { k: "persistence (burned in 7 d)", col: PERSIST, auc: L1.scores.persistence.auc, ap: L1.scores.persistence.ap },
+  ];
+  const rankAuc = [...rows].sort((a, b) => b.auc - a.auc);
+  const rankAp = [...rows].sort((a, b) => b.ap - a.ap);
+  const yOf = (i: number) => T + i * rowH;
+  const body = rows.map((r) => {
+    const ia = rankAuc.indexOf(r), ib = rankAp.indexOf(r);
+    const ya = yOf(ia), yb = yOf(ib);
+    return `<path d="M${xa} ${ya} C${xa + 84} ${ya} ${xb - 84} ${yb} ${xb} ${yb}" fill="none"
+        stroke="${r.col}" stroke-width="2.6" opacity="0.9"/>
+      <circle cx="${xa}" cy="${ya}" r="5.5" fill="${r.col}"/>
+      <circle cx="${xb}" cy="${yb}" r="5.5" fill="${r.col}"/>
+      <text x="${xa - 14}" y="${ya - 3}" fill="${INK}" font-size="12.5" text-anchor="end">${esc(r.k)}</text>
+      <text x="${xa - 14}" y="${ya + 13}" fill="${r.col}" font-size="11.5" text-anchor="end"
+        font-family="var(--font-data)">AUC ${sig(r.auc)}</text>
+      <text x="${xb + 14}" y="${yb - 3}" fill="${INK}" font-size="12.5">${esc(r.k)}</text>
+      <text x="${xb + 14}" y="${yb + 13}" fill="${r.col}" font-size="11.5"
+        font-family="var(--font-data)">AP ${sig(r.ap)}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Ranked by AUC climatology beats persistence; ranked by average precision the order reverses">
+    <text x="${xa}" y="30" fill="${MUTED}" font-size="12" text-anchor="middle"
+      font-family="var(--font-data)" letter-spacing="0.06em">RANKED BY AUC</text>
+    <text x="${xb}" y="30" fill="${MUTED}" font-size="12" text-anchor="middle"
+      font-family="var(--font-data)" letter-spacing="0.06em">RANKED BY AVERAGE PRECISION</text>
+    <line x1="${xa}" y1="40" x2="${xa}" y2="${T + 2 * rowH + 22}" stroke="${GRID}"/>
+    <line x1="${xb}" y1="40" x2="${xb}" y2="${T + 2 * rowH + 22}" stroke="${GRID}"/>
+    ${body}
+    <text x="${W / 2}" y="${H - 10}" fill="${MUTED}" font-size="11.5" text-anchor="middle">1-day lead · ${nf(L1.n)} held-out cell-days · base rate ${pct(L1.base_rate, 2)}</text>
+  </svg>`;
+}
+
+/* ── Figure 2 · what an alert budget actually buys ─────────────────────────────────── */
+function fig2() {
+  const W = 700, H = 296, L = 116, R = 152, T = 56;
+  const bw = W - L - R, rowH = 66;
+  const leads = [
+    { L: 1, m: L1.scores.model, p: L1.scores.persistence },
+    { L: 3, m: L3.scores.model, p: L3.scores.persistence },
+    { L: 7, m: L7.scores.model, p: L7.scores.persistence },
+  ];
+  const body = leads.map((d, i) => {
+    const y = T + i * rowH;
+    const hit = d.m.p1 * bw;
+    const px = L + d.p.p1 * bw;
+    return `<text x="${L - 16}" y="${y + 17}" fill="${INK}" font-size="12.5" text-anchor="end">${d.L}-day lead</text>
+      <rect x="${L}" y="${y}" width="${bw}" height="24" fill="${GRID}" rx="3"/>
+      <rect x="${L}" y="${y}" width="${hit.toFixed(1)}" height="24" fill="${MODEL}" rx="3"/>
+      <text x="${(L + 9).toFixed(1)}" y="${y + 17}" fill="#2A0A18" font-size="12"
+        font-weight="600" font-family="var(--font-data)">${(d.m.p1 * 100).toFixed(0)} real</text>
+      <text x="${(L + bw - 9).toFixed(1)}" y="${y + 17}" fill="${MUTED}" font-size="12"
+        text-anchor="end" font-family="var(--font-data)">${(100 - d.m.p1 * 100).toFixed(0)} false alarms</text>
+      <line x1="${px.toFixed(1)}" y1="${y - 6}" x2="${px.toFixed(1)}" y2="${y + 30}"
+        stroke="#100D0C" stroke-width="4.5"/>
+      <line x1="${px.toFixed(1)}" y1="${y - 6}" x2="${px.toFixed(1)}" y2="${y + 30}"
+        stroke="${PERSIST}" stroke-width="2" stroke-dasharray="3 3"/>
+      <text x="${(L + bw + 14).toFixed(1)}" y="${y + 11}" fill="${MODEL}" font-size="11.5"
+        font-family="var(--font-data)">catches ${pct(d.m.r1, 1)}</text>
+      <text x="${(L + bw + 14).toFixed(1)}" y="${y + 26}" fill="${MUTED}" font-size="11">of the season's fires</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Out of 100 alerts at a one percent budget, the model is right 53 times at one day and 37 at seven">
+    <text x="${L}" y="24" fill="${INK}" font-size="12.5">Out of 100 alerts, at an alert budget of 1% of cell-days</text>
+    <text x="${L}" y="41" fill="${MUTED}" font-size="11.5">≈ ${cellsPerDay} of ${nf(A.rescore.n_cells)} land cells a day</text>
+    ${body}
+    <line x1="${L}" y1="${H - 34}" x2="${L + 22}" y2="${H - 34}" stroke="${PERSIST}"
+      stroke-width="2" stroke-dasharray="3 3"/>
+    <text x="${L + 30}" y="${H - 30}" fill="${MUTED}" font-size="11.5">dashed: the same budget spent on "it burned here in the last 7 days"</text>
+  </svg>`;
+}
+
+/* ── Figure 3 · where the skill lives once the easy variation is removed ───────────── */
+function fig3() {
+  const W = 700, H = 300, L = 214, R = 74, T = 52;
+  const x0 = 0.6, x1 = 0.9;
+  const sx = (v: number) => L + ((v - x0) / (x1 - x0)) * (W - L - R);
+  const rows = [
+    { k: "The published ROC", s: "every cell-day against every other", d: L1.scores },
+    { k: "Within one day", s: "given a day, does it find the right cells?", d: null, key: "day" },
+    { k: "Within one cell", s: "given a cell, does it find the right days?", d: null, key: "cell" },
+  ];
+  const series = [
+    { k: "model", col: MODEL }, { k: "climatology", col: CLIM }, { k: "persistence", col: PERSIST },
+  ];
+  const rowH = 62;
+  const body = rows.map((r, i) => {
+    const y = T + i * rowH;
+    const dots = series.map((s) => {
+      const v = r.d ? (r.d as any)[s.k].auc : (L1.decomposition as any)[s.k][(r as any).key];
+      return `<circle cx="${sx(v).toFixed(1)}" cy="${y}" r="6" fill="${s.col}"
+        data-t="${esc(s.k)} · AUC ${sig(v)}"/>`;
+    }).join("");
+    return `<text x="${L - 16}" y="${y - 2}" fill="${INK}" font-size="12.5" text-anchor="end">${esc(r.k)}</text>
+      <text x="${L - 16}" y="${y + 14}" fill="${MUTED}" font-size="10.5" text-anchor="end">${esc(r.s)}</text>
+      <line x1="${L}" y1="${y}" x2="${W - R}" y2="${y}" stroke="${GRID}"/>${dots}`;
+  }).join("");
+  const cy = T + 3 * rowH;
+  const cr = A.rescore.per_lead["1"].cell_rate_only;
+  const ticks = [0.6, 0.7, 0.8, 0.9].map((v) =>
+    `<line x1="${sx(v).toFixed(1)}" y1="${T - 22}" x2="${sx(v).toFixed(1)}" y2="${cy + 10}"
+       stroke="${GRID}" opacity="0.6"/>
+     <text x="${sx(v).toFixed(1)}" y="${T - 28}" fill="${MUTED}" font-size="10.5" text-anchor="middle"
+       font-family="var(--font-data)">${v.toFixed(2)}</text>`).join("");
+  const leg = series.map((s, i) =>
+    `<circle cx="${L + i * 118 + 6}" cy="${H - 20}" r="5" fill="${s.col}"/>
+     <text x="${L + i * 118 + 18}" y="${H - 16}" fill="${MUTED}" font-size="11.5">${esc(s.k)}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="AUC falls only modestly when the between-day or between-cell variation is removed">
+    <text x="${W - R}" y="${T - 44}" fill="${MUTED}" font-size="11" text-anchor="end"
+      font-family="var(--font-data)" letter-spacing="0.06em">AUC · 1-DAY LEAD</text>
+    ${ticks}${body}
+    <text x="${L - 16}" y="${cy - 2}" fill="${ALERT}" font-size="12.5" text-anchor="end">Cell fire-rate only</text>
+    <text x="${L - 16}" y="${cy + 14}" fill="${MUTED}" font-size="10.5" text-anchor="end">a constant map, using no weather at all</text>
+    <line x1="${L}" y1="${cy}" x2="${W - R}" y2="${cy}" stroke="${GRID}"/>
+    <circle cx="${sx(cr.auc).toFixed(1)}" cy="${cy}" r="6" fill="none" stroke="${ALERT}" stroke-width="2"/>
+    <text x="${(sx(cr.auc) + 12).toFixed(1)}" y="${cy + 4}" fill="${ALERT}" font-size="11"
+      font-family="var(--font-data)">${sig(cr.auc)}</text>
+    ${leg}
+  </svg>`;
+}
+
+/* ── Figure 4 · the decisive test: refit so no test cell was ever seen ─────────────── */
+function fig4() {
+  const W = 700, H = 348, L = 178, R = 96, T = 96;
+  const x0 = 0.76, x1 = 0.91;
+  const sx = (v: number) => L + ((v - x0) / (x1 - x0)) * (W - L - R);
+  const groups = [{ lab: "1-day lead", pub: P1.auc, pubAp: L1.scores.model.ap, s: S1 },
+                  { lab: "7-day lead", pub: P7.auc, pubAp: L7.scores.model.ap, s: S7 }];
+  const gH = 118;
+  const body = groups.map((g, i) => {
+    const y = T + i * gH;
+    const blocks = Object.entries(g.s.per_block).map(([k, b]: any) =>
+      `<circle cx="${sx(b.auc).toFixed(1)}" cy="${y + 42}" r="4" fill="none"
+         stroke="${BLOCKED}" stroke-width="1.5" data-t="spatial fold ${esc(k)} · AUC ${sig(b.auc)} · ${nf(b.n)} cell-days"/>`).join("");
+    return `<text x="${L - 16}" y="${y - 4}" fill="${INK}" font-size="13" text-anchor="end">${esc(g.lab)}</text>
+      <text x="${L - 16}" y="${y + 14}" fill="${MODEL}" font-size="10.5" text-anchor="end"
+        font-family="var(--font-data)">published ${sig(g.pub, 4)}</text>
+      <text x="${L - 16}" y="${y + 29}" fill="${BLOCKED}" font-size="10.5" text-anchor="end"
+        font-family="var(--font-data)">blocked ${sig(g.s.auc, 4)}</text>
+      <text x="${L - 16}" y="${y + 46}" fill="${MUTED}" font-size="10.5" text-anchor="end">the four spatial folds</text>
+      <line x1="${sx(g.s.auc).toFixed(1)}" y1="${y}" x2="${sx(g.pub).toFixed(1)}" y2="${y}"
+        stroke="${MUTED}" stroke-width="2.4" opacity="0.5"/>
+      <circle cx="${sx(g.pub).toFixed(1)}" cy="${y}" r="7" fill="${MODEL}"
+        data-t="published, seasons blocked · AUC ${sig(g.pub, 4)} · AP ${sig(g.pubAp)}"/>
+      <circle cx="${sx(g.s.auc).toFixed(1)}" cy="${y}" r="7" fill="${BLOCKED}"
+        data-t="refit, seasons and space blocked · AUC ${sig(g.s.auc, 4)} · AP ${sig(g.s.ap)}"/>
+      ${blocks}
+      <text x="${W - R + 12}" y="${y + 4}" fill="${INK}" font-size="12"
+        font-family="var(--font-data)">Δ ${g.s.delta_auc.toFixed(4)}</text>
+      <text x="${W - R + 12}" y="${y + 21}" fill="${MUTED}" font-size="10.5"
+        font-family="var(--font-data)">AP ${sig(g.s.ap)}</text>
+      <text x="${W - R + 12}" y="${y + 35}" fill="${MUTED}" font-size="10.5"
+        font-family="var(--font-data)">vs ${sig(g.pubAp)}</text>`;
+  }).join("");
+  const ticks = [0.78, 0.82, 0.86, 0.90].map((v) =>
+    `<line x1="${sx(v).toFixed(1)}" y1="${T - 34}" x2="${sx(v).toFixed(1)}" y2="${H - 46}"
+       stroke="${GRID}" opacity="0.55"/>
+     <text x="${sx(v).toFixed(1)}" y="${H - 30}" fill="${MUTED}" font-size="10.5"
+       text-anchor="middle" font-family="var(--font-data)">${v.toFixed(2)}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Blocking the split in space as well as season costs the model less than one AUC point">
+    ${ticks}${body}
+    <g><circle cx="20" cy="24" r="6" fill="${MODEL}"/>
+      <text x="32" y="28" fill="${MUTED}" font-size="11.5">published · seasons blocked</text>
+      <circle cx="20" cy="48" r="6" fill="${BLOCKED}"/>
+      <text x="32" y="52" fill="${MUTED}" font-size="11.5">refit · seasons and space blocked, so no test cell was ever seen</text>
+      <circle cx="20" cy="72" r="4" fill="none" stroke="${BLOCKED}" stroke-width="1.5"/>
+      <text x="32" y="76" fill="${MUTED}" font-size="11.5">each spatial fold, scored separately</text></g>
+    <text x="${(L + W - R) / 2}" y="${H - 10}" fill="${MUTED}" font-size="11.5" text-anchor="middle">AUC on the identical ${nf(S1.n)} held-out cell-days</text>
+  </svg>`;
+}
+
+/* ── Figure 5 · the FWI record has a hole exactly where the test is ────────────────── */
+function fig5() {
+  const years: number[] = [];
+  for (let y = 2012; y <= 2026; y++) years.push(y);
+  const W = 700, H = 250, L = 168, T = 58, cw = (W - L - 22) / years.length, ch = 26;
+  const have = new Set(A.fwi.years_on_disk);
+  const recovered = new Set(A.fwi.reviewed_build.years_recovered);
+  const folds = new Set(A.fwi.oof_folds);
+  const anchors = new Set(A.published.anchors);
+  const rows = [
+    { k: "CEMS FWI on disk", test: (y: number) => have.has(y), col: FWI, mark: true },
+    { k: "held-out model season", test: (y: number) => folds.has(y), col: MODEL, mark: true },
+    { k: "anchor season (never trained)", test: (y: number) => anchors.has(y), col: CLEAN, mark: true },
+  ];
+  const head = years.map((y, i) =>
+    `<text x="${(L + i * cw + cw / 2).toFixed(1)}" y="${T - 10}" fill="${MUTED}" font-size="10"
+       text-anchor="middle" font-family="var(--font-data)"
+       transform="rotate(-52 ${(L + i * cw + cw / 2).toFixed(1)} ${T - 10})">${y}</text>`).join("");
+  const body = rows.map((r, ri) => {
+    const y = T + ri * (ch + 12);
+    const cells = years.map((yr, i) => {
+      const on = r.test(yr);
+      const gap = on && recovered.has(yr);
+      return `<rect x="${(L + i * cw + 2).toFixed(1)}" y="${y}" width="${(cw - 4).toFixed(1)}"
+        height="${ch}" rx="2" fill="${on ? r.col : "#221E1B"}" opacity="${on ? 0.92 : 1}"
+        ${gap ? `stroke="${ALERT}" stroke-width="2"` : ""}/>`;
+    }).join("");
+    return `<text x="${L - 14}" y="${y + 17}" fill="${INK}" font-size="12" text-anchor="end">${esc(r.k)}</text>${cells}`;
+  }).join("");
+  const i17 = years.indexOf(2017), i15 = years.indexOf(2015);
+  const x17 = L + i17 * cw + cw / 2, x15 = L + i15 * cw + cw / 2;
+  const yBase = T + 3 * (ch + 12);
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="CEMS FWI is missing for 2017, a held-out season, and for the 2015 anchor">
+    <text x="${L - 14}" y="24" fill="${MUTED}" font-size="11.5" text-anchor="end">coverage</text>
+    ${head}${body}
+    <path d="M${x17.toFixed(1)} ${yBase} L${x17.toFixed(1)} ${yBase + 18} L${(x17 + 8).toFixed(1)} ${yBase + 18}"
+      fill="none" stroke="${ALERT}" stroke-width="1.4"/>
+    <path d="M${x15.toFixed(1)} ${yBase} L${x15.toFixed(1)} ${yBase + 36} L${(x15 + 8).toFixed(1)} ${yBase + 36}"
+      fill="none" stroke="${ALERT}" stroke-width="1.4"/>
+    <text x="${(x17 + 14).toFixed(1)}" y="${yBase + 22}" fill="${ALERT}" font-size="11"
+      font-family="var(--font-data)">2017 · a held-out season, recovered</text>
+    <text x="${(x15 + 14).toFixed(1)}" y="${yBase + 40}" fill="${ALERT}" font-size="11"
+      font-family="var(--font-data)">2015 · the anchor, recovered</text>
+  </svg>`;
+}
+
+/* ── Figure 6 · the composite index is not the best member of its own family ───────── */
+function fig6() {
+  const comp = FW1.components;
+  const entries = Object.entries(comp).map(([k, v]: any) => ({ k, auc: v.auc }))
+    .sort((a, b) => b.auc - a.auc);
+  const rows = [
+    { k: "our model", auc: FW1.like_for_like.model_auc, col: MODEL },
+    ...entries.map((e) => ({ k: e.k.toUpperCase(), auc: e.auc, col: e.k === "fwi" ? FWI : PERSIST })),
+  ];
+  const W = 700, H = 110 + rows.length * 27 + 96, L = 118, R = 92, T = 96;
+  const x0 = 0.6, bw = W - L - R;
+  const sx = (v: number) => ((v - x0) / (0.92 - x0)) * bw;
+  const body = rows.map((r, i) => {
+    const y = T + i * 27;
+    return `<text x="${L - 12}" y="${y + 14}" fill="${INK}" font-size="12" text-anchor="end">${esc(r.k)}</text>
+      <rect x="${L}" y="${y + 2}" width="${sx(r.auc).toFixed(1)}" height="17" rx="2" fill="${r.col}"
+        opacity="${r.k === "FWI" || r.k === "our model" ? 1 : 0.55}"/>
+      <text x="${(L + sx(r.auc) + 9).toFixed(1)}" y="${y + 15}" fill="${r.col}" font-size="11"
+        font-family="var(--font-data)">${sig(r.auc)}</text>`;
+  }).join("");
+  const yB = T + rows.length * 27 + 44;
+  const deltas = [["1 day", FW1], ["3 days", FW3], ["7 days", FW7]].map(([lab, d]: any, i) => {
+    const dv = d.components.bui.auc - d.components.fwi.auc;
+    return `<text x="${L + i * 176}" y="${yB + 16}" fill="${MUTED}" font-size="11">${esc(lab)}</text>
+      <text x="${L + i * 176}" y="${yB + 33}" fill="${ALERT}" font-size="12.5"
+        font-family="var(--font-data)">BUI +${dv.toFixed(4)}</text>`;
+  }).join("");
+  // the published band for the same index over very nearly the same box
+  const ml = L + sx(LIT.mortelmans.fwi_drained), mh = L + sx(LIT.mortelmans.fwi_undrained);
+  const dl = L + sx(LIT.mortelmans.dc_drained), dh = L + sx(LIT.mortelmans.dc_undrained);
+  const yBot = T + rows.length * 27 + 6;
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="The Build-Up Index outscores the composite Fire Weather Index at every lead, and our FWI value sits inside the published band for the same box">
+    <text x="${L - 12}" y="26" fill="${MUTED}" font-size="11.5" text-anchor="end">1-day lead</text>
+    <text x="${L}" y="26" fill="${MUTED}" font-size="11.5">AUC on the ${nf(FW1.like_for_like.n)} held-out cell-days that carry a CEMS value</text>
+    <rect x="${ml.toFixed(1)}" y="${T - 12}" width="${(mh - ml).toFixed(1)}" height="${(rows.length * 27 + 16).toFixed(1)}"
+      fill="${FWI}" opacity="0.12"/>
+    <rect x="${dl.toFixed(1)}" y="${T - 12}" width="${(dh - dl).toFixed(1)}" height="${(rows.length * 27 + 16).toFixed(1)}"
+      fill="${CLEAN}" opacity="0.1"/>
+    <line x1="${((ml + mh) / 2).toFixed(1)}" y1="${T - 30}" x2="${((ml + mh) / 2).toFixed(1)}"
+      y2="${T - 14}" stroke="${FWI}" stroke-width="1"/>
+    <text x="${((ml + mh) / 2).toFixed(1)}" y="${T - 36}" fill="${FWI}" font-size="10" text-anchor="middle"
+      font-family="var(--font-data)">FWI, published</text>
+    <line x1="${((dl + dh) / 2).toFixed(1)}" y1="${T - 48}" x2="${((dl + dh) / 2).toFixed(1)}"
+      y2="${T - 14}" stroke="${CLEAN}" stroke-width="1"/>
+    <text x="${((dl + dh) / 2).toFixed(1)}" y="${T - 54}" fill="${CLEAN}" font-size="10" text-anchor="middle"
+      font-family="var(--font-data)">Drought Code, published</text>
+    ${body}
+    <text x="${L}" y="${yBot + 16}" fill="${MUTED}" font-size="10.5">shaded: Mortelmans et al. (2025) over ${esc(LIT.mortelmans.box)} — drained to undrained peat</text>
+    <line x1="${L}" y1="${yB - 6}" x2="${W - R}" y2="${yB - 6}" stroke="${GRID}"/>
+    <text x="${L - 12}" y="${yB + 26}" fill="${INK}" font-size="12" text-anchor="end">BUI over FWI</text>
+    ${deltas}
+  </svg>`;
+}
+
+/* ── Figure 7 · the ensemble that carries a 72-hour attribution ────────────────────── */
+function fig7() {
+  const W = 700, H = 362, L = 58, R = 74, T = 30, B = 96;
+  const e = TR.ensemble;
+  const x0 = 0, x1 = 72, y1 = 500;
+  const sx = (v: number) => L + (v / x1) * (W - L - R);
+  const sy = (v: number) => H - B - (v / y1) * (H - T - B);
+  const sr = (v: number) => H - B - v * (H - T - B);
+  const path = (key: "med" | "p90", col: string, w: number, dash = "") =>
+    `<path fill="none" stroke="${col}" stroke-width="${w}" ${dash} d="${e.map((r: any, i: number) =>
+      `${i ? "L" : "M"}${sx(r.h).toFixed(1)} ${sy(r[key]).toFixed(1)}`).join(" ")}"/>`;
+  const surv = `<path fill="none" stroke="${PERSIST}" stroke-width="2.2" stroke-dasharray="5 4"
+    d="${e.map((r: any, i: number) => `${i ? "L" : "M"}${sx(r.h).toFixed(1)} ${sr(r.surv).toFixed(1)}`).join(" ")}"/>`;
+  const dots = e.map((r: any) =>
+    `<circle class="hv" cx="${sx(r.h).toFixed(1)}" cy="${sy(r.med).toFixed(1)}" r="4.5" fill="${MODEL}"
+       data-t="${r.h} h upwind · ensemble half-width ${r.med.toFixed(0)} km (p90 ${r.p90.toFixed(0)} km) · ${(r.surv * 100).toFixed(0)}% of parcels still inside the domain"/>`).join("");
+  const gl = [0, 125, 250, 375, 500].map((v) =>
+    `<line x1="${L}" y1="${sy(v).toFixed(1)}" x2="${W - R}" y2="${sy(v).toFixed(1)}" stroke="${GRID}" opacity="0.55"/>
+     <text x="${L - 9}" y="${(sy(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end"
+       font-family="var(--font-data)">${v}</text>`).join("");
+  const xt = [6, 24, 48, 72].map((v) =>
+    `<text x="${sx(v).toFixed(1)}" y="${H - B + 19}" fill="${MUTED}" font-size="10.5"
+       text-anchor="middle" font-family="var(--font-data)">${v} h</text>`).join("");
+  const rk = sy(TR.receptor_km);
+  const last = e[e.length - 1], first = e[0];
+  const legY = H - 34;
+  const leg = [
+    { c: MODEL, w: 2.6, d: "", k: "median half-width" },
+    { c: BLOCKED, w: 1.8, d: 'stroke-dasharray="2 3"', k: "90th percentile" },
+    { c: PERSIST, w: 2.2, d: 'stroke-dasharray="5 4"', k: "parcels still in the domain" },
+  ].map((s, i) => {
+    const x = L + i * 196;
+    return `<line x1="${x}" y1="${legY - 4}" x2="${x + 20}" y2="${legY - 4}" stroke="${s.c}"
+        stroke-width="${s.w}" ${s.d}/>
+      <text x="${x + 26}" y="${legY}" fill="${MUTED}" font-size="11">${esc(s.k)}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Ensemble half-width grows to 177 km at 72 hours while only 55 percent of parcels remain">
+    ${gl}
+    <line x1="${L}" y1="${rk.toFixed(1)}" x2="${W - R}" y2="${rk.toFixed(1)}" stroke="${CLEAN}"
+      stroke-dasharray="3 4"/>
+    <text x="${W - R - 4}" y="${(rk - 8).toFixed(1)}" fill="${CLEAN}" font-size="10.5" text-anchor="end">the receptor capture radius · ${TR.receptor_km} km</text>
+    ${path("p90", BLOCKED, 1.8, 'stroke-dasharray="2 3"')}${path("med", MODEL, 2.6)}${surv}${dots}
+    <text x="${(sx(first.h) + 8).toFixed(1)}" y="${(sr(first.surv) + 16).toFixed(1)}" fill="${PERSIST}"
+      font-size="10.5" font-family="var(--font-data)">${pct(first.surv, 0)} of parcels</text>
+    <text x="${(sx(last.h) - 4).toFixed(1)}" y="${(sr(last.surv) - 9).toFixed(1)}" fill="${PERSIST}"
+      font-size="10.5" text-anchor="end" font-family="var(--font-data)">${pct(last.surv, 0)}</text>
+    <text x="${(sx(last.h) - 4).toFixed(1)}" y="${(sy(last.med) - 12).toFixed(1)}" fill="${MODEL}"
+      font-size="11" text-anchor="end" font-family="var(--font-data)">${last.med.toFixed(0)} km</text>
+    <line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" stroke="${GRID}"/>${xt}
+    <text x="14" y="${(T + H - B) / 2}" fill="${MUTED}" font-size="11" text-anchor="middle"
+      transform="rotate(-90 14 ${(T + H - B) / 2})">ensemble half-width, km</text>
+    ${leg}
+    <text x="${(L + W - R) / 2}" y="${H - 58}" fill="${MUTED}" font-size="11.5" text-anchor="middle">hours upwind of the receptor · ${nf(TR.receptor_days)} receptor-days</text>
+  </svg>`;
+}
+
+/* ── Figure 8 · where Singapore's air came from, over every episode in the archive ─── */
+function fig8() {
+  const rows = SG.provinces;
+  const MY = new Set(["Johor", "Pahang", "Selangor", "Malacca", "Negeri Sembilan", "Perak",
+    "Kelantan", "Terengganu", "Kedah", "Penang", "Perlis", "Sarawak", "Sabah"]);
+  const W = 700, L = 194, R = 84, T = 44, rowH = 30;
+  const H = T + rows.length * rowH + 54;
+  const bw = W - L - R;
+  const max = Math.max(...rows.map((r: any) => r.share));
+  const body = rows.map((r: any, i: number) => {
+    const y = T + i * rowH;
+    const my = MY.has(r.p);
+    const w = (r.share / max) * bw;
+    return `<text x="${L - 12}" y="${y + 15}" fill="${INK}" font-size="12" text-anchor="end">${esc(r.p)}</text>
+      <rect x="${L}" y="${y + 2}" width="${w.toFixed(1)}" height="18" rx="2"
+        fill="${my ? PERSIST : MODEL}"/>
+      <text x="${(L + w + 9).toFixed(1)}" y="${y + 16}" fill="${my ? PERSIST : MODEL}" font-size="11"
+        font-family="var(--font-data)">${pct(r.share)} · ${r.days} d</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Over 1284 Singapore episode days the most frequent upwind province is Johor in Malaysia">
+    <text x="${L - 12}" y="26" fill="${MUTED}" font-size="11.5" text-anchor="end">share of episode days</text>
+    <rect x="${L}" y="18" width="11" height="11" rx="2" fill="${MODEL}"/>
+    <text x="${L + 18}" y="28" fill="${MUTED}" font-size="11.5">Indonesia</text>
+    <rect x="${L + 104}" y="18" width="11" height="11" rx="2" fill="${PERSIST}"/>
+    <text x="${L + 122}" y="28" fill="${MUTED}" font-size="11.5">Malaysia</text>
+    ${body}
+    <text x="${L}" y="${H - 18}" fill="${MUTED}" font-size="11">${SG.distinct_top_provinces} different provinces take first place at some point across ${nf(SG.episode_days)} episode days</text>
+  </svg>`;
+}
+
+/* ── Figure 9 · direction error, and the tail the median hides ─────────────────────── */
+function fig9() {
+  const per = TR.bearing.per_receptor;
+  const rows = Object.entries(per).map(([k, v]: any) => ({ k, ...v }))
+    .sort((a, b) => b.within_30 - a.within_30);
+  const W = 700, L = 132, R = 118, T = 52, rowH = 33;
+  const H = T + rows.length * rowH + 52;
+  const x1 = 130;
+  const sx = (v: number) => L + (v / x1) * (W - L - R);
+  const body = rows.map((r, i) => {
+    const y = T + i * rowH;
+    return `<text x="${L - 12}" y="${y + 5}" fill="${INK}" font-size="12" text-anchor="end">${esc(title(r.k))}</text>
+      <line x1="${sx(r.median).toFixed(1)}" y1="${y}" x2="${sx(r.p90).toFixed(1)}" y2="${y}"
+        stroke="${ALERT}" stroke-width="2" opacity="0.45"/>
+      <circle cx="${sx(r.median).toFixed(1)}" cy="${y}" r="5" fill="${MODEL}"
+        data-t="${esc(title(r.k))} · median ${r.median.toFixed(1)}°"/>
+      <circle cx="${sx(r.p90).toFixed(1)}" cy="${y}" r="5" fill="${ALERT}"
+        data-t="${esc(title(r.k))} · p90 ${r.p90.toFixed(1)}° on ${nf(r.n)} days"/>
+      <text x="${W - R + 14}" y="${y + 4}" fill="${r.within_30 >= 0.7 ? FWI : ALERT}" font-size="11.5"
+        font-family="var(--font-data)">${pct(r.within_30)}</text>`;
+  }).join("");
+  const t30 = sx(30);
+  const xt = [0, 30, 60, 90, 120].map((v) =>
+    `<text x="${sx(v).toFixed(1)}" y="${H - 30}" fill="${MUTED}" font-size="10.5" text-anchor="middle"
+       font-family="var(--font-data)">${v}°</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Median direction error is under 25 degrees everywhere but the 90th percentile exceeds 90 degrees at every receptor">
+    <line x1="${t30.toFixed(1)}" y1="${T - 16}" x2="${t30.toFixed(1)}" y2="${H - 42}"
+      stroke="${MUTED}" stroke-dasharray="3 4" opacity="0.7"/>
+    <circle cx="${L + 6}" cy="26" r="5" fill="${MODEL}"/><text x="${L + 18}" y="30" fill="${MUTED}" font-size="11.5">median</text>
+    <circle cx="${L + 116}" cy="26" r="5" fill="${ALERT}"/><text x="${L + 128}" y="30" fill="${MUTED}" font-size="11.5">90th percentile</text>
+    <text x="${W - R + 14}" y="30" fill="${MUTED}" font-size="11">within ±30°</text>
+    ${body}
+    <line x1="${L}" y1="${H - 42}" x2="${W - R}" y2="${H - 42}" stroke="${GRID}"/>${xt}
+    <text x="${(t30 + 7).toFixed(1)}" y="${H - 50}" fill="${MUTED}" font-size="10.5">what the check asks for</text>
+    <text x="${(L + W - R) / 2}" y="${H - 10}" fill="${MUTED}" font-size="11.5" text-anchor="middle">difference between the backward and forward bearing, ${nf(TR.bearing.rows)} episode days</text>
+  </svg>`;
+}
+
+/* ── Figure 10 · the check published as failed ranks all seven seasons correctly ───── */
+function fig10() {
+  const S = A.anchors.seasons;
+  const W = 700, H = 340, T = 62, rowH = 34, L = 76, R = 76;
+  const xa = L + 138, xb = W - R - 138;
+  const maxO = Math.max(...S.map((s: any) => s.observed));
+  const maxM = Math.max(...S.map((s: any) => s.modelled));
+  const byObs = [...S].sort((a: any, b: any) => b.observed - a.observed);
+  const byMod = [...S].sort((a: any, b: any) => b.modelled - a.modelled);
+  const yO = (s: any) => T + byObs.indexOf(s) * rowH;
+  const yM = (s: any) => T + byMod.indexOf(s) * rowH;
+  const body = S.map((s: any) => {
+    const anchor = A.published.anchors.includes(s.year);
+    const col = anchor ? MODEL : PERSIST;
+    const wo = (s.observed / maxO) * 120, wm = (s.modelled / maxM) * 120;
+    const a = yO(s), b = yM(s);
+    return `<rect x="${(xa - wo).toFixed(1)}" y="${a - 8}" width="${wo.toFixed(1)}" height="16" rx="2"
+        fill="${col}" opacity="${anchor ? 0.95 : 0.5}"/>
+      <rect x="${xb}" y="${b - 8}" width="${wm.toFixed(1)}" height="16" rx="2"
+        fill="${col}" opacity="${anchor ? 0.95 : 0.5}"/>
+      <path d="M${xa + 6} ${a} C${xa + 60} ${a} ${xb - 60} ${b} ${xb - 6} ${b}" fill="none"
+        stroke="${col}" stroke-width="${anchor ? 2.4 : 1.4}" opacity="${anchor ? 0.9 : 0.4}"/>
+      <text x="${(xa - wo - 8).toFixed(1)}" y="${a + 4}" fill="${col}" font-size="11"
+        text-anchor="end" font-family="var(--font-data)">${s.year}</text>
+      <text x="${(xb + wm + 8).toFixed(1)}" y="${b + 4}" fill="${col}" font-size="11"
+        font-family="var(--font-data)">${s.year}</text>`;
+  }).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Modelled and observed seasonal severity rank the seven seasons in exactly the same order">
+    <text x="${xa}" y="30" fill="${MUTED}" font-size="12" text-anchor="end"
+      font-family="var(--font-data)" letter-spacing="0.06em">OBSERVED DETECTIONS</text>
+    <text x="${xb}" y="30" fill="${MUTED}" font-size="12" font-family="var(--font-data)"
+      letter-spacing="0.06em">MODELLED SEASONAL RISK</text>
+    ${body}
+    <text x="${W / 2}" y="${H - 34}" fill="${INK}" font-size="12.5" text-anchor="middle">Spearman ρ = ${A.anchors.spearman.toFixed(2)} across all ${S.length} seasons — the ordering is exact</text>
+    <text x="${W / 2}" y="${H - 14}" fill="${ALERT}" font-size="11.5" text-anchor="middle">and the case publishes this check as FAILED, because a 90th-percentile rule over ${A.anchors.seasons_in_record} seasons admits ${A.anchors.seasons_admitted}</text>
+  </svg>`;
+}
+
+const F1 = fig1(), F2 = fig2(), F3 = fig3(), F4 = fig4(), F5 = fig5();
+const F6 = fig6(), F7 = fig7(), F8 = fig8(), F9 = fig9(), F10 = fig10();
+
+const sgIdn = SG.provinces.filter((p: any) =>
+  !["Johor", "Pahang", "Selangor", "Malacca", "Negeri Sembilan", "Perak", "Kelantan",
+    "Terengganu", "Kedah", "Penang", "Perlis", "Sarawak", "Sabah"].includes(p.p));
+const sgMys = SG.provinces.filter((p: any) => !sgIdn.includes(p));
+const sgMysShare = sgMys.reduce((s: number, p: any) => s + p.share, 0);
+const southSumatra = SG.provinces.find((p: any) => p.p === "South Sumatra");
+const bestComp = FW1.like_for_like.best_component;
+---
+<html lang="en" data-case="haze" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Can an Ignition Model Beat the Fire Weather Index over Indonesian Peat?</title>
+    <meta name="description" content="An adversarial review of a fire and haze early-warning case: average precision against AUC on a 3.8% event, a spatially blocked refit, an audit of the CEMS FWI comparison, and back-trajectory attribution replayed over 9,594 receptor-days." />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="back" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/`}>← The instrument</a>
+      <span class="stamp dim">REVIEW ARTICLE · DATA VINTAGE {A.vintage}</span>
+    </header>
+
+    <article>
+      <div class="masthead">
+        <span class="eyebrow">METHODS &amp; VALIDATION · FIRE &amp; HAZE EARLY WARNING</span>
+        <h1>Can an ignition model beat the Fire Weather Index over Indonesian peat?</h1>
+        <p class="standfirst">A stress test of a 0.25° daily ignition-risk surface and a
+        back-trajectory attribution engine. The model's skill survives the harder test its own
+        design never ran — but the headline metric is the wrong one for a rare event, the
+        comparison that gives the case its title rested on a single season until we found the bug
+        that stranded the rest, and the attribution, replayed over every episode instead of one,
+        points somewhere the page did not.</p>
+        <div class="byline">
+          <span>Demo Lab · FMV</span><span>Data through {A.vintage}</span>
+          <span>{nf(A.published.panel_rows)} cell-days · {nf(A.rescore.n_cells)} land cells</span>
+          <span>{nf(TR.receptor_days)} receptor-days</span>
+        </div>
+      </div>
+
+      <section class="abstract">
+        <h2>Abstract</h2>
+        <p><b>Question.</b> The case claims an ignition-risk surface with AUC {sig(P1.auc)} at one
+        day's lead that "beats the operational Canadian Fire Weather Index", and a 72-hour
+        back-trajectory that attributes a bad-air day in Singapore to fires in South Sumatra. We
+        ask whether either claim survives an independent re-scoring on the case's own data.</p>
+        <p><b>Method.</b> We re-derive every headline statistic from the case's published
+        out-of-fold predictions ({nf(A.rescore.sample_rows)} rows across three leads), audit the
+        CEMS FWI join row by row, refit the model under a split blocked in <i>space</i> as well as
+        season, and replay the trajectory ensemble across all {nf(TR.receptor_days)}
+        receptor-days rather than one.</p>
+        <p><b>Findings.</b> The published AUC reproduces exactly ({sig(L1.scores.model.auc)}
+        against {sig(P1.auc)}), and the skill is <b>not</b> a spatial artefact: refitting so that
+        no test cell was ever seen in training costs only <b>{S1.delta_auc.toFixed(4)}</b> AUC at
+        one day and <b>{S7.delta_auc.toFixed(4)}</b> at seven. But AUC is the wrong instrument for
+        a {pct(L1.base_rate, 2)} event. Average precision is <b>{sig(L1.scores.model.ap)}</b>, and
+        at an operational alert budget the model is right {pct(L1.scores.model.p1, 0)} of the time
+        at one day and <b>{pct(L7.scores.model.p1, 0)}</b> at seven, catching
+        {pct(L7.scores.model.r1, 1)} of the season's fires. AUC and average precision <b>disagree
+        about which baseline is stronger</b>. The FWI comparison was thinner than it looked: the
+        reviewed build scored it on <b>one held-out season, {nf(RB.published_n)} cell-days</b>,
+        because three CEMS seasons — including the {RB.anchor_years_without_fwi.join(", ")} anchor —
+        had been stranded by a defect in the case's own Copernicus queue driver. We diagnosed and
+        fixed it, the record drained to {A.fwi.years_on_disk.length} of 15 years, and the
+        comparison now runs on <b>all {A.fwi.fold_years_with_fwi.length} held-out seasons at a
+        {pct(FW1.join_share, 0)} join</b>. The claim survives but had been flattered: the model's
+        recomputed Brier skill against the index at one day falls from
+        +{sig(RB.bss_vs_fwi["1"], 3)} to <b>+{sig(P1.fwi_bss, 3)}</b>. The index's own value,
+        {sig(FW1.like_for_like.fwi_auc)}, sits inside the
+        {LIT.mortelmans.fwi_drained}–{LIT.mortelmans.fwi_undrained} band
+        <a href="#ref-mortelmans">Mortelmans et al. (2025)</a> publish for the same box — but the
+        composite FWI is <b>not the best member of its own family</b> here: the Build-Up Index
+        beats it at every lead, reproducing both the 2007 design decision behind the operational
+        Indonesian fire-danger system and the 2025 literature. On transport, the ensemble
+        half-width reaches <b>{TR.ensemble[6].med.toFixed(0)} km</b> at 72 hours with only
+        {pct(TR.ensemble[6].surv, 0)} of parcels still in the domain; the top attributed province
+        changes on {pct(1 - TR.truncation.top_province_same_at_24h, 0)} of episodes if the window
+        is 24 hours instead of 72; and across {nf(SG.episode_days)} Singapore episode days the
+        most frequently attributed upwind province is <b>{SG.provinces[0].p}</b>
+        ({pct(SG.provinces[0].share)}), not South Sumatra ({pct(southSumatra.share)}) — a result
+        that is partly a proximity artefact of the weighting and partly a reproduction of
+        <a href="#ref-hansen">Hansen et al. (2019)</a>, whose tagged dispersion modelling concluded
+        that peninsular Malaysia is a large source for Singapore.</p>
+        <p><b>Conclusion.</b> This is a <i>ranking</i> instrument for where to put a patrol, not a
+        <i>probability</i> instrument for whether a given cell will burn, and not an attribution
+        instrument at province level beyond about a day of travel. Read that way it is defensible
+        and unusually well built. Read the way the page currently sells it, it promises more than
+        the evidence carries.</p>
+      </section>
+
+      <nav class="toc">
+        <a href="#s1">1 · The claims under test</a><a href="#s2">2 · Prior art</a>
+        <a href="#s3">3 · Data and method</a><a href="#s4">4 · The headline reproduces</a>
+        <a href="#s5">5 · The wrong metric</a><a href="#s6">6 · Where the skill lives</a>
+        <a href="#s7">7 · The decisive test</a><a href="#s8">8 · One season</a>
+        <a href="#s9">9 · Not the best index</a><a href="#s10">10 · The trajectory</a>
+        <a href="#s11">11 · Whose air</a><a href="#s12">12 · Contradicted by its own data</a>
+        <a href="#s13">13 · The best result is published as a failure</a>
+        <a href="#s14">14 · What follows for decisions</a><a href="#s15">15 · What remains open</a>
+        <a href="#refs">References</a>
+      </nav>
+
+      <section id="s1">
+        <h2><span class="num">1</span> The claims under test</h2>
+        <p>The case makes two commercial promises, and they are different in kind. The first is
+        <b>anticipation</b>: an ignition probability per 0.25° cell per day, one to seven days
+        ahead, that beats the index fire services already use. The second is
+        <b>attribution</b>: that when the air over a city is bad, a back-trajectory can name the
+        province the air was standing over when the fires were burning.</p>
+        <p>Anticipation is a forecasting claim and is judged by skill scores. Attribution is a
+        causal claim in a live diplomatic dispute and is judged by whether the answer would
+        survive being contested. This review takes both at face value and tries to break them.</p>
+        <p>We separate three questions the page merges. <b>Is the model good?</b> <b>Is the metric
+        that says so the right metric?</b> <b>And is the baseline it beats the right baseline?</b>
+        They have different answers.</p>
+      </section>
+
+      <section id="s2">
+        <h2><span class="num">2</span> Prior art, and what a fair benchmark looks like</h2>
+        <p><b>The physics.</b> <a href="#ref-degroot">de Groot et al. (2007)</a> built the
+        Indonesian and Malaysian Fire Danger Rating Systems, and chose the Drought Code as their
+        governing indicator specifically because peat burns: their operational bands — extreme
+        above DC {LIT.degroot.dc_extreme} — are still the ones METMalaysia and BMKG publish today,
+        unchanged. They also report that {pct(LIT.degroot.hotspots_above_ffmc78, 0)} of hotspots in
+        their 1995–2000 record occurred above FFMC 78. That paper is the reason §9's result is a
+        confirmation rather than a surprise.</p>
+        <p><b>The benchmark, and it is higher than the case's.</b> Two recent papers score the FWI
+        as a fire-occurrence classifier in ways directly comparable to this case, and they
+        disagree with each other. <a href="#ref-mortelmans">Mortelmans et al. (2025)</a> score it
+        over <i>almost exactly this bounding box</i> ({LIT.mortelmans.box}), 2002–2018, and report
+        FWI AUC <b>{LIT.mortelmans.fwi_drained}</b> on drained peat and
+        <b>{LIT.mortelmans.fwi_undrained}</b> on undrained, with the Drought Code alone doing
+        better at {LIT.mortelmans.dc_drained}–{LIT.mortelmans.dc_undrained}; their conclusion is
+        that "DC outperformed both FWI<sub>ref</sub> and FWI<sub>peat</sub>, making it the best
+        predictor for fire occurrence."
+        <a href="#ref-shmuel">Shmuel et al. (2025)</a>, on a <i>0.25° daily binary ignition grid
+        over Indonesia</i> — this case's exact resolution and country — report the plain Canadian
+        FWI at <b>{LIT.shmuel.fwi_indonesia}</b>, well above the case's baseline. The difference
+        is design: they balance the classes by random undersampling and hold out a random 20%,
+        with no spatial or temporal blocking. §8 places this case's FWI value against both.</p>
+        <p><b>The operational verdict.</b> <a href="#ref-digiuseppe">Di Giuseppe et al. (2020)</a>,
+        verifying ECMWF's operational fire forecast, single out equatorial Asia as the failure
+        case: "the system seems to have a predictability below {LIT.digiuseppe.eqas_pod} (only
+        {pct(LIT.digiuseppe.eqas_pod, 0)} of fires corresponded to the FWI above the 90th
+        percentile) … a fire early-warning system should mostly rely on the drought code." Anyone
+        selling skill over the FWI in this region is pushing on a door the operational centre has
+        already said is open.</p>
+        <p><b>Validation design.</b> <a href="#ref-roberts">Roberts et al. (2017)</a> and
+        <a href="#ref-ploton">Ploton et al. (2020)</a> showed that a random or merely temporal
+        split on spatially autocorrelated data reports skill a spatially blocked split removes:
+        Ploton's own case falls from R² {LIT.ploton.random_r2} to {LIT.ploton.spatial_r2}, about
+        three-quarters of the apparent explained variance. Fire is about as spatially clustered as
+        an environmental process gets; Mortelmans et al. measure the FWI's own temporal
+        autocorrelation length at {LIT.mortelmans.tau_days} days; and seven of this model's
+        features are the cell's own fire history. The prior expectation was collapse. §7 reports
+        what actually happened, and it is not what we expected.</p>
+        <p><b>Metrics.</b> <a href="#ref-saito">Saito &amp; Rehmsmeier (2015)</a> is the standard
+        reference: because both ROC axes normalise within class, the ROC curve is literally
+        unchanged between a balanced and an imbalanced version of the same problem, while the
+        precision–recall curve moves. Their Table 5 has one tool with the best ROC-AUC in its field
+        ({LIT.saito.rnamicro_roc}) and a PR-AUC of {LIT.saito.rnamicro_prc}, beaten on PR-AUC by a
+        tool with a worse ROC ({LIT.saito.mirfinder_roc} / {LIT.saito.mirfinder_prc}).
+        <a href="#ref-davis">Davis &amp; Goadrich (2006)</a> give the same inversion analytically.
+        §5 shows it happening on this case's own numbers, between its own two baselines.</p>
+        <p><b>Transport.</b> <a href="#ref-stohl">Stohl (1998)</a> remains the standard review:
+        "errors of {pct(LIT.stohl.typical, 0)} of the distance travelled seem to be typical", rising
+        with travel time — {pct(LIT.stohl.h24, 0)} at 24 hours, {pct(LIT.stohl.h48, 0)} at 48 and
+        {pct(LIT.stohl.h72, 0)} at 72 in the one-year set he summarises — and his recommendation is
+        blunt: "single trajectories are hardly sufficient to describe transport processes in the
+        boundary layer … studies that are currently based on the interpretation of forward or back
+        trajectories … should in the future be based on the simulation results of [Lagrangian
+        particle dispersion models]." <a href="#ref-engstrom">Engström &amp; Magnusson (2009)</a>
+        add the tropical qualifier that matters most here: a back-trajectory released at 0°N, 120°E
+        — inside this case's domain — split under ensemble analysis into "two different source
+        regions", and their ensemble is <i>under-dispersive</i> in the tropics, so a tropical
+        ensemble spread is a floor on the error, not an estimate of it.</p>
+        <p><b>Attribution.</b> <a href="#ref-koplitz">Koplitz et al. (2016)</a> is the reference
+        study for exactly this problem, using a GEOS-Chem adjoint over a whole season — and even
+        so it disclaims the granularity this case publishes at: "since our analysis was conducted
+        on a 0.5°×0.67° grid, there is some uncertainty in our attributions of emissions and
+        exposure contributions to specific provinces."
+        <a href="#ref-hansen">Hansen et al. (2019)</a> is the decisive comparator, and §11 shows
+        this case reproducing its most uncomfortable finding.</p>
+        <p class="caveat"><b>What this review is not.</b> We did not re-run any external study, and
+        we do not re-derive the case's inputs. Every number below is computed from the artefacts
+        the case itself published, by <code>pipeline/review.py</code>, on the same machine that
+        produced them.</p>
+      </section>
+
+      <section id="s3">
+        <h2><span class="num">3</span> Data and method</h2>
+        <p><b>The instrument under review.</b> {nf(A.fires.rows_kept)} retained VIIRS detections
+        after a static-source mask that removes {pct(A.fires.removed_share, 2)} of the archive and
+        {pct(A.fires.nrt_removed_share, 2)} of the near-real-time tail; a
+        {nf(A.published.panel_rows)}-row panel of {nf(A.rescore.n_cells)} land cells across
+        {A.published.era5_years.length} ERA5 seasons; gradient-boosted ignition probability at 1,
+        3 and 7 days' lead, isotonically calibrated; and a Petterssen second-order kinematic
+        trajectory model producing {nf(TR.receptor_days)} receptor-days of 72-hour
+        back-trajectories.</p>
+        <p><b>How it validates itself.</b> Cross-validation is <i>blocked by season</i>: each fold
+        holds out one whole calendar year ({A.published.folds.join(", ")}), with a separate
+        calibration season inside each fold, and the two anchor years
+        ({A.published.anchors.join(" and ")}) excluded from training entirely. That is already
+        better discipline than most published fire models, and it is the reason this review could
+        go looking for the <i>next</i> problem rather than the obvious one.</p>
+        <p><b>What we added.</b> Four tests the case did not run.
+        (a) Average precision and precision at an operational alert budget, alongside AUC.
+        (b) A decomposition of the ROC into its within-day and within-cell parts, plus a
+        deliberately stupid map-only baseline.
+        (c) A complete refit under a split blocked in space <i>and</i> season: cells grouped into
+        {A.spatial.n_blocks} blocks of {A.spatial.block_deg}°, assigned at random to
+        {A.spatial.n_spatial_folds} folds, so that every scored cell-day comes from a model that
+        never saw that cell.
+        (d) The trajectory ensemble replayed across every receptor-day, with the attribution
+        recomputed under 24-, 48- and 72-hour windows.</p>
+        <p class="caveat"><b>Sample.</b> The re-scoring in §5 and §6 uses the
+        {nf(A.rescore.sample_rows)}-row out-of-fold sample the pipeline retains
+        ({nf(L1.n)} cell-days per lead, {nf(L1.positives)} positives at one day). The spatially
+        blocked refit in §7 scores the complete out-of-fold set, {nf(S1.n)} cell-days, so it is
+        directly comparable with the published number rather than with the sample.</p>
+      </section>
+
+      <section id="s4">
+        <h2><span class="num">4</span> Finding one — the headline reproduces exactly</h2>
+        <p>Before attacking a number it is worth confirming it. Re-scoring the case's own stored
+        out-of-fold predictions independently gives AUC <b>{sig(L1.scores.model.auc)}</b> at one
+        day against the published {sig(P1.auc)}, {sig(L3.scores.model.auc)} against
+        {sig(A.published.per_lead["3"].auc)} at three, and {sig(L7.scores.model.auc)} against
+        {sig(P7.auc)} at seven — the residual difference being the sampling of the retained rows.
+        The arithmetic is sound and the leakage that usually explains a suspiciously good fire
+        model is not present in the obvious places: the folds really are blocked by season, the
+        calibration really is fitted on a season the model never saw, and the anchors really are
+        excluded from training.</p>
+        <p>That matters, because everything that follows is a criticism of what the number
+        <i>means</i> rather than of whether it is real.</p>
+      </section>
+
+      <section id="s5">
+        <h2><span class="num">5</span> Finding two — AUC is the wrong instrument for a 3.8% event</h2>
+        <p>Fire happens in {pct(L1.base_rate, 2)} of cell-days. On a rare event the ROC curve
+        spends almost all its length in a region no operator will ever visit, because the false
+        positive rate is computed against an enormous pool of easy true negatives. Average
+        precision — the area under the precision–recall curve — is computed against the positives
+        instead, and is the metric that moves when a fire service's day changes.</p>
+        <div class="stat-row">
+          <div class="stat"><span class="sv">{sig(L1.scores.model.auc)}</span><span class="sl">AUC at 1-day lead — the published gate</span></div>
+          <div class="stat"><span class="sv amber">{sig(L1.scores.model.ap)}</span><span class="sl">average precision, same predictions, same rows</span></div>
+          <div class="stat"><span class="sv">{sig(L1.scores.model.ap_lift, 1)}×</span><span class="sl">that is still {sig(L1.scores.model.ap_lift, 1)} times the base rate — real skill, honestly sized</span></div>
+        </div>
+        <p>The gap is not a gotcha; it is the difference between a ranking statement and a
+        probability statement. But it becomes a gotcha when the two metrics disagree about
+        <i>which baseline is stronger</i>, and here they do.</p>
+        <figure>
+          <Fragment set:html={F1} />
+          <figcaption><b>Figure 1.</b> The same three predictors on the same
+          {nf(L1.n)} held-out cell-days, ranked twice. By AUC, day-of-year climatology
+          ({sig(L1.scores.climatology.auc)}) beats persistence
+          ({sig(L1.scores.persistence.auc)}). By average precision the order reverses:
+          persistence {sig(L1.scores.persistence.ap)}, climatology
+          {sig(L1.scores.climatology.ap)}.</figcaption>
+        </figure>
+        <p class="pull">A metric that ranks your two baselines in the opposite order from the
+        metric an operator experiences is not a neutral choice of summary statistic. It is a
+        modelling decision, and it should be declared as one.</p>
+        <p>The practical version of the same point is what an alert budget buys. Suppose a
+        provincial fire service can inspect the top 1% of cells on a given day — about
+        {cellsPerDay} of {nf(A.rescore.n_cells)} cells, which is roughly what an air-patrol
+        schedule can visit.</p>
+        <figure>
+          <Fragment set:html={F2} />
+          <figcaption><b>Figure 2.</b> Precision and recall at a 1%-of-cell-days alert budget.
+          At one day's lead {(L1.scores.model.p1 * 100).toFixed(0)} of every 100 alerts are
+          followed by a detection; at seven days
+          {(L7.scores.model.p1 * 100).toFixed(0)} are. The dashed rule is the same budget spent on
+          "it burned here in the last seven days", which reaches
+          {(L1.scores.persistence.p1 * 100).toFixed(0)} of 100 at one day —
+          {((L1.scores.persistence.p1 / L1.scores.model.p1) * 100).toFixed(0)}% of the model's
+          precision, for no model at all.</figcaption>
+        </figure>
+        <p>Read from the ROC, the model beats persistence by
+        {((L1.scores.model.auc - L1.scores.persistence.auc) * 100).toFixed(1)} points of AUC and
+        the case is closed. Read from the alert budget, the model's advantage over a rule anyone
+        could implement in an afternoon is {((L1.scores.model.p1 - L1.scores.persistence.p1) * 100).toFixed(1)}
+        percentage points of precision at one day and
+        {((L7.scores.model.p1 - L7.scores.persistence.p1) * 100).toFixed(1)} at seven. Still a real
+        gain — a fifth more true finds per patrol — but it is a different sales conversation.</p>
+        <p class="caveat"><b>The counter-argument, stated fairly.</b> ECMWF's own fire-forecast
+        verification (<a href="#ref-digiuseppe">Di Giuseppe et al. 2020</a>) deliberately declines
+        false-alarm-sensitive metrics: "the identification of false alarms is not meaningful, and
+        the verification should mainly rely on hits and misses", on the reasoning that a high fire
+        danger with no ignition is not a forecast error. That is a defensible position for a
+        <i>danger</i> index. It is not a defensible position for a <i>probability</i> product sold
+        on a patrol budget, because a patrol dispatched to a cell that does not burn has a cost
+        that lands on somebody. Whichever position this case takes, it should state it — and it
+        currently states neither.</p>
+      </section>
+
+      <section id="s6">
+        <h2><span class="num">6</span> Finding three — where the skill actually lives</h2>
+        <p>An AUC of {sig(L1.scores.model.auc)} on a spatially clustered, violently seasonal
+        process invites one obvious suspicion: that the model has learned a map and a calendar. We
+        put that to the data before testing it properly, by removing one source of variation at a
+        time from the ROC itself.</p>
+        <figure>
+          <Fragment set:html={F3} />
+          <figcaption><b>Figure 3.</b> The same predictions scored three ways. <i>Within one
+          day</i> pools only comparisons between cells on the same date, so all seasonal
+          information is removed. <i>Within one cell</i> pools only comparisons between dates in
+          the same cell, so all geography is removed. The open ring is a baseline consisting of
+          each cell's own fire rate in the other folds — a map with no weather in it at all.
+          Hover any point.</figcaption>
+        </figure>
+        <p>The suspicion is not confirmed. Removing all seasonal variation leaves the model at
+        AUC <b>{sig(L1.decomposition.model.day)}</b>; removing all geography leaves it at
+        <b>{sig(L1.decomposition.model.cell)}</b>. Both baselines fall much further —
+        climatology loses {((L1.scores.climatology.auc - L1.decomposition.climatology.cell) * 100).toFixed(1)}
+        points when geography is removed, because a day-of-year climatology
+        <i>is</i> mostly geography. And the pure map baseline reaches only
+        {sig(A.rescore.per_lead["1"].cell_rate_only.auc)} AUC with average precision
+        {sig(A.rescore.per_lead["1"].cell_rate_only.ap)} — barely above the
+        {pct(L1.base_rate, 2)} base rate — while its rank correlation with the model's own scores
+        is {A.rescore.per_lead["1"].model_vs_cellrate_spearman.toFixed(2)}.</p>
+        <p>So the model is answering both questions: given a day it finds the right cells, and
+        given a cell it finds the right days. That is the diagnostic. The proper test is next.</p>
+      </section>
+
+      <section id="s7">
+        <h2><span class="num">7</span> Finding four — the decisive test, and it passes</h2>
+        <p>Blocking cross-validation by season removes the leakage between adjacent days. It does
+        nothing about the leakage between adjacent <i>places</i>. Every 0.25° cell in the test
+        year is also in the training years, and the model carries seven fire-history features for
+        that exact cell, so it can in principle learn "this cell burns" rather than "these
+        conditions burn". <a href="#ref-roberts">Roberts et al. (2017)</a> and
+        <a href="#ref-ploton">Ploton et al. (2020)</a> both report that this is where
+        environmental models lose most of their apparent skill.</p>
+        <p>We refit the whole thing. Cells were grouped into {A.spatial.n_blocks} blocks of
+        {A.spatial.block_deg}° — far larger than the grid, and larger than the correlation length
+        of a fire season — and the blocks assigned at random to {A.spatial.n_spatial_folds}
+        spatial folds. Blocks are assigned at random rather than in stripes deliberately: a
+        striped pattern puts every held-out block against a training block and leaks back across
+        the seam. For each held-out season <i>and</i> each held-out spatial fold, the model was
+        retrained from scratch on the other seasons and the other blocks, recalibrated on a
+        separate season's other blocks, and scored on exactly the rows the published number was
+        scored on.</p>
+        <figure>
+          <Fragment set:html={F4} />
+          <figcaption><b>Figure 4.</b> Published (seasons blocked) against refit (seasons and
+          space blocked), on the identical {nf(S1.n)} held-out cell-days. Open rings are the four
+          spatial folds separately. Hover any ring.</figcaption>
+        </figure>
+        <p>The result is unambiguous and it goes the case's way. Scoring only cells the model has
+        never seen costs <b>{S1.delta_auc.toFixed(4)} AUC at one day</b>
+        ({sig(P1.auc, 4)} → {sig(S1.auc, 4)}) and <b>{S7.delta_auc.toFixed(4)} at seven</b>
+        ({sig(P7.auc, 4)} → {sig(S7.auc, 4)}). Average precision falls by
+        {Math.abs(S1.delta_ap).toFixed(3)} and {Math.abs(S7.delta_ap).toFixed(3)}. The seven-day
+        surface still clears the gate's 0.80 threshold at {sig(S7.auc)} with no cell of its own
+        history to lean on. Set that against Ploton et al.'s R²
+        {LIT.ploton.random_r2} → {LIT.ploton.spatial_r2}, or against the wildfire preprints that
+        report AUC falling by 0.17 to 0.45 under spatial blocking.</p>
+        <p class="pull">The skill is in the weather and the fuel, not in the memory of where fire
+        lives. On this evidence the model would transfer to peatland it has never been fitted on —
+        which is the property that decides whether this is a product or a demo.</p>
+        <p>Two reasons the result is credible rather than suspicious. First, the model's features
+        are overwhelmingly meteorological and static-fuel quantities that vary smoothly across a
+        block boundary, so a held-out block is not an out-of-distribution region in the way a
+        held-out country would be — this tests transfer between neighbourhoods, not between
+        biomes. Second, §6 predicted it: a within-day AUC of {sig(L1.decomposition.model.day)}
+        already said the model was ranking cells against each other on a given date, which is the
+        same capability a spatial hold-out asks for.</p>
+        <p class="caveat"><b>Why we report a test that failed to break anything.</b> We could find
+        no peer-reviewed fire-occurrence study that reports both a random or season-blocked score
+        and a spatially blocked one on the same data; the two wildfire comparisons we located are
+        unrefereed preprints. That absence is itself a finding about the field, and it makes this
+        the strongest positive statement in this review — a statement the case could not make
+        about itself, because it never ran the test. The published page should carry it.</p>
+      </section>
+
+      <section id="s8">
+        <h2><span class="num">8</span> Finding five — "beats the FWI" was scored on one season, because of a bug</h2>
+        <p>The comparison that gives the case its chapter title is the Brier skill score against
+        the CEMS Canadian Fire Weather Index. We audited the join that produces it, row by row, and
+        found the reviewed build had computed it on a single held-out season —
+        <b>{nf(RB.published_n)} cell-days</b>, against the {nf(P1.n)} the model's own headline AUC
+        is computed on. Two halves of the same table row, two different samples, no note on the
+        page.</p>
+        <p>The cause was not the archive. Of the {A.fwi.oof_folds.length} held-out seasons the
+        model is scored on, the CEMS record in that build covered
+        {RB.fold_years_with_fwi.join(" and ")}; {RB.fold_years_without_fwi.join(", ")} was absent,
+        and so was {RB.anchor_years_without_fwi.join(", ")}, the anchor the case is most about. The
+        ingest metadata described them as "<span class="mono">{RB.ingest_status.status}</span> —
+        {RB.ingest_status.reason}", which implies a rerun would fetch them. It would not. The job
+        ledger recorded those seasons as <b>rejected</b> across roughly forty submissions and six
+        and a half hours, and the reason was a defect in the case's own Copernicus queue driver:
+        when a job came back rejected, <b>the poller re-stamped its cooling-off timestamp on every
+        pass</b>, so the submit loop's 180-second retry window never elapsed and the request could
+        never be resubmitted for the life of the ledger. The log said "cooling off" indefinitely and
+        nothing moved.</p>
+        <p class="pull">Dropping the dead job id on rejection is a four-line fix. With it in place
+        all three stranded seasons landed inside fifteen minutes, and the CEMS record went from
+        {RB.years_on_disk.length} years to <b>{A.fwi.years_on_disk.length}</b> —
+        {nf(A.fwi.ingest_status.rows)} cell-days, status <span class="mono">{A.fwi.ingest_status.status}</span>.</p>
+        <figure>
+          <Fragment set:html={F5} />
+          <figcaption><b>Figure 5.</b> The CEMS record after the fix, against the seasons the model
+          is scored on. Amber outlines mark the three seasons that were stranded before it
+          ({RB.years_recovered.join(", ")}), two of which the comparison could not run
+          without.</figcaption>
+        </figure>
+        <p>So the comparison can now be made properly, and we made it twice. The case's own routine,
+        re-run against the complete record without refitting anything, now scores the index on
+        <b>{nf(A.fwi.published_n)} cell-days across two held-out seasons</b> instead of one. Our
+        own even-handed version scores model and index on <i>every</i> out-of-fold row — all
+        {A.fwi.fold_years_with_fwi.length} seasons, {nf(FW1.like_for_like.n)} cell-days, a
+        <b>{pct(FW1.join_share, 0)}</b> join, identical rows on both sides.</p>
+        <div class="stat-row">
+          <div class="stat"><span class="sv">{sig(FW1.like_for_like.model_auc)}</span><span class="sl">model AUC, 1 day, all three held-out seasons</span></div>
+          <div class="stat"><span class="sv teal">{sig(FW1.like_for_like.fwi_auc)}</span><span class="sl">CEMS FWI AUC, same rows, same days</span></div>
+          <div class="stat"><span class="sv amber">{sig(FW1.like_for_like.model_ap)} vs {sig(FW1.like_for_like.fwi_ap)}</span><span class="sl">average precision — the gap is much wider than AUC suggests</span></div>
+        </div>
+        <p><b>The claim survives, and it is now properly supported — but it had been flattered.</b>
+        On the one season the original comparison happened to land on, the index scored
+        {sig(FW1.by_fold["2018"].fwi_auc)}. On the two seasons it had been missing, the index scores
+        {sig(FW1.by_fold["2016"].fwi_auc)} and {sig(FW1.by_fold["2017"].fwi_auc)}. The published
+        figure was the index's <i>best</i> of three, which inflated the model's apparent margin: the
+        case's own recomputed Brier skill against the FWI at one day falls from
+        +{sig(RB.bss_vs_fwi["1"], 3)} to <b>+{sig(P1.fwi_bss, 3)}</b>, and at seven days from
+        +{sig(RB.bss_vs_fwi["7"], 3)} to <b>+{sig(A.published.per_lead["7"].fwi_bss, 3)}</b>.
+        Smaller, and real.</p>
+        <p>Two further things the complete record exposes. First, <b>the seasons differ enormously
+        and pooling hides it</b>: at seven days' lead the model scores
+        {sig(FW7.by_fold["2016"].model_auc)} on 2016 alone — <i>below the gate's own 0.80
+        threshold</i> — against {sig(FW7.by_fold["2018"].model_auc)} on 2018. A pooled AUC of
+        {sig(P7.auc)} is a mean over a range that straddles the threshold it is being judged
+        against, and the spread belongs beside the mean. Second, <b>both anchors now carry an FWI
+        baseline</b> ({A.fwi.anchor_years_with_fwi.join(" and ")}), so the comparison the case most
+        wants — how the model and the index behaved in the crisis years — has become answerable for
+        the first time. It has not yet been made.</p>
+        <p><b>Is the index's value here plausible?</b> This matters, because a flattering baseline
+        would make the whole comparison meaningless.
+        <a href="#ref-mortelmans">Mortelmans et al. (2025)</a> report FWI AUC between
+        {LIT.mortelmans.fwi_drained} and {LIT.mortelmans.fwi_undrained} for fire occurrence over
+        {LIT.mortelmans.box} — very nearly this case's box. This case's pooled value,
+        <b>{sig(FW1.like_for_like.fwi_auc)}</b>, sits inside that published band. The index is
+        being scored fairly.</p>
+        <p class="caveat"><b>The one comparison that does not agree, and what it means.</b>
+        <a href="#ref-shmuel">Shmuel et al. (2025)</a> report the plain Canadian FWI at AUC
+        <b>{LIT.shmuel.fwi_indonesia}</b> for Indonesia on a 0.25° daily binary ignition grid —
+        the same resolution, the same country, and far above the {sig(FW1.like_for_like.fwi_auc)}
+        measured here. Three differences account for it and none of them favours this case being
+        quiet about the discrepancy. Their target is the <i>ignition of a new fire</i> from
+        250 m fire polygons rather than "at least one VIIRS detection in a cell"; their classes are
+        balanced by random undersampling, so the negatives in play are a sample rather than the
+        population; and their test set is a <b>random 20% holdout with no spatial or temporal
+        blocking</b>, on data whose dominant predictor has a {LIT.mortelmans.tau_days}-day
+        autocorrelation length. Their machine-learning models reach {LIT.shmuel.lightgbm} on the
+        same split. Since AUC is prevalence-invariant in expectation, the balancing is not the
+        explanation; the split design and the target definition are. A reader is entitled to know
+        that a higher published number exists, and to know exactly which design choice separates
+        it from this one.</p>
+      </section>
+
+      <section id="s9">
+        <h2><span class="num">9</span> Finding six — the index being beaten is not the best index available</h2>
+        <p>The Canadian FWI is a composite. Its Build-Up Index (BUI) combines the Duff Moisture
+        Code and the Drought Code and describes how much fuel is available to burn; its Initial
+        Spread Index combines the Fine Fuel Moisture Code with wind and describes how fast a fire
+        would run once lit. The composite multiplies the two. Over equatorial peat that is a
+        strange thing to do, because the limiting factor is almost never spread rate, and the fine
+        fuel moisture code equilibrates in hours to a humidity that in Indonesia barely varies.</p>
+        <p>The case's data lets us test that directly, because the CEMS product ships every
+        component. We scored all six on identical rows.</p>
+        <figure>
+          <Fragment set:html={F6} />
+          <figcaption><b>Figure 6.</b> AUC of each CEMS fire-index component at one day's lead, on
+          the {nf(FW1.like_for_like.n)} out-of-fold cell-days that carry a CEMS value, with the
+          model for scale. Below: how much the Build-Up Index beats the composite FWI by, at each
+          lead.</figcaption>
+        </figure>
+        <p>At every lead the best member of the family is <b>{bestComp.toUpperCase()}</b>, not the
+        composite: {sig(FW1.components.bui.auc)} against {sig(FW1.components.fwi.auc)} at one day,
+        {sig(FW3.components.bui.auc)} against {sig(FW3.components.fwi.auc)} at three, and
+        {sig(FW7.components.bui.auc)} against {sig(FW7.components.fwi.auc)} at seven. The
+        drought-and-fuel half of the index carries the signal and the spread half dilutes it.</p>
+        <p>This is not a novel discovery — it is a reproduction, and that is what makes it
+        trustworthy. <a href="#ref-degroot">de Groot et al. (2007)</a> selected the Drought Code
+        for the Indonesian and Malaysian Fire Danger Rating Systems on exactly this reasoning,
+        because peat fires produced the great majority of particulate emissions in 1997.
+        <a href="#ref-mortelmans">Mortelmans et al. (2025)</a> reach the same conclusion
+        quantitatively over this box: DC at {LIT.mortelmans.dc_drained}–{LIT.mortelmans.dc_undrained}
+        against FWI at {LIT.mortelmans.fwi_drained}–{LIT.mortelmans.fwi_undrained}, concluding that
+        DC is "the best predictor for fire occurrence".
+        <a href="#ref-digiuseppe">Di Giuseppe et al. (2020)</a> say it operationally: over
+        equatorial Asia "a fire early-warning system should mostly rely on the drought code". The
+        case's own data lands in the same place from an entirely independent direction.</p>
+        <p class="caveat"><b>What this costs the case, and what it buys it.</b> It costs a little:
+        the honest margin at one day is {(FW1.like_for_like.model_auc - FW1.components.bui.auc).toFixed(4)}
+        AUC over BUI rather than {(FW1.like_for_like.model_auc - FW1.components.fwi.auc).toFixed(4)}
+        over FWI, so "we beat the FWI" should read "we beat the best drought-code member of the
+        FWI family, by a slightly smaller margin". It buys a great deal more. Three independent
+        lines — a 2007 operational design decision, a 2025 hydrological study over the same box,
+        and this case's own held-out data — agree that the composite index published daily by the
+        ASEAN Specialised Meteorological Centre and by BMKG is mis-specified for peat, and agree on
+        which component should carry the warning. That is a change to a public product rather than
+        a procurement, and it is worth more than the margin it costs.</p>
+      </section>
+
+      <section id="s10">
+        <h2><span class="num">10</span> Finding seven — the trajectory ensemble is wider than the answer it gives</h2>
+        <p>The attribution engine releases {Math.round(TR.parcel_rows / TR.receptor_days)} parcels
+        per receptor-day and integrates them {TR.hours} hours backwards on ERA5 winds with a
+        {TR.scheme.toLowerCase()} scheme. A single trajectory is a line; the spread of the ensemble
+        is the only uncertainty statement available. So we measured it, across every stored
+        receptor-day rather than on the one the hero animates.</p>
+        <figure>
+          <Fragment set:html={F7} />
+          <figcaption><b>Figure 7.</b> Ensemble half-width (root-mean-square distance from the
+          ensemble's own centre) against travel time, over {nf(TR.receptor_days)} receptor-days,
+          with the share of parcels still inside the domain on the right axis. Hover any point.</figcaption>
+        </figure>
+        <p>The ensemble half-width is {TR.ensemble[0].med.toFixed(0)} km at six hours,
+        {TR.ensemble[2].med.toFixed(0)} km at a day, and
+        <b>{TR.ensemble[6].med.toFixed(0)} km at 72 hours</b>, with a 90th percentile of
+        {TR.ensemble[6].p90.toFixed(0)} km. Simultaneously the ensemble thins: only
+        <b>{pct(TR.ensemble[6].surv, 0)}</b> of released parcels are still inside the domain at
+        72 hours, against {pct(TR.ensemble[3].surv, 0)} at 36. Both effects run the same way — the
+        further back you look, the wider and the sparser the evidence — and both are the
+        physically expected behaviour of a kinematic trajectory
+        (<a href="#ref-stohl">Stohl 1998</a>).</p>
+        <p class="caveat"><b>And this spread is a floor, not an estimate.</b> The ensemble is
+        generated by perturbing the release point and the release height, so it samples
+        <i>initial-condition</i> uncertainty only. It contains nothing for the error in the wind
+        analysis itself, which <a href="#ref-stohl">Stohl (1998)</a> puts at
+        {pct(LIT.stohl.h72, 0)} of travel distance at 72 hours — around 470 km on a typical
+        equatorial trajectory, which is close to this ensemble's <i>90th percentile</i> of
+        {TR.ensemble[6].p90.toFixed(0)} km rather than its median.
+        <a href="#ref-engstrom">Engström &amp; Magnusson (2009)</a> add that analysis-error
+        ensembles are <i>under-dispersive in the tropics</i> specifically, and demonstrate a
+        back-trajectory released at 0°N 120°E — inside this domain — splitting into "two different
+        source regions" that are "equally plausible". The honest reading of Figure 7 is therefore
+        that {TR.ensemble[6].med.toFixed(0)} km is the least the 72-hour uncertainty can be.</p>
+        <p>The consequence is a resolution limit, and it is measurable rather than rhetorical. At
+        {TR.ensemble[6].med.toFixed(0)} km the ensemble is wider than most Sumatran provinces are
+        deep, and wider than the ~200 km separating the Jambi and South Sumatra fire complexes. A
+        province-level statement at 72 hours is being made at a scale the instrument cannot
+        resolve; the same statement at 24 hours, where the half-width is
+        {TR.ensemble[2].med.toFixed(0)} km, is inside it.</p>
+        <p>Recomputing the attribution under different assumed windows shows what that costs.
+        Holding the parcels, the fires and the residence-time × radiative-power weighting fixed and
+        changing only the window, the top-ranked province is unchanged on
+        <b>{pct(TR.truncation.top_province_same_at_48h)}</b> of
+        {nf(TR.truncation.episodes_tested)} episodes at 48 hours and
+        <b>{pct(TR.truncation.top_province_same_at_24h)}</b> at 24. So on roughly one episode in
+        four, the province you name depends on how far back you chose to look.</p>
+        <figure>
+          <Fragment set:html={F9} />
+          <figcaption><b>Figure 8.</b> Agreement between the backward and forward bearing, by
+          receptor, over {nf(TR.bearing.rows)} episode days. The case publishes the median (magenta)
+          and the share within ±30°; the 90th percentile (amber) is the part the median hides.
+          Hover any point.</figcaption>
+        </figure>
+        <p>The case publishes its direction check as failed —
+        {pct(TR.bearing.within_30)} of episode days agree within ±30° against a
+        {"70%"} threshold — and frames the failure by its median difference of
+        {TR.bearing.median.toFixed(1)}°, which is comfortably inside the tolerance. That framing is
+        too kind. <b>The 90th percentile of the difference is {TR.bearing.p90.toFixed(0)}°</b>, and
+        it exceeds 90° at every one of the seven receptors. On the worst tenth of days the forward
+        and backward runs of the same integrator point into different quadrants. The honest
+        statement is not "usually close, occasionally off" but "bimodal: close on most days,
+        meaningless on a minority, and you cannot tell which day you are on from the output".</p>
+      </section>
+
+      <section id="s11">
+        <h2><span class="num">11</span> Finding eight — replayed over every episode, the attribution points somewhere else</h2>
+        <p>The case's signature interaction picks one bad-air day in Singapore and lands the
+        back-trajectories on fires in South Sumatra. One episode is an illustration. The archive
+        contains {nf(SG.episode_days)} Singapore episode days with a computed attribution, so the
+        question of whether that episode is representative has an answer.</p>
+        <figure>
+          <Fragment set:html={F8} />
+          <figcaption><b>Figure 9.</b> The most-attributed upwind province on each of
+          {nf(SG.episode_days)} Singapore episode days, ranked by how often it comes first.
+          Malaysian provinces in slate.</figcaption>
+        </figure>
+        <p>It is not representative. The province that most often comes first is
+        <b>{SG.provinces[0].p}</b>, on {SG.provinces[0].days} days
+        ({pct(SG.provinces[0].share)}); second is {SG.provinces[1].p}
+        ({pct(SG.provinces[1].share)}); <b>South Sumatra is
+        {pct(southSumatra.share)}</b>. {SG.distinct_top_provinces} different provinces take first
+        place at some point. Across all receptors the median top share is
+        {pct(A.traj.attribution.median_top_share)} carried by a median ensemble agreement of
+        {pct(A.traj.attribution.median_top_agreement)}, and
+        {pct(A.traj.attribution.no_attributable_source_share)} of receptor-days return the
+        case's explicit "no attributable source" outcome — a genuinely good design decision that
+        the page under-advertises.</p>
+        <p>Three things follow. The first is uncomfortable for the case, the second vindicates it,
+        and the third is the one that should change the page.</p>
+        <p><b>First, a geometry artefact.</b> The weighting is residence time × fire radiative
+        power with no correction for distance. But a back-trajectory spends its first hours near
+        the receptor <i>whatever</i> its ultimate origin — the median ensemble is still within
+        {TR.ensemble[0].med.toFixed(0)} km of the city at six hours (Figure 7). So any burning
+        land close to the receptor accumulates residence time on almost every trajectory, and the
+        ranking is biased toward proximity. {SG.provinces[0].p} and {SG.provinces[1].p} are the
+        two nearest land masses to Singapore. Some of this ranking is that bias, and a published
+        province ranking needs a distance term or a far-field restriction before it can be read
+        any other way.</p>
+        <p><b>Second — and this is the surprise — the finding is corroborated.</b>
+        <a href="#ref-hansen">Hansen et al. (2019)</a> attributed Singapore's biomass-burning PM10
+        for 2010–2015 with the NAME Lagrangian dispersion model and emissions tagged by source
+        region, which is a far heavier instrument than this one. Their headline conclusion:
+        "these results challenge the current popular assumption that haze in Singapore is dominated
+        by emissions/burning from only Indonesia … Peninsular Malaysia is a large source for the
+        Maritime Continent off-season biomass burning impact on Singapore." A proximity bias and a
+        real proximity effect look identical in a ranking, and the published dispersion modelling
+        says at least part of this is real. <a href="#ref-marlier">Marlier et al. (2015)</a> give
+        the mechanism: Sumatran fires dominate population-weighted smoke concentrations despite
+        Kalimantan emitting more, "because fire sources were located closer to population centres".
+        Distance is not only an artefact in this problem; it is also physics.</p>
+        <p><b>Third, a scope contradiction on the page.</b> The case states plainly that "the
+        transboundary claim here is Indonesia → Singapore only", because Malaysian air-quality data
+        proved unusable. That is a statement about <i>ground truth</i>, and it is correct as such.
+        But the model's own attribution names Malaysian provinces first on
+        <b>{pct(sgMysShare)}</b> of Singapore episode days, and the published literature says that
+        is not a mistake. The engine makes Indonesia-and-Malaysia → Singapore statements while the
+        page sold itself as an Indonesia → Singapore instrument. That framing should be corrected
+        — not softened, corrected — and the correction makes the case more interesting rather than
+        less.</p>
+        <p class="caveat"><b>What the same literature says about the granularity.</b> Hansen et
+        al.'s two Singapore monitoring stations sit about 25 km apart — less than one cell of this
+        model's grid. During the same September–November 2015 episode they attribute
+        {pct(LIT.hansen.s_sumatra[0])} and {pct(LIT.hansen.s_sumatra[1])} of PM10 to South Sumatra,
+        and {pct(LIT.hansen.c_kalimantan[0])} and {pct(LIT.hansen.c_kalimantan[1])} to Central
+        Kalimantan — <b>the two stations reverse the top-ranked source province</b>. The
+        within-receptor spread exceeds the between-province differences any attribution of this
+        kind reports. And <a href="#ref-koplitz">Koplitz et al. (2016)</a>, running a full adjoint
+        chemistry-transport model over a whole season, still wrote that "there is some uncertainty
+        in our attributions of emissions and exposure contributions to specific provinces". If a
+        tagged dispersion model and an adjoint CTM both decline that precision, a kinematic
+        trajectory should decline it too — while continuing to publish the ranking as what it is,
+        a prioritised list of where to look.</p>
+      </section>
+
+      <section id="s12">
+        <h2><span class="num">12</span> Finding nine — three claims the case's own data contradicts</h2>
+        <p>These are not interpretive disagreements. They are statements on the page that the
+        published JSON refutes.</p>
+        <div class="stat-row">
+          <div class="stat"><span class="sv alert">{pct(TR.gfas_height_share, 1)}</span><span class="sl">of parcels actually released at a CAMS GFAS injection height</span></div>
+          <div class="stat"><span class="sv alert">{TR.cams_comparison.status}</span><span class="sl">the CAMS chemistry comparison chapter 04 promises</span></div>
+          <div class="stat"><span class="sv alert">{TR.shared_years_with_risk.length}</span><span class="sl">seasons shared between the risk model and the transport model</span></div>
+        </div>
+        <ol class="uses">
+          <li><b>"Released at CAMS GFAS injection heights."</b> Chapter 04 says the forward
+          trajectories are released at GFAS injection heights. The transport metadata says
+          {pct(TR.gfas_height_share, 1)} of parcels were —
+          <b>{pct(TR.plume_rise_fallback_share, 1)} used the parameterised plume-rise fallback</b>,
+          because GFAS carries a usable injection height only over the later part of the archive.
+          The hero's smaller print does say heights come from GFAS "where GFAS exists"; the chapter
+          that draws the plume does not. Since release height decides whether smoke settles locally
+          or joins the flow across the Strait — and since
+          <a href="#ref-stohl">Draxler and Hess</a> showed that starting a trajectory at 10, 200 and
+          750 m produces "quite substantial" differences where a ±0.5° horizontal offset produces
+          almost none — this is the single most consequential unqualified sentence on the page.</li>
+          <li><b>"Drawn beside the CAMS chemistry forecast."</b> Chapter 04 promises the trajectory
+          result next to a real chemistry-transport model, with divergence as the finding. The
+          published transport metadata records that comparison as
+          <span class="mono">{TR.cams_comparison.status}</span>. The forecast data itself has since
+          landed — the ingest reports {TR.cams_forecast.parts} years
+          ({TR.cams_forecast.years.join(", ")}), status
+          <span class="mono">{TR.cams_forecast.status}</span> — but it arrived <i>after</i> the
+          transport stage last ran, so nothing has yet been compared against it. The physics check
+          the specification calls the real validation is one transport re-run away, and until that
+          happens the chapter is describing a figure that does not exist.</li>
+          <li><b>The two halves of the case run on almost disjoint years.</b> The risk model is
+          fitted on {A.published.era5_years.join(", ")}. The transport model is integrated on
+          {TR.years_integrated.join(", ")}. They share
+          <b>{TR.shared_years_with_risk.join(", ")}</b> — {TR.shared_years_with_risk.length} of
+          {A.published.era5_years.length}. Nothing about that is wrong, and it is a straightforward
+          consequence of the Copernicus queue delivering single-level and pressure-level years in
+          different orders. But it means "where fire starts" and "where the smoke goes" are, at
+          present, statements about largely different periods, and the page reads as though they
+          were one system.</li>
+        </ol>
+      </section>
+
+      <section id="s13">
+        <h2><span class="num">13</span> Finding ten — the case's best result is published as a failure</h2>
+        <p>The anchor-replay check asks whether {A.published.anchors.join(" and ")}, held out of
+        training entirely, land in the top decile of modelled seasonal severity. It ships red. The
+        case's own diagnosis is arithmetic: a 90th-percentile rule over
+        {A.anchors.seasons_in_record} seasons admits {A.anchors.seasons_admitted}, and two anchors
+        cannot occupy one slot. That is correct, and refusing to move the threshold is right.</p>
+        <p>What is missing beside it is what the model actually did.</p>
+        <figure>
+          <Fragment set:html={F10} />
+          <figcaption><b>Figure 10.</b> Observed detections (left) against modelled seasonal mean
+          risk (right), for the {A.anchors.seasons.length} seasons in the modelled record. Anchor
+          years, never trained on, in magenta. Bar lengths are each side's own scale.</figcaption>
+        </figure>
+        <p>The model reproduces the observed severity ordering of all
+        {A.anchors.seasons.length} seasons <b>exactly</b> — Spearman ρ =
+        {A.anchors.spearman.toFixed(2)} — having never seen two of them, and scores the anchors
+        blind at AUC {sig(A.anchors.auc_2015)} in 2015 and {sig(A.anchors.auc_2019)} in 2019,
+        higher than its own cross-validated folds. A rank correlation of 1.00 over seven seasons
+        would arise by chance about once in five thousand draws.</p>
+        <p class="caveat"><b>One qualification the case should also print.</b> The ordering is
+        exact but the top of the distribution is compressed. Observed, 2019 exceeds 2012 by
+        {pct(A.anchors.gap_2019_2012_observed, 0)}; modelled, it exceeds it by
+        {pct(A.anchors.gap_2019_2012_modelled, 1)}. The model gets the order right on a margin of
+        under one percent, so the ordering result is robust in rank and fragile in magnitude. Both
+        halves belong on the page.</p>
+        <p class="pull">Publishing a failed check is a discipline. Publishing it without the
+        successful result standing next to it is an error in the opposite direction — and it is
+        the single most valuable thing this instrument does.</p>
+      </section>
+
+      <section id="s14">
+        <h2><span class="num">14</span> What follows for decisions</h2>
+        <p>Evidence is only worth gathering if it changes an action. Before listing the uses it is
+        worth saying what is <i>already</i> published daily over this exact domain, because the
+        case does not say it. The ASEAN Specialised Meteorological Centre publishes the ASEAN Fire
+        Danger Rating System — the full Canadian index set, gridded, free, at analysis plus one to
+        seven days — and BMKG publishes the same thing for Indonesia at observation plus seven days
+        under the SPARTAN banner. Both use de Groot et al.'s 2007 breakpoints unchanged. So a daily
+        1–7 day fire product is not white space. What is white space is the distinction BMKG itself
+        draws: SPARTAN, in its own words, "does not report fire locations … but a picture of the
+        weather conditions that support a fire occurring <i>if</i> there is an ignition source",
+        and "does not detect heat sources". <b>Fire danger is not fire probability</b>, and nothing
+        operational in this region publishes the second. That, and not the lead time, is this
+        instrument's claim to exist. It should be the first sentence of the case, and it currently
+        appears nowhere on it.</p>
+        <p>Read strictly, then, the instrument supports four uses and forbids a fifth.</p>
+        <ol class="uses">
+          <li><b>Patrol allocation, at one to three days.</b> At a 1% alert budget the model
+          returns {pct(L1.scores.model.p1, 0)} precision at one day against
+          {pct(L1.scores.persistence.p1, 0)} for the rule a district office already uses. For
+          <b>KLHK</b>'s Manggala Agni patrols and <b>BNPB</b>'s water-bombing rosters, that is a
+          costable improvement in visits per detection, and §7 says it should hold in districts the
+          model was never fitted on. The caution is that peat fires spread at roughly 135–190 m a
+          day and smoulder for weeks, so the binding operational constraint may be detection
+          latency and dispatch rather than forecast lead — and no published Indonesian dispatch
+          SOP states a target lead time either way. A buyer should be asked which of those two
+          problems they actually have.</li>
+          <li><b>Re-specifying the operational index.</b> §9 is directly actionable by
+          <b>BMKG</b> and by the <b>ASEAN Specialised Meteorological Centre</b>, neither of whom
+          needs to buy anything: over this domain the Build-Up Index outperforms the composite FWI
+          at every lead, reproducing both de Groot et al. (2007) and Mortelmans et al. (2025). That
+          is a change to a published product, not a procurement, and it is the cheapest public good
+          in this review.</li>
+          <li><b>Verification of what is already published.</b> ASMC publishes no skill scores for
+          any of its products, and by ASEAN's own 2023 roadmap it does not publish burned area
+          either. An independently verified, openly scored fire product is defensible even where the
+          variable is not new — and this case's discipline about publishing failed checks is exactly
+          the qualification for that work.</li>
+          <li><b>Seasonal outlook, and near-field warning at 24 hours.</b> The ordering result in
+          §13 — an exact reproduction of seven seasons' severity, blind on two — maps onto the
+          decision that matters at national scale: whether this is a year to pre-position, a
+          <b>BNPB</b> and Ministry of Finance conversation months ahead. At the other end, Figure 7
+          puts the ensemble half-width at {TR.ensemble[2].med.toFixed(0)} km at a day, so
+          24-hour downwind warnings for <b>Singapore's NEA</b> and provincial health offices sit
+          inside the instrument's resolution. Seventy-two-hour province-level attribution does
+          not.</li>
+          <li class="no"><b>Not: contested attribution.</b> Singapore's Transboundary Haze
+          Pollution Act 2014 is precise about what evidence does what, and a province share fits
+          nowhere in it. The Act engages only above a 24-hour PM2.5 index of 101 sustained for a
+          day; its section 8 presumption requires a <i>specific located fire</i> to be
+          <i>proved</i>, and admits satellite information only to establish that the smoke was
+          moving towards Singapore; ownership is presumed only from maps obtained from a compelled
+          disclosure or a foreign government. The unit of attribution throughout is a parcel of land
+          owned or occupied by a named entity — not an administrative region. In the only two
+          Act cases publicly closed, the ownership presumption was rebutted. A province share from
+          a kinematic back-trajectory with a {TR.ensemble[6].med.toFixed(0)} km ensemble half-width,
+          a proximity-biased weighting and a {pct(1 - TR.truncation.top_province_same_at_24h, 0)}
+          sensitivity to the choice of window satisfies no limb of it. Under the <b>ASEAN Agreement
+          on Transboundary Haze Pollution</b> the position is softer but no more useful: the treaty
+          obliges monitoring and early warning, it names no attribution mechanism, and its
+          assessment article is hedged twice over. This is a triage instrument that says where to
+          look, not an evidentiary one that says who is responsible.</li>
+        </ol>
+        <p class="caveat"><b>One thing the case should stop under-selling.</b> Its Singapore
+        receptor correlation is Spearman ρ {sig(A.receptors.singapore.rho)} against instruments.
+        <a href="#ref-crippa">Crippa et al. (2016)</a> ran WRF-Chem at 10 km with full aerosol
+        chemistry over the 2015 episode and report a daily PM2.5 correlation of
+        {LIT.crippa.singapore_r_daily} at Singapore; <a href="#ref-hansen">Hansen et al. (2019)</a>
+        report {LIT.hansen.r_ntu} and {LIT.hansen.r_tp} for the 2015 season with a tagged
+        dispersion model. A parcel-counting exposure index on ERA5 winds, with no chemistry at all,
+        is within the same band as both. The page reports this as a gate that passed; it is a
+        result.</p>
+      </section>
+
+      <section id="s15">
+        <h2><span class="num">15</span> What remains open</h2>
+        <ol class="next">
+          <li><b>Score the anchors against the index.</b> The CEMS backfill is now complete and
+          both {A.published.anchors.join(" and ")} carry an FWI baseline for the first time. The
+          model was already scored blind on those years; the index has not been. That comparison —
+          how an operational fire-danger index and this model each behaved in the two crises the
+          case is named for — is the most valuable single number still missing, and it needs no new
+          data.</li>
+          <li><b>Re-run transport against the CAMS forecast.</b> The forecast years
+          ({TR.cams_forecast.years.join(", ")}) are on disk and the comparison code exists; it
+          simply has not been run since they landed. That closes the only outstanding physics check
+          in the case.</li>
+          <li><b>Score against the operational baseline that actually exists.</b> The comparison a
+          buyer will make is not against day-of-year climatology but against the ASEAN FDRS and
+          BMKG products already published daily over this domain at analysis plus one to seven
+          days. Those are the same CEMS-family indices, so the machinery is in place — what is
+          missing is the framing.</li>
+          <li><b>Confront ProbFire directly.</b> <a href="#ref-nikonovas">Nikonovas et al. (2022)</a>
+          already publish a probabilistic fire-occurrence model on a 0.25° Indonesian grid. It is
+          monthly rather than daily and it publishes no numeric skill table, so a like-for-like
+          comparison is not currently possible — which is itself the argument for building one.</li>
+          <li><b>Give the attribution a distance term.</b> The residence-time × radiative-power
+          weighting is the standard receptor-model form, but with no distance normalisation it
+          ranks the nearest burning province first by construction. A far-field restriction, or a
+          weighting by the parcel's own travel time, would separate "the air came from here" from
+          "here is close".</li>
+          <li><b>Publish an attribution only where the ensemble supports it.</b> The spread is
+          already computed per receptor-day. A province share whose ensemble half-width exceeds the
+          province's own width should be reported at island level or not at all — turning §10's
+          limit into an automatic scope rule rather than a caveat.</li>
+          <li><b>Fit on BUI as well as beat it.</b> If the Build-Up Index is the best single
+          predictor in the CEMS family over peat, the interesting experiment is what the model adds
+          <i>on top of</i> BUI, not what it beats. That is the nested-model version of §9 and it is
+          one refit away.</li>
+          <li><b>Run the spatial test at three days, and by ecosystem rather than by block.</b>
+          §7 blocks geometrically. Blocking by peat/non-peat, or holding out Kalimantan entirely and
+          fitting on Sumatra, tests transfer between the regimes an operator actually cares
+          about.</li>
+        </ol>
+      </section>
+
+      <section id="refs">
+        <h2><span class="num">16</span> References and reproducibility</h2>
+        <ol class="refs">
+          <li id="ref-mortelmans">Mortelmans, J., Apers, S., De Lannoy, G.J.M., Veraverbeke, S.,
+          Field, R.D., Andela, N., Page, S.E. &amp; Bechtold, M. (2025). Using hydrological
+          modelling to improve the Fire Weather Index system over tropical peatlands of peninsular
+          Malaysia, Sumatra and Borneo. <i>International Journal of Wildland Fire</i> 34(2),
+          WF24057. doi:10.1071/WF24057 — <i>the AUC band in Figure 6, and the 42-day
+          autocorrelation length in §7.</i></li>
+          <li id="ref-shmuel">Shmuel, A., Lazebnik, T., Heifetz, E., Glickman, O. &amp; Price, C.
+          (2025). Fire weather indices tailored to regional patterns outperform global models.
+          <i>npj Natural Hazards</i> 2, 74. doi:10.1038/s44304-025-00126-y — <i>Supplementary
+          Table 1, Indonesia, 0.25° daily grid, class-balanced with a random holdout.</i></li>
+          <li id="ref-degroot">de Groot, W.J., Field, R.D., Brady, M.A., Roswintiarti, O. &amp;
+          Mohamad, M. (2007). Development of the Indonesian and Malaysian Fire Danger Rating
+          Systems. <i>Mitigation and Adaptation Strategies for Global Change</i> 12(1), 165–180.
+          doi:10.1007/s11027-006-9043-8 — <i>the Drought Code bands still in operational use.</i></li>
+          <li id="ref-digiuseppe">Di Giuseppe, F., Vitolo, C., Krzeminski, B., Barnard, C., Maciel,
+          P. &amp; San-Miguel-Ayanz, J. (2020). Fire Weather Index: the skill provided by the ECMWF
+          ensemble prediction system. <i>Natural Hazards and Earth System Sciences</i> 20,
+          2365–2378. doi:10.5194/nhess-20-2365-2020</li>
+          <li id="ref-field15">Field, R.D., Spessa, A.C., Aziz, N.A. et al. (2015). Development of
+          a Global Fire Weather Database. <i>Natural Hazards and Earth System Sciences</i> 15,
+          1407–1423. doi:10.5194/nhess-15-1407-2015</li>
+          <li id="ref-nikonovas">Nikonovas, T., Spessa, A., Doerr, S.H., Clay, G.D. &amp;
+          Mezbahuddin, S. (2022). ProbFire: a probabilistic fire early warning system for
+          Indonesia. <i>Natural Hazards and Earth System Sciences</i> 22(1), 303–322.
+          doi:10.5194/nhess-22-303-2022 — <i>the existing 0.25° probabilistic fire-occurrence model
+          for Indonesia; monthly, and it publishes no numeric skill table.</i></li>
+          <li id="ref-roberts">Roberts, D.R., Bahn, V., Ciuti, S. et al. (2017). Cross-validation
+          strategies for data with temporal, spatial, hierarchical, or phylogenetic structure.
+          <i>Ecography</i> 40(8), 913–929. doi:10.1111/ecog.02881</li>
+          <li id="ref-ploton">Ploton, P., Mortier, F., Réjou-Méchain, M. et al. (2020). Spatial
+          validation reveals poor predictive performance of large-scale remote sensing models.
+          <i>Nature Communications</i> 11, 4540. doi:10.1038/s41467-020-18321-y</li>
+          <li id="ref-saito">Saito, T. &amp; Rehmsmeier, M. (2015). The precision-recall plot is
+          more informative than the ROC plot when evaluating binary classifiers on imbalanced
+          datasets. <i>PLoS ONE</i> 10(3), e0118432. doi:10.1371/journal.pone.0118432</li>
+          <li id="ref-davis">Davis, J. &amp; Goadrich, M. (2006). The relationship between
+          precision-recall and ROC curves. <i>Proceedings of the 23rd International Conference on
+          Machine Learning</i>, 233–240. doi:10.1145/1143844.1143874</li>
+          <li id="ref-stohl">Stohl, A. (1998). Computation, accuracy and applications of
+          trajectories — a review and bibliography. <i>Atmospheric Environment</i> 32(6), 947–966.
+          doi:10.1016/S1352-2310(98)00184-8</li>
+          <li id="ref-engstrom">Engström, A. &amp; Magnusson, L. (2009). Estimating trajectory
+          uncertainties due to flow dependent errors in the atmospheric analysis.
+          <i>Atmospheric Chemistry and Physics</i> 9(22), 8857–8867. doi:10.5194/acp-9-8857-2009</li>
+          <li id="ref-hansen">Hansen, A.B., Witham, C.S., Chong, W.M., Kendall, E., Chew, B.N.,
+          Gan, C., Hort, M.C. &amp; Lee, S.-Y. (2019). Haze in Singapore — source attribution of
+          biomass burning PM10 from Southeast Asia. <i>Atmospheric Chemistry and Physics</i> 19(8),
+          5363–5385. doi:10.5194/acp-19-5363-2019 — <i>the two-station reversal in §11.</i></li>
+          <li id="ref-koplitz">Koplitz, S.N., Mickley, L.J., Marlier, M.E. et al. (2016). Public
+          health impacts of the severe haze in Equatorial Asia in September–October 2015 and 2006.
+          <i>Environmental Research Letters</i> 11, 094023. doi:10.1088/1748-9326/11/9/094023</li>
+          <li id="ref-marlier">Marlier, M.E., DeFries, R.S., Kim, P.S., Koplitz, S.N., Jacob, D.J.,
+          Mickley, L.J. &amp; Myers, S.S. (2015). Fire emissions and regional air quality impacts
+          from fires in oil palm, timber, and logging concessions in Indonesia.
+          <i>Environmental Research Letters</i> 10(8), 085005. doi:10.1088/1748-9326/10/8/085005</li>
+          <li id="ref-crippa">Crippa, P., Castruccio, S., Archer-Nicholls, S. et al. (2016).
+          Population exposure to hazardous air quality due to the 2015 fires in Equatorial Asia.
+          <i>Scientific Reports</i> 6, 37074. doi:10.1038/srep37074</li>
+          <li id="ref-reid">Reid, J.S., Hyer, E.J., Johnson, R.S. et al. (2013). Observing and
+          understanding the Southeast Asian aerosol system by remote sensing. <i>Atmospheric
+          Research</i> 122, 403–468. doi:10.1016/j.atmosres.2012.06.005 — <i>"no fire product …
+          provides comprehensive detection of open burning in SEA".</i></li>
+          <li id="ref-vanwagner">Van Wagner, C.E. (1987). Development and structure of the Canadian
+          Forest Fire Weather Index System. <i>Canadian Forestry Service, Forestry Technical Report
+          35</i>. The definition of the Build-Up Index and the Initial Spread Index used in §9.</li>
+          <li id="ref-thpa">Republic of Singapore (2014). <i>Transboundary Haze Pollution Act 2014
+          (Act 24 of 2014)</i>, in force 25 September 2014, with the Transboundary Haze Pollution
+          (Air Quality) Regulations 2014 (S 622/2014). Sections 2(2), 8 and 22 are the ones §14
+          relies on.</li>
+          <li id="ref-aathp">Association of Southeast Asian Nations (2002). <i>ASEAN Agreement on
+          Transboundary Haze Pollution</i>, Kuala Lumpur, 10 June 2002. Articles 4, 7, 8 and 9.
+          Ratified by Indonesia through UU No. 26 Tahun 2014.</li>
+          <li id="ref-cems">Copernicus Emergency Management Service. Fire danger indices historical
+          data from the Copernicus Emergency Management Service (CEMS), <span class="mono">cems-fire-historical-v1</span>,
+          via the CEMS Early Warning Data Store. doi:10.24381/cds.0e89c522</li>
+        </ol>
+        <p class="repro">Every figure on this page is generated in the page's own frontmatter from
+        <code>web/src/data/article.json</code>, which <code>pipeline/article.py</code> derives from
+        the case's published <code>data/stats.json</code> and from
+        <code>data/review.json</code> — the output of <code>pipeline/review.py</code>, which
+        performs the re-scoring, the FWI audit, the spatially blocked refit and the trajectory
+        replay described above. Data vintage {A.vintage}; the case's calibration was generated
+        {A.generated.slice(0, 19)}Z and the review {(A.review_generated ?? "").slice(0, 19)}Z. Gate
+        thresholds were committed to version control before the corresponding results were
+        computed, and none were moved for this review.</p>
+      </section>
+
+      <footer class="end">
+        <p>Part of the Demo Lab. Built end-to-end on public data — acquisition, pipeline, model,
+        validation, and this review.</p>
+        <a class="cta" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/`}>← Back to the instrument</a>
+      </footer>
+    </article>
+
+    <div id="tip" hidden></div>
+
+    <style is:global>
+      body { margin: 0; background: var(--ground); color: var(--ink);
+        font-family: var(--font-body); line-height: 1.7; -webkit-font-smoothing: antialiased; }
+      *, *::before, *::after { box-sizing: border-box; }
+      a { color: var(--accent); }
+
+      .bar { position: sticky; top: 0; z-index: 20; display: flex; justify-content: space-between;
+        align-items: center; gap: 16px; padding: 12px 24px;
+        background: color-mix(in srgb, var(--ground) 92%, transparent);
+        backdrop-filter: blur(8px); border-bottom: 1px solid var(--hairline); }
+      .back { text-decoration: none; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.06em; }
+      .stamp { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--accent); }
+      .stamp.dim { color: var(--ink-muted); }
+
+      article { max-width: 50rem; margin: 0 auto; padding: 0 24px 12vh; }
+      .masthead { padding: 9vh 0 4vh; border-bottom: 1px solid var(--hairline); }
+      .eyebrow { font-family: var(--font-data); font-size: 0.72rem; letter-spacing: 0.16em; color: var(--accent); }
+      h1 { font-family: var(--font-display); font-size: clamp(1.9rem, 4.6vw, 3rem); line-height: 1.1;
+        letter-spacing: -0.02em; margin: 18px 0 20px; }
+      .standfirst { font-size: 1.12rem; color: var(--ink); margin: 0 0 26px; max-width: 42rem; }
+      .byline { display: flex; flex-wrap: wrap; gap: 8px 22px; font-family: var(--font-data);
+        font-size: 0.74rem; letter-spacing: 0.08em; color: var(--ink-muted); text-transform: uppercase; }
+
+      .abstract { margin: 5vh 0; padding: 26px 28px; border: 1px solid var(--hairline);
+        border-left: 3px solid var(--accent); border-radius: var(--radius); background: var(--surface); }
+      .abstract h2 { font-family: var(--font-data); font-size: 0.76rem; letter-spacing: 0.16em;
+        color: var(--accent); margin: 0 0 14px; text-transform: uppercase; }
+      .abstract p { margin: 0 0 12px; font-size: 0.97rem; }
+      .abstract p:last-child { margin-bottom: 0; }
+
+      .toc { display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 20px 0 8px; margin-bottom: 4vh;
+        border-bottom: 1px solid var(--hairline); font-family: var(--font-data); font-size: 0.74rem; }
+      .toc a { text-decoration: none; color: var(--ink-muted); }
+      .toc a:hover { color: var(--accent); }
+
+      section { margin: 6vh 0; }
+      h2 { font-family: var(--font-display); font-size: 1.5rem; line-height: 1.25; letter-spacing: -0.01em;
+        margin: 0 0 20px; display: flex; gap: 14px; align-items: baseline; }
+      .num { font-family: var(--font-data); font-size: 0.9rem; color: var(--accent); flex: none; }
+      p { margin: 0 0 18px; }
+      b { color: #FFE6F1; font-weight: 600; }
+      .mono { font-family: var(--font-data); font-size: 0.88em; color: var(--ink-muted); }
+
+      .caveat { border-left: 2px solid var(--alert); padding: 2px 0 2px 18px; color: var(--ink-muted); }
+      .caveat b { color: var(--alert); }
+      .pull { font-size: 1.1rem; line-height: 1.6; border-left: 3px solid var(--accent);
+        padding: 8px 0 8px 20px; color: #FFE6F1; }
+
+      figure { margin: 34px 0; padding: 20px 18px 14px; border: 1px solid var(--hairline);
+        border-radius: var(--radius); background: var(--surface); }
+      .fig { display: block; width: 100%; height: auto; overflow: visible; }
+      figcaption { font-size: 0.85rem; color: var(--ink-muted); margin-top: 14px; line-height: 1.55; }
+      figcaption b { color: var(--ink); }
+      .hv, [data-t] { cursor: crosshair; }
+      [data-t]:hover { opacity: 1; }
+
+      .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin: 26px 0; }
+      .stat { padding: 18px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
+      .sv { display: block; font-family: var(--font-display); font-size: 1.55rem; letter-spacing: -0.01em;
+        line-height: 1.15; }
+      .sv.amber { color: var(--accent); }
+      .sv.teal { color: #4BB8A9; }
+      .sv.alert { color: var(--alert); }
+      .sl { display: block; font-size: 0.82rem; color: var(--ink-muted); margin-top: 6px; line-height: 1.45; }
+
+      ol.uses, ol.next { padding-left: 22px; margin: 0 0 18px; }
+      ol.uses li, ol.next li { margin-bottom: 14px; }
+      ol.uses li.no { color: var(--ink-muted); }
+      ol.uses li.no b { color: var(--alert); }
+
+      ol.refs { padding-left: 22px; font-size: 0.9rem; color: var(--ink-muted); }
+      ol.refs li { margin-bottom: 12px; }
+      .repro { font-size: 0.86rem; color: var(--ink-muted); border-top: 1px solid var(--hairline); padding-top: 18px; }
+      code { font-family: var(--font-data); font-size: 0.88em; color: var(--accent); }
+
+      .end { margin-top: 8vh; padding-top: 26px; border-top: 1px solid var(--hairline); }
+      .end p { color: var(--ink-muted); font-size: 0.9rem; }
+      .cta { display: inline-block; font-family: var(--font-data); font-size: 0.78rem; letter-spacing: 0.08em;
+        color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; padding: 10px 18px; text-decoration: none; }
+      .cta:hover { background: var(--accent-ink); }
+
+      #tip { position: fixed; z-index: 60; pointer-events: none; background: var(--surface-raised);
+        border: 1px solid var(--hairline); border-radius: 5px; padding: 8px 11px; font-family: var(--font-data);
+        font-size: 0.72rem; line-height: 1.5; color: var(--ink); max-width: 20rem;
+        box-shadow: 0 8px 26px rgba(0,0,0,0.55); }
+
+      @media (max-width: 680px) {
+        article { padding: 0 16px 10vh; }
+        .masthead { padding-top: 5vh; }
+        figure { padding: 12px 8px 10px; }
+        .abstract { padding: 20px 18px; }
+      }
+      @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+    </style>
+
+    <script>
+      /* Hover read-outs. Pure SVG, no GPU path anywhere on this page. */
+      const tip = document.getElementById("tip");
+      const show = (text, e) => {
+        tip.textContent = text; tip.hidden = false;
+        const r = tip.getBoundingClientRect();
+        let x = e.clientX + 14, y = e.clientY + 14;
+        if (x + r.width > innerWidth - 8) x = e.clientX - r.width - 14;
+        if (y + r.height > innerHeight - 8) y = e.clientY - r.height - 14;
+        tip.style.left = x + "px"; tip.style.top = y + "px";
+      };
+      document.querySelectorAll("[data-t]").forEach((el) => {
+        el.addEventListener("mousemove", (e) => show(el.getAttribute("data-t"), e));
+        el.addEventListener("mouseleave", () => { tip.hidden = true; });
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,1285 @@
+{
+ "vintage": "2026-08-31",
+ "generated": "2026-08-31T03:39:36.249284+00:00",
+ "review_generated": "2026-08-31T03:40:03.192552+00:00",
+ "leads": [
+  1,
+  3,
+  7
+ ],
+ "published": {
+  "gates_passed": 3,
+  "gates_total": 5,
+  "hard_passed": 3,
+  "hard_total": 3,
+  "era5_years": [
+   2012,
+   2015,
+   2016,
+   2017,
+   2018,
+   2019,
+   2026
+  ],
+  "folds": [
+   2016,
+   2017,
+   2018
+  ],
+  "anchors": [
+   2015,
+   2019
+  ],
+  "panel_rows": 4748695,
+  "n_cells": 1955,
+  "per_lead": {
+   "1": {
+    "auc": 0.875384,
+    "auc_reanalysis": 0.879272,
+    "foresight_gap": 0.003888,
+    "brier": 0.030767,
+    "base_rate": 0.037812,
+    "auc_climatology": 0.798163,
+    "auc_persistence": 0.746156,
+    "bss_climatology": 0.11573,
+    "bss_persistence": 0.071029,
+    "n": 2142680,
+    "positives": 81019,
+    "fwi_auc": 0.790867,
+    "fwi_bss": 0.108041,
+    "fwi_n": 266658,
+    "fwi_model_auc": 0.881442
+   },
+   "3": {
+    "auc": 0.848293,
+    "auc_reanalysis": 0.870219,
+    "foresight_gap": 0.021926,
+    "brier": 0.032191,
+    "base_rate": 0.03781,
+    "auc_climatology": 0.798374,
+    "auc_persistence": 0.725457,
+    "bss_climatology": 0.074665,
+    "bss_persistence": 0.048421,
+    "n": 2142680,
+    "positives": 81015,
+    "fwi_auc": 0.755351,
+    "fwi_bss": 0.086564,
+    "fwi_n": 266658,
+    "fwi_model_auc": 0.854758
+   },
+   "7": {
+    "auc": 0.822126,
+    "auc_reanalysis": 0.860349,
+    "foresight_gap": 0.038223,
+    "brier": 0.034299,
+    "base_rate": 0.037787,
+    "auc_climatology": 0.798889,
+    "auc_persistence": 0.693713,
+    "bss_climatology": 0.013276,
+    "bss_persistence": 0.012124,
+    "n": 2142680,
+    "positives": 80965,
+    "fwi_auc": 0.71295,
+    "fwi_bss": 0.051078,
+    "fwi_n": 266658,
+    "fwi_model_auc": 0.836587
+   }
+  },
+  "shap_share": {
+   "dryness": 0.0294,
+   "atmosphere": 0.1766,
+   "soil": 0.1067,
+   "fuel": 0.1085,
+   "fire_history": 0.4373,
+   "season": 0.0497,
+   "ocean": 0.0918
+  },
+  "shap_top": [
+   {
+    "f": "fire_30d",
+    "v": 0.56958
+   },
+   {
+    "f": "fire_7d",
+    "v": 0.34728
+   },
+   {
+    "f": "fire_365d",
+    "v": 0.30715
+   },
+   {
+    "f": "nbr_fire_7d",
+    "v": 0.28829
+   },
+   {
+    "f": "swvl1",
+    "v": 0.28823
+   },
+   {
+    "f": "nbr_fire_30d",
+    "v": 0.25627
+   },
+   {
+    "f": "rh_min",
+    "v": 0.18912
+   },
+   {
+    "f": "vpd_max",
+    "v": 0.18337
+   },
+   {
+    "f": "oni",
+    "v": 0.13782
+   },
+   {
+    "f": "doy_cos",
+    "v": 0.13125
+   }
+  ],
+  "anchor_scores": {
+   "2015": {
+    "auc": 0.908672,
+    "n": 713575,
+    "positives": 73063
+   },
+   "2019": {
+    "auc": 0.903996,
+    "n": 713575,
+    "positives": 49010
+   }
+  }
+ },
+ "rescore": {
+  "sample_rows": 1200000,
+  "folds": [
+   2016,
+   2017,
+   2018
+  ],
+  "n_cells": 1955,
+  "per_lead": {
+   "1": {
+    "n": 400000,
+    "positives": 15052,
+    "base_rate": 0.03763,
+    "scores": {
+     "model": {
+      "auc": 0.874269,
+      "ap": 0.291823,
+      "ap_lift": 7.755,
+      "p1": 0.52825,
+      "r1": 0.14038,
+      "p5": 0.3013,
+      "r5": 0.400345,
+      "k1": 4000
+     },
+     "climatology": {
+      "auc": 0.801102,
+      "ap": 0.151298,
+      "ap_lift": 4.021,
+      "p1": 0.27275,
+      "r1": 0.072482,
+      "p5": 0.19965,
+      "r5": 0.26528,
+      "k1": 4000
+     },
+     "persistence": {
+      "auc": 0.743775,
+      "ap": 0.19748,
+      "ap_lift": 5.248,
+      "p1": 0.44525,
+      "r1": 0.118323,
+      "p5": 0.2595,
+      "r5": 0.344805,
+      "k1": 4000
+     }
+    },
+    "decomposition": {
+     "model": {
+      "day": 0.828857,
+      "cell": 0.819452
+     },
+     "climatology": {
+      "day": 0.760724,
+      "cell": 0.695935
+     },
+     "persistence": {
+      "day": 0.712033,
+      "cell": 0.70626
+     }
+    },
+    "cell_rate_only": {
+     "auc": 0.680408,
+     "ap": 0.07016,
+     "p1": 0.1045
+    },
+    "model_vs_cellrate_spearman": 0.437
+   },
+   "3": {
+    "n": 400000,
+    "positives": 15114,
+    "base_rate": 0.037785,
+    "scores": {
+     "model": {
+      "auc": 0.84615,
+      "ap": 0.234057,
+      "ap_lift": 6.194,
+      "p1": 0.4525,
+      "r1": 0.119757,
+      "p5": 0.26065,
+      "r5": 0.344912,
+      "k1": 4000
+     },
+     "climatology": {
+      "auc": 0.796868,
+      "ap": 0.151414,
+      "ap_lift": 4.007,
+      "p1": 0.2825,
+      "r1": 0.074765,
+      "p5": 0.20205,
+      "r5": 0.267368,
+      "k1": 4000
+     },
+     "persistence": {
+      "auc": 0.721642,
+      "ap": 0.164243,
+      "ap_lift": 4.347,
+      "p1": 0.39425,
+      "r1": 0.10434,
+      "p5": 0.2378,
+      "r5": 0.314675,
+      "k1": 4000
+     }
+    },
+    "decomposition": {
+     "model": {
+      "day": 0.805614,
+      "cell": 0.779643
+     },
+     "climatology": {
+      "day": 0.756975,
+      "cell": 0.691015
+     },
+     "persistence": {
+      "day": 0.692645,
+      "cell": 0.682854
+     }
+    },
+    "cell_rate_only": {
+     "auc": 0.672243,
+     "ap": 0.069694,
+     "p1": 0.125
+    },
+    "model_vs_cellrate_spearman": 0.441
+   },
+   "7": {
+    "n": 400000,
+    "positives": 15019,
+    "base_rate": 0.037547,
+    "scores": {
+     "model": {
+      "auc": 0.822677,
+      "ap": 0.187086,
+      "ap_lift": 4.983,
+      "p1": 0.36875,
+      "r1": 0.098209,
+      "p5": 0.2253,
+      "r5": 0.30002,
+      "k1": 4000
+     },
+     "climatology": {
+      "auc": 0.799741,
+      "ap": 0.153616,
+      "ap_lift": 4.091,
+      "p1": 0.27925,
+      "r1": 0.074372,
+      "p5": 0.20525,
+      "r5": 0.27332,
+      "k1": 4000
+     },
+     "persistence": {
+      "auc": 0.697058,
+      "ap": 0.127912,
+      "ap_lift": 3.407,
+      "p1": 0.30225,
+      "r1": 0.080498,
+      "p5": 0.2065,
+      "r5": 0.274985,
+      "k1": 4000
+     }
+    },
+    "decomposition": {
+     "model": {
+      "day": 0.788615,
+      "cell": 0.746026
+     },
+     "climatology": {
+      "day": 0.760349,
+      "cell": 0.694586
+     },
+     "persistence": {
+      "day": 0.671404,
+      "cell": 0.655754
+     }
+    },
+    "cell_rate_only": {
+     "auc": 0.676802,
+     "ap": 0.069475,
+     "p1": 0.1255
+    },
+    "model_vs_cellrate_spearman": 0.449
+   }
+  }
+ },
+ "metric_reversal": {
+  "auc_prefers": "climatology",
+  "ap_prefers": "persistence",
+  "climatology": {
+   "auc": 0.801102,
+   "ap": 0.151298,
+   "p1": 0.27275
+  },
+  "persistence": {
+   "auc": 0.743775,
+   "ap": 0.19748,
+   "p1": 0.44525
+  },
+  "reversed": true
+ },
+ "spatial": {
+  "block_deg": 2.0,
+  "n_blocks": 73,
+  "n_spatial_folds": 4,
+  "n_cells": 1955,
+  "seasons": [
+   2016,
+   2017,
+   2018
+  ],
+  "per_lead": {
+   "1": {
+    "n": 2142680,
+    "auc": 0.87,
+    "ap": 0.282528,
+    "base_rate": 0.037812,
+    "p1": 0.502404,
+    "r1": 0.13287,
+    "published_auc": 0.875384,
+    "delta_auc": -0.005384,
+    "delta_ap": -0.009295,
+    "per_block": {
+     "0": {
+      "n": 550192,
+      "auc": 0.885285,
+      "ap": 0.327943,
+      "base_rate": 0.039101
+     },
+     "1": {
+      "n": 663080,
+      "auc": 0.865046,
+      "ap": 0.23121,
+      "base_rate": 0.033074
+     },
+     "2": {
+      "n": 384696,
+      "auc": 0.857893,
+      "ap": 0.247738,
+      "base_rate": 0.037713
+     },
+     "3": {
+      "n": 544712,
+      "auc": 0.866846,
+      "ap": 0.305252,
+      "base_rate": 0.042347
+     }
+    },
+    "per_season": {
+     "2016": {
+      "n": 715530,
+      "auc": 0.854856,
+      "ap": 0.241288
+     },
+     "2017": {
+      "n": 713575,
+      "auc": 0.861782,
+      "ap": 0.211831
+     },
+     "2018": {
+      "n": 713575,
+      "auc": 0.885907,
+      "ap": 0.357777
+     }
+    }
+   },
+   "7": {
+    "n": 2142680,
+    "auc": 0.813858,
+    "ap": 0.1713,
+    "base_rate": 0.037787,
+    "p1": 0.334438,
+    "r1": 0.088507,
+    "published_auc": 0.822126,
+    "delta_auc": -0.008268,
+    "delta_ap": -0.015786,
+    "per_block": {
+     "0": {
+      "n": 550192,
+      "auc": 0.832234,
+      "ap": 0.201779,
+      "base_rate": 0.03911
+     },
+     "1": {
+      "n": 663080,
+      "auc": 0.818204,
+      "ap": 0.149215,
+      "base_rate": 0.032973
+     },
+     "2": {
+      "n": 384696,
+      "auc": 0.787042,
+      "ap": 0.139732,
+      "base_rate": 0.037721
+     },
+     "3": {
+      "n": 544712,
+      "auc": 0.806441,
+      "ap": 0.18193,
+      "base_rate": 0.042356
+     }
+    },
+    "per_season": {
+     "2016": {
+      "n": 715530,
+      "auc": 0.785553,
+      "ap": 0.123748
+     },
+     "2017": {
+      "n": 713575,
+      "auc": 0.808989,
+      "ap": 0.133396
+     },
+     "2018": {
+      "n": 713575,
+      "auc": 0.835605,
+      "ap": 0.237172
+     }
+    }
+   }
+  }
+ },
+ "fwi": {
+  "years_on_disk": [
+   2012,
+   2013,
+   2014,
+   2015,
+   2016,
+   2017,
+   2018,
+   2019,
+   2020,
+   2021,
+   2022,
+   2023,
+   2024,
+   2025,
+   2026
+  ],
+  "rows_by_year": {
+   "2012": 2165622,
+   "2013": 2159705,
+   "2014": 2159705,
+   "2015": 2159705,
+   "2016": 2165622,
+   "2017": 2159705,
+   "2018": 2159705,
+   "2019": 2159705,
+   "2020": 2165622,
+   "2021": 2159705,
+   "2022": 2159705,
+   "2023": 2159705,
+   "2024": 2165622,
+   "2025": 2159705,
+   "2026": 1070977
+  },
+  "oof_folds": [
+   2016,
+   2017,
+   2018
+  ],
+  "fold_years_with_fwi": [
+   2016,
+   2017,
+   2018
+  ],
+  "fold_years_without_fwi": [],
+  "anchor_years_with_fwi": [
+   2015,
+   2019
+  ],
+  "anchor_years_without_fwi": [],
+  "ingest_status": {
+   "status": "complete",
+   "done": 15,
+   "rows": 31330515,
+   "years": 15,
+   "licence": "CC BY 4.0",
+   "doi": "10.24381/cds.0e89c522"
+  },
+  "per_lead": {
+   "1": {
+    "oof_rows": 400000,
+    "rows_with_fwi": 400000,
+    "join_share": 1.0,
+    "per_fold": {
+     "2016": {
+      "oof_rows": 133342,
+      "rows_with_fwi": 133342,
+      "share": 1.0
+     },
+     "2017": {
+      "oof_rows": 133272,
+      "rows_with_fwi": 133272,
+      "share": 1.0
+     },
+     "2018": {
+      "oof_rows": 133386,
+      "rows_with_fwi": 133386,
+      "share": 1.0
+     }
+    },
+    "like_for_like": {
+     "n": 400000.0,
+     "base_rate": 0.03763,
+     "model_auc": 0.874269,
+     "model_ap": 0.291823,
+     "fwi_auc": 0.776912,
+     "fwi_ap": 0.14177,
+     "climatology_auc": 0.801102,
+     "best_component": "bui",
+     "model_p1": 0.52825,
+     "model_r1": 0.14038
+    },
+    "components": {
+     "fwi": {
+      "auc": 0.776912,
+      "ap": 0.14177,
+      "p1": 0.267
+     },
+     "ffmc": {
+      "auc": 0.7704,
+      "ap": 0.139044,
+      "p1": 0.2675
+     },
+     "dmc": {
+      "auc": 0.780072,
+      "ap": 0.134788,
+      "p1": 0.26525
+     },
+     "dc": {
+      "auc": 0.759396,
+      "ap": 0.114659,
+      "p1": 0.2265
+     },
+     "bui": {
+      "auc": 0.780964,
+      "ap": 0.133828,
+      "p1": 0.265
+     },
+     "kbdi": {
+      "auc": 0.763018,
+      "ap": 0.118021,
+      "p1": 0.2285
+     }
+    },
+    "by_fold": {
+     "2016": {
+      "n": 133342,
+      "base_rate": 0.037678,
+      "model_auc": 0.862162,
+      "fwi_auc": 0.750228,
+      "model_ap": 0.256236,
+      "fwi_ap": 0.113163
+     },
+     "2017": {
+      "n": 133272,
+      "base_rate": 0.028513,
+      "model_auc": 0.865417,
+      "fwi_auc": 0.754912,
+      "model_ap": 0.213005,
+      "fwi_ap": 0.117862
+     },
+     "2018": {
+      "n": 133386,
+      "base_rate": 0.046692,
+      "model_auc": 0.888759,
+      "fwi_auc": 0.806189,
+      "model_ap": 0.3599,
+      "fwi_ap": 0.177325
+     }
+    }
+   },
+   "3": {
+    "oof_rows": 400000,
+    "rows_with_fwi": 400000,
+    "join_share": 1.0,
+    "per_fold": {
+     "2016": {
+      "oof_rows": 133342,
+      "rows_with_fwi": 133342,
+      "share": 1.0
+     },
+     "2017": {
+      "oof_rows": 133272,
+      "rows_with_fwi": 133272,
+      "share": 1.0
+     },
+     "2018": {
+      "oof_rows": 133386,
+      "rows_with_fwi": 133386,
+      "share": 1.0
+     }
+    },
+    "like_for_like": {
+     "n": 400000.0,
+     "base_rate": 0.037785,
+     "model_auc": 0.84615,
+     "model_ap": 0.234057,
+     "fwi_auc": 0.738417,
+     "fwi_ap": 0.125657,
+     "climatology_auc": 0.796868,
+     "best_component": "bui",
+     "model_p1": 0.4525,
+     "model_r1": 0.119757
+    },
+    "components": {
+     "fwi": {
+      "auc": 0.738417,
+      "ap": 0.125657,
+      "p1": 0.26375
+     },
+     "ffmc": {
+      "auc": 0.728847,
+      "ap": 0.117553,
+      "p1": 0.2405
+     },
+     "dmc": {
+      "auc": 0.74741,
+      "ap": 0.124494,
+      "p1": 0.26975
+     },
+     "dc": {
+      "auc": 0.736341,
+      "ap": 0.110844,
+      "p1": 0.2345
+     },
+     "bui": {
+      "auc": 0.749883,
+      "ap": 0.124655,
+      "p1": 0.2685
+     },
+     "kbdi": {
+      "auc": 0.731722,
+      "ap": 0.111854,
+      "p1": 0.23225
+     }
+    },
+    "by_fold": {
+     "2016": {
+      "n": 133342,
+      "base_rate": 0.038068,
+      "model_auc": 0.832513,
+      "fwi_auc": 0.705726,
+      "model_ap": 0.18912,
+      "fwi_ap": 0.099186
+     },
+     "2017": {
+      "n": 133272,
+      "base_rate": 0.028183,
+      "model_auc": 0.835191,
+      "fwi_auc": 0.712308,
+      "model_ap": 0.162165,
+      "fwi_ap": 0.095481
+     },
+     "2018": {
+      "n": 133386,
+      "base_rate": 0.047096,
+      "model_auc": 0.862873,
+      "fwi_auc": 0.774075,
+      "model_ap": 0.302469,
+      "fwi_ap": 0.164223
+     }
+    }
+   },
+   "7": {
+    "oof_rows": 400000,
+    "rows_with_fwi": 400000,
+    "join_share": 1.0,
+    "per_fold": {
+     "2016": {
+      "oof_rows": 133342,
+      "rows_with_fwi": 133342,
+      "share": 1.0
+     },
+     "2017": {
+      "oof_rows": 133272,
+      "rows_with_fwi": 133272,
+      "share": 1.0
+     },
+     "2018": {
+      "oof_rows": 133386,
+      "rows_with_fwi": 133386,
+      "share": 1.0
+     }
+    },
+    "like_for_like": {
+     "n": 400000.0,
+     "base_rate": 0.037547,
+     "model_auc": 0.822677,
+     "model_ap": 0.187086,
+     "fwi_auc": 0.697054,
+     "fwi_ap": 0.110684,
+     "climatology_auc": 0.799741,
+     "best_component": "bui",
+     "model_p1": 0.36875,
+     "model_r1": 0.098209
+    },
+    "components": {
+     "fwi": {
+      "auc": 0.697054,
+      "ap": 0.110684,
+      "p1": 0.2495
+     },
+     "ffmc": {
+      "auc": 0.686639,
+      "ap": 0.102722,
+      "p1": 0.23575
+     },
+     "dmc": {
+      "auc": 0.704934,
+      "ap": 0.109013,
+      "p1": 0.25425
+     },
+     "dc": {
+      "auc": 0.70893,
+      "ap": 0.099894,
+      "p1": 0.211
+     },
+     "bui": {
+      "auc": 0.709765,
+      "ap": 0.109593,
+      "p1": 0.254
+     },
+     "kbdi": {
+      "auc": 0.692677,
+      "ap": 0.098296,
+      "p1": 0.20925
+     }
+    },
+    "by_fold": {
+     "2016": {
+      "n": 133342,
+      "base_rate": 0.038383,
+      "model_auc": 0.794399,
+      "fwi_auc": 0.667486,
+      "model_ap": 0.132518,
+      "fwi_ap": 0.08624
+     },
+     "2017": {
+      "n": 133272,
+      "base_rate": 0.02753,
+      "model_auc": 0.815213,
+      "fwi_auc": 0.655926,
+      "model_ap": 0.141436,
+      "fwi_ap": 0.08919
+     },
+     "2018": {
+      "n": 133386,
+      "base_rate": 0.046722,
+      "model_auc": 0.844041,
+      "fwi_auc": 0.738132,
+      "model_ap": 0.25081,
+      "fwi_ap": 0.14334
+     }
+    }
+   }
+  },
+  "seasons_with_data": [
+   "2016",
+   "2017",
+   "2018"
+  ],
+  "published_n": 266658,
+  "reviewed_build": {
+   "years_on_disk": [
+    2012,
+    2013,
+    2016,
+    2018,
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024,
+    2025,
+    2026
+   ],
+   "fold_years_with_fwi": [
+    2016,
+    2018
+   ],
+   "fold_years_without_fwi": [
+    2017
+   ],
+   "anchor_years_without_fwi": [
+    2015
+   ],
+   "years_recovered": [
+    2014,
+    2015,
+    2017
+   ],
+   "published_n": 133386,
+   "auc_fwi": {
+    "1": 0.806189,
+    "3": 0.774075,
+    "7": 0.738132
+   },
+   "bss_vs_fwi": {
+    "1": 0.131496,
+    "3": 0.104357,
+    "7": 0.055004
+   },
+   "ingest_status": {
+    "status": "queued",
+    "reason": "EWDS jobs submitted; rerun to drain"
+   },
+   "note": "the three seasons were recorded as rejected, not queued; the poller re-stamped each rejected job's cooling-off timestamp on every pass, so the submit loop's 180 s retry window never elapsed and the request was never resubmitted"
+  }
+ },
+ "traj": {
+  "receptor_days": 9594,
+  "parcel_rows": 287820,
+  "years": [
+   2014,
+   2015,
+   2019,
+   2020,
+   2024,
+   2025,
+   2026
+  ],
+  "ensemble": [
+   {
+    "h": 6,
+    "surv": 1.0,
+    "med": 23.64,
+    "p90": 44.37
+   },
+   {
+    "h": 12,
+    "surv": 0.999753,
+    "med": 44.49,
+    "p90": 92.6
+   },
+   {
+    "h": 24,
+    "surv": 0.966041,
+    "med": 81.98,
+    "p90": 184.89
+   },
+   {
+    "h": 36,
+    "surv": 0.878539,
+    "med": 109.79,
+    "p90": 266.18
+   },
+   {
+    "h": 48,
+    "surv": 0.775033,
+    "med": 139.2,
+    "p90": 347.27
+   },
+   {
+    "h": 60,
+    "surv": 0.664881,
+    "med": 158.79,
+    "p90": 408.75
+   },
+   {
+    "h": 72,
+    "surv": 0.554263,
+    "med": 176.96,
+    "p90": 465.42
+   }
+  ],
+  "truncation": {
+   "episodes_tested": 730,
+   "top_province_same_at_48h": 0.887671,
+   "top_province_same_at_24h": 0.725948,
+   "median_top_share_72h": 0.71791,
+   "median_n_provinces_72h": 28.0,
+   "note": "the same parcels, the same fires, the same residence-time x FRP weighting \u2014 only the assumed travel window changes"
+  },
+  "attribution": {
+   "receptor_days": 9594,
+   "no_attributable_source_days": 773,
+   "no_attributable_source_share": 0.080571,
+   "median_top_share": 0.742036,
+   "median_top_agreement": 0.766667,
+   "top_share_over_half": 0.815554,
+   "agreement_over_half": 0.667611,
+   "provinces_named": 36
+  },
+  "singapore": {
+   "episode_days": 1284,
+   "distinct_top_provinces": 26,
+   "median_top_share": 0.641321,
+   "median_agreement": 0.533333,
+   "top_share_over_half": 0.69081,
+   "provinces": [
+    {
+     "p": "Johor",
+     "days": 329,
+     "share": 0.256231
+    },
+    {
+     "p": "Bangka-Belitung Islands",
+     "days": 235,
+     "share": 0.183022
+    },
+    {
+     "p": "South Sumatra",
+     "days": 143,
+     "share": 0.111371
+    },
+    {
+     "p": "Riau",
+     "days": 122,
+     "share": 0.095016
+    },
+    {
+     "p": "Jambi",
+     "days": 73,
+     "share": 0.056854
+    },
+    {
+     "p": "West Kalimantan",
+     "days": 61,
+     "share": 0.047508
+    },
+    {
+     "p": "Central Kalimantan",
+     "days": 52,
+     "share": 0.040498
+    },
+    {
+     "p": "Pahang",
+     "days": 43,
+     "share": 0.033489
+    }
+   ]
+  },
+  "bearing": {
+   "rows": 8286,
+   "within_30": 0.613444,
+   "median": 19.68,
+   "p90": 106.41,
+   "per_receptor": {
+    "medan": {
+     "n": 910,
+     "within_30": 0.5,
+     "median": 30.13,
+     "p90": 119.24
+    },
+    "palangkaraya": {
+     "n": 1167,
+     "within_30": 0.626392,
+     "median": 18.06,
+     "p90": 107.15
+    },
+    "palembang": {
+     "n": 1345,
+     "within_30": 0.670632,
+     "median": 16.45,
+     "p90": 90.63
+    },
+    "pekanbaru": {
+     "n": 1300,
+     "within_30": 0.69,
+     "median": 15.06,
+     "p90": 90.1
+    },
+    "pontianak": {
+     "n": 1191,
+     "within_30": 0.570949,
+     "median": 23.21,
+     "p90": 106.09
+    },
+    "singapore": {
+     "n": 1247,
+     "within_30": 0.550922,
+     "median": 24.58,
+     "p90": 107.35
+    },
+    "west_sumatra": {
+     "n": 1126,
+     "within_30": 0.649201,
+     "median": 14.98,
+     "p90": 129.83
+    }
+   }
+  },
+  "gfas_height_share": 0.037403,
+  "plume_rise_fallback_share": 0.962597,
+  "escaped_domain_share": 0.308403,
+  "years_integrated": [
+   2014,
+   2015,
+   2019,
+   2020,
+   2024,
+   2025,
+   2026
+  ],
+  "hours": 72,
+  "scheme": "Petterssen 2nd-order, 2 corrector passes",
+  "receptor_km": 75.0,
+  "cams_comparison": {
+   "status": "unavailable"
+  },
+  "cams_forecast": {
+   "status": "complete",
+   "parts": 3,
+   "years": [
+    2015,
+    2019,
+    2025
+   ]
+  },
+  "gfas_injection_years": [],
+  "shared_years_with_risk": [
+   2015,
+   2019,
+   2026
+  ],
+  "risk_only_years": [
+   2012,
+   2016,
+   2017,
+   2018
+  ],
+  "transport_only_years": [
+   2014,
+   2020,
+   2024,
+   2025
+  ]
+ },
+ "anchors": {
+  "seasons": [
+   {
+    "year": 2012,
+    "modelled": 0.102093,
+    "observed": 236034,
+    "rank_modelled": 3.0,
+    "rank_observed": 3.0
+   },
+   {
+    "year": 2015,
+    "modelled": 0.149018,
+    "observed": 629244,
+    "rank_modelled": 1.0,
+    "rank_observed": 1.0
+   },
+   {
+    "year": 2016,
+    "modelled": 0.037546,
+    "observed": 56098,
+    "rank_modelled": 6.0,
+    "rank_observed": 6.0
+   },
+   {
+    "year": 2017,
+    "modelled": 0.035883,
+    "observed": 41442,
+    "rank_modelled": 7.0,
+    "rank_observed": 7.0
+   },
+   {
+    "year": 2018,
+    "modelled": 0.063217,
+    "observed": 103215,
+    "rank_modelled": 5.0,
+    "rank_observed": 5.0
+   },
+   {
+    "year": 2019,
+    "modelled": 0.103054,
+    "observed": 304129,
+    "rank_modelled": 2.0,
+    "rank_observed": 2.0
+   },
+   {
+    "year": 2026,
+    "modelled": 0.097922,
+    "observed": 110531,
+    "rank_modelled": 4.0,
+    "rank_observed": 4.0
+   }
+  ],
+  "spearman": 1.0,
+  "exact_order": true,
+  "observed_full": {
+   "2012": 236034,
+   "2013": 185012,
+   "2014": 286745,
+   "2015": 629244,
+   "2016": 56098,
+   "2017": 41442,
+   "2018": 103215,
+   "2019": 304129,
+   "2020": 32489,
+   "2021": 28372,
+   "2022": 18954,
+   "2023": 137693,
+   "2024": 49700,
+   "2025": 54979,
+   "2026": 110531
+  },
+  "auc_2015": 0.908672,
+  "auc_2019": 0.903996,
+  "gate_pass": false,
+  "seasons_admitted": 1,
+  "seasons_in_record": 7,
+  "structurally_unsatisfiable": true,
+  "gap_2019_2012_modelled": 0.0093,
+  "gap_2019_2012_observed": 0.2239
+ },
+ "fires": {
+  "rows_raw": 3040367,
+  "rows_kept": 2678059,
+  "removed_share": 0.119166,
+  "nrt_rows": 126548,
+  "nrt_removed_share": 0.106853,
+  "type_present_share": 0.958377,
+  "composition": {
+   "low_confidence": 142988,
+   "static_mask": 105561,
+   "type_static": 74328,
+   "type_volcano": 21606,
+   "type_offshore": 17825
+  },
+  "by_year": {
+   "2012": 258923,
+   "2013": 211328,
+   "2014": 446248,
+   "2015": 658645,
+   "2016": 92058,
+   "2017": 48785,
+   "2018": 117198,
+   "2019": 330757,
+   "2020": 46891,
+   "2021": 39326,
+   "2022": 30335,
+   "2023": 147402,
+   "2024": 61572,
+   "2025": 60172,
+   "2026": 128419
+  },
+  "retained_inside_mask": 0,
+  "per_product": {
+   "NRT_API": {
+    "rows": 113026,
+    "retained_inside_mask": 0
+   },
+   "SP_API": {
+    "rows": 75565,
+    "retained_inside_mask": 0
+   },
+   "SP_BULK": {
+    "rows": 2489468,
+    "retained_inside_mask": 0
+   }
+  }
+ },
+ "receptors": {
+  "singapore": {
+   "tier": 1,
+   "rho": 0.525033,
+   "n": 795,
+   "kind": "instrument",
+   "pass": true
+  },
+  "palembang": {
+   "tier": 2,
+   "rho": 0.43877,
+   "n": 112,
+   "kind": "instrument",
+   "pass": false
+  },
+  "west_sumatra": {
+   "tier": 2,
+   "rho": 0.561549,
+   "n": 393,
+   "kind": "instrument",
+   "pass": true
+  },
+  "medan": {
+   "tier": 2,
+   "rho": -0.025627,
+   "n": 33,
+   "kind": "instrument",
+   "pass": false
+  },
+  "pekanbaru": {
+   "tier": 3,
+   "rho": 0.571334,
+   "n": 1079,
+   "kind": "model (CAMS EAC4 reanalysis)",
+   "pass": true
+  },
+  "palangkaraya": {
+   "tier": 3,
+   "rho": 0.685433,
+   "n": 1079,
+   "kind": "model (CAMS EAC4 reanalysis)",
+   "pass": true
+  },
+  "pontianak": {
+   "tier": 3,
+   "rho": 0.637474,
+   "n": 1079,
+   "kind": "model (CAMS EAC4 reanalysis)",
+   "pass": true
+  }
+ },
+ "gates": {
+  "G-J1": {
+   "pass": true,
+   "hard": true,
+   "reason": null
+  },
+  "G-J2": {
+   "pass": true,
+   "hard": true,
+   "reason": null
+  },
+  "G-J3": {
+   "pass": false,
+   "hard": false,
+   "reason": "bearings agree within 30 deg on only 61.3% of episode days, below the 70% threshold"
+  },
+  "G-J4": {
+   "pass": true,
+   "hard": true,
+   "reason": null
+  },
+  "G-J5": {
+   "pass": false,
+   "hard": false,
+   "reason": "2019: modelled seasonal severity at percentile 0.83, below 0.9 (ranked 2 of 7 modelled seasons; observed it is 0.93)"
+  }
+ }
+}

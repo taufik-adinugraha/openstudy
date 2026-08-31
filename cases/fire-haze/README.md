@@ -114,6 +114,53 @@ The two anchor years are the two worst of the six drained so far, and 2015 is ne
 2017. That ordering is what gate G-J5 asks the model — which never saw either year — to
 reproduce.
 
+## The adversarial review (`/haze/article`)
+
+`pipeline/review.py` re-derives every headline statistic from the case's own published output
+under four tests the pipeline did not run, and `pipeline/article.py` turns the result into the
+data layer the review article renders. `make review && make article` rebuilds both.
+
+The four tests, and what they found:
+
+| test | result |
+|---|---|
+| **Average precision** alongside AUC | AP **0.292** at 1 day against a 3.76 % base rate (7.8× lift). At a 1 % alert budget precision is **52.8 %** at 1 day and **36.9 %** at 7. AUC and AP rank the two internal baselines in **opposite orders** — climatology wins on AUC, persistence on AP. |
+| **ROC decomposition** — within-day and within-cell | Model holds 0.829 within a day and 0.819 within a cell against 0.874 overall. A constant per-cell fire-rate map with no weather reaches only 0.680. The skill is not a map. |
+| **Spatially blocked refit** (2° blocks → 4 folds, on top of the season blocking) | **AUC 0.870 against the published 0.875 at 1 day (−0.0054), and 0.814 against 0.822 at 7 (−0.0083)**, on the identical 2,142,680 held-out cell-days. The obvious leakage hypothesis is refuted. This is the strongest result in the case. |
+| **Trajectory replay over all 9,594 receptor-days** | Ensemble half-width 24 km at 6 h → **177 km at 72 h**, with only **55 %** of parcels still in the domain. Truncating at 24 h changes the top-ranked province on **27 %** of episodes. Across 1,284 Singapore episode days the most-attributed province is **Johor (25.6 %)**, not South Sumatra (11.1 %) — corroborated by Hansen et al. (2019). |
+
+### The queue-driver bug this review found and fixed
+
+`util.run_store_jobs` polled every job with a stored id on every pass, and on a non-successful
+status wrote `status="rejected", ts=now` — **including for jobs that were already rejected**. The
+submit loop skips a rejected job for 180 s after its `ts`, so the poller's own re-stamping kept
+that window permanently open and the request could never be resubmitted. The log printed
+"cooling off" indefinitely while nothing moved.
+
+That is why `fwi:2014`, `fwi:2015` and `fwi:2017` sat unfetched across ~40 submissions and 6 h 40 m,
+and why gate G-J2's FWI half was scored on **one** held-out season (133,386 cell-days) rather than
+three. The fix drops the dead job id on rejection so the request returns to the submit loop:
+
+```python
+jobs_put(s["key"], status="rejected", job_id=None, ts=time.time())
+```
+
+All three seasons landed within fifteen minutes of the fix. **The CEMS record is now complete —
+15/15 years, 31,330,515 cell-days** — and `risk.py --score-fwi-only` re-scored G-J2 without
+refitting anything. The comparison had been flattered: 2018, the one season it happened to land
+on, is the index's best of the three (FWI AUC 0.806 against 0.750 and 0.755), so the model's Brier
+skill against the FWI at 1 day falls **+0.131 → +0.108** and at 7 days **+0.055 → +0.051**. The
+claim survives, on a proper sample.
+
+Two further FWI findings:
+
+- **BUI beats the composite FWI at every lead** (0.781 vs 0.777 at 1 day, 0.750 vs 0.738 at 3,
+  0.710 vs 0.697 at 7) — reproducing de Groot et al. (2007), who built Indonesia's FDRS around the
+  Drought Code for exactly this reason, and Mortelmans et al. (2025), who measure DC above FWI over
+  this same box. The case's FWI value (0.777) sits inside their published 0.75–0.79 band.
+- **Pooling three seasons hides a threshold crossing**: at 7 days the model scores 0.794 on 2016
+  alone, below the 0.80 the gate asks for, against 0.844 on 2018.
+
 ## Where it stands
 
 Numbers below are from the run on the **seven ERA5 years drained so far** (2012, 2015–2019, 2026 —

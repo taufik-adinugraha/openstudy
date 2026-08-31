@@ -354,7 +354,10 @@ def run_store_jobs(host: str, specs: list[dict], reduce_fn, nc_dir: Path,
                 blocked_reason = blocked
                 break
             if not jid:
-                jobs_put(s["key"], status="failed", ts=time.time())
+                # a submit that returns 2xx without a job id is silent otherwise, and a silent
+                # failure in a queue driver is indistinguishable from a slow queue
+                log(f"  {s['key']}: submit returned no job id — will retry")
+                jobs_put(s["key"], status="failed", job_id=None, ts=time.time())
                 continue
             jobs_put(s["key"], job_id=jid, dataset=s["dataset"], status="accepted",
                      ts=time.time())
@@ -377,8 +380,15 @@ def run_store_jobs(host: str, specs: list[dict], reduce_fn, nc_dir: Path,
                 if st in ("accepted", "running"):
                     continue
                 if st != "successful":
-                    log(f"  {s['key']}: job {st} — cooling off")
-                    jobs_put(s["key"], status="rejected", ts=time.time())
+                    # DROP THE JOB ID.  A terminally rejected job never becomes successful, so
+                    # re-polling it is pointless — and worse, each poll re-stamped `ts`, which
+                    # kept the submit loop's 180 s cooling-off window permanently open and made
+                    # the request unresubmittable for the life of the ledger.  That is why the
+                    # CEMS backfill sat on three missing years across ~40 passes while the log
+                    # said "cooling off".  Clearing the id sends it back to the submit loop.
+                    if v.get("status") != "rejected":
+                        log(f"  {s['key']}: job {st} — dropping the id and requeueing")
+                    jobs_put(s["key"], status="rejected", job_id=None, ts=time.time())
                     continue
                 if not guard_disk(2.0):
                     return {"status": "disk_guard"}
