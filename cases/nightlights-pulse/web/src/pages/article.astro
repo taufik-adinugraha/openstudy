@@ -7,6 +7,7 @@
  */
 import "../styles/tokens.css";
 import A from "../data/article.json";
+import R from "../data/replication.json";
 
 const pct = (x: number, d = 1) => `${(x * 100).toFixed(d)}%`;
 const sig = (x: number, d = 3) => x.toFixed(d);
@@ -225,7 +226,80 @@ function fig7() {
   </svg>`;
 }
 
+/* ── Figure 8 · the decisive test: rural fit on one product, every year ───── */
+function fig8() {
+  const W = 720, H = 340, L = 58, Rr = 150, T = 22, B = 52;
+  const rows = R.testA;
+  const y0 = 0, y1 = 1;
+  const xs = (i: number) => L + (i / (rows.length - 1)) * (W - L - Rr);
+  const ys = (v: number) => H - B - ((v - y0) / (y1 - y0)) * (H - T - B);
+  const path = (key: string, col: string) =>
+    `<path fill="none" stroke="${col}" stroke-width="2.4" d="${rows.map((r: any, i: number) =>
+      `${i ? "L" : "M"}${xs(i).toFixed(1)} ${ys(r[key].r2).toFixed(1)}`).join("")}"/>`;
+  const dots = (key: string, col: string) => rows.map((r: any, i: number) =>
+    `<circle cx="${xs(i).toFixed(1)}" cy="${ys(r[key].r2).toFixed(1)}" r="3.6" fill="${col}"/>`).join("");
+  const gi = rows.findIndex((r: any) => r.year === 2015);
+  const gj = rows.findIndex((r: any) => r.year === 2016);
+  const gy = ys(R.gibson.kabupaten.r2);
+  const split = rows.findIndex((r: any) => r.year === R.sensorSplit);
+  const ticks = rows.map((r: any, i: number) => i % 2 === 0
+    ? `<text x="${xs(i).toFixed(1)}" y="${H - B + 19}" fill="${MUTED}" font-size="10.5" text-anchor="middle">${String(r.year).slice(2)}</text>` : "").join("");
+  const gl = [0, 0.25, 0.5, 0.75, 1].map((v) =>
+    `<line x1="${L}" y1="${ys(v).toFixed(1)}" x2="${W - Rr}" y2="${ys(v).toFixed(1)}" stroke="${GRID}" opacity="0.55"/>
+     <text x="${L - 9}" y="${(ys(v) + 4).toFixed(1)}" fill="${MUTED}" font-size="10.5" text-anchor="end">${v.toFixed(2)}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Rural kabupaten fit on Black Marble is high in every year including the years Gibson et al used">
+    ${gl}
+    <line x1="${xs(split).toFixed(1)}" y1="${T}" x2="${xs(split).toFixed(1)}" y2="${H - B}" stroke="${MUTED}" stroke-dasharray="3 4" opacity="0.5"/>
+    <text x="${(xs(split) + 5).toFixed(1)}" y="${T + 10}" fill="${MUTED}" font-size="9.5" font-family="var(--font-data)">sensor change</text>
+    ${path("kota", TEAL)}${path("kabupaten", AMBER)}
+    ${dots("kota", TEAL)}${dots("kabupaten", AMBER)}
+    <rect x="${(xs(gi) - 7).toFixed(1)}" y="${(gy - 7).toFixed(1)}" width="${(xs(gj) - xs(gi) + 14).toFixed(1)}" height="14" fill="${CORAL}" opacity="0.16" rx="3"/>
+    <circle cx="${xs(gi).toFixed(1)}" cy="${gy.toFixed(1)}" r="5" fill="${CORAL}"/>
+    <circle cx="${xs(gj).toFixed(1)}" cy="${gy.toFixed(1)}" r="5" fill="${CORAL}"/>
+    <line x1="${xs(gi).toFixed(1)}" y1="${(gy - 8).toFixed(1)}" x2="${xs(gi).toFixed(1)}" y2="${(ys(rows[gi].kabupaten.r2) + 8).toFixed(1)}" stroke="${CORAL}" stroke-width="1.3" stroke-dasharray="3 3"/>
+    <text x="${(xs(gj) + 14).toFixed(1)}" y="${(gy + 4).toFixed(1)}" fill="${CORAL}" font-size="11" font-family="var(--font-data)">Gibson 2021 · same years · R² ${R.gibson.kabupaten.r2}</text>
+    <g><circle cx="${W - Rr + 20}" cy="${T + 14}" r="4" fill="${AMBER}"/><text x="${W - Rr + 32}" y="${T + 18}" fill="${MUTED}" font-size="11">kabupaten (rural)</text>
+       <circle cx="${W - Rr + 20}" cy="${T + 36}" r="4" fill="${TEAL}"/><text x="${W - Rr + 32}" y="${T + 40}" fill="${MUTED}" font-size="11">kota (cities)</text>
+       <circle cx="${W - Rr + 20}" cy="${T + 58}" r="4" fill="${CORAL}"/><text x="${W - Rr + 32}" y="${T + 62}" fill="${MUTED}" font-size="11">same years,</text>
+       <text x="${W - Rr + 32}" y="${T + 76}" fill="${MUTED}" font-size="11">other product</text></g>
+    ${ticks}
+    <text x="${((L + W - Rr) / 2).toFixed(1)}" y="${H - 12}" fill="${MUTED}" font-size="11.5" text-anchor="middle">annual Black Marble composites · R² of log PDRB on log lights</text>
+  </svg>`;
+}
+
+/* ── Figure 9 · what lights add over population and area ───────────────────── */
+function fig9() {
+  const W = 720, H = 226, L = 200, Rr = 66, T = 26;
+  const b = R.testB[R.testB.length - 1];
+  const rows = [
+    { k: "Population alone", v: b.r2.pop, col: SLATE },
+    { k: "Population + area", v: b.r2.pop_area, col: SLATE },
+    { k: "Lights alone", v: b.r2.lights, col: AMBER },
+    { k: "Population + area + lights", v: b.r2.pop_area_lights, col: AMBER },
+  ];
+  const bw = W - L - Rr, rh = 34;
+  const body = rows.map((r, i) => {
+    const y = T + i * rh;
+    return `<text x="${L - 14}" y="${y + 18}" fill="${INK}" font-size="12.5" text-anchor="end">${esc(r.k)}</text>
+      <rect x="${L}" y="${y + 6}" width="${(r.v * bw).toFixed(1)}" height="17" fill="${r.col}" rx="2"/>
+      <text x="${(L + r.v * bw + 9).toFixed(1)}" y="${y + 19}" fill="${r.col}" font-size="11.5" font-family="var(--font-data)">${r.v.toFixed(3)}</text>`;
+  }).join("");
+  const yA = T + 1 * rh + 14, yB = T + 3 * rh + 14;
+  const xA = L + rows[1].v * bw, xB = L + rows[3].v * bw;
+  return `<svg viewBox="0 0 ${W} ${H}" class="fig" role="img" aria-label="Lights add 0.15 of R-squared over population and area">
+    ${body}
+    <path d="M${xA.toFixed(1)} ${yA + 10} L${(xA + 18).toFixed(1)} ${yA + 10} L${(xA + 18).toFixed(1)} ${(yB - 4).toFixed(1)} L${xB.toFixed(1)} ${(yB - 4).toFixed(1)}"
+      fill="none" stroke="${AMBER}" stroke-width="1.3" stroke-dasharray="3 3" opacity="0.8"/>
+    <text x="${L}" y="${H - 14}" fill="${AMBER}" font-size="11.5" font-family="var(--font-data)">lights add R² +${b.increment.toFixed(3)} over population and area · conditional β ${b.beta_lights_full.toFixed(2)}</text>
+  </svg>`;
+}
+
 const F1 = fig1(), F2 = fig2(), F3 = fig3(), F4 = fig4(), F5 = fig5(), F6 = fig6(), F7 = fig7();
+const F8 = fig8(), F9 = fig9();
+const rk = R.testA.map((r: any) => r.kabupaten.r2);
+const g15 = R.testA.find((r: any) => r.year === 2015), g16 = R.testA.find((r: any) => r.year === 2016);
+const hr = R.testB[R.testB.length - 1];
+const dens = R.testC[R.testC.length - 1];
 const javaLight = 0.667, javaGdp = 0.5702, javaLand = 0.066;
 ---
 <html lang="en" data-case="nightlights" data-theme="dark">
@@ -268,7 +342,12 @@ const javaLight = 0.667, javaGdp = 0.5702, javaLand = 0.066;
         cross-section to <b>{sig(A.ladder[3].b)}</b> once place and year are absorbed, and to
         <b>{sig(A.nowcast.beta, 4)}</b> in growth, where the confidence interval contains zero. Out of
         sample, the annual model is <b>{Math.round((A.oos.annual.mae_lights / A.oos.annual.mae_naive - 1) * 100)}% worse than
-        assuming last year's growth</b>. Measured lights growth correlates <b>r = {A.coverage.corr.toFixed(2)}</b>
+        assuming last year's growth</b>. Running the same specification on annual composites for every
+        year since 2012 shows the rural result is a property of the <i>sensor product</i>, not of the
+        decade: on 2015–16 — the years Gibson et al. used — Black Marble gives rural R² of
+        <b>{sig(g15.kabupaten.r2, 2)}</b> and <b>{sig(g16.kabupaten.r2, 2)}</b> against their
+        <b>{R.gibson.kabupaten.r2}</b>. The fit is not an artefact of scale either: lights add
+        <b>R² +{hr.increment.toFixed(2)}</b> over population and area. Measured lights growth correlates <b>r = {A.coverage.corr.toFixed(2)}</b>
         with how much of the country the satellite actually saw, so the growth series is partly an
         observation artefact. The instrument's bias is structured, not random: lights overstate Java by
         {Math.round((javaLight - javaGdp) * 100)} points, and in {A.flares.top[0].name}
@@ -281,9 +360,10 @@ const javaLight = 0.667, javaGdp = 0.5702, javaLand = 0.066;
       <nav class="toc">
         <a href="#s1">1 · The claim under test</a><a href="#s2">2 · Prior art</a>
         <a href="#s3">3 · Data and method</a><a href="#s4">4 · Lights locate activity</a>
-        <a href="#s5">5 · The signal dies</a><a href="#s6">6 · The nowcast is a constant</a>
-        <a href="#s7">7 · Coverage confounds growth</a><a href="#s8">8 · The bias is structured</a>
-        <a href="#s9">9 · What follows for decisions</a><a href="#s10">10 · What would settle it</a>
+        <a href="#s5">5 · The sensor, not the decade</a><a href="#s6">6 · Not an artefact of scale</a>
+        <a href="#s7">7 · The signal dies</a><a href="#s8">8 · The nowcast is a constant</a>
+        <a href="#s9">9 · Coverage confounds growth</a><a href="#s10">10 · The bias is structured</a>
+        <a href="#s11">11 · What follows for decisions</a><a href="#s12">12 · What remains open</a>
         <a href="#refs">References</a>
       </nav>
 
@@ -339,7 +419,7 @@ const javaLight = 0.667, javaGdp = 0.5702, javaLand = 0.066;
       </section>
 
       <section id="s4">
-        <h2><span class="num">4</span> Finding one — lights locate activity, and rural Indonesia has changed</h2>
+        <h2><span class="num">4</span> Finding one — lights locate activity, and the rural verdict does not replicate</h2>
         <p>Across every year in the sample, log real PDRB regressed on log sum of lights yields
         R² between {sig(minR2)} and {sig(maxR2)} over all {A.bps.n_regencies} regencies. That is the
         result the instrument is built on, and it is stable.</p>
@@ -367,18 +447,77 @@ const javaLight = 0.667, javaGdp = 0.5702, javaLand = 0.066;
         uncorrected annual composites of 2015–16 buried in noise, and dim rural regencies are precisely
         where that correction bites. The second is <b>substantive</b>: Indonesia's electrification ratio
         rose from roughly 88% in 2015 to near-universal by 2024, so rural light may genuinely have crossed
-        the detection floor in the intervening decade. We are careful not to claim which. §10 sets out the
-        experiment that separates them.</p>
+        the detection floor in the intervening decade. The next section separates them.</p>
       </section>
 
       <section id="s5">
-        <h2><span class="num">5</span> Finding two — the signal dies as the cross-section is removed</h2>
+        <h2><span class="num">5</span> Finding two — the divergence is the sensor, not the decade</h2>
+        <p>The two explanations make opposite predictions, which makes this cheap to settle. If rural
+        light only became legible as Indonesia electrified, fit should be poor early in the series and
+        improve steadily. If the earlier verdict was a property of the composites, fit should be high
+        <i>in every year</i> — including 2015 and 2016, the exact years Gibson et al. analysed.</p>
+        <p>We ran the identical specification on NASA Black Marble <b>annual</b> composites for all
+        {R.testA.length} years from {R.testA[0].year} to {R.testA[R.testA.length - 1].year}, holding
+        boundaries, output data and estimator fixed.</p>
+        <figure>
+          <Fragment set:html={F8} />
+          <figcaption><b>Figure 4.</b> Cross-sectional R² by year on one consistent product family. The
+          coral markers are Gibson et al.'s published rural result for 2015 and 2016 — the same two years,
+          a different lights product.</figcaption>
+        </figure>
+        <p>The answer is unambiguous. Rural fit in <b>2015 is {sig(g15.kabupaten.r2)}</b> and in
+        <b>2016 is {sig(g16.kabupaten.r2)}</b>, against the {R.gibson.kabupaten.r2} reported for those
+        same years. Across the whole {R.testA[0].year}–{R.testA[R.testA.length - 1].year} span rural R²
+        moves only from {sig(rk[0])} to {sig(rk[rk.length - 1])} — essentially flat, with no trend
+        resembling an electrification ramp.</p>
+        <p class="pull">The conclusion that night lights cannot proxy rural Indonesian output is a
+        property of the composite product it was measured on, not a property of night lights.</p>
+        <p>This matters beyond this case. Gibson et al.'s finding is widely cited as the reason not to
+        use lights below the provincial level in developing countries. On this evidence that caution
+        should be re-scoped: it applies to uncorrected annual composites, not to BRDF- and
+        stray-light-corrected products, and the difference between them in rural Indonesia is the
+        difference between R² of {R.gibson.kabupaten.r2} and R² of {sig(Math.max(...rk), 2)}.</p>
+        <p class="caveat"><b>What this test does not do.</b> We did not re-run their pipeline — EOG's
+        programmatic access became paid in June 2026 — so this compares our Black Marble estimates to
+        their <i>published</i> table rather than to composites we processed ourselves. Two further
+        differences remain: they used 497 units on the 2010 administrative vintage where we use
+        {A.bps.n_regencies} on the frozen 2020 vintage, and our series crosses a sensor change from
+        Suomi-NPP to NOAA-20 in {R.sensorSplit} (visible in Figure 4, and undramatic). Finer units and a
+        sensor change would both tend to <i>depress</i> fit, so neither explains the gap — but a full
+        head-to-head on identically processed composites remains the cleaner test.</p>
+      </section>
+
+      <section id="s6">
+        <h2><span class="num">6</span> Finding three — and it is not an artefact of scale</h2>
+        <p>A sceptic should still object that both sides of that regression are extensive quantities.
+        Big regencies have more output and more light because they are big, so some of R² = 0.8 could be
+        arithmetic rather than evidence. We put the objection to the data directly.</p>
+        <figure>
+          <Fragment set:html={F9} />
+          <figcaption><b>Figure 5.</b> Nested models for {hr.year}. Population is BPS var 2790
+          (kabupaten/kota totals); area is computed from the frozen boundaries on an equal-area
+          projection.</figcaption>
+        </figure>
+        <p>Population alone explains {sig(hr.r2.pop)} of the variation in regency output and adding area
+        moves it only to {sig(hr.r2.pop_area)} — so the sceptic is partly right, and most of what a raw
+        lights regression captures is scale. But lights are not merely a scale proxy: adding them lifts
+        R² to <b>{sig(hr.r2.pop_area_lights)}</b>, an increment of <b>+{hr.increment.toFixed(3)}</b>, and
+        the conditional lights coefficient remains <b>{sig(hr.beta_lights_full, 2)}</b>. Lights carry
+        information about where output is that population and area do not.</p>
+        <p>The stronger version of the test removes area from both sides entirely. Regressing log output
+        per km² on log lights per km² gives R² <b>{sig(dens.all.r2)}</b> with elasticity
+        {sig(dens.all.slope)} — <i>higher</i> than the levels form, and {sig(dens.kabupaten.r2)} for rural
+        regencies alone. Stripping scale out does not weaken the relationship; it sharpens it.</p>
+      </section>
+
+      <section id="s7">
+        <h2><span class="num">7</span> Finding four — the signal dies as the cross-section is removed</h2>
         <p>A cross-sectional fit answers "where", and it is flattered by scale: big regencies have more
         light and more output. The question that matters for any timing use is what survives once you stop
         comparing places to each other and start comparing a place to itself.</p>
         <figure>
           <Fragment set:html={F2} />
-          <figcaption><b>Figure 3.</b> The same relationship under progressively stricter designs. Bars are
+          <figcaption><b>Figure 6.</b> The same relationship under progressively stricter designs. Bars are
           95% intervals; grey means the interval contains zero.</figcaption>
         </figure>
         <p>The decay is monotone and severe. Absorbing regency fixed effects cuts the elasticity from
@@ -392,13 +531,13 @@ const javaLight = 0.667, javaGdp = 0.5702, javaLand = 0.066;
         600 between the cross-sectional and the growth elasticity</b>.</p>
       </section>
 
-      <section id="s6">
-        <h2><span class="num">6</span> Finding three — the published nowcast is, numerically, a constant</h2>
+      <section id="s8">
+        <h2><span class="num">8</span> Finding five — the published nowcast is, numerically, a constant</h2>
         <p>If the growth coefficient is {sig(A.nowcast.beta, 4)}, then a growth nowcast built on it cannot
         carry much information. It is worth making that concrete rather than abstract.</p>
         <figure>
           <Fragment set:html={F5} />
-          <figcaption><b>Figure 4.</b> Decomposition of the published headline nowcast for {A.vintage}.</figcaption>
+          <figcaption><b>Figure 7.</b> Decomposition of the published headline nowcast for {A.vintage}.</figcaption>
         </figure>
         <p>National lights moved {pct(A.nowcast.lightsGrowth)} year-on-year. Passed through the calibration,
         that motion contributes <b>{(A.nowcast.contribution * 100).toFixed(3)} percentage points</b> to a
@@ -424,15 +563,15 @@ const javaLight = 0.667, javaGdp = 0.5702, javaLand = 0.066;
         ({pct(A.oos.quarterly.prov_win_rate)}). This is gate G-A2, and it is published failed.</p>
       </section>
 
-      <section id="s7">
-        <h2><span class="num">7</span> Finding four — coverage confounds the growth series</h2>
+      <section id="s9">
+        <h2><span class="num">9</span> Finding six — coverage confounds the growth series</h2>
         <p>Indonesia is equatorial and cloudy. In this sample {pct(A.deseason.regency_months_no_data)} of
         regency-months carry no usable composite at all, and
         {A.deseason.national_low_coverage_months} of {A.deseason.months} national months are flagged
         low-coverage. The pipeline divides by coverage to compensate. We tested whether that works.</p>
         <figure>
           <Fragment set:html={F4} />
-          <figcaption><b>Figure 5.</b> Measured lights growth against mean satellite coverage, by year.
+          <figcaption><b>Figure 8.</b> Measured lights growth against mean satellite coverage, by year.
           Teal dots are BPS real GDP growth for the same year; the connecting line is the gap.</figcaption>
         </figure>
         <p>It does not work well enough. Across years, measured lights growth correlates
@@ -451,8 +590,8 @@ const javaLight = 0.667, javaGdp = 0.5702, javaLand = 0.066;
         corrected accordingly.</p>
       </section>
 
-      <section id="s8">
-        <h2><span class="num">8</span> Finding five — the bias is structured, and therefore usable</h2>
+      <section id="s10">
+        <h2><span class="num">10</span> Finding seven — the bias is structured, and therefore usable</h2>
         <p>An instrument with random error is noisy. An instrument with <i>structured</i> error is
         correctable, and its residuals carry information. This one is the second kind.</p>
         <div class="stat-row">
@@ -468,7 +607,7 @@ const javaLight = 0.667, javaGdp = 0.5702, javaLand = 0.066;
         share of all measured light is gas flaring rather than economic life:</p>
         <figure>
           <Fragment set:html={F6} />
-          <figcaption><b>Figure 6.</b> Share of each regency's measured night light removed as gas flaring.
+          <figcaption><b>Figure 9.</b> Share of each regency's measured night light removed as gas flaring.
           In {A.flares.top[0].name} the instrument is, before correction, very largely an LNG sensor.</figcaption>
         </figure>
         <p>And the residuals themselves are diagnostic. {A.weakFitN} regencies sit beyond two standard
@@ -481,8 +620,8 @@ const javaLight = 0.667, javaGdp = 0.5702, javaLand = 0.066;
         hide.</p>
       </section>
 
-      <section id="s9">
-        <h2><span class="num">9</span> What follows for decisions</h2>
+      <section id="s11">
+        <h2><span class="num">11</span> What follows for decisions</h2>
         <p>Evidence is only worth gathering if it changes an action. Read strictly, this instrument
         supports three uses and forbids a fourth.</p>
         <ol class="uses">
@@ -504,21 +643,18 @@ const javaLight = 0.667, javaGdp = 0.5702, javaLand = 0.066;
         failed gate is one whose passed gates mean something.</p>
       </section>
 
-      <section id="s10">
-        <h2><span class="num">10</span> What would settle the open question</h2>
-        <p>The rural divergence in §4 has two candidate causes and we deliberately do not adjudicate
-        between them. A clean experiment does, and it is cheap:</p>
+      <section id="s12">
+        <h2><span class="num">12</span> What remains open</h2>
+        <p>Two of the questions this review opened have been answered in §5 and §6. Three remain, and
+        we state them as work not done rather than as caveats.</p>
         <ol class="next">
-          <li><b>Hold the decade fixed, swap the product.</b> Run this exact specification on 2015–16 using
-          both the annual composites Gibson et al. used and Black Marble for the same years. If Black Marble
-          lifts rural R² from ≈0.01 toward 0.7 on <i>identical years</i>, the cause is instrumental. If it
-          does not, the cause is electrification — a real economic change, and a more interesting finding.</li>
-          <li><b>Break the scale mechanic.</b> Both sides of the levels regression are extensive quantities.
-          Report the incremental R² of lights over log population and log area, and repeat in per-capita
-          form. Until that is done, part of the 0.7 is arithmetic rather than evidence.</li>
+          <li><b>A true head-to-head on identically processed composites.</b> §5 compares our estimates
+          to a published table. The cleaner test processes both products ourselves over the same years
+          and units, which needs EOG access that became paid in June 2026.</li>
           <li><b>Match the pixels before differencing.</b> Compute year-on-year change only on pixels
-          observed in both periods. This removes the composition change behind Figure 5 at its source,
-          rather than dividing by coverage after the fact.</li>
+          observed in both periods. This removes the composition change behind Figure 8 at its source,
+          rather than dividing by coverage after the fact — and it is the most likely route to a growth
+          signal that survives §7 and §8.</li>
           <li><b>Interact Ramadan with what it should depend on.</b> The national Ramadan coefficient is
           {pct(A.deseason.ramadan_beta_national, 2)} — indistinguishable from nothing — but that average
           conceals a spread from {pct(A.deseason.ramadan_beta_regency_quantiles["0.1"], 0)} to
@@ -526,7 +662,7 @@ const javaLight = 0.667, javaGdp = 0.5702, javaLand = 0.066;
         </ol>
         <figure>
           <Fragment set:html={F7} />
-          <figcaption><b>Figure 7.</b> The regency-level Ramadan coefficient. A national average of
+          <figcaption><b>Figure 10.</b> The regency-level Ramadan coefficient. A national average of
           approximately zero sits inside a 42-point spread — one of the clearest signals in the dataset,
           currently discarded as a nuisance regressor.</figcaption>
         </figure>
@@ -538,7 +674,7 @@ const javaLight = 0.667, javaGdp = 0.5702, javaLand = 0.066;
       </section>
 
       <section id="refs">
-        <h2><span class="num">11</span> References and reproducibility</h2>
+        <h2><span class="num">13</span> References and reproducibility</h2>
         <ol class="refs">
           <li id="ref-hsw">Henderson, J.V., Storeygard, A. &amp; Weil, D.N. (2012). Measuring Economic
           Growth from Outer Space. <i>American Economic Review</i> 102(2), 994–1028.
