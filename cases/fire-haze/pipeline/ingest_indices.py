@@ -433,7 +433,7 @@ def pull_fwi(max_minutes: float = 200.0) -> dict:
                                  max_inflight=1, max_minutes=max_minutes)
     parts = sorted(FWI_PARTS.glob("*.parquet"))
     if not parts:
-        return {**status, "effect": "G-J2's climatology half is scored; its FWI half is PENDING."}
+        return {**status, "effect": "The climatology half of the ignition-skill check is scored; its FWI half is PENDING."}
     df = pd.concat([pd.read_parquet(p) for p in parts], ignore_index=True)
     df.to_parquet(FWI_OUT, index=False, compression="zstd")
     log(f"  fwi: {len(df):,} cell-days, {df['day'].min().date()} -> {df['day'].max().date()}, "

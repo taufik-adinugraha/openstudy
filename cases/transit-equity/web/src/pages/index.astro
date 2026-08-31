@@ -916,8 +916,9 @@ import "maplibre-gl/dist/maplibre-gl.css";
         if (!stats) { g.innerHTML = `<p class="pending">Gate results pending — validate.py has not run for this build.</p>`; }
         else {
           const rowsG = [];
+          let checkNo = 0;   // readers get a plain handle, not an internal code
           const mk = (id, title, body, ok) => rowsG.push(`<div class="gate ${ok === true ? "ok" : ok === false ? "bad" : "na"}">
-            <span class="g-id">${id}</span><div><b>${title}</b><p>${body}</p></div>
+            <span class="g-id">CHECK ${++checkNo}</span><div><b>${title}</b><p>${body}</p></div>
             <span class="g-flag">${ok === true ? "PASS" : ok === false ? "FAIL" : "PENDING"}</span></div>`);
           const g1 = stats["G-G1"] ?? {};
           mk("G-G1", "Timetable sanity", ((g1.ods ?? []).map((o) =>

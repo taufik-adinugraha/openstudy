@@ -565,7 +565,7 @@ def score_against_fwi() -> dict:
                               f"consolidated fwi.parquet has not been written yet — run "
                               f"`make fwi` to drain it, then `make risk`.",
                     "parts_on_disk": len(parts),
-                    "effect": "G-J2's climatology half is scored; its FWI half is PENDING."}
+                    "effect": "The climatology half of the ignition-skill check is scored; its FWI half is PENDING."}
         return {"status": "PENDING",
                 "reason": "no CEMS fire-index data on disk.  If the submission returns a 403 "
                           "mentioning site policies, the account has not accepted 'Terms of use "
@@ -573,7 +573,7 @@ def score_against_fwi() -> dict:
                           "click, not a credential fault, and the token authenticates either "
                           "way (HTTP 200 on the EWDS account endpoint).",
                 "url": config.POLICY_URLS["ewds"][0],
-                "effect": "G-J2's climatology half is scored; its FWI half is PENDING."}
+                "effect": "The climatology half of the ignition-skill check is scored; its FWI half is PENDING."}
     # only the two columns and only the days the folds cover: the full CEMS table is 2.16 M rows
     # a year, and merging fifteen years of it against the out-of-fold sample is a gigabyte of
     # join for a correlation

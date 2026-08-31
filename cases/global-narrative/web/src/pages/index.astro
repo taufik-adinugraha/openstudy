@@ -87,7 +87,7 @@ const eventsLast = summary.eventsLast ?? "pending";
       barely glance, and when they do the tone is different.</p>
       <div id="sources-heat" class="chart"></div>
       <div class="two-up">
-        <div><h3>Foreign vs domestic press</h3><p class="footnote">Share of Indonesia coverage published outside Indonesia (<code>-sourcecountry:ID</code>). Gate G-D4.</p><div id="press-chart" class="chart"></div></div>
+        <div><h3>Foreign vs domestic press</h3><p class="footnote">Share of Indonesia coverage published outside Indonesia (<code>-sourcecountry:ID</code>). See the language-honesty check.</p><div id="press-chart" class="chart"></div></div>
         <div><h3>Languages</h3><p class="footnote">Intensity of Indonesia coverage by language — the world’s narrative is not only the English one.</p><div id="lang-bars" class="chart"></div></div>
       </div>
       <div id="outlets" class="two-up"></div>
@@ -104,7 +104,7 @@ const eventsLast = summary.eventsLast ?? "pending";
       <div id="quad-chart" class="chart"></div>
       <h3>Protest events</h3>
       <p class="footnote">CAMEO root code 14. The 2019 post-election riots and the 2025 protests are the two
-      spikes the pipeline must reproduce unprompted (gate G-D2).</p>
+      spikes the pipeline must reproduce unprompted — the anchor-event check.</p>
       <div id="protest-chart" class="chart"></div>
       <h3>Where the news happened</h3>
       <p class="footnote">Event locations on a 0.25° grid; the archipelago draws itself from the data — no
@@ -124,7 +124,7 @@ const eventsLast = summary.eventsLast ?? "pending";
 
     <footer class="method">
       <span class="eyebrow">Methodology &amp; sources</span>
-      <h3>Normalization (gate G-D1)</h3>
+      <h3>Normalization</h3>
       <p>GDELT’s crawl is not a constant: the number of articles it monitors per day has drifted by a factor
       of about four across the decade — mostly <em>shrinking</em> since 2017. Every attention chart on this
       page is therefore a <b>share</b> of everything monitored, never a raw count: a raw count would show
@@ -692,11 +692,11 @@ const eventsLast = summary.eventsLast ?? "pending";
           const V = (v) => `<span class="verdict ${v}">${v}</span>`;
           const d1 = g["G-D1"] ?? {}, d3g = g["G-D3"] ?? {}, d4 = g["G-D4"] ?? {}, d2 = g["G-D2"] ?? {};
           el.innerHTML = `
-            <div class="gate">${V(d1.verdict)}<div><b>G-D1 Normalization honesty.</b> Crawl size drifts <b>${num(d1.crawl_size_drift_max_over_min, 2)}×</b> across years (${Object.entries(d1.monitored_articles_per_day_by_year ?? {}).map(([y, v]) => `${y}: ${d3.format(".2s")(v)}`).join(" · ")} articles/day). All attention charts are shares.</div></div>
-            <div class="gate">${V(d2.verdict)}<div><b>G-D2 Anchors.</b> ${d2.pass ?? 0} pass · ${d2.fail ?? 0} fail · ${d2.pending ?? 0} pending of ${d2.anchors?.length ?? 0}, each against a trailing ${d2.baseline_days}-day baseline.
+            <div class="gate">${V(d1.verdict)}<div><b>Normalization honesty.</b> Crawl size drifts <b>${num(d1.crawl_size_drift_max_over_min, 2)}×</b> across years (${Object.entries(d1.monitored_articles_per_day_by_year ?? {}).map(([y, v]) => `${y}: ${d3.format(".2s")(v)}`).join(" · ")} articles/day). All attention charts are shares.</div></div>
+            <div class="gate">${V(d2.verdict)}<div><b>Anchor events.</b> ${d2.pass ?? 0} pass · ${d2.fail ?? 0} fail · ${d2.pending ?? 0} pending of ${d2.anchors?.length ?? 0}, each against a trailing ${d2.baseline_days}-day baseline.
               <div class="table-scroll"><table class="rank small anchors"><thead><tr><th>Anchor</th><th>Attention ×</th><th>Δ tone</th><th>Protest ×</th><th>Verdict</th></tr></thead><tbody>${(d2.anchors ?? []).map((a) => { const s = a.signatures; const mark = (k) => (a.gated?.includes(k) ? (s[k].verdict === "PASS" ? "✓" : s[k].verdict === "FAIL" ? "✗" : "…") : "<i>info</i>"); const th = a.gated?.find((k) => k.startsWith("theme_")); return `<tr><td>${a.day} · ${a.label}</td><td class="num">${s.attention ? `${num(s.attention.ratio, 1)} ${mark("attention")}` : "—"}${th && s[th] ? `<br><i>${th.replace("theme_", "")} ${s[th].ratio != null ? num(s[th].ratio, 1) + "×" : "…"} ${mark(th)}</i>` : ""}</td><td class="num">${s.tone_drop ? `${sgn(-s.tone_drop.delta)} ${s.tone_drop.verdict === "PASS" ? "✓" : s.tone_drop.verdict === "FAIL" ? "✗" : "…"}` : a.report_only?.tone_rise ? `<i>${sgn(a.report_only.tone_rise.delta)} (report only)</i>` : "—"}</td><td class="num">${s.protest ? `${num(s.protest.ratio, 1)} ${s.protest.verdict === "PASS" ? "✓" : s.protest.verdict === "FAIL" ? "✗" : "…"}` : "—"}</td><td>${V(a.verdict)}</td></tr>`; }).join("")}</tbody></table></div></div></div>
-            <div class="gate">${V(d3g.verdict)}<div><b>G-D3 Two-source coherence.</b> Event-layer Indonesia share (own denominator) vs the API’s normalized volume: Spearman ρ = <b>${d3g.share_all?.spearman_rho ?? "pending"}</b> over ${d3g.share_all?.n_days ?? 0} shared days (threshold ${d3g.threshold}).${d3g.share_en ? ` English feed ρ ${d3g.share_en.spearman_rho ?? "—"}, translated ρ ${d3g.share_trans?.spearman_rho ?? "—"}.` : ""}</div></div>
-            <div class="gate">${V(d4.verdict)}<div><b>G-D4 Language honesty.</b> Foreign press carries <b>${d4.api_foreign_share_mean != null ? d3.format(".0%")(d4.api_foreign_share_mean) : "—"}</b> of Indonesia coverage; the translated (non-English) feed supplies <b>${d4.event_layer_translated_share != null ? d3.format(".0%")(d4.event_layer_translated_share) : "—"}</b> of kept events. Both are charted in chapter 04.</div></div>`;
+            <div class="gate">${V(d3g.verdict)}<div><b>Two-source coherence.</b> Event-layer Indonesia share (own denominator) vs the API’s normalized volume: Spearman ρ = <b>${d3g.share_all?.spearman_rho ?? "pending"}</b> over ${d3g.share_all?.n_days ?? 0} shared days (threshold ${d3g.threshold}).${d3g.share_en ? ` English feed ρ ${d3g.share_en.spearman_rho ?? "—"}, translated ρ ${d3g.share_trans?.spearman_rho ?? "—"}.` : ""}</div></div>
+            <div class="gate">${V(d4.verdict)}<div><b>Language honesty.</b> Foreign press carries <b>${d4.api_foreign_share_mean != null ? d3.format(".0%")(d4.api_foreign_share_mean) : "—"}</b> of Indonesia coverage; the translated (non-English) feed supplies <b>${d4.event_layer_translated_share != null ? d3.format(".0%")(d4.event_layer_translated_share) : "—"}</b> of kept events. Both are charted in chapter 04.</div></div>`;
         }).catch(() => { el.innerHTML = `<div class="pending">stats.json not exported yet.</div>`; });
       });
 

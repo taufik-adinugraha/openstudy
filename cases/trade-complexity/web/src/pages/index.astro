@@ -413,7 +413,7 @@ const timesX = (v) => (v == null ? "—" : `${(v + 1).toFixed(0)}×`);
       <p>Two totals, two published benchmarks, tolerances fixed before either was computed.
       The import side reconciles almost exactly. The export side does not: BACI puts
       Indonesia’s goods exports roughly a sixth above what Indonesia itself reports, every
-      year we can check. <b>G-B5 fails</b>, and rather than quietly widening the tolerance we
+      year we can check. <b>The export-reconciliation check fails</b>, and rather than quietly widening the tolerance we
       are printing the gap.</p>
       <div id="recon" class="gate-card"></div>
       <p>The gap is not an artefact of this extension. It is systematic across years, it is
@@ -451,7 +451,7 @@ const timesX = (v) => (v == null ? "—" : `${(v + 1).toFixed(0)}×`);
       30–100 MB first-visit download.) <b>Caveats stated plainly:</b> goods only; the
       log-supermodularity condition — Growth Lab’s structural-ranking check — holds for
       roughly a third of country-product pairs in early years, so ECI is a ranking, not a
-      cardinal measure. <b>Gate G-B1:</b> Indonesia 2023 rank #71 of 158 here vs #69 of 133 in
+      cardinal measure. <b>Rank check:</b> Indonesia 2023 rank #71 of 158 here vs #69 of 133 in
       the Atlas — within three places.</p>
       <p><b>Why chapters 01–06 use exports only.</b> Not an omission: economic complexity is
       defined through revealed comparative advantage, which compares a country’s share of
@@ -467,7 +467,7 @@ const timesX = (v) => (v == null ? "—" : `${(v + 1).toFixed(0)}×`);
       <b>Hong Kong, Macao and Taiwan (“Other Asia, nes”) are counted separately from
       China</b>; folding them in would raise the reported China share. Concentration is the
       Herfindahl–Hirschman index over partner shares, alongside the top-five share.
-      <b>Gates G-B5–G-B7</b> were given numeric thresholds in <code>pipeline/config.py</code>
+      <b>The three partner-and-import checks</b> were given numeric thresholds in <code>pipeline/config.py</code>
       before any partner or import number was computed, and failures publish red above rather
       than being quietly dropped.</p>
       <span class="stamp dim">A DEMO-LAB CASE · ANNUAL REBUILD · {exportsB ? `IDN GOODS EXPORTS ${latest}: US$${exportsB}B` : ""}</span>
@@ -1666,7 +1666,7 @@ const timesX = (v) => (v == null ? "—" : `${(v + 1).toFixed(0)}×`);
         const host = document.getElementById("gate-b7");
         host.className = `gate-card verdict-${v.toLowerCase()}`;
         host.innerHTML = `
-          <div class="gate-head"><span class="stamp dim">GATE G-B7 · PRE-REGISTERED</span>
+          <div class="gate-head"><span class="stamp dim">PRE-REGISTERED CHECK</span>
             <span class="verdict">${v}</span></div>
           <div class="gate-rows">
             <div>${chip(ninputs.h1, `<b>H1</b> HS 84+85 imports grew

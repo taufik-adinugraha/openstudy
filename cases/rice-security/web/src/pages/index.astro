@@ -578,7 +578,7 @@ const CHAPTERS = [
             supports it: the shipped route is <b>10 m</b> γ⁰ and this analysis reads it at 80 m
             to fit a 100 m grid. Detecting at 20–30 m over the same six regencies is roughly
             twenty times the cells — an afternoon of compute on a bigger box rather than a
-            research programme — and it is the single change that would move G-I1, G-I2 and G-I3
+            research programme — and it is the single change that would move the first three checks
             together, because all three are measuring the same damping. That is the honest scope
             of the next pilot, and it is why this page ships red rather than tuned.
           </p>
@@ -1746,18 +1746,18 @@ const CHAPTERS = [
           }
           return "";
         };
-        for (const g of gs) {
+        gs.forEach((g, gi) => {
           const v = g.pass === true ? "pass" : g.pass === false ? "fail" : "na";
           const label = g.pass === true ? "Pass" : g.pass === false ? "Fail" : "Not evaluated";
           const el = document.createElement("div");
           el.className = "gate";
-          el.innerHTML = `<div class="id">${g.id}</div>
+          el.innerHTML = `<div class="id">CHECK ${gi + 1}</div>
             <div><h3 style="margin-bottom:4px">${g.name}</h3>
               <p class="prose" style="font-size:0.92rem">${detail(g)}</p>
               ${g.diagnosis && g.pass === false ? `<p class="prose warn callout" style="margin-top:8px;font-size:0.92rem">${g.diagnosis}</p>` : ""}</div>
             <div><span class="verdict ${v}">${label}</span></div>`;
           host.appendChild(el);
-        }
+        });
         const t = SUM?.detector_thresholds ?? {};
         document.getElementById("thresholds").innerHTML = `<div class="scroll-x"><table class="data"><tbody>
           <tr><td>VV fall below the cell's own baseline</td><td style="text-align:right;color:${C.accent}">${t.flood_drop_db} dB</td></tr>

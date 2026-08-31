@@ -153,7 +153,8 @@ def run() -> dict:
             "reconciliation": recon, "inputs": cover,
         },
         "caveats": [
-            "G-F1 fails on this run and is published as measured. The BPS headcount is a count "
+            "The out-of-sample skill check fails on this run and is published as measured. The BPS "
+            "headcount is a count "
             "of people under a nominal, region-specific poverty line, not an asset index, and "
             "the satellite feature families cannot see the line — which is why the published "
             "literature's asset-wealth R² values are not the right expectation here."

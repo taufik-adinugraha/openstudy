@@ -547,9 +547,9 @@ const CHAPTERS = [
           pending with the reason.
         </p>
         <div id="gates">
-          {GATES.map(([id, title, hard, desc]) => (
+          {GATES.map(([id, title, hard, desc], gi) => (
             <div class="gate na" data-gate={id}>
-              <span class="id">{id}</span>
+              <span class="id">CHECK {gi + 1}</span>
               <div>
                 <b>{title}{hard ? " · hard" : ""}</b>
                 <p>{desc}</p>
@@ -602,7 +602,7 @@ const CHAPTERS = [
               root, and the only aggregator carrying it forbids commercial use verbatim. The
               transboundary claim here is <b>Indonesia → Singapore only</b>.</li>
           <li><b>2015 has no Singapore ground truth.</b> The NEA record begins ~2016-03, so that
-              anchor is scored on FIRMS detections plus CAMS EAC4, and G-J5 says so.</li>
+              anchor is scored on FIRMS detections plus CAMS EAC4, and the replay check says so.</li>
           <li><b>There is no operational IOD index.</b> The HadISST DMI runs about three months
               behind and is stamped “Preliminary”, so it is a historical feature only — and 2019,
               the strongest positive IOD on record, is unreadable without it.</li>
@@ -1061,7 +1061,7 @@ const CHAPTERS = [
                 fire radiative power (${Math.round(tot).toLocaleString()} MW in view), integrated
                 72 hours forward on the same engine that ran backwards a moment ago.</p>
               <p class="muted" style="font-size:12.5px;margin-bottom:0">
-                Forward and backward sharing one integrator is exactly what gate <b>G-J3</b>
+                Forward and backward sharing one integrator is exactly what the <b>transport-direction check</b>
                 tests: if the two disagree about where the smoke came from, that is a bug, and the
                 gate is how we would find out.</p>`;
           }
@@ -1406,7 +1406,7 @@ const CHAPTERS = [
               }).join("")).join("")}</tbody></table></div>
             ${fwi.status && fwi.status !== "ok"
               ? `<p class="muted" style="font-size:13px;margin-top:12px">
-                   <b>The CEMS FWI half of G-J2 is PENDING.</b> ${fwi.reason ?? ""}</p>`
+                   <b>The CEMS FWI half of the ignition-skill check is PENDING.</b> ${fwi.reason ?? ""}</p>`
               : `<p class="muted" style="font-size:13px;margin-top:12px">
                    <b>Both external baselines are calibrated before they are beaten.</b> The CEMS
                    FWI and the persistence rule ("it burned here in the last 7 days") are each
@@ -1449,7 +1449,7 @@ const CHAPTERS = [
             .attr("stroke", C.alert).attr("stroke-dasharray", "5 4").attr("stroke-width", 1.5);
           svg.append("text").attr("x", W - m.r + 6).attr("y", y(0.8) + 4)
             .attr("fill", C.alert).attr("font-family", "var(--font-data)").attr("font-size", 12)
-            .text("G-J2 threshold 0.80");
+            .text("threshold 0.80");
           svg.append("g").attr("class", "axis").attr("transform", `translate(0,${Hh - m.b})`)
             .call(d3.axisBottom(x).tickFormat((d) => `${d} day`));
           svg.append("g").attr("class", "axis").attr("transform", `translate(${m.l},0)`)
@@ -1494,7 +1494,7 @@ const CHAPTERS = [
             <div class="tile ${gj3.pass === false ? "warn" : ""}"><div class="v">${
               gj3.share_within != null ? (gj3.share_within * 100).toFixed(0) + "%" : "—"}</div>
               <div class="k">Forward/backward bearing agreement</div>
-              <div class="s">within ±30°, threshold 70% — gate G-J3</div></div>
+              <div class="s">within ±30°, threshold 70% — transport-direction check</div></div>
             <div class="tile"><div class="v">${t.escaped_domain_share != null ? (t.escaped_domain_share * 100).toFixed(1) + "%" : "—"}</div>
               <div class="k">Parcels that left the domain</div>
               <div class="s">terminated and counted, never clamped to the boundary</div></div>
@@ -1508,7 +1508,7 @@ const CHAPTERS = [
             html += `<h3 style="margin-top:var(--space-4)">Where the two directions agree — and
               where they do not</h3>
               <p class="muted" style="font-size:14px">
-                Gate G-J3 runs the same integrator forwards from the fires and backwards from the
+                The transport-direction check runs the same integrator forwards from the fires and backwards from the
                 receptor and asks whether they agree about where the smoke came from. Pooled, they
                 agree on <b>${(gj3.share_within * 100).toFixed(1)} %</b> of episode days at a
                 median difference of <b>${gj3.median_diff_deg?.toFixed(1)}°</b> — inside the ±30°

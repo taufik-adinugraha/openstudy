@@ -338,7 +338,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
             <p>For every regency and year, kecamatan predictions are multiplied by one factor
             so that the population-weighted mean equals the published rate. Units pinned at 0
             or 100 % hand their residual back to the units still free, so the identity holds
-            exactly. Gate G-F4 recomputes it from the shipped file.</p>
+            exactly. The reproducibility check recomputes it from the shipped file.</p>
             <h3>Cross-validation</h3>
             <p>Leave-one-province-out, 38 folds. A held-out province leaves the training set
             in <em>every</em> year, so no temporal copy of a test regency can leak back in.
@@ -390,7 +390,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
             <pre class="code">cd cases/poverty-map
 uv sync
 make rebuild        # ingest → features → train → downscale → validate → export
-make validate       # gates G-F1..G-F4 → data/stats.json
+make validate       # all four published checks → data/stats.json
 SCOPE=java make rebuild   # the ~11 GB fast path</pre>
             <p class="cap">Every raw input is deleted as soon as it has been reduced to
             per-kecamatan aggregates, so about 16 GB flows through a 48 GB disk that never
@@ -880,14 +880,14 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
                 const r2 = g1.checks[0].value, rho = g1.checks[1].value;
                 return { k: g1.status === "pass" ? "model" : "fail",
                   big: `R²&nbsp;${fmt2(r2)}`,
-                  lab: `Held-out skill, leave-one-province-out — gate G-F1 ${g1.status}`,
+                  lab: `Held-out skill, leave-one-province-out — ${g1.status}`,
                   sub: `ρ ${fmt2(rho)} · RMSE ${fmt1(g1.checks[2].value)} pp` +
                     (dec.within_province_spearman != null
                       ? ` · but ρ ${fmt2(dec.within_province_spearman)} once the province's own level is set by BPS`
                       : "") };
               })()
             : { k: "pending", big: "—", lab: "Held-out skill, leave-one-province-out",
-                sub: "gate G-F1 runs when every partition has landed" },
+                sub: "the held-out skill check runs when every partition has landed" },
         ];
         row.innerHTML = items.map((it) => `
           <div class="stat ${it.k}">
@@ -1226,10 +1226,10 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
         const el = document.getElementById("gate-grid");
         if (!statsJson) {
           const specs = [
-            ["G-F1", "Out-of-sample skill", "R² ≥ 0.50 · Spearman ρ ≥ 0.70 · RMSE ≤ 4.0 pp", true],
-            ["G-F2", "Java / off-Java disclosure", "both R² published; off-Java < 0.35 ⇒ labelled indicative", false],
-            ["G-F3", "Temporal hold-out", "train ≤ 2023 → Spearman ρ ≥ 0.65 on 2024 and 2025", false],
-            ["G-F4", "Benchmark integrity", "regency totals reproduced within 0.1 pp", true],
+            ["CHECK 1", "Out-of-sample skill", "R² ≥ 0.50 · Spearman ρ ≥ 0.70 · RMSE ≤ 4.0 pp", true],
+            ["CHECK 2", "Java / off-Java disclosure", "both R² published; off-Java < 0.35 ⇒ labelled indicative", false],
+            ["CHECK 3", "Temporal hold-out", "train ≤ 2023 → Spearman ρ ≥ 0.65 on 2024 and 2025", false],
+            ["CHECK 4", "Benchmark integrity", "regency totals reproduced within 0.1 pp", true],
           ];
           const why = document.createElement("p");
           why.className = "sowhat pending-note";
@@ -1250,9 +1250,9 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
             </div>`).join("");
           return;
         }
-        el.innerHTML = statsJson.gates.map((g) => `
+        el.innerHTML = statsJson.gates.map((g, gi) => `
           <div class="gate ${g.status}">
-            <div class="gate-top"><span class="gate-id">${g.id}</span>
+            <div class="gate-top"><span class="gate-id">CHECK ${gi + 1}</span>
               <span class="gate-status ${g.status}">${g.status.toUpperCase()}</span></div>
             <h4>${g.title}${g.hard ? ' <span class="hard">hard</span>' : ""}</h4>
             <ul class="checks">${g.checks.map((c) => `
@@ -1424,7 +1424,7 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
         el.innerHTML =
           (g1.status === "pass"
             ? `The model reproduces the official ranking of ${s.lopo.n} regencies it was never trained on (Spearman ρ ${fmt2(s.lopo.spearman)}, RMSE ${fmt1(s.lopo.rmse)} pp). `
-            : `<b class="bad-inline">G-F1 fails on this run and goes up red</b> — R² ${fmt2(s.lopo.r2)}, ρ ${fmt2(s.lopo.spearman)}, RMSE ${fmt1(s.lopo.rmse)} pp against thresholds of 0.50, 0.70 and 4.0 pp. Those thresholds were set from an asset-wealth literature; the target here is a headcount against a <em>nominal, region-specific poverty line</em>, and no satellite can see a price level. `) +
+            : `<b class="bad-inline">The held-out skill check fails on this run and goes up red</b> — R² ${fmt2(s.lopo.r2)}, ρ ${fmt2(s.lopo.spearman)}, RMSE ${fmt1(s.lopo.rmse)} pp against thresholds of 0.50, 0.70 and 4.0 pp. Those thresholds were set from an asset-wealth literature; the target here is a headcount against a <em>nominal, region-specific poverty line</em>, and no satellite can see a price level. `) +
           (inflate != null
             ? `A random k-fold on the same rows would have reported R² ${fmt2(s.random.r2)} instead of ${fmt2(s.lopo.r2)} — ${fmt2(inflate)} of pure fold design, and the reason the honest number is the published one. `
             : "") +

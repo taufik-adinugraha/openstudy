@@ -412,8 +412,8 @@ const javaLight = 0.667, javaGdp = 0.5702, javaLand = 0.066;
         the 5 km often used swallows whole towns.</p>
         <p><b>Output.</b> BPS real PDRB (ADHK), annual table {A.bps.annual_var} and quarterly table
         {A.bps.quarterly_var}, {A.bps.annual_years[0]}–{A.bps.latest_annual}.</p>
-        <p class="caveat"><b>Registered in advance.</b> The levels gate (G-A1) required R² ≥ 0.65; it
-        passed at {sig(A.gates["G-A1"].min_r2)}. The out-of-sample gate (G-A2) required a
+        <p class="caveat"><b>Registered in advance.</b> The location check required R² ≥ 0.65; it
+        passed at {sig(A.gates["G-A1"].min_r2)}. The out-of-sample check required a
         {pct(0.6, 0)} province win rate; it reached {pct(A.gates["G-A2"].prov_win_rate)} and
         <b>failed</b>. Both are published here, unchanged.</p>
       </section>
@@ -560,7 +560,7 @@ const javaLight = 0.667, javaGdp = 0.5702, javaLand = 0.066;
         nothing</b>, winning in only {pct(A.oos.annual.prov_win_rate)} of provinces. The quarterly variant
         does better than naive on error ({sig(A.oos.quarterly.mae_lights, 4)} against
         {sig(A.oos.quarterly.mae_naive, 4)}) but still wins in under half of provinces
-        ({pct(A.oos.quarterly.prov_win_rate)}). This is gate G-A2, and it is published failed.</p>
+        ({pct(A.oos.quarterly.prov_win_rate)}). This is the out-of-sample check, and it is published failed.</p>
       </section>
 
       <section id="s9">

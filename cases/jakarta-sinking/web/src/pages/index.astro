@@ -96,7 +96,7 @@ const flooded = S?.most_flooded ?? [];
         <div class="legend" id="legend1"><i></i><div></div></div>
       </div>
       <div class="hotspots">
-        <h3 class="stamp">NAMED HOTSPOTS · CM/YR · 2017–2023 · MEDIAN | FASTEST DECILE · GATE RANGE (G-C1)</h3>
+        <h3 class="stamp">NAMED HOTSPOTS · CM/YR · 2017–2023 · MEDIAN | FASTEST DECILE · PUBLISHED RANGE</h3>
         <ol class="ranked">
           {(S?.hotspots ?? []).slice().sort((a, b) => (a.p10 ?? 0) - (b.p10 ?? 0)).map((h) => (
             <li>
@@ -189,10 +189,10 @@ const flooded = S?.most_flooded ?? [];
       </div>
       <div class="table-scroll">
         <table class="data-table">
-          <thead><tr><th>Gate</th><th>Check</th><th>Result</th><th>Detail</th></tr></thead>
+          <thead><tr><th>#</th><th>Check</th><th>Result</th><th>Detail</th></tr></thead>
           <tbody>
-            {gateRows.map((g) => (
-              <tr><td>{g.k}</td><td>{g.label}</td>
+            {gateRows.map((g, gi) => (
+              <tr><td>{gi + 1}</td><td>{g.label}</td>
                   <td class={g.pass === true ? "ok" : g.pass === false ? "bad" : "defer"}>{g.pass === true ? "PASS" : g.pass === false ? "FAIL" : "DEFERRED"}</td>
                   <td class="detail">{gateDetail(g)}</td></tr>
             ))}
@@ -212,7 +212,7 @@ const flooded = S?.most_flooded ?? [];
       )}
       <p class="footnote">GNSS rates are in IGS14; the InSAR field is referenced to stable ground in the
       same region, so a small frame offset (≈1–2 mm/yr) is expected and stays inside the tolerance.
-      G-C3 — our own LiCSBAS processing of LiCSAR frame 098A (2017–2024) against this deposited
+      Independent reprocessing — our own LiCSBAS run over LiCSAR frame 098A (2017–2024) against this deposited
       field — is pending; it needs a 13 GB download and runs after the flagships' bandwidth frees.</p>
     </section>
 
@@ -235,8 +235,8 @@ const flooded = S?.most_flooded ?? [];
       (WorldPop's cells); kelurahan assigned by cell centre; velocity bilinear; kelurahan p10 = fastest decile
       of covered cells; flood frequency = distinct BPBD event dates with a flooded RT inside the kelurahan.
       <b>The clock:</b> ground(y) = ground(2025) + v·(y−2025), linear, no scenarios, cells without coverage
-      held still — an illustration of momentum, not a prediction. <b>Gates:</b> G-C1 literature, G-C2 GNSS,
-      G-C4 exposure sanity, G-C5 flood plausibility evaluated above; G-C3 (own LiCSBAS run) deferred.</p>
+      held still — an illustration of momentum, not a prediction. <b>Checks:</b> literature range, GNSS,
+      exposure sanity and flood plausibility evaluated above; independent reprocessing deferred.</p>
       <span class="stamp dim">A DEMO-LAB CASE · STATIC SNAPSHOT · GENERATED {generated} · ALL SOURCES OPEN</span>
     </footer>
 

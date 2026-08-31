@@ -278,7 +278,7 @@ import "../styles/tokens.css";
             spatial join. Mill catchments come from the Universal Mill List points via a KD-tree
             on the unit sphere, which also yields the distance and identity of the nearest mill.</li>
             <li><b>No forest mask is applied to the alerts.</b> RADD is already a
-            forest-disturbance product, and gate G-H2 compares against GFW's own unmasked
+            forest-disturbance product, and the alert-reconciliation check compares against GFW's own unmasked
             aggregation — masking here would compare unlike with unlike.</li>
           </ol>
         </div>
@@ -1569,7 +1569,7 @@ import "../styles/tokens.css";
               already plantation in 2001. ${r.note ?? ""}`;
           }
           if (!num) num = r?.reason ? `Not evaluated: ${r.reason}` : "Not evaluated yet.";
-          return `<div class="gate"><span class="id">${id}</span>
+          return `<div class="gate"><span class="id">CHECK ${Object.keys(DESC).indexOf(id) + 1}</span>
             <div><b>${DESC[id][0]}</b><p>${DESC[id][1]}</p><p>${num}</p></div>
             <span class="badge ${st}">${st}</span></div>`;
         }).join("");

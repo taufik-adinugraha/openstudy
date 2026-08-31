@@ -111,7 +111,7 @@ const maxMean = summary.topMean[0].v;
       regional accounts: real PDRB for all 514 regencies — annual and quarterly.
       The verdict is two-sided, and both sides are printed. <b>Where</b> activity
       is, lights explain about 70% of the cross-regency variation, every year
-      (gate G-A1). <b>When</b> it moves, the short-run link is too weak to use: the
+      (the location check). <b>When</b> it moves, the short-run link is too weak to use: the
       growth coefficient’s interval contains zero, and out of sample the mapping
       loses to simply assuming last year’s growth. 2020 is usually offered as the
       proof case; on our own numbers it is not one — lights fell 2.1% and GDP fell
@@ -119,7 +119,7 @@ const maxMean = summary.topMean[0].v;
       cannot be separated. The uncertainty bands below are that sentence, drawn.</p>
 
       <div class="tiles" id="calib-tiles" hidden>
-        <div class="tile"><span class="t-label">Where · levels fit (gate G-A1)</span>
+        <div class="tile"><span class="t-label">Where · levels fit</span>
           <span class="t-value" id="t-gate-v">—</span>
           <span class="t-sub" id="t-gate-s"></span></div>
         <div class="tile"><span class="t-label">Elasticity (within regency)</span>
@@ -149,7 +149,7 @@ const maxMean = summary.topMean[0].v;
       </div>
 
       <div class="calib-block" id="calib-scatter-block" hidden>
-        <h3 class="stamp">GATE G-A1 · LOG REAL PDRB ~ LOG LIGHTS, ONE DOT PER REGENCY <span class="gate-chip" id="sc-gate"></span></h3>
+        <h3 class="stamp">LOCATION CHECK · LOG REAL PDRB ~ LOG LIGHTS, ONE DOT PER REGENCY <span class="gate-chip" id="sc-gate"></span></h3>
         <div class="controls" style="flex-wrap:wrap; justify-content:flex-start; gap:10px;">
           <div class="toggle sc-years" id="sc-years" role="group" aria-label="calibration year"></div>
           <span class="stamp dim" id="sc-r2"></span>
@@ -887,7 +887,7 @@ const maxMean = summary.topMean[0].v;
         const years = cal.scatter.years, pts = cal.scatter.points;
         const lv = Object.fromEntries(cal.levels.map((d) => [d.year, d]));
         const gate = cal.gates["G-A1"];
-        $("sc-gate").textContent = `G-A1 ${gate.pass ? "PASS" : "FAIL"} · min R² ${gate.min_r2.toFixed(2)}`;
+        $("sc-gate").textContent = `${gate.pass ? "PASS" : "FAIL"} · min R² ${gate.min_r2.toFixed(2)}`;
         $("sc-gate").classList.add(gate.pass ? "pass" : "fail");
         let yi = years.length - 1;
         const W = Math.max(el.clientWidth, 320), H = 360, M = { t: 14, r: 16, b: 40, l: 58 };
