@@ -366,10 +366,62 @@ def main() -> None:
             "years": g.to_dict("records"),
         })
 
+    # The review's own recomputation, folded in so the page's diagnosis is sourced from a file
+    # rather than typed into prose.  Written by pipeline/audit.py; absent on a first run, and the
+    # page falls back to saying less rather than to saying something unsupported.
+    review = None
+    af = config.DATA_DIR / "audit.json"
+    if af.exists():
+        a = json.loads(af.read_text())
+        agg = a["A_decomposition"]["aggregate"]
+        lastA = agg[-1]
+        lad = a["E_thinning"]["ladder"]
+        wu = sorted(
+            ({"kabupaten": k,
+              "gap_first": v[min(v)]["median_gap_days"], "gap_last": v[max(v)]["median_gap_days"],
+              "recall_first": v[min(v)]["recall_extent"], "recall_last": v[max(v)]["recall_extent"],
+              "gain": round(v[max(v)]["recall_extent"] / max(v[min(v)]["recall_extent"], 1e-9), 2)}
+             for k, v in {kk: {r["year"]: r for r in a["D_revisit"]["rows"]
+                               if r["kabupaten"] == kk}
+                          for kk in {r["kabupaten"] for r in a["D_revisit"]["rows"]}}.items()),
+            key=lambda r: -r["gain"])
+        review = {
+            "year": lastA["year"],
+            "ratio_ksa": lastA["ratio_ksa"],
+            "recall_extent": lastA["recall_extent"],
+            "recall_intensity": lastA["recall_ci"],
+            "share_of_deficit_extent": lastA["share_extent"],
+            "map_ci": lastA["map_ci"], "detected_ci": lastA["det_ci"],
+            "map_vs_ksa_pct": a["H_benchmark"]["map_vs_ksa_pct"],
+            "map_implied_ha": a["H_benchmark"]["map_implied_harvest_ha"],
+            "precision_by_year": [{"year": r["year"], "precision": r["precision"],
+                                   "recall": r["recall"]} for r in a["I_prf"]["rows"]],
+            "class_detect_rate": {c: a["B_by_crop_class"]["summary"][c]["detect_rate"]
+                                  for c in ("1", "2", "3")},
+            "class_cycles": {c: a["B_by_crop_class"]["summary"][c]["cond"]
+                             for c in ("1", "2", "3")},
+            "lobes": {k: a["C_seasonal"]["lobes_lag_corrected"][k]["ratio"]
+                      for k in ("rendeng", "gadu")},
+            "thinning": {"kabupaten": a["E_thinning"]["kabupaten"],
+                         "gap_full": lad[0]["median_gap_days"],
+                         "gap_half": lad[1]["median_gap_days"],
+                         "cycles_lost": round(1 - lad[1]["cycles_vs_full"], 4),
+                         "extent_lost": round(1 - lad[1]["extent_vs_full"], 4)},
+            "best_revisit_gain": wu[0],
+            "r2_monthly_calibrated": a["F_calibration"]["r2_monthly_calibrated"],
+            "satellite_share_of_calibrated": a["F_calibration"]["mean_sat_share"],
+            "negative_slope_units": [p["kabupaten"] for p in a["F_calibration"]["per_kabupaten"]
+                                     if p["effective_slope_on_detected"] < 0],
+            "timing_lag_months": a["G_timing"]["median_abs_xcorr_lag_months"],
+            "timing_corr_at_lag": a["G_timing"]["median_xcorr_at_lag"],
+            "timing_corr_at_zero": a["G_timing"]["median_xcorr_at_zero"],
+        }
+
     summary = {
         **{k: stats[k] for k in ("case", "generated_utc", "scope", "gates", "gates_passed",
                                  "gates_total", "detector_thresholds",
                                  "threshold_sensitivity_ha")},
+        "review": review,
         "kabupaten": kab_cards,
         "backscatter": bs_meta,
         "area_meta": area_meta,

@@ -43,6 +43,7 @@ const CHAPTERS = [
   ["05", "Six weeks early", "#ch05"],
   ["06", "Explore", "#explore"],
   ["07", "Method & gates", "#method"],
+  ["08", "Review", "#review"],
 ];
 ---
 
@@ -116,6 +117,15 @@ const CHAPTERS = [
       }
       .pad { padding: var(--space-4); }
       @media (max-width: 640px) { .pad { padding: 16px; } }
+
+      /* Review hand-off — the article is a separate page, so it gets a real door. */
+      .review-cta .lede { max-width: 66ch; }
+      .cta.big { display: inline-block; margin-top: 4px; font-family: var(--font-data);
+        font-size: 0.82rem; letter-spacing: 0.08em; color: var(--accent);
+        border: 1px solid var(--accent); border-radius: 4px; padding: 13px 22px;
+        text-decoration: none; transition: background 0.18s ease, transform 0.18s ease; }
+      .cta.big:hover { background: var(--accent-ink); transform: translateY(-1px); }
+      @media (prefers-reduced-motion: reduce) { .cta.big { transition: none; } }
 
       /* ── big stat ────────────────────────────────────────────────────── */
       .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -290,9 +300,9 @@ const CHAPTERS = [
           <span class="tag">Benchmarked against BPS KSA</span>
         </div>
         <div class="hero-top" style="margin-top:14px">
-          <h1 style="margin:0; max-width: 20ch;">
-            Indonesia will know how much rice it harvested in March.
-            <em style="font-style:normal;color:var(--accent)">We can know in January.</em>
+          <h1 style="margin:0; max-width: 22ch;">
+            Indonesia counts its March rice harvest in May.
+            <em style="font-style:normal;color:var(--accent)">The radar watched it arrive.</em>
           </h1>
           <p class="lede" style="font-size:0.98rem">
             Java's rice grows through the monsoon, under cloud — exactly what optical satellites
@@ -339,8 +349,10 @@ const CHAPTERS = [
           <div class="stat"><b>{fmt(totalCycles / 1000, 0)}k</b><span>crop cycles detected</span></div>
           <div class="stat"><b><i>{fmt(totalHa / 1000, 0)}k</i> ha</b><span>six kabupaten, all of it</span></div>
           <div class="stat">
-            <b><i>{g1?.variants?.calibrated?.kabupaten_r2?.toFixed(2) ?? "—"}</i></b>
-            <span>R² vs BPS, calibrated</span>
+            <b>
+              <i style="color:var(--alert)">{S?.review ? `${(S.review.recall_extent * 100).toFixed(0)}%` : "—"}</i>
+            </b>
+            <span>of the rice fields found ({S?.review?.year ?? "—"})</span>
           </div>
           <div class="stat">
             <b style={S?.gates_passed === 0 ? "color:var(--alert)" : ""}>
@@ -564,23 +576,26 @@ const CHAPTERS = [
         </div>
 
         <div class="panel pad" style="margin-top:var(--space-4)">
-          <span class="stamp">What would close the gap</span>
+          <span class="stamp">What would close the gap — revised after review</span>
           <p class="prose" style="margin-top:10px">
-            Every gate here fails for one reason, and it is a <b>resolution</b> problem rather
-            than a modelling one. The detector asks of each 100 m cell "did this cell go through
-            a flood-to-heading cycle?", and answers it well — the extent it returns agrees with a
-            published 10 m rice map on <b>83 %</b> of its own area. It cannot ask "how many
-            hectares of rice were harvested here?", because a 1 ha cell holds several 0.3–0.5 ha
-            plots on different calendars and the cell mean averages the second cycle away.
+            This panel used to say the gap was a <b>resolution</b> problem with a known fix: a
+            smaller analysis cell. The review tested that and it does not hold. The controlled
+            experiment is the one that settles it — take radar looks away from
+            <b id="rv-thin-kab">the densest regency's</b> own record, leave the fields, the
+            detector and every threshold untouched, and re-run. Widening the gap between looks
+            from <b id="rv-gap-full">—</b> to <b id="rv-gap-half">—</b> days costs
+            <b id="rv-cycles-lost">—</b> of its crop cycles and <b id="rv-extent-lost">—</b> of its
+            fields, and reproduces East Java's observed shortfall from sampling alone.
           </p>
           <p class="prose" style="margin-top:12px">
-            The fix is not a better model. It is a smaller cell, and the source data already
-            supports it: the shipped route is <b>10 m</b> γ⁰ and this analysis reads it at 80 m
-            to fit a 100 m grid. Detecting at 20–30 m over the same six regencies is roughly
-            twenty times the cells — an afternoon of compute on a bigger box rather than a
-            research programme — and it is the single change that would move the first three checks
-            together, because all three are measuring the same damping. That is the honest scope
-            of the next pilot, and it is why this page ships red rather than tuned.
+            The same experiment runs forwards in the record. As Sentinel-1C and 1D came into
+            service, <b id="rv-gain-kab">—</b>'s median gap fell
+            <b id="rv-gain-gap">—</b> and the share of its rice fields we find rose
+            <b id="rv-gain">—</b> — no change to the crop, the plots or the code. Cell size is a
+            real second-order effect and the case's damping term measures something real, but
+            <b>revisit binds first</b>, and the two are separable: both are testable on these same
+            six regencies, and the answer decides what a pilot should buy. That is the honest scope
+            of the next step, and it is why this page ships red rather than tuned.
           </p>
         </div>
 
@@ -589,6 +604,24 @@ const CHAPTERS = [
           <ul class="prose" style="margin-top:10px;padding-left:1.1em" id="licences"></ul>
           <p class="prose warn callout" style="margin-top:14px" id="lbs"></p>
         </div>
+      </section>
+
+      <!-- ── review ─────────────────────────────────────────────────────── -->
+      <section class="chapter reveal review-cta" id="review">
+        <div class="chap-head">
+          <div class="chap-no">08</div>
+          <div>
+            <h2>We had this instrument reviewed, adversarially.</h2>
+            <p class="lede" style="margin-top:10px">
+              An independent read of the same data against the published literature. It factors the
+              shortfall against the official survey and finds that three-quarters of it is fields
+              never found, not crops never counted — so the diagnosis this page used to give was the
+              wrong way round. It then takes radar looks away from Karawang's own record and
+              reproduces East Java's shortfall from revisit alone.
+            </p>
+          </div>
+        </div>
+        <a class="cta big" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/article`}>Read the review article →</a>
       </section>
     </main>
 
@@ -1392,28 +1425,42 @@ const CHAPTERS = [
         const g3 = SUM?.gates?.find((g) => g.id === "G-I3");
         const ciMean = g3 ? d3.mean(Object.values(g3.units ?? {}).filter((u) => /irrigat/.test(u.system ?? "")), (u) => u.cycles_per_year) : null;
         const f2 = (v) => (v == null ? "—" : (+v).toFixed(2));
+        /* the review's own recomputation, written by pipeline/audit.py into summary.json */
+        const RV = SUM?.review ?? null;
+        const pc = (v, d = 0) => (v == null ? "—" : `${(+v * 100).toFixed(d)} %`);
         document.getElementById("ksa-note").innerHTML = `
           The <b style="color:${C.accent}">radar line</b> is ours; the
           <b style="color:${C.official}">teal line</b> is BPS. They are never the same colour, and
           the residual is drawn rather than netted out.
           <br><br>
-          <b>What the comparison actually says.</b> We find the rice and we miss the second crop.
-          Our detected paddy extent sits inside the published rice map on
-          <b>${g4 ? (g4.agreement_on_ours * 100).toFixed(0) : "—"} %</b> of its area — the map is
-          broadly right. But the detector returns <b>${f2(ciMean)} crops per rice cell per year</b>
-          in the irrigated commands where agronomy and BPS both say two, and a harvested-area
-          figure that is a flow is short by exactly that factor. A 100 m cell holds several
-          0.3–0.5 ha sawah plots that are not transplanted on the same day, so the cell mean never
-          swings as far as a plot does and the second, weaker cycle disappears into the first.
+          <b>What the comparison actually says, corrected.</b> This page used to say we find the
+          rice and miss the second crop. Our own review disproved that, and the correction stands
+          here rather than in a footnote. Harvested area is a flow, so it factors exactly into the
+          fields that grew rice times the crops each one grew — and in ${RV?.year ?? "—"} we
+          recover <b>${pc(RV?.ratio_ksa)}</b> of BPS's figure as
+          <b>${pc(RV?.recall_extent)}</b> of the fields times
+          <b>${pc(RV?.recall_intensity)}</b> of the crops. <b>${pc(RV?.share_of_deficit_extent)}
+          of the shortfall is fields we never find</b>, not crops we fail to count. On cells an
+          independent 10 m map calls double-cropping we return
+          <b>${f2(RV?.class_cycles?.["2"])} crops</b>, not one — but we see only
+          <b>${pc(RV?.class_detect_rate?.["2"])}</b> of those cells at all, and
+          <b>${pc(RV?.class_detect_rate?.["1"])}</b> of single-cropping ones.
+          <br><br>
+          <b>The ${g4 ? (g4.agreement_on_ours * 100).toFixed(0) : "—"} % agreement figure is a
+          precision, not a recall.</b> It says most of what we call rice really is rice, which a
+          detector can always buy by detecting less. Read the other way round, we reproduce
+          <b>${g4 ? (g4.agreement_on_prior * 100).toFixed(0) : "—"} %</b> of the published map's
+          rice area pooled over four seasons, and
+          <b>${RV ? pc(RV.precision_by_year[2]?.recall) : "—"}</b> within a single year.
           <br><br>
           Uncalibrated, the kabupaten-year fit is <b>R² ${f2(g1v.uncalibrated?.kabupaten_r2)}</b>
           at <b>MAPE ${f2(g1v.uncalibrated?.kabupaten_mape)} %</b> — a failure, published red.
-          A calibration that carries that damping as an explicit term
-          (detected area ÷ the cell's own VH seasonal range) moves it to
-          <b>R² ${f2(g1v.calibrated?.kabupaten_r2)}</b> at
-          <b>MAPE ${f2(g1v.calibrated?.kabupaten_mape)} %</b> with a worst year of
-          <b>${f2(g1v.calibrated?.worst_abs_diff_pct)} %</b>. Both are published, because a gate
-          applied only after fitting to the benchmark is not a gate.`;
+          The calibration moves the <em>annual</em> fit to
+          <b>R² ${f2(g1v.calibrated?.kabupaten_r2)}</b>, but at the kabupaten-month resolution it
+          was fitted at its R² is <b>${f2(RV?.r2_monthly_calibrated)}</b> and the satellite
+          supplies <b>${pc(RV?.satellite_share_of_calibrated)}</b> of its hectares. Both are
+          published, because a gate applied only after fitting to the benchmark is not a gate —
+          and neither is a headline that only survives aggregation.`;
 
         /* the break */
         const bEl = document.getElementById("ch-break");
@@ -1628,6 +1675,7 @@ const CHAPTERS = [
           .on("mouseleave", () => { tip.hidden = true; });
         const g5 = SUM?.gates?.find((g) => g.id === "G-I5");
         const f2b = (v) => (v == null ? "—" : (+v).toFixed(2));
+        const RVW2 = SUM?.review ?? null;
         document.getElementById("holdout-note").innerHTML = `
           The ${hs} season never entered the calibration. Scored once, on arrival — and the
           honest reading is right there in the shape of the lines.
@@ -1645,8 +1693,12 @@ const CHAPTERS = [
           <b>So the six-week claim is not yet earned, and the page says so rather than implying
           otherwise.</b> What is earned is the lead itself: the shaded band is real — we hold a
           number for months in which BPS has not published one — and the seasonal <em>structure</em>
-          is reproduced from radar alone. Closing the gap is a resolution problem with a known
-          answer (see the method note), not a modelling one.`;
+          is reproduced from radar alone — with a systematic
+          <b>${f2b(RVW2?.timing_lag_months)}-month</b> late bias that, once removed, lifts the
+          correlation between our monthly curve and BPS's from
+          <b>${f2b(RVW2?.timing_corr_at_zero)}</b> to <b>${f2b(RVW2?.timing_corr_at_lag)}</b>.
+          A one-signed bias is a calibration constant, not an error. Closing the area gap is a
+          <b>sampling</b> problem before it is a resolution one (see the method note).`;
       })();
 
       /* ══════════════════════════════════════════════════════════════════
@@ -1799,6 +1851,21 @@ const CHAPTERS = [
         const ul = document.getElementById("licences");
         (SUM?.licences ?? []).forEach((l) => { const li = document.createElement("li"); li.textContent = l; ul.appendChild(li); });
         document.getElementById("lbs").textContent = SUM?.lahan_baku_sawah ?? "";
+
+        /* "What would close the gap" — every number from the review's own recomputation */
+        const RVW = SUM?.review ?? null;
+        const setTxt = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+        const pc0 = (v) => (v == null ? "—" : `${Math.round(+v * 100)} %`);
+        if (RVW) {
+          setTxt("rv-thin-kab", `${RVW.thinning.kabupaten}'s`);
+          setTxt("rv-gap-full", String(RVW.thinning.gap_full));
+          setTxt("rv-gap-half", String(RVW.thinning.gap_half));
+          setTxt("rv-cycles-lost", pc0(RVW.thinning.cycles_lost));
+          setTxt("rv-extent-lost", pc0(RVW.thinning.extent_lost));
+          setTxt("rv-gain-kab", RVW.best_revisit_gain.kabupaten);
+          setTxt("rv-gain-gap", `${RVW.best_revisit_gain.gap_first}→${RVW.best_revisit_gain.gap_last} days`);
+          setTxt("rv-gain", `×${(+RVW.best_revisit_gain.gain).toFixed(2)}`);
+        }
       })();
     </script>
   </body>

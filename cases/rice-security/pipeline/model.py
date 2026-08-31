@@ -51,16 +51,24 @@ DESIGN = ["intercept", "detected_kha", "detected_kha_x_inv_vh_range",
 def _design(df):
     """The calibration's design matrix — five interpretable terms and one that is the point.
 
-    ``detected_kha_x_inv_vh_range`` is the mechanism, not a fudge.  The detector under-counts
-    because a 100 m cell holds several 0.3-0.5 ha plots transplanted on different days, so the
-    cell MEAN never swings as far as a single plot does and a cycle that a plot-scale sensor
-    would see as a 8-10 dB VH climb arrives as 4.  The size of that damping is directly
-    observable per kabupaten as the cell's VH seasonal range, and where the range is small the
-    shortfall is large: Indramayu's rice cells swing 9.3 dB and we recover about half of KSA,
-    Lamongan's swing 6.6 dB and we recover a tenth.  Interacting the detected area with the
-    INVERSE of that range therefore lets one coefficient carry the physics instead of six
-    kabupaten dummies carrying six unexplained numbers — and it is a term that generalises to a
-    kabupaten this model has never seen, which a dummy is not.
+    ``detected_kha_x_inv_vh_range`` was intended as the mechanism rather than a fudge: a 100 m
+    cell holds several 0.3-0.5 ha plots transplanted on different days, so the cell MEAN never
+    swings as far as a single plot does, and the size of that damping is directly observable per
+    kabupaten as the cell's VH seasonal range.  Measured, that range is 8.3 dB in Indramayu
+    against 5.9 dB in Lamongan, and the recovered share of KSA moves with it (33 % against 2.5 %
+    in 2023).
+
+    ** REVIEW FINDING, 2026-08-31 — this term does not survive scrutiny and is scheduled for
+    replacement.  ``pipeline/audit.py`` test E thins Karawang's own record from a 6-day to a
+    24-day revisit and moves its VH range only 8.50 -> 6.91 dB while costing 99.7 % of its
+    detected fields, so the range is a weak function of sampling and cannot be the channel
+    through which revisit destroys detection.  Worse, the fitted interaction gives the detected
+    area an EFFECTIVE SLOPE of 1.444 - 9.638 / vh_range, which changes sign below 6.68 dB — so in
+    Bojonegoro, Grobogan and Lamongan the calibration says more detected rice implies less KSA
+    area.  Across the panel the satellite supplies 5.0 % of the calibrated hectares and the
+    monthly R2 is 0.06 against the 0.82 the annual aggregate shows.  Kept here unchanged because
+    the published gate is evaluated on it and results are not retro-fitted; see
+    ``web/src/pages/article.astro`` sections 9 and 10. **
     """
     import numpy as np
 
