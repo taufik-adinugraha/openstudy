@@ -918,5 +918,20 @@ const flipped = rv
       /* nothing may push the document sideways at any width */
       html, body { max-width: 100%; overflow-x: hidden; }
     </style>
+  
+    <script>
+      /* A hover read-out must not outlive the hover. Each chart hides its own tooltip on
+         mouseleave, but a hover can end without one ever firing: the window loses focus
+         (an app switch, a screenshot), or the tab is hidden. Backstop only — it never
+         second-guesses an active hover, it just closes read-outs once hovering has
+         demonstrably ended. */
+      (() => {
+        const stale = () => [...document.querySelectorAll('[id*="tip" i],[id*="tool" i],[class*="tip" i]')]
+          .filter((e) => !e.hidden && e.offsetWidth > 40 && getComputedStyle(e).position !== "static");
+        const hide = () => stale().forEach((e) => { e.hidden = true; });
+        addEventListener("blur", hide);
+        document.addEventListener("visibilitychange", () => { if (document.hidden) hide(); });
+      })();
+    </script>
   </body>
 </html>

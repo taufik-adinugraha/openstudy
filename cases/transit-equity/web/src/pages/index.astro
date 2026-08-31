@@ -796,7 +796,18 @@ import "maplibre-gl/dist/maplibre-gl.css";
             tip.style.top = Math.min(e.clientY - r.top + 16, host.clientHeight - 160) + "px";
             tip.innerHTML = tipHTML(geo.features[i].properties.id);
           });
-          canvas.addEventListener("mouseleave", () => { hover = -1; tip.hidden = true; paint(); });
+          const hideTip = () => { if (!tip.hidden || hover >= 0) { hover = -1; tip.hidden = true; paint(); } };
+          canvas.addEventListener("mouseleave", hideTip);
+          /* mouseleave is the happy path, but a pointer can stop hovering without ever
+             firing one: the window loses focus (an app switch, a screenshot), the tab is
+             hidden, or the pointer is already elsewhere when something repaints. Any of
+             those stranded the read-out on screen. Treat "a pointer moving anywhere that
+             is not this canvas" as the authoritative signal that hovering has ended. */
+          canvas.addEventListener("pointerleave", hideTip);
+          document.addEventListener("pointermove", (e) => { if (e.target !== canvas) hideTip(); }, { passive: true });
+          document.addEventListener("pointerdown", (e) => { if (e.target !== canvas) hideTip(); }, { passive: true });
+          addEventListener("blur", hideTip);
+          document.addEventListener("visibilitychange", () => { if (document.hidden) hideTip(); });
           canvas.addEventListener("click", (e) => { const i = m.featureAt(e); if (i >= 0) select(geo.features[i].properties.id); });
           canvas.tabIndex = 0;
           repaint = paint;
