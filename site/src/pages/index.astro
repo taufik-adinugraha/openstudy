@@ -49,7 +49,7 @@ const DEMOS = {
           <h2>Nighttime-Lights Economic Pulse</h2>
           <p>Monthly satellite radiance across 514 regencies, calibrated against BPS
           regional accounts and reviewed against the literature. Lights say <b>where</b>
-          the economy is, not <b>when</b> it moves — and we publish the failed gate
+          the economy is, not <b>when</b> it moves — and we publish the failed check
           that proves it.</p>
           <span class="meta">SATELLITE · ECONOMETRICS · MONTHLY CRON</span>
         </div>
@@ -194,12 +194,11 @@ const DEMOS = {
         <div class="case-body">
           <span class="badge">LIVE DEMO</span>
           <h2>Indonesia in the Global Trade Network</h2>
-          <p>330 million rows of bilateral trade — the product space, and then the
-          half the map was missing. Processed nickel exports grew fifteenfold while
-          the complexity rank stood still; the import data shows the price: chrome
-          ore up 124×, and the world’s largest coal exporter buying US$3.2B of coal
-          a year to feed its own smelters.</p>
-          <span class="meta">330M ROWS · EXPORTS + IMPORTS + PARTNERS · BACI · PRE-REGISTERED GATES</span>
+          <p>330 million rows of bilateral trade — the product space, and then the half the map was
+          missing. Downstreaming multiplied Indonesia’s processed-nickel exports 14.6× in dollars and
+          <b>34.6× in tonnes</b>: the price per tonne fell 58%. The import data shows what that bought —
+          chrome ore up 124×, and the world’s largest coal exporter buying US$3.2B of coal a year.</p>
+          <span class="meta">330M ROWS · EXPORTS + IMPORTS + PARTNERS · BACI · REVIEWED VS THE HARVARD ATLAS</span>
         </div>
       </a>
 
@@ -493,10 +492,11 @@ const DEMOS = {
         <div class="case-body">
           <span class="badge">LIVE DEMO</span>
           <h2>Jakarta Is Sinking</h2>
-          <p>Sentinel-1 InSAR 2017–2023 fused with elevation, population and
-          observed floods: 442,000 people live on ground sinking faster than
-          2&nbsp;cm a year — mapped for all 267 kelurahan, with a clock to 2050.</p>
-          <span class="meta">INSAR · SENTINEL-1 · 267 KELURAHAN · CLOCK TO 2050</span>
+          <p>Sentinel-1 radar over 261 kelurahan, 2017–2023. Central Jakarta now falls at
+          3.8 mm a year, down from 8.6 — while Pekalongan accelerates past 11 cm. The fastest
+          ground in Jakarta is <b>no longer on the coast</b>: it is inland in the west, where the
+          groundwater-free zone does not reach.</p>
+          <span class="meta">INSAR · SENTINEL-1 · 261 KELURAHAN · SUBSIDENCE HALVED SINCE 2016</span>
         </div>
       </a>
 
@@ -948,12 +948,11 @@ const DEMOS = {
         <div class="case-body">
           <span class="badge">LIVE DEMO</span>
           <h2>Indonesia in the Global Narrative</h2>
-          <p>Every 15 minutes, the world’s news mentions Indonesia somewhere. GDELT
-          watches all of it — 65 languages, a decade back. This case turns that
-          firehose into attention, tone, and theme signals a strategy team can read —
-          validated against nine dated events, from the 2018 tsunamis to the 2025
-          protests.</p>
-          <span class="meta">GDELT OPEN FEED · 65 LANGUAGES · 9 ANCHOR EVENTS · 50 GB STREAMED</span>
+          <p>A decade of the world’s news, machine-read and filtered to Indonesia: 8.05 million
+          coded events from 49.6 GB of raw feed. It measures <b>who</b> talks about Indonesia and
+          about what — three quarters of it Indonesia’s own press — far better than it measures
+          how much the world is looking.</p>
+          <span class="meta">GDELT OPEN FEED · 65 LANGUAGES · 8.05M EVENTS · REVIEWED ADVERSARIALLY</span>
         </div>
       </a>
 
@@ -1236,11 +1235,11 @@ const DEMOS = {
         <div class="case-body">
           <span class="badge">LIVE DEMO</span>
           <h2>Transit Access &amp; Urban Equity</h2>
-          <p>Four transit systems collapsed into one routing graph. An hour of
-          public transport buys Jakarta’s median resident 4.29% of the region’s
-          jobs — and Bodetabek’s median resident 0.05%. 38% of Jabodetabek
-          cannot reach a hospital within the hour.</p>
-          <span class="meta">GTFS · OSM · R5 ROUTING · 1,511 KELURAHAN · GINI 0.74</span>
+          <p>Four transit systems on one routing graph. An hour of scheduled public transport buys
+          Jakarta’s median resident 4.29% of the region’s job-dense floorspace and Bodetabek’s 0.05%
+          — but <b>34 kelurahan, 739,629 people</b>, live within 10 km of more of it than average and
+          reach none of it at all.</p>
+          <span class="meta">GTFS · OSM · R5 ROUTING · 1,511 KELURAHAN · 11 REVIEW TESTS</span>
         </div>
       </a>
 
@@ -1347,11 +1346,11 @@ const DEMOS = {
         <div class="case-body">
           <span class="badge">LIVE DEMO</span>
           <h2>Rice &amp; Food Security</h2>
-          <p>Sentinel-1 radar reads Java's paddy through monsoon cloud — 1.23 million
-          cells, 1.18 million crop cycles, benchmarked against 6,240 official BPS
-          regency-months. <b>All five gates published red</b>, with the reason
-          measured: we find the rice, but one crop where there are two.</p>
-          <span class="meta">SENTINEL-1 RTC · 6 KABUPATEN · 1.18M CROP CYCLES · 5 GATES RED</span>
+          <p>Sentinel-1 radar reads Java’s paddy through monsoon cloud — 1.23 million cells,
+          1.18 million crop cycles, against 6,240 official BPS regency-months. All five checks fail,
+          and the review <b>overturned our own first diagnosis</b>: three quarters of the shortfall is
+          fields the radar never sees, and what decides that is how often the satellite looks.</p>
+          <span class="meta">SENTINEL-1 RTC · 6 KABUPATEN · 5 CHECKS RED · DIAGNOSIS OVERTURNED</span>
         </div>
       </a>
 
@@ -2405,11 +2404,11 @@ const DEMOS = {
         <div class="case-body">
           <span class="badge">LIVE DEMO</span>
           <h2>Forest &amp; Commodity Watch</h2>
-          <p>404,287 radar alerts since 2020, clustered into events and linked to
-          palm estates, mill sourcing areas and peat. Three-quarters of alerted
-          hectares fall inside a mill catchment — deforestation as a supply-chain
-          question, not a pixel count.</p>
-          <span class="meta">RADD · 763,643 HA · MILL LINKAGE · 13.6% ON PEAT</span>
+          <p>404,287 radar disturbance events since 2020, tested against palm estates, mill sourcing
+          areas and peat. Three quarters of alerted hectares fall inside a mill catchment — but so does
+          42% of all alertable forest, so the number that matters is the <b>1.76× lift</b>, running from
+          1.03× in Riau to 2.43× on the Kalimantan frontier.</p>
+          <span class="meta">RADD · 763,643 HA · 1.76× LIFT OVER BASE RATE · 13.6% ON PEAT</span>
         </div>
       </a>
 
@@ -2419,11 +2418,10 @@ const DEMOS = {
         <div class="case-body">
           <span class="badge">LIVE DEMO</span>
           <h2>Poverty Mapping from Space</h2>
-          <p>Rooftops, lights and land cover as welfare signals across 7,069
-          kecamatan. Its headline gate <b>fails</b> — and that is the finding:
-          57% of the error is one constant per province, because a satellite
-          cannot see the poverty line the roofs are judged against.</p>
-          <span class="meta">GEO-ML · 7,069 KECAMATAN · GATE PUBLISHED RED · BENCHMARKED TO BPS</span>
+          <p>Rooftops, lights and land cover as welfare signals across 7,069 kecamatan. Its headline
+          check <b>fails</b>, and an adversarial review found the reason is fold design, not the target:
+          a random fold on the same rows scores 0.65, holding a whole province out scores 0.40.</p>
+          <span class="meta">GEO-ML · 7,069 KECAMATAN · CHECK PUBLISHED RED · REVIEWED ADVERSARIALLY</span>
         </div>
       </a>
 
@@ -3762,11 +3760,11 @@ const DEMOS = {
         <div class="case-body">
           <span class="badge">LIVE DEMO</span>
           <h2>Jabodetabek Air Quality Nowcast</h2>
-          <p>Ground sensors, ERA5 weather and fire hotspots fused into a 24–72
-          hour PM2.5 forecast that beats persistence by 18%. It also found the
-          harder truth: of 24 stations in Jabodetabek, <b>two are still
-          reporting</b>.</p>
-          <span class="meta">OPENAQ · ERA5 · FIRMS · +17.9% VS PERSISTENCE · 2 LIVE SENSORS</span>
+          <p>A 24–72 hour PM2.5 nowcast for 32 million people, from ERA5, fire detections and
+          whatever ground sensors are left. It beats “tomorrow looks like today” — and in proving
+          it, established that Greater Jakarta is down to <b>one working public sensor</b>, 43 metres
+          from a dead one it disagreed with sixfold.</p>
+          <span class="meta">OPENAQ · ERA5 · FIRMS · 1 LIVE PUBLIC SENSOR · REVIEWED ADVERSARIALLY</span>
         </div>
       </a>
     </section>
