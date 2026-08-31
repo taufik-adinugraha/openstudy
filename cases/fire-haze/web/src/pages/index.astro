@@ -33,7 +33,7 @@ const GATES = [
   ["G-J1", "Hotspot hygiene", true,
    "Zero retained detections inside the static volcano/flare mask, on every product including NRT — where the FIRMS type field does not exist, so a field-based filter passes while doing nothing. A removal share below 0.5 % also fails: that means the filter is broken, not that Indonesia has no volcanoes."],
   ["G-J2", "Ignition-risk skill", true,
-   "Held-out AUC ≥ 0.80 and a Brier skill score > 0 against both day-of-year climatology and the CEMS Canadian Fire Weather Index, at 1, 3 and 7 days' lead. Reanalysis and forecast paths scored separately."],
+   "Held-out AUC ≥ 0.80 and a Brier skill score > 0 against both day-of-year climatology and the CEMS Canadian Fire Weather Index, at 1, 3 and 7 days' lead. Reanalysis and forecast paths scored separately. Two things the threshold does not capture, both measured in the review: on a 3.8% event average precision is the honest companion to AUC (0.292 at one day), and the FWI half of this check is scored on the two held-out seasons the CEMS record covers, not all three."],
   ["G-J3", "Transport direction", false,
    "On episode days, the back-trajectory bearing agrees with the forward run's within ±30° on ≥ 70 % of days. This gates the integrator, not the physics — the physics check is the CAMS comparison, published as divergence rather than as a score we claim to win."],
   ["G-J4", "Receptor correlation", true,
@@ -51,6 +51,7 @@ const CHAPTERS = [
   ["06", "2015 and 2019", "#ch06"],
   ["07", "Explore", "#explore"],
   ["08", "Methodology", "#method"],
+  ["09", "Review", "#review"],
 ];
 ---
 
@@ -256,6 +257,17 @@ const CHAPTERS = [
                   letter-spacing: 0.06em; color: var(--ink-muted); text-decoration: none; white-space: nowrap; }
       nav.toc a:hover, nav.toc a[aria-current="true"] { color: var(--accent); }
 
+      /* ── review hand-off — the article is a separate page, so it gets a real door ── */
+      .review-cta { padding-top: var(--space-6); display: flex; flex-direction: column;
+                    align-items: flex-start; }
+      .review-cta p { color: var(--ink-muted); max-width: var(--prose-width); }
+      .cta.big { align-self: flex-start; margin-top: var(--space-2); font-family: var(--font-data);
+                 font-size: 13px; letter-spacing: 0.08em; color: var(--accent);
+                 border: 1px solid var(--accent); border-radius: 4px; padding: 13px 22px;
+                 text-decoration: none; transition: background 0.18s ease, transform 0.18s ease; }
+      .cta.big:hover { background: var(--accent-ink); transform: translateY(-1px); }
+      @media (prefers-reduced-motion: reduce) { .cta.big { transition: none; } }
+
       footer { padding: var(--space-6) 0 var(--space-5); border-top: 1px solid var(--hairline);
                color: var(--ink-muted); font-size: 13px; }
 
@@ -288,7 +300,7 @@ const CHAPTERS = [
       <!-- ══════════════════════════ HERO ══════════════════════════ -->
       <section class="hero wrap" id="top">
         <span class="stamp">Case J · Indonesia → Singapore · {pending ? "pipeline not yet run" : "live"}</span>
-        <h1>The smoke that closed Singapore's schools — whose land was it standing on three days earlier?</h1>
+        <h1>The smoke that closed Singapore's schools — where was that air three days earlier, and what was burning under it?</h1>
         <p class="lede">
           Indonesia's haze is not weather. It is a land-use decision plus a wind, and the two
           halves are separable: <em>where a fire is likely to start</em> is a function of drought,
@@ -358,7 +370,18 @@ const CHAPTERS = [
           This is a <b>kinematic trajectory model</b>, not a chemistry-transport model. A single
           trajectory is a line, not a plume; the spread of the ensemble is a proxy for dispersion,
           not a simulation of it. Release heights come from CAMS GFAS where GFAS exists and from a
-          parameterised plume rise where it does not — the share is printed in the methodology.
+          parameterised plume rise where it does not — and in this build the fallback carries
+          <b>96.3%</b> of parcels, because GFAS has no injection height before 2019. The share is
+          printed in the methodology and the review measures what it costs.
+        </p>
+        <p class="muted" style="margin-top: var(--space-2); font-size: 13px;">
+          <b>How far back this can be read.</b> Across all 9,594 receptor-days in the archive the
+          ensemble's half-width is 24 km at six hours, 82 km at a day, and <b>177 km at 72 hours</b>,
+          by which point only 55% of parcels are still inside the domain. A province-level answer is
+          inside the instrument's resolution at a day and at the edge of it at three; the top-ranked
+          province changes on 27% of episodes if the window is 24 hours instead of 72. The
+          trajectory says <em>where the air was</em>, not who lit the fire, and the review article
+          puts numbers on how far that can be pushed.
         </p>
       </section>
 
@@ -414,6 +437,15 @@ const CHAPTERS = [
           asserted, seasons blocked in cross-validation, and the two anchor years removed from
           training entirely.
         </p>
+        <p class="muted" style="font-size: 14px">
+          <b>The obvious objection, tested.</b> Blocking by season does not stop the model
+          memorising <em>where</em> fire lives: every cell is in both train and test, and seven of
+          its features are that cell's own fire history. The review refits the whole model with the
+          split blocked in <b>space</b> as well as season — cells grouped into 73 blocks of 2°,
+          assigned at random to four folds — so that no scored cell was ever seen in training. It
+          costs <b>0.0054 AUC at one day</b> and 0.0083 at seven. The skill is in the weather and
+          the fuel, not in the memory of the map.
+        </p>
 
         <div class="controls" role="group" aria-label="Risk surface controls">
           <span class="ctl-label" id="lbl-lead">Lead</span>
@@ -461,7 +493,33 @@ const CHAPTERS = [
           cannot tune, given the fairest possible treatment by being isotonically calibrated to
           probability on the same folds.
         </p>
+        <p class="muted" style="font-size: 14px">
+          <b>Read the AUC column with the next sentence attached.</b> Fire happens on 3.76% of
+          cell-days, and on a rare event AUC is dominated by easy true negatives. The same
+          predictions score an <b>average precision of 0.292</b> at one day — 7.8× the base rate,
+          real skill, honestly sized — and at an alert budget of 1% of cell-days the model is right
+          <b>53 times in 100</b> at one day and <b>37 in 100</b> at seven. AUC and average precision
+          also rank the two internal baselines in <em>opposite</em> orders, which is why the review
+          article argues the gate metric should be the second one.
+        </p>
         <div id="skill-block"><div class="loading skel" style="height: 260px"></div></div>
+        <p class="muted" style="font-size: 14px; margin-top: var(--space-3)">
+          <b>What the FWI column was scored on, and what changed.</b> Until this review the CEMS
+          record on disk covered only <b>two of the three held-out seasons</b> — 2014, 2015 and 2017
+          had been recorded as rejected rather than queued — so the "BSS vs CEMS FWI" column was
+          computed on one held-out season and 133,386 cell-days while the AUC column beside it was
+          computed on 2,142,680 across three. The cause was a defect in this pipeline's own
+          Copernicus queue driver: a rejected job's cooling-off timestamp was refreshed on every
+          poll, so it could never be resubmitted. That is fixed, all fifteen CEMS years are now on
+          disk, and the comparison above is re-scored on <b>266,658 cell-days across two held-out
+          seasons</b>, with an even-handed re-scoring across all three at a 100% join. The claim
+          survives, and it was flattered: the index's best season had been the one it was tested on,
+          so the model's skill against it at one day falls from +0.131 to <b>+0.108</b>. A second,
+          sharper caveat: the composite FWI is <b>not the best member of its own family here</b> —
+          the Build-Up Index beats it at every lead, which is exactly what de Groot et al. (2007)
+          assumed when they built Indonesia's fire-danger system around the Drought Code, and what
+          Mortelmans et al. (2025) measure over this same box.
+        </p>
 
         <h3 style="margin-top: var(--space-5)">The honest cost of forecasting rather than hindcasting</h3>
         <p class="muted" style="font-size: 14px">
@@ -477,11 +535,23 @@ const CHAPTERS = [
         <span class="chnum">Chapter 04</span>
         <h2>The plume</h2>
         <p class="lede">
-          Forward trajectories weighted by fire radiative power and released at CAMS GFAS
-          injection heights — plume height is what decides whether smoke settles over
-          Palangkaraya or joins the 850 hPa flow across the Strait. Drawn beside the CAMS
-          chemistry forecast: where the cheap model agrees, it is doing its job; where it
-          diverges, the divergence is the finding.
+          Forward trajectories weighted by fire radiative power, released at CAMS GFAS injection
+          heights <em>where GFAS has them</em> and at a parameterised plume rise where it does not
+          — plume height is what decides whether smoke settles over Palangkaraya or joins the
+          850 hPa flow across the Strait.
+        </p>
+        <p class="muted" style="font-size: 14px">
+          <b>In this build the fallback carries almost all of it.</b> GFAS publishes a usable
+          injection height only over the later part of the archive, so <b>3.7%</b> of parcels were
+          released at a measured height and <b>96.3%</b> at the parameterised one. That is the
+          single most consequential number in this chapter and it belongs in the first paragraph
+          rather than the methodology — Draxler and Hess showed that releasing at 10, 200 and 750 m
+          changes a trajectory substantially where a half-degree horizontal offset barely does.
+          <b>The CAMS chemistry comparison has not run either</b>: the transport metadata records it
+          as unavailable, and although the forecast years have since landed on disk they arrived
+          after this stage last ran. The physics check the specification calls the real validation
+          is therefore <em>outstanding</em>, not passed, and the only direction check that did run
+          is the integrator's own self-consistency test below, which fails.
         </p>
         <div id="plume-block"><div class="loading skel" style="height: 220px"></div></div>
       </section>
@@ -508,6 +578,17 @@ const CHAPTERS = [
           which is the kind of arrangement that survives one refactor and then quietly stops being
           true. They are scored blind. If the model cannot rank the two crises everyone remembers,
           nothing else here is worth reading.
+        </p>
+        <p class="muted" style="font-size: 14px">
+          <b>The replay check ships red, and the result underneath it is the strongest thing on
+          this page.</b> The gate fails on arithmetic — a 90th-percentile rule over seven modelled
+          seasons admits one, and two anchors cannot occupy one slot — and the threshold is not
+          moved. But the model reproduces the observed severity ordering of <b>all seven seasons
+          exactly</b> (Spearman ρ = 1.00), having never been trained on two of them, and scores the
+          anchors blind at AUC 0.909 in 2015 and 0.904 in 2019 — higher than its own
+          cross-validated folds. One qualification belongs beside it: the ordering is exact but the
+          top of the distribution is compressed. Observed, 2019 exceeds 2012 by 29%; modelled, by
+          0.9%. Right in rank, fragile in magnitude.
         </p>
         <div id="anchors"><div class="loading skel" style="height: 260px"></div></div>
       </section>
@@ -598,9 +679,43 @@ const CHAPTERS = [
 
         <h3 style="margin-top: var(--space-5)">Known holes, stated rather than papered over</h3>
         <ul class="muted" style="font-size: 14px; max-width: var(--prose-width); padding-left: 1.2em">
-          <li><b>Malaysia is out.</b> <code>apims.doe.gov.my</code> 404s on every path including
-              root, and the only aggregator carrying it forbids commercial use verbatim. The
-              transboundary claim here is <b>Indonesia → Singapore only</b>.</li>
+          <li><b>Malaysia has no ground truth, but it is not out of the model.</b>
+              <code>apims.doe.gov.my</code> 404s on every path including root, and the only
+              aggregator carrying it forbids commercial use verbatim, so there is no Malaysian
+              <em>receptor</em> to validate against. The trajectory engine still integrates over the
+              whole box, and across 1,284 Singapore episode days it names a <b>Malaysian</b>
+              province first on 29% of them — Johor alone on 25.6%, more often than any Indonesian
+              province. So the honest scope is <b>Indonesia and Malaysia → Singapore, validated
+              only at Singapore</b>. An earlier version of this page said "Indonesia → Singapore
+              only", which the model's own attribution contradicts.</li>
+          <li><b>The attribution weighting has no distance term.</b> Province shares are residence
+              time × fire radiative power, the standard receptor-model form. But a back-trajectory
+              spends its first hours near the receptor whatever its origin — the ensemble is still
+              within 24 km of the city at six hours — so any burning land close to the receptor
+              accumulates residence time on almost every parcel and the ranking is biased toward
+              proximity. Johor and Bangka-Belitung are the two nearest land masses to Singapore.
+              Read the ranking as "where the air was", never as "the dominant source".</li>
+          <li><b>Three CEMS FWI years were stranded by a bug, and it is now fixed.</b> 2014, 2015
+              and 2017 were recorded as rejected across roughly forty submissions because the queue
+              driver refreshed each rejected job's cooling-off timestamp on every poll, so it could
+              never be resubmitted. Dropping the dead job id on rejection recovered all three inside
+              fifteen minutes and the CEMS record is now complete at fifteen years. The external
+              baseline is re-scored above.</li>
+          <li><b>The CAMS chemistry comparison has still not run.</b> The transport metadata records
+              it as unavailable. The forecast years (2015, 2019, 2025) have since landed on disk,
+              but they arrived after the transport stage last ran, so nothing has been compared
+              against them yet. The physics check is outstanding rather than passed, and it is one
+              re-run away.</li>
+          <li><b>Pooling three seasons hides a threshold crossing.</b> At seven days' lead the
+              model scores 0.794 on the 2016 season alone — below the 0.80 the check asks for —
+              against 0.844 on 2018. The pooled 0.822 is a mean over a range that straddles its own
+              threshold, and the spread belongs beside the mean.</li>
+          <li><b>The two halves of the case cover different years.</b> The risk model is fitted on
+              2012 and 2015–2019 and 2026; the trajectory model is integrated on 2014, 2015, 2019,
+              2020 and 2024–2026. They share three seasons. That is the Copernicus queue delivering
+              single-level and pressure-level years in different orders, not a design choice, but
+              "where fire starts" and "where the smoke goes" are currently statements about largely
+              different periods.</li>
           <li><b>2015 has no Singapore ground truth.</b> The NEA record begins ~2016-03, so that
               anchor is scored on FIRMS detections plus CAMS EAC4, and the replay check says so.</li>
           <li><b>There is no operational IOD index.</b> The HadISST DMI runs about three months
@@ -622,6 +737,25 @@ const CHAPTERS = [
 
         <h3 style="margin-top: var(--space-5)">Attribution</h3>
         <div id="licences" class="muted" style="font-size: 13px"></div>
+      </section>
+
+      <!-- ══════════════════════════ REVIEW ══════════════════════════ -->
+      <section class="wrap review-cta" id="review">
+        <span class="chnum">09 · Review</span>
+        <h2>We had this instrument reviewed, adversarially.</h2>
+        <p>
+          An independent read of the same data against the published literature. It refits the
+          whole model with the split blocked in space as well as season — and finds the skill
+          survives, which is the strongest result on this page and one this build never tested for.
+          It also shows that AUC is the wrong gate metric for a 3.8% event; it traces "beats the
+          FWI" back to a single held-out season, finds the queue bug that caused it, fixes it,
+          drains the three missing CEMS years and re-scores; it shows the Build-Up Index beating the
+          composite index the model is measured against; and it replays the attribution over all
+          1,284 Singapore episode days, where it points at Johor before South Sumatra — which the
+          published dispersion-modelling literature independently supports. Every correction on this
+          page came from it.
+        </p>
+        <a class="cta big" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/article`}>Read the review article →</a>
       </section>
 
       <footer class="wrap">
