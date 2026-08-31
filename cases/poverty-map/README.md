@@ -12,9 +12,11 @@ Status: **BUILT — full DAG implemented (ingest → features → train → down
 
 ## Results (2026-08-30, full national run)
 
-Ingest moved **110,122,129 building footprints** across 273 Open Buildings partitions,
-10 WorldPop years, 14 Black Marble annuals and 71 WorldCover tiles into per-kecamatan
-aggregates for all 7,069 kecamatan, and **G-F1 fails.** It is published failing.
+Ingest moved **110,122,129 building footprints** across all 315 Open Buildings level-6
+partitions, 10 WorldPop years, 14 Black Marble annuals and 102 WorldCover tiles into
+per-kecamatan aggregates for all 7,069 kecamatan (`data/ingest_ledger.jsonl` is the
+authority — nothing was fitted on a partial pull), and **G-F1 fails.** It is published
+failing.
 
 | gate | result | numbers |
 |---|---|---|
@@ -22,6 +24,55 @@ aggregates for all 7,069 kecamatan, and **G-F1 fails.** It is published failing.
 | **G-F2** Java / off-Java + urban / rural | disclosed | Java R² 0.357 · off-Java 0.381 · kabupaten 0.365 · **kota −0.599** |
 | **G-F3** temporal hold-out | PASS as specified | ρ 0.985 (2024) / 0.977 (2025); **strict** (province held out too) ρ 0.548 / 0.538 |
 | **G-F4** benchmark integrity (hard) | PASS | max \|recovered − official\| = **0.00 pp** over all 5,140 regency-years |
+
+## Adversarial review — `/poverty/article`
+
+The case was reviewed against the published literature and against its own stored
+predictions (`pipeline/review.py` → `data/review.json`, `pipeline/article.py` →
+`web/src/data/article.json`, page at `web/src/pages/article.astro`). Every published
+skill statistic reproduces exactly (max |Δ R²| = 0.0000 across 12). Four findings changed
+what the page says.
+
+1. **The defence of the failing check does not hold.** The page argued the target is a
+   headcount against a nominal region-specific poverty line "no satellite can see."
+   Handing the model the official poverty line under the identical folds moves R² 0.3952
+   → 0.4094 (**+0.014**, against the +0.105 it needs). Re-targeting the same features onto
+   the poverty line itself gives R² 0.378 / ρ 0.620 — the price level is seen *better in
+   rank* than the headcount is. The province offsets are explained by the line at R²
+   **0.014**, and by prediction compression (offset on the province's own poverty level)
+   at R² **0.357**. And BPS sets a line per regency: the median province spans 1.62×
+   internally, so the line varies more *within* a fold than between folds.
+2. **The thresholds' provenance was misdescribed.** `config.py` cites Putri, Wijayanto &
+   Sakti (2022, ISPRS IJGI 11(5):275) — a study of the **BPS poverty rate** in East Java,
+   not an asset index. The real mismatch is validation design: none of the three source
+   studies held space out. A random fold on these same rows gives R² 0.653, which is where
+   they sit; the spatial penalty here (−39 %) is smaller than Ploton et al. 2020 (−74 %)
+   and Engstrom et al. 2022 (−26 %) report. Against the only published *spatially held-out*
+   satellite model of a monetary headcount (Engstrom et al., R² 0.45 linear / 0.564 RF),
+   0.395 over an archipelago is unremarkable.
+3. **Most of the feature stack does not pay in R².** Under the identical 38 folds: night
+   lights alone 0.394, population + lights (9 features) **0.412** — above the published
+   0.395 on 31. Buildings alone 0.049; adding buildings to lights+population *lowers* R²
+   to 0.277. But in **rank** the roof family is the strongest single family (ρ 0.494 alone
+   vs lights' 0.416) and lifts the full stack to ρ 0.546. The attribution chart is
+   in-sample gain and was being read as predictive contribution.
+4. **The disaggregator has a positive, checkable result — now published.**
+   `validate.py::disaggregation` runs the shipped benchmarking rule one level up, where
+   truth exists: given each province's official rate, the held-out model distributes it
+   among that province's regencies at MAE **2.49 pp** against **2.69 pp** for giving every
+   regency its province's rate (R² 0.686 → 0.729), beating the flat rate on **54.1 %** of
+   514 regencies. Modest, real, and the only evidence the kecamatan layer works.
+
+Also published in `stats.json` and on the page: within-province **R² 0.077** beside the
+ρ 0.50 that was quoted alone; off-Java **RMSE 5.9 pp vs Java's 2.8 pp** beside the nearly
+equal R²; and error by roof density (**6.97 pp** in the emptiest quintile against 2.30 pp
+in the densest), which is the coverage diagnosis that replaces the price-level one.
+
+Open, and stated as work not done: OSM roads / GHSL / Sentinel-2 are specified and not
+ingested, and Figure 15 says where they would pay; predict P1 or a location parameter and
+derive the headcount, rather than predicting a threshold crossing directly; and decide
+explicitly whether the 22 features that do not pay in R² are kept for the rank skill they
+do add.
 
 **The headline finding is the shape of the failure, not the failure.** 57 % of the squared
 error is a single constant offset for a whole province. A satellite measures roofs and light;
@@ -103,8 +154,10 @@ journalctl -u pv-ingest -f
 | `features` | reconciles COD-AB's 2020 ADM2 codes to the current BPS codes, rolls the extensive accumulators up to ADM2, and runs **one** `derive()` on both levels | `features_adm2.parquet` (514 × 10), `features_adm3.parquet` (7,069 × 10), `features_meta.json` |
 | `model` | LightGBM on the regency P0; leave-one-province-out headline, 200 km blocks, random k-fold, ridge baseline, temporal hold-out, SHAP | `cv_predictions.parquet`, `model/`, `shap_adm2.parquet`, `model_stats.json` |
 | `downscale` | applies the regency model to kecamatan features and benchmarks each regency exactly | `estimates_adm3.parquet` |
-| `validate` | gates G-F1…G-F4, measured not tuned | `stats.json` |
+| `validate` | gates G-F1…G-F4 plus the province→regency disaggregation test, measured not tuned | `stats.json` |
 | `export` | view-models for the web app; missing artefacts are recorded as `pending` | `web/public/data/*` |
+| `review` | independent recomputation + five extra tests (horse race, poverty-line oracle, line-as-target, disaggregation, persistence) | `data/review.json` |
+| `article` | assembles the review article's data layer, incl. the transcribed literature table | `web/src/data/article.json` |
 
 ```sh
 uv sync
@@ -224,11 +277,12 @@ displays. Result: **7,069 kecamatan at a 78 m lattice in 2.07 MB**, 514 regencie
 14. **G-F1 fails and is published failing.** See "Results" above. Two things were
     deliberately *not* done in response: the CV design was not relaxed (a random k-fold
     would have reported R² 0.65 and cleared the bar), and the official poverty line was not
-    added as a feature (it is published per regency and would have supplied most of the
-    missing province-level signal, but it is derived from the very survey we are predicting,
-    so using it is circular). Instead the failure is decomposed and reported. **If you want
-    the gate chased, say so and say which of those two is acceptable** — both change what
-    the number means.
+    added as a feature, because it is derived from the very survey we are predicting.
+    Instead the failure is decomposed and reported. **UPDATE (review):** the line was added
+    as a *diagnostic* under the same folds and it does **not** supply the missing signal —
+    R² 0.3952 → 0.4094, +0.014 against the +0.105 needed. The assumption behind the second
+    option was wrong, and the review documents what replaces it. Chasing the gate by
+    relaxing the CV design remains off the table.
 15. **G-F3 as specified is not a clean test, so both versions are published.** Training on
     ≤ 2023 and predicting 2024/25 leaves the same regencies in the training set at earlier
     years, and the roof/land-cover layers are single-vintage — so the specified test mostly

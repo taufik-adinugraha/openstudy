@@ -1,0 +1,5600 @@
+{
+ "vintage": "2026-08-30",
+ "generated": "2026-08-31T01:54:44",
+ "latest_year": 2025,
+ "ships": false,
+ "gates": {
+  "G-F1": {
+   "id": "G-F1",
+   "title": "Out-of-sample skill \u2014 leave-one-province-out, 2025 cross-section",
+   "hard": true,
+   "status": "fail",
+   "detail": "38 province folds over 514 regencies. A random k-fold on the same rows reaches R\u00b2 0.6526 \u2014 the inflation a non-spatial fold buys, and the reason this number is the one published. Where the error lives: 57% of the squared error is a single constant offset for a whole province, and once that offset is removed the model orders regencies inside their province at \u03c1 0.50.",
+   "checks": [
+    {
+     "label": "R\u00b2 (leave-one-province-out)",
+     "value": 0.3952,
+     "threshold": 0.5,
+     "cmp": ">=",
+     "unit": "",
+     "ok": false
+    },
+    {
+     "label": "Spearman \u03c1",
+     "value": 0.5463,
+     "threshold": 0.7,
+     "cmp": ">=",
+     "unit": "",
+     "ok": false
+    },
+    {
+     "label": "RMSE",
+     "value": 5.3826,
+     "threshold": 4.0,
+     "cmp": "<=",
+     "unit": "pp",
+     "ok": false
+    }
+   ]
+  },
+  "G-F2": {
+   "id": "G-F2",
+   "title": "Java / off-Java and urban / rural skill disclosed separately",
+   "hard": false,
+   "status": "disclosed",
+   "detail": "A disclosure gate: it is satisfied by measuring and publishing both sides, and a red value below is a finding, not a gate failure. kota skill sits under 0.35, so every kota estimate is labelled indicative. Urban R\u00b2 of -0.5993 is below zero \u2014 for kota the model does worse than predicting the national mean, and city estimates should be read as indicative only.",
+   "checks": [
+    {
+     "label": "Java R\u00b2",
+     "value": 0.3574,
+     "threshold": 0.35,
+     "cmp": ">=",
+     "unit": "",
+     "ok": true
+    },
+    {
+     "label": "off-Java R\u00b2",
+     "value": 0.3808,
+     "threshold": 0.35,
+     "cmp": ">=",
+     "unit": "",
+     "ok": true
+    },
+    {
+     "label": "kota (urban) R\u00b2",
+     "value": -0.5993,
+     "threshold": 0.35,
+     "cmp": ">=",
+     "unit": "",
+     "ok": false
+    },
+    {
+     "label": "kabupaten (rural) R\u00b2",
+     "value": 0.3651,
+     "threshold": 0.35,
+     "cmp": ">=",
+     "unit": "",
+     "ok": true
+    }
+   ]
+  },
+  "G-F3": {
+   "id": "G-F3",
+   "title": "Temporal hold-out \u2014 train \u2264 2023, predict 2024 and 2025",
+   "hard": false,
+   "status": "pass",
+   "detail": "Fitted on 2016\u20132023 only, then asked for the two releases it has never seen. Read the first two rows with care: the same regencies appear in training in earlier years and the roof and land-cover layers are single-vintage, so what they mostly measure is how persistent a regency's rate is. The last two rows are the strict version \u2014 the province is held out as well as the year \u2014 and that is the number to quote to a client.",
+   "checks": [
+    {
+     "label": "Spearman \u03c1 2024",
+     "value": 0.9847,
+     "threshold": 0.65,
+     "cmp": ">=",
+     "unit": "",
+     "ok": true
+    },
+    {
+     "label": "Spearman \u03c1 2025",
+     "value": 0.9767,
+     "threshold": 0.65,
+     "cmp": ">=",
+     "unit": "",
+     "ok": true
+    },
+    {
+     "label": "\u03c1 2024 \u00b7 province ALSO held out",
+     "value": 0.5483,
+     "threshold": 0.65,
+     "cmp": ">=",
+     "unit": "",
+     "ok": false
+    },
+    {
+     "label": "\u03c1 2025 \u00b7 province ALSO held out",
+     "value": 0.5375,
+     "threshold": 0.65,
+     "cmp": ">=",
+     "unit": "",
+     "ok": false
+    }
+   ]
+  },
+  "G-F4": {
+   "id": "G-F4",
+   "title": "Benchmark integrity \u2014 kecamatan estimates reproduce every official regency rate",
+   "hard": true,
+   "status": "pass",
+   "detail": "Population-weighted mean of the kecamatan estimates recomputed from the shipped file for all 5,140 regency-years.",
+   "checks": [
+    {
+     "label": "max |recovered \u2212 official|",
+     "value": 0.0,
+     "threshold": 0.1,
+     "cmp": "<=",
+     "unit": "pp",
+     "ok": true
+    }
+   ]
+  }
+ },
+ "thresholds": {
+  "r2": 0.5,
+  "spearman": 0.7,
+  "rmse": 4.0,
+  "subgroup_r2": 0.35
+ },
+ "skill": {
+  "lopo": {
+   "n": 514,
+   "r2": 0.3952,
+   "spearman": 0.5463,
+   "pearson": 0.6629,
+   "rmse": 5.3826,
+   "mae": 3.9415,
+   "bias": 0.5038
+  },
+  "block": {
+   "n": 514,
+   "r2": 0.5766,
+   "spearman": 0.6142,
+   "pearson": 0.7632,
+   "rmse": 4.5036,
+   "mae": 3.3491,
+   "bias": 0.2754
+  },
+  "random": {
+   "n": 514,
+   "r2": 0.6526,
+   "spearman": 0.6993,
+   "pearson": 0.8081,
+   "rmse": 4.0796,
+   "mae": 3.0286,
+   "bias": 0.0942
+  },
+  "lopo_ridge": {
+   "n": 514,
+   "r2": 0.1852,
+   "spearman": 0.5956,
+   "pearson": 0.563,
+   "rmse": 6.2475,
+   "mae": 4.4475,
+   "bias": 1.1427
+  },
+  "lopo_java": {
+   "n": 119,
+   "r2": 0.3574,
+   "spearman": 0.6274,
+   "pearson": 0.6042,
+   "rmse": 2.8042,
+   "mae": 2.1862,
+   "bias": -0.2989
+  },
+  "lopo_offjava": {
+   "n": 395,
+   "r2": 0.3808,
+   "spearman": 0.5438,
+   "pearson": 0.6556,
+   "rmse": 5.944,
+   "mae": 4.4703,
+   "bias": 0.7456
+  },
+  "lopo_kota": {
+   "n": 98,
+   "r2": -0.5993,
+   "spearman": 0.2789,
+   "pearson": 0.3931,
+   "rmse": 3.8234,
+   "mae": 2.7061,
+   "bias": 0.9489
+  },
+  "lopo_kabupaten": {
+   "n": 416,
+   "r2": 0.3651,
+   "spearman": 0.451,
+   "pearson": 0.6386,
+   "rmse": 5.688,
+   "mae": 4.2325,
+   "bias": 0.399
+  },
+  "temporal_2024": {
+   "n": 514,
+   "r2": 0.9814,
+   "spearman": 0.9847,
+   "pearson": 0.9915,
+   "rmse": 0.9637,
+   "mae": 0.7324,
+   "bias": 0.2739
+  },
+  "temporal_strict_2024": {
+   "n": 514,
+   "r2": 0.3967,
+   "spearman": 0.5483,
+   "pearson": 0.6693,
+   "rmse": 5.4884,
+   "mae": 4.1151,
+   "bias": 0.7361
+  },
+  "temporal_2025": {
+   "n": 514,
+   "r2": 0.9461,
+   "spearman": 0.9767,
+   "pearson": 0.9811,
+   "rmse": 1.6066,
+   "mae": 1.2229,
+   "bias": 0.8742
+  },
+  "temporal_strict_2025": {
+   "n": 514,
+   "r2": 0.3324,
+   "spearman": 0.5375,
+   "pearson": 0.6539,
+   "rmse": 5.6549,
+   "mae": 4.2106,
+   "bias": 1.3132
+  }
+ },
+ "panel": {
+  "n": 5140,
+  "r2": 0.4046,
+  "spearman": 0.5495,
+  "pearson": 0.6627,
+  "rmse": 5.8293,
+  "mae": 4.3739,
+  "bias": 0.4702
+ },
+ "folds": {
+  "lopo": 38,
+  "block_200km": 108,
+  "random": 10
+ },
+ "coverage": {
+  "adm2_units": 514,
+  "adm3_units": 7069,
+  "years": [
+   2016,
+   2017,
+   2018,
+   2019,
+   2020,
+   2021,
+   2022,
+   2023,
+   2024,
+   2025
+  ],
+  "n_features": 31,
+  "reconciliation": {
+   "matched": 514,
+   "by_pcode": 488,
+   "by_name": 26,
+   "non_census": 8,
+   "unresolved": []
+  },
+  "inputs": {
+   "adm3": 7069,
+   "no_buildings": 372,
+   "no_population": 6,
+   "no_landcover": 0,
+   "no_lights": 106
+  }
+ },
+ "decomposition": {
+  "within_province_r2": 0.0767,
+  "within_province_spearman": 0.5016,
+  "provinces_scored": 37,
+  "offset_share_of_sse": 0.5657,
+  "note": "Fraction of the squared error that is a constant offset for a whole province, versus misordering of regencies inside it."
+ },
+ "audit": {
+  "rows": [
+   {
+    "key": "lopo",
+    "published": 0.3952,
+    "recomputed": 0.3952,
+    "abs_diff": 0.0
+   },
+   {
+    "key": "block",
+    "published": 0.5766,
+    "recomputed": 0.5766,
+    "abs_diff": 0.0
+   },
+   {
+    "key": "random",
+    "published": 0.6526,
+    "recomputed": 0.6526,
+    "abs_diff": 0.0
+   },
+   {
+    "key": "lopo_ridge",
+    "published": 0.1852,
+    "recomputed": 0.1852,
+    "abs_diff": 0.0
+   },
+   {
+    "key": "lopo_java",
+    "published": 0.3574,
+    "recomputed": 0.3574,
+    "abs_diff": 0.0
+   },
+   {
+    "key": "lopo_offjava",
+    "published": 0.3808,
+    "recomputed": 0.3808,
+    "abs_diff": 0.0
+   },
+   {
+    "key": "lopo_kota",
+    "published": -0.5993,
+    "recomputed": -0.5993,
+    "abs_diff": 0.0
+   },
+   {
+    "key": "lopo_kabupaten",
+    "published": 0.3651,
+    "recomputed": 0.3651,
+    "abs_diff": 0.0
+   },
+   {
+    "key": "temporal_2024",
+    "published": 0.9814,
+    "recomputed": 0.9814,
+    "abs_diff": 0.0
+   },
+   {
+    "key": "temporal_strict_2024",
+    "published": 0.3967,
+    "recomputed": 0.3967,
+    "abs_diff": 0.0
+   },
+   {
+    "key": "temporal_2025",
+    "published": 0.9461,
+    "recomputed": 0.9461,
+    "abs_diff": 0.0
+   },
+   {
+    "key": "temporal_strict_2025",
+    "published": 0.3324,
+    "recomputed": 0.3324,
+    "abs_diff": 0.0
+   }
+  ],
+  "max_abs_diff_r2": 0.0
+ },
+ "recomputed": {
+  "lopo": {
+   "n": 514,
+   "r2": 0.3952,
+   "spearman": 0.5463,
+   "pearson": 0.6629,
+   "rmse": 5.3826,
+   "mae": 3.9415,
+   "bias": 0.5038
+  },
+  "block": {
+   "n": 514,
+   "r2": 0.5766,
+   "spearman": 0.6142,
+   "pearson": 0.7632,
+   "rmse": 4.5036,
+   "mae": 3.3491,
+   "bias": 0.2754
+  },
+  "random": {
+   "n": 514,
+   "r2": 0.6526,
+   "spearman": 0.6993,
+   "pearson": 0.8081,
+   "rmse": 4.0796,
+   "mae": 3.0286,
+   "bias": 0.0942
+  },
+  "lopo_ridge": {
+   "n": 514,
+   "r2": 0.1852,
+   "spearman": 0.5956,
+   "pearson": 0.563,
+   "rmse": 6.2475,
+   "mae": 4.4475,
+   "bias": 1.1427
+  },
+  "lopo_java": {
+   "n": 119,
+   "r2": 0.3574,
+   "spearman": 0.6274,
+   "pearson": 0.6042,
+   "rmse": 2.8042,
+   "mae": 2.1862,
+   "bias": -0.2989
+  },
+  "lopo_offjava": {
+   "n": 395,
+   "r2": 0.3808,
+   "spearman": 0.5438,
+   "pearson": 0.6556,
+   "rmse": 5.944,
+   "mae": 4.4703,
+   "bias": 0.7456
+  },
+  "lopo_kota": {
+   "n": 98,
+   "r2": -0.5993,
+   "spearman": 0.2789,
+   "pearson": 0.3931,
+   "rmse": 3.8234,
+   "mae": 2.7061,
+   "bias": 0.9489
+  },
+  "lopo_kabupaten": {
+   "n": 416,
+   "r2": 0.3651,
+   "spearman": 0.451,
+   "pearson": 0.6386,
+   "rmse": 5.688,
+   "mae": 4.2325,
+   "bias": 0.399
+  },
+  "temporal_2024": {
+   "n": 514,
+   "r2": 0.9814,
+   "spearman": 0.9847,
+   "pearson": 0.9915,
+   "rmse": 0.9637,
+   "mae": 0.7324,
+   "bias": 0.2739
+  },
+  "temporal_strict_2024": {
+   "n": 514,
+   "r2": 0.3967,
+   "spearman": 0.5483,
+   "pearson": 0.6693,
+   "rmse": 5.4884,
+   "mae": 4.1151,
+   "bias": 0.7361
+  },
+  "temporal_2025": {
+   "n": 514,
+   "r2": 0.9461,
+   "spearman": 0.9767,
+   "pearson": 0.9811,
+   "rmse": 1.6066,
+   "mae": 1.2229,
+   "bias": 0.8742
+  },
+  "temporal_strict_2025": {
+   "n": 514,
+   "r2": 0.3324,
+   "spearman": 0.5375,
+   "pearson": 0.6539,
+   "rmse": 5.6549,
+   "mae": 4.2106,
+   "bias": 1.3132
+  },
+  "panel_lopo": {
+   "n": 5140,
+   "r2": 0.4046,
+   "spearman": 0.5495,
+   "pearson": 0.6627,
+   "rmse": 5.8293,
+   "mae": 4.3739,
+   "bias": 0.4702
+  }
+ },
+ "variance": {
+  "sst": 24621.7,
+  "between_share": 0.7155,
+  "within_share": 0.2845,
+  "sd_total": 6.928,
+  "sd_within": 3.836,
+  "n_prov": 38
+ },
+ "withinProvince": {
+  "r2": 0.0767,
+  "spearman": 0.5016,
+  "provinces_scored": 37,
+  "rmse": 3.5472
+ },
+ "provinces": [
+  {
+   "prov": "94",
+   "name": "Papua",
+   "n": 9,
+   "official": 24.663,
+   "pred": 12.756,
+   "offset": -11.907,
+   "line": 835262.0,
+   "rho": 0.833
+  },
+  {
+   "prov": "53",
+   "name": "Nusa Tenggara Timur",
+   "n": 22,
+   "official": 19.251,
+   "pred": 12.653,
+   "offset": -6.598,
+   "line": 500735.0,
+   "rho": 0.5
+  },
+  {
+   "prov": "96",
+   "name": "Papua Tengah",
+   "n": 8,
+   "official": 31.363,
+   "pred": 25.497,
+   "offset": -5.865,
+   "line": 904011.0,
+   "rho": 0.405
+  },
+  {
+   "prov": "75",
+   "name": "Gorontalo",
+   "n": 6,
+   "official": 13.477,
+   "pred": 8.539,
+   "offset": -4.937,
+   "line": 555991.0,
+   "rho": 0.6
+  },
+  {
+   "prov": "81",
+   "name": "Maluku",
+   "n": 11,
+   "official": 18.948,
+   "pred": 14.053,
+   "offset": -4.895,
+   "line": 683244.0,
+   "rho": 0.382
+  },
+  {
+   "prov": "34",
+   "name": "DI Yogyakarta",
+   "n": 5,
+   "official": 10.614,
+   "pred": 7.815,
+   "offset": -2.799,
+   "line": 532257.0,
+   "rho": 1.0
+  },
+  {
+   "prov": "92",
+   "name": "Papua Barat Daya",
+   "n": 6,
+   "official": 21.803,
+   "pred": 19.09,
+   "offset": -2.714,
+   "line": 685121.0,
+   "rho": 0.371
+  },
+  {
+   "prov": "16",
+   "name": "Sumatera Selatan",
+   "n": 17,
+   "official": 10.464,
+   "pred": 7.898,
+   "offset": -2.566,
+   "line": 566623.0,
+   "rho": 0.235
+  },
+  {
+   "prov": "17",
+   "name": "Bengkulu",
+   "n": 10,
+   "official": 12.148,
+   "pred": 9.989,
+   "offset": -2.159,
+   "line": 560423.0,
+   "rho": 0.358
+  },
+  {
+   "prov": "95",
+   "name": "Papua Selatan",
+   "n": 4,
+   "official": 22.55,
+   "pred": 20.595,
+   "offset": -1.955,
+   "line": 554280.0,
+   "rho": null
+  },
+  {
+   "prov": "33",
+   "name": "Jawa Tengah",
+   "n": 35,
+   "official": 9.187,
+   "pred": 7.967,
+   "offset": -1.22,
+   "line": 538656.0,
+   "rho": 0.671
+  },
+  {
+   "prov": "74",
+   "name": "Sulawesi Tenggara",
+   "n": 17,
+   "official": 11.734,
+   "pred": 10.726,
+   "offset": -1.008,
+   "line": 443914.0,
+   "rho": 0.676
+  },
+  {
+   "prov": "72",
+   "name": "Sulawesi Tengah",
+   "n": 13,
+   "official": 11.334,
+   "pred": 10.388,
+   "offset": -0.946,
+   "line": 545109.0,
+   "rho": 0.74
+  },
+  {
+   "prov": "91",
+   "name": "Papua Barat",
+   "n": 7,
+   "official": 23.054,
+   "pred": 22.27,
+   "offset": -0.784,
+   "line": 778271.0,
+   "rho": 0.0
+  },
+  {
+   "prov": "35",
+   "name": "Jawa Timur",
+   "n": 38,
+   "official": 9.481,
+   "pred": 8.815,
+   "offset": -0.665,
+   "line": 533304.0,
+   "rho": 0.622
+  },
+  {
+   "prov": "18",
+   "name": "Lampung",
+   "n": 15,
+   "official": 9.546,
+   "pred": 8.943,
+   "offset": -0.603,
+   "line": 582358.0,
+   "rho": 0.554
+  },
+  {
+   "prov": "52",
+   "name": "Nusa Tenggara Barat",
+   "n": 10,
+   "official": 11.784,
+   "pred": 11.373,
+   "offset": -0.411,
+   "line": 565881.0,
+   "rho": 0.321
+  },
+  {
+   "prov": "12",
+   "name": "Sumatera Utara",
+   "n": 33,
+   "official": 9.077,
+   "pred": 8.765,
+   "offset": -0.312,
+   "line": 559206.0,
+   "rho": 0.393
+  },
+  {
+   "prov": "76",
+   "name": "Sulawesi Barat",
+   "n": 6,
+   "official": 9.972,
+   "pred": 10.588,
+   "offset": 0.617,
+   "line": 434076.0,
+   "rho": 1.0
+  },
+  {
+   "prov": "32",
+   "name": "Jawa Barat",
+   "n": 27,
+   "official": 7.596,
+   "pred": 8.3,
+   "offset": 0.704,
+   "line": 556304.0,
+   "rho": 0.614
+  },
+  {
+   "prov": "14",
+   "name": "Riau",
+   "n": 12,
+   "official": 7.036,
+   "pred": 7.951,
+   "offset": 0.915,
+   "line": 679122.0,
+   "rho": 0.825
+  },
+  {
+   "prov": "15",
+   "name": "Jambi",
+   "n": 11,
+   "official": 7.143,
+   "pred": 8.203,
+   "offset": 1.06,
+   "line": 630305.0,
+   "rho": 0.764
+  },
+  {
+   "prov": "19",
+   "name": "Kep. Bangka Belitung",
+   "n": 7,
+   "official": 5.161,
+   "pred": 6.309,
+   "offset": 1.147,
+   "line": 837081.0,
+   "rho": -0.357
+  },
+  {
+   "prov": "73",
+   "name": "Sulawesi Selatan",
+   "n": 24,
+   "official": 8.141,
+   "pred": 9.615,
+   "offset": 1.474,
+   "line": 465353.0,
+   "rho": 0.107
+  },
+  {
+   "prov": "36",
+   "name": "Banten",
+   "n": 8,
+   "official": 5.496,
+   "pred": 7.173,
+   "offset": 1.677,
+   "line": 628784.0,
+   "rho": 0.786
+  },
+  {
+   "prov": "64",
+   "name": "Kalimantan Timur",
+   "n": 10,
+   "official": 6.058,
+   "pred": 7.9,
+   "offset": 1.842,
+   "line": 765654.0,
+   "rho": 0.939
+  },
+  {
+   "prov": "61",
+   "name": "Kalimantan Barat",
+   "n": 14,
+   "official": 6.469,
+   "pred": 8.776,
+   "offset": 2.307,
+   "line": 552664.0,
+   "rho": 0.604
+  },
+  {
+   "prov": "31",
+   "name": "DKI Jakarta",
+   "n": 6,
+   "official": 5.747,
+   "pred": 8.077,
+   "offset": 2.331,
+   "line": 795345.0,
+   "rho": 0.771
+  },
+  {
+   "prov": "21",
+   "name": "Kep. Riau",
+   "n": 7,
+   "official": 5.711,
+   "pred": 8.119,
+   "offset": 2.407,
+   "line": 648873.0,
+   "rho": 0.75
+  },
+  {
+   "prov": "97",
+   "name": "Papua Pegunungan",
+   "n": 8,
+   "official": 29.793,
+   "pred": 32.707,
+   "offset": 2.915,
+   "line": 918778.0,
+   "rho": 0.024
+  },
+  {
+   "prov": "13",
+   "name": "Sumatera Barat",
+   "n": 19,
+   "official": 5.403,
+   "pred": 8.678,
+   "offset": 3.275,
+   "line": 605094.0,
+   "rho": 0.766
+  },
+  {
+   "prov": "71",
+   "name": "Sulawesi Utara",
+   "n": 15,
+   "official": 7.256,
+   "pred": 10.589,
+   "offset": 3.333,
+   "line": 456282.0,
+   "rho": 0.593
+  },
+  {
+   "prov": "65",
+   "name": "Kalimantan Utara",
+   "n": 5,
+   "official": 5.536,
+   "pred": 10.015,
+   "offset": 4.479,
+   "line": 692748.0,
+   "rho": 0.2
+  },
+  {
+   "prov": "63",
+   "name": "Kalimantan Selatan",
+   "n": 13,
+   "official": 3.901,
+   "pred": 9.153,
+   "offset": 5.253,
+   "line": 622984.0,
+   "rho": -0.011
+  },
+  {
+   "prov": "82",
+   "name": "Maluku Utara",
+   "n": 10,
+   "official": 6.541,
+   "pred": 12.342,
+   "offset": 5.801,
+   "line": 587608.0,
+   "rho": 0.418
+  },
+  {
+   "prov": "62",
+   "name": "Kalimantan Tengah",
+   "n": 14,
+   "official": 5.114,
+   "pred": 12.159,
+   "offset": 7.046,
+   "line": 622837.0,
+   "rho": 0.339
+  },
+  {
+   "prov": "51",
+   "name": "Bali",
+   "n": 9,
+   "official": 4.216,
+   "pred": 13.373,
+   "offset": 9.157,
+   "line": 588576.0,
+   "rho": 0.6
+  },
+  {
+   "prov": "11",
+   "name": "Aceh",
+   "n": 23,
+   "official": 12.699,
+   "pred": 22.364,
+   "offset": 9.666,
+   "line": 591016.0,
+   "rho": 0.215
+  }
+ ],
+ "eastJava": {
+  "prov": "35",
+  "name": "Jawa Timur",
+  "n": 38,
+  "official": 9.481,
+  "pred": 8.815,
+  "offset": -0.665,
+  "line": 533304.0,
+  "rho": 0.622
+ },
+ "offsetExplained": {
+  "by_poverty_line": {
+   "slope": -0.0,
+   "intercept": 2.91121,
+   "r": -0.1165,
+   "r2": 0.0136,
+   "n": 38
+  },
+  "by_log_poverty_line": {
+   "slope": -2.02743,
+   "intercept": 27.4052,
+   "r": -0.09,
+   "r2": 0.0081,
+   "n": 38
+  },
+  "by_official_level": {
+   "slope": -0.35013,
+   "intercept": 4.40872,
+   "r": -0.5978,
+   "r2": 0.3574,
+   "n": 38
+  },
+  "line_range_idr": [
+   434076,
+   918778
+  ],
+  "line_ratio": 2.117,
+  "offset_range_pp": [
+   -11.91,
+   9.67
+  ]
+ },
+ "lineGeography": {
+  "adm2_min": 344125,
+  "adm2_max": 1253343,
+  "adm2_ratio": 3.642,
+  "median_within_province_ratio": 1.617,
+  "max_within_province_ratio": 2.173,
+  "max_within_province": "Jawa Barat",
+  "max_within_low_name": "Garut",
+  "max_within_low": 407191,
+  "max_within_high_name": "Kota Depok",
+  "max_within_high": 884633,
+  "n_provinces_over_1_5x": 27,
+  "n_provinces": 38
+ },
+ "calibration": {
+  "slope": 0.77051,
+  "intercept": 2.038,
+  "r": 0.6629,
+  "r2": 0.4395,
+  "n": 514
+ },
+ "testA": [
+  {
+   "n": 514,
+   "r2": -0.0754,
+   "spearman": -0.6683,
+   "pearson": -0.734,
+   "rmse": 7.1772,
+   "mae": 5.5447,
+   "bias": 1.4097,
+   "label": "National mean (null)",
+   "k": 0
+  },
+  {
+   "n": 514,
+   "r2": -0.0283,
+   "spearman": 0.2626,
+   "pearson": 0.2747,
+   "rmse": 7.0183,
+   "mae": 4.9934,
+   "bias": -0.038,
+   "label": "Population only",
+   "k": 3
+  },
+  {
+   "n": 514,
+   "r2": 0.3941,
+   "spearman": 0.4165,
+   "pearson": 0.6536,
+   "rmse": 5.3876,
+   "mae": 4.1244,
+   "bias": 0.6707,
+   "label": "Night lights only",
+   "k": 6
+  },
+  {
+   "n": 514,
+   "r2": 0.0493,
+   "spearman": 0.4939,
+   "pearson": 0.5336,
+   "rmse": 6.7484,
+   "mae": 4.8131,
+   "bias": 1.8357,
+   "label": "Buildings only",
+   "k": 11
+  },
+  {
+   "n": 514,
+   "r2": 0.3043,
+   "spearman": 0.4281,
+   "pearson": 0.609,
+   "rmse": 5.7729,
+   "mae": 4.3771,
+   "bias": 1.3358,
+   "label": "Land cover only",
+   "k": 9
+  },
+  {
+   "n": 514,
+   "r2": 0.4117,
+   "spearman": 0.4203,
+   "pearson": 0.6548,
+   "rmse": 5.3086,
+   "mae": 4.0249,
+   "bias": -0.0426,
+   "label": "Population + lights",
+   "k": 9
+  },
+  {
+   "n": 514,
+   "r2": 0.2767,
+   "spearman": 0.519,
+   "pearson": 0.6108,
+   "rmse": 5.886,
+   "mae": 4.1861,
+   "bias": 0.4671,
+   "label": "Population + lights + buildings",
+   "k": 20
+  },
+  {
+   "n": 514,
+   "r2": 0.3952,
+   "spearman": 0.5463,
+   "pearson": 0.6629,
+   "rmse": 5.3826,
+   "mae": 3.9415,
+   "bias": 0.5038,
+   "label": "All 31 features (published)",
+   "k": 31
+  }
+ ],
+ "testB": [
+  {
+   "n": 514,
+   "r2": 0.3952,
+   "spearman": 0.5463,
+   "pearson": 0.6629,
+   "rmse": 5.3826,
+   "mae": 3.9415,
+   "bias": 0.5038,
+   "label": "Published model"
+  },
+  {
+   "n": 514,
+   "r2": 0.4026,
+   "spearman": 0.5593,
+   "pearson": 0.667,
+   "rmse": 5.3496,
+   "mae": 3.9043,
+   "bias": 0.4998,
+   "label": "+ province mean poverty line"
+  },
+  {
+   "n": 514,
+   "r2": 0.4094,
+   "spearman": 0.5603,
+   "pearson": 0.6693,
+   "rmse": 5.3189,
+   "mae": 3.8822,
+   "bias": 0.4594,
+   "label": "+ regency poverty line"
+  }
+ ],
+ "testC": {
+  "log": {
+   "n": 514,
+   "r2": 0.3781,
+   "spearman": 0.6197,
+   "pearson": 0.6208,
+   "rmse": 0.1735,
+   "mae": 0.1365,
+   "bias": 0.0009
+  },
+  "level": {
+   "n": 514,
+   "r2": 0.3708,
+   "spearman": 0.6197,
+   "pearson": 0.615,
+   "rmse": 109415.4021,
+   "mae": 81728.9422,
+   "bias": -6878.8572
+  },
+  "mape": 0.1379
+ },
+ "testD": {
+  "flat_null": {
+   "n": 514,
+   "r2": 0.6858,
+   "spearman": 0.7693,
+   "pearson": 0.8341,
+   "rmse": 3.8794,
+   "mae": 2.6948,
+   "bias": -0.5582
+  },
+  "benchmarked_model": {
+   "n": 514,
+   "r2": 0.729,
+   "spearman": 0.8293,
+   "pearson": 0.8668,
+   "rmse": 3.6031,
+   "mae": 2.4923,
+   "bias": 0.0828
+  },
+  "unbenchmarked_model": {
+   "n": 514,
+   "r2": 0.3952,
+   "spearman": 0.5463,
+   "pearson": 0.6629,
+   "rmse": 5.3826,
+   "mae": 3.9415,
+   "bias": 0.5038
+  },
+  "win_rate": 0.5409,
+  "mae_reduction_pp": 0.2025,
+  "n": 514
+ },
+ "testE": [
+  {
+   "n": 514,
+   "r2": 0.9776,
+   "spearman": 0.9941,
+   "pearson": 0.9929,
+   "rmse": 1.036,
+   "mae": 0.7618,
+   "bias": 0.5974,
+   "lag": 1,
+   "label": "Official rate, 2024"
+  },
+  {
+   "n": 514,
+   "r2": 0.9584,
+   "spearman": 0.9919,
+   "pearson": 0.9891,
+   "rmse": 1.4123,
+   "mae": 1.1049,
+   "bias": 0.928,
+   "lag": 2,
+   "label": "Official rate, 2023"
+  },
+  {
+   "n": 514,
+   "r2": 0.9162,
+   "spearman": 0.9837,
+   "pearson": 0.9825,
+   "rmse": 2.0039,
+   "mae": 1.5857,
+   "bias": 1.3825,
+   "lag": 5,
+   "label": "Official rate, 2020"
+  },
+  {
+   "n": 514,
+   "r2": 0.7553,
+   "spearman": 0.9724,
+   "pearson": 0.9709,
+   "rmse": 3.424,
+   "mae": 2.7444,
+   "bias": 2.6077,
+   "lag": 9,
+   "label": "Official rate, 2016"
+  }
+ ],
+ "surveyNoise": {
+  "rmse_about_quadratic_trend_pp": 0.4063,
+  "n_regencies": 514,
+  "n_obs": 5140
+ },
+ "coverageQuintiles": [
+  {
+   "q": 1,
+   "bld_per_km2_median": 1.6,
+   "mae": 6.973,
+   "n": 103
+  },
+  {
+   "q": 2,
+   "bld_per_km2_median": 20.2,
+   "mae": 3.589,
+   "n": 103
+  },
+  {
+   "q": 3,
+   "bld_per_km2_median": 56.2,
+   "mae": 3.854,
+   "n": 102
+  },
+  {
+   "q": 4,
+   "bld_per_km2_median": 325.1,
+   "mae": 2.987,
+   "n": 103
+  },
+  {
+   "q": 5,
+   "bld_per_km2_median": 1125.6,
+   "mae": 2.303,
+   "n": 103
+  }
+ ],
+ "scatter": [
+  {
+   "n": "Simeulue",
+   "pv": "Aceh",
+   "y": 15.52,
+   "p": 18.38,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Aceh Singkil",
+   "pv": "Aceh",
+   "y": 17.07,
+   "p": 15.1,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Aceh Selatan",
+   "pv": "Aceh",
+   "y": 9.89,
+   "p": 23.09,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Aceh Tenggara",
+   "pv": "Aceh",
+   "y": 9.78,
+   "p": 20.05,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Aceh Timur",
+   "pv": "Aceh",
+   "y": 11.24,
+   "p": 24.34,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Aceh Tengah",
+   "pv": "Aceh",
+   "y": 12.29,
+   "p": 25.23,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Aceh Barat",
+   "pv": "Aceh",
+   "y": 15.5,
+   "p": 21.24,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Aceh Besar",
+   "pv": "Aceh",
+   "y": 11.05,
+   "p": 25.1,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pidie",
+   "pv": "Aceh",
+   "y": 16.46,
+   "p": 27.06,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bireuen",
+   "pv": "Aceh",
+   "y": 10.3,
+   "p": 23.57,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Aceh Utara",
+   "pv": "Aceh",
+   "y": 14.27,
+   "p": 18.44,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Aceh Barat Daya",
+   "pv": "Aceh",
+   "y": 13.3,
+   "p": 26.13,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Gayo Lues",
+   "pv": "Aceh",
+   "y": 16.77,
+   "p": 25.09,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Aceh Tamiang",
+   "pv": "Aceh",
+   "y": 10.84,
+   "p": 17.84,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Nagan Raya",
+   "pv": "Aceh",
+   "y": 15.42,
+   "p": 26.9,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Aceh Jaya",
+   "pv": "Aceh",
+   "y": 10.37,
+   "p": 25.66,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bener Meriah",
+   "pv": "Aceh",
+   "y": 16.2,
+   "p": 25.62,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pidie Jaya",
+   "pv": "Aceh",
+   "y": 16.12,
+   "p": 24.11,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Banda Aceh",
+   "pv": "Aceh",
+   "y": 5.45,
+   "p": 21.02,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Sabang",
+   "pv": "Aceh",
+   "y": 12.75,
+   "p": 23.51,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Langsa",
+   "pv": "Aceh",
+   "y": 8.59,
+   "p": 17.21,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Lhokseumawe",
+   "pv": "Aceh",
+   "y": 9.01,
+   "p": 21.59,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Subulussalam",
+   "pv": "Aceh",
+   "y": 13.88,
+   "p": 18.12,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Nias",
+   "pv": "Sumatera Utara",
+   "y": 14.51,
+   "p": 12.81,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Mandailing Natal",
+   "pv": "Sumatera Utara",
+   "y": 7.91,
+   "p": 10.13,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tapanuli Selatan",
+   "pv": "Sumatera Utara",
+   "y": 6.16,
+   "p": 11.67,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tapanuli Tengah",
+   "pv": "Sumatera Utara",
+   "y": 11.03,
+   "p": 8.06,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tapanuli Utara",
+   "pv": "Sumatera Utara",
+   "y": 7.47,
+   "p": 10.69,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Toba Samosir",
+   "pv": "Sumatera Utara",
+   "y": 7.21,
+   "p": 7.06,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Labuhan Batu",
+   "pv": "Sumatera Utara",
+   "y": 7.37,
+   "p": 9.25,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Asahan",
+   "pv": "Sumatera Utara",
+   "y": 7.18,
+   "p": 6.46,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Simalungun",
+   "pv": "Sumatera Utara",
+   "y": 6.91,
+   "p": 6.54,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Dairi",
+   "pv": "Sumatera Utara",
+   "y": 6.98,
+   "p": 12.25,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Karo",
+   "pv": "Sumatera Utara",
+   "y": 6.66,
+   "p": 11.21,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Deli Serdang",
+   "pv": "Sumatera Utara",
+   "y": 3.11,
+   "p": 5.51,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Langkat",
+   "pv": "Sumatera Utara",
+   "y": 8.42,
+   "p": 6.57,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Nias Selatan",
+   "pv": "Sumatera Utara",
+   "y": 16.16,
+   "p": 12.04,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Humbang Hasundutan",
+   "pv": "Sumatera Utara",
+   "y": 7.8,
+   "p": 11.94,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pakpak Bharat",
+   "pv": "Sumatera Utara",
+   "y": 6.4,
+   "p": 14.21,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Samosir",
+   "pv": "Sumatera Utara",
+   "y": 10.79,
+   "p": 12.11,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Serdang Bedagai",
+   "pv": "Sumatera Utara",
+   "y": 6.18,
+   "p": 5.8,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Batu Bara",
+   "pv": "Sumatera Utara",
+   "y": 10.1,
+   "p": 6.43,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Padang Lawas Utara",
+   "pv": "Sumatera Utara",
+   "y": 8.04,
+   "p": 8.36,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Padang Lawas",
+   "pv": "Sumatera Utara",
+   "y": 7.32,
+   "p": 10.54,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Labuhan Batu Selatan",
+   "pv": "Sumatera Utara",
+   "y": 6.8,
+   "p": 8.56,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Labuhan Batu Utara",
+   "pv": "Sumatera Utara",
+   "y": 8.42,
+   "p": 8.01,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Nias Utara",
+   "pv": "Sumatera Utara",
+   "y": 20.79,
+   "p": 13.14,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Nias Barat",
+   "pv": "Sumatera Utara",
+   "y": 22.47,
+   "p": 14.11,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Sibolga",
+   "pv": "Sumatera Utara",
+   "y": 10.28,
+   "p": 5.99,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Tanjung Balai",
+   "pv": "Sumatera Utara",
+   "y": 10.67,
+   "p": 6.97,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Pematang Siantar",
+   "pv": "Sumatera Utara",
+   "y": 6.24,
+   "p": 5.8,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Tebing Tinggi",
+   "pv": "Sumatera Utara",
+   "y": 8.74,
+   "p": 4.67,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Medan",
+   "pv": "Sumatera Utara",
+   "y": 7.25,
+   "p": 4.45,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Binjai",
+   "pv": "Sumatera Utara",
+   "y": 4.71,
+   "p": 4.69,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Padangsidimpuan",
+   "pv": "Sumatera Utara",
+   "y": 5.61,
+   "p": 4.5,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Gunungsitoli",
+   "pv": "Sumatera Utara",
+   "y": 13.85,
+   "p": 8.69,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kepulauan Mentawai",
+   "pv": "Sumatera Barat",
+   "y": 13.22,
+   "p": 17.84,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pesisir Selatan",
+   "pv": "Sumatera Barat",
+   "y": 6.52,
+   "p": 9.25,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Solok",
+   "pv": "Sumatera Barat",
+   "y": 6.52,
+   "p": 9.23,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sijunjung",
+   "pv": "Sumatera Barat",
+   "y": 5.15,
+   "p": 9.89,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tanah Datar",
+   "pv": "Sumatera Barat",
+   "y": 3.59,
+   "p": 7.53,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Padang Pariaman",
+   "pv": "Sumatera Barat",
+   "y": 5.86,
+   "p": 8.46,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Agam",
+   "pv": "Sumatera Barat",
+   "y": 5.97,
+   "p": 9.42,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Lima Puluh Kota",
+   "pv": "Sumatera Barat",
+   "y": 6.1,
+   "p": 9.22,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pasaman",
+   "pv": "Sumatera Barat",
+   "y": 6.02,
+   "p": 10.71,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Solok Selatan",
+   "pv": "Sumatera Barat",
+   "y": 6.0,
+   "p": 8.28,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Dharmasraya",
+   "pv": "Sumatera Barat",
+   "y": 4.61,
+   "p": 8.58,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pasaman Barat",
+   "pv": "Sumatera Barat",
+   "y": 6.3,
+   "p": 11.44,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Padang",
+   "pv": "Sumatera Barat",
+   "y": 3.63,
+   "p": 6.07,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Solok",
+   "pv": "Sumatera Barat",
+   "y": 2.91,
+   "p": 6.59,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Sawah Lunto",
+   "pv": "Sumatera Barat",
+   "y": 2.72,
+   "p": 7.05,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Padang Panjang",
+   "pv": "Sumatera Barat",
+   "y": 4.97,
+   "p": 6.26,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Bukittinggi",
+   "pv": "Sumatera Barat",
+   "y": 3.78,
+   "p": 5.85,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Payakumbuh",
+   "pv": "Sumatera Barat",
+   "y": 4.95,
+   "p": 6.7,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Pariaman",
+   "pv": "Sumatera Barat",
+   "y": 3.83,
+   "p": 6.52,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kuantan Singingi",
+   "pv": "Riau",
+   "y": 6.99,
+   "p": 9.18,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Indragiri Hulu",
+   "pv": "Riau",
+   "y": 5.83,
+   "p": 8.84,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Indragiri Hilir",
+   "pv": "Riau",
+   "y": 4.95,
+   "p": 7.57,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pelalawan",
+   "pv": "Riau",
+   "y": 7.24,
+   "p": 9.07,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Siak",
+   "pv": "Riau",
+   "y": 4.4,
+   "p": 7.98,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kampar",
+   "pv": "Riau",
+   "y": 6.29,
+   "p": 7.78,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Rokan Hulu",
+   "pv": "Riau",
+   "y": 8.71,
+   "p": 8.86,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bengkalis",
+   "pv": "Riau",
+   "y": 6.08,
+   "p": 7.25,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Rokan Hilir",
+   "pv": "Riau",
+   "y": 7.16,
+   "p": 10.29,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kepulauan Meranti",
+   "pv": "Riau",
+   "y": 20.51,
+   "p": 9.2,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Pekanbaru",
+   "pv": "Riau",
+   "y": 3.19,
+   "p": 4.91,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Dumai",
+   "pv": "Riau",
+   "y": 3.08,
+   "p": 4.47,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kerinci",
+   "pv": "Jambi",
+   "y": 7.48,
+   "p": 9.38,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Merangin",
+   "pv": "Jambi",
+   "y": 8.07,
+   "p": 9.13,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sarolangun",
+   "pv": "Jambi",
+   "y": 8.74,
+   "p": 8.82,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Batang Hari",
+   "pv": "Jambi",
+   "y": 8.27,
+   "p": 9.83,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Muaro Jambi",
+   "pv": "Jambi",
+   "y": 4.32,
+   "p": 5.33,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tanjung Jabung Timur",
+   "pv": "Jambi",
+   "y": 9.96,
+   "p": 9.28,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tanjung Jabung Barat",
+   "pv": "Jambi",
+   "y": 9.67,
+   "p": 10.39,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tebo",
+   "pv": "Jambi",
+   "y": 5.97,
+   "p": 8.42,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bungo",
+   "pv": "Jambi",
+   "y": 5.17,
+   "p": 7.41,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Jambi",
+   "pv": "Jambi",
+   "y": 7.69,
+   "p": 6.61,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Sungai Penuh",
+   "pv": "Jambi",
+   "y": 3.23,
+   "p": 5.63,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Ogan Komering Ulu",
+   "pv": "Sumatera Selatan",
+   "y": 10.08,
+   "p": 7.29,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Ogan Komering Ilir",
+   "pv": "Sumatera Selatan",
+   "y": 11.84,
+   "p": 6.59,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Muara Enim",
+   "pv": "Sumatera Selatan",
+   "y": 9.45,
+   "p": 6.12,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Lahat",
+   "pv": "Sumatera Selatan",
+   "y": 13.69,
+   "p": 10.2,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Musi Rawas",
+   "pv": "Sumatera Selatan",
+   "y": 12.67,
+   "p": 8.32,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Musi Banyuasin",
+   "pv": "Sumatera Selatan",
+   "y": 9.97,
+   "p": 4.83,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Banyu Asin",
+   "pv": "Sumatera Selatan",
+   "y": 8.48,
+   "p": 6.11,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Ogan Komering Ulu Selatan",
+   "pv": "Sumatera Selatan",
+   "y": 9.17,
+   "p": 12.92,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Ogan Komering Ulu Timur",
+   "pv": "Sumatera Selatan",
+   "y": 8.86,
+   "p": 8.26,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Ogan Ilir",
+   "pv": "Sumatera Selatan",
+   "y": 11.69,
+   "p": 7.52,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Empat Lawang",
+   "pv": "Sumatera Selatan",
+   "y": 10.48,
+   "p": 14.33,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Penukal Abab Lematang Ilir",
+   "pv": "Sumatera Selatan",
+   "y": 9.27,
+   "p": 6.89,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Musi Rawas Utara",
+   "pv": "Sumatera Selatan",
+   "y": 15.25,
+   "p": 8.53,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Palembang",
+   "pv": "Sumatera Selatan",
+   "y": 9.04,
+   "p": 5.24,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Prabumulih",
+   "pv": "Sumatera Selatan",
+   "y": 9.75,
+   "p": 4.84,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Pagar Alam",
+   "pv": "Sumatera Selatan",
+   "y": 7.7,
+   "p": 9.93,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Lubuklinggau",
+   "pv": "Sumatera Selatan",
+   "y": 10.49,
+   "p": 6.34,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Bengkulu Selatan",
+   "pv": "Bengkulu",
+   "y": 15.72,
+   "p": 10.95,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Rejang Lebong",
+   "pv": "Bengkulu",
+   "y": 11.71,
+   "p": 10.16,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bengkulu Utara",
+   "pv": "Bengkulu",
+   "y": 10.07,
+   "p": 11.63,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kaur",
+   "pv": "Bengkulu",
+   "y": 15.82,
+   "p": 12.18,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Seluma",
+   "pv": "Bengkulu",
+   "y": 15.98,
+   "p": 10.57,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Mukomuko",
+   "pv": "Bengkulu",
+   "y": 10.05,
+   "p": 9.9,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Lebong",
+   "pv": "Bengkulu",
+   "y": 10.1,
+   "p": 9.34,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kepahiang",
+   "pv": "Bengkulu",
+   "y": 10.38,
+   "p": 10.79,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bengkulu Tengah",
+   "pv": "Bengkulu",
+   "y": 9.74,
+   "p": 9.64,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Bengkulu",
+   "pv": "Bengkulu",
+   "y": 11.91,
+   "p": 4.74,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Lampung Barat",
+   "pv": "Lampung",
+   "y": 9.93,
+   "p": 9.88,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tanggamus",
+   "pv": "Lampung",
+   "y": 10.1,
+   "p": 9.74,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Lampung Selatan",
+   "pv": "Lampung",
+   "y": 12.05,
+   "p": 8.97,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Lampung Timur",
+   "pv": "Lampung",
+   "y": 12.15,
+   "p": 9.1,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Lampung Tengah",
+   "pv": "Lampung",
+   "y": 9.59,
+   "p": 9.09,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Lampung Utara",
+   "pv": "Lampung",
+   "y": 15.78,
+   "p": 8.05,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Way Kanan",
+   "pv": "Lampung",
+   "y": 9.36,
+   "p": 9.48,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tulangbawang",
+   "pv": "Lampung",
+   "y": 7.54,
+   "p": 8.71,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pesawaran",
+   "pv": "Lampung",
+   "y": 10.93,
+   "p": 10.7,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pringsewu",
+   "pv": "Lampung",
+   "y": 7.6,
+   "p": 9.43,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Mesuji",
+   "pv": "Lampung",
+   "y": 5.92,
+   "p": 6.45,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tulang Bawang Barat",
+   "pv": "Lampung",
+   "y": 6.72,
+   "p": 8.46,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pesisir Barat",
+   "pv": "Lampung",
+   "y": 12.13,
+   "p": 13.74,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Bandar Lampung",
+   "pv": "Lampung",
+   "y": 6.95,
+   "p": 6.26,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Metro",
+   "pv": "Lampung",
+   "y": 6.44,
+   "p": 6.09,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Bangka",
+   "pv": "Kep. Bangka Belitung",
+   "y": 4.71,
+   "p": 4.26,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Belitung",
+   "pv": "Kep. Bangka Belitung",
+   "y": 6.44,
+   "p": 7.98,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bangka Barat",
+   "pv": "Kep. Bangka Belitung",
+   "y": 2.92,
+   "p": 7.53,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bangka Tengah",
+   "pv": "Kep. Bangka Belitung",
+   "y": 6.7,
+   "p": 5.31,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bangka Selatan",
+   "pv": "Kep. Bangka Belitung",
+   "y": 4.17,
+   "p": 9.15,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Belitung Timur",
+   "pv": "Kep. Bangka Belitung",
+   "y": 6.69,
+   "p": 4.9,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Pangkal Pinang",
+   "pv": "Kep. Bangka Belitung",
+   "y": 4.5,
+   "p": 5.03,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Karimun",
+   "pv": "Kep. Riau",
+   "y": 5.16,
+   "p": 6.03,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bintan",
+   "pv": "Kep. Riau",
+   "y": 4.77,
+   "p": 5.26,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Natuna",
+   "pv": "Kep. Riau",
+   "y": 4.81,
+   "p": 10.12,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Lingga",
+   "pv": "Kep. Riau",
+   "y": 9.12,
+   "p": 13.77,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kepulauan Anambas",
+   "pv": "Kep. Riau",
+   "y": 6.35,
+   "p": 13.66,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Batam",
+   "pv": "Kep. Riau",
+   "y": 3.81,
+   "p": 3.66,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Tanjung Pinang",
+   "pv": "Kep. Riau",
+   "y": 5.96,
+   "p": 4.33,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kepulauan Seribu",
+   "pv": "DKI Jakarta",
+   "y": 12.37,
+   "p": 9.78,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Kota Jakarta Selatan",
+   "pv": "DKI Jakarta",
+   "y": 3.23,
+   "p": 7.1,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Jakarta Timur",
+   "pv": "DKI Jakarta",
+   "y": 3.94,
+   "p": 7.05,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Jakarta Pusat",
+   "pv": "DKI Jakarta",
+   "y": 4.7,
+   "p": 9.38,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Jakarta Barat",
+   "pv": "DKI Jakarta",
+   "y": 3.91,
+   "p": 6.76,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Jakarta Utara",
+   "pv": "DKI Jakarta",
+   "y": 6.33,
+   "p": 8.39,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Bogor",
+   "pv": "Jawa Barat",
+   "y": 6.26,
+   "p": 6.72,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Sukabumi",
+   "pv": "Jawa Barat",
+   "y": 6.41,
+   "p": 8.88,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Cianjur",
+   "pv": "Jawa Barat",
+   "y": 9.82,
+   "p": 9.14,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Bandung",
+   "pv": "Jawa Barat",
+   "y": 6.04,
+   "p": 9.59,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Garut",
+   "pv": "Jawa Barat",
+   "y": 9.39,
+   "p": 10.25,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Tasikmalaya",
+   "pv": "Jawa Barat",
+   "y": 10.15,
+   "p": 12.31,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Ciamis",
+   "pv": "Jawa Barat",
+   "y": 7.19,
+   "p": 12.93,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Kuningan",
+   "pv": "Jawa Barat",
+   "y": 10.74,
+   "p": 8.08,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Cirebon",
+   "pv": "Jawa Barat",
+   "y": 10.23,
+   "p": 9.21,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Majalengka",
+   "pv": "Jawa Barat",
+   "y": 10.31,
+   "p": 9.46,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Sumedang",
+   "pv": "Jawa Barat",
+   "y": 8.81,
+   "p": 10.15,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Indramayu",
+   "pv": "Jawa Barat",
+   "y": 11.02,
+   "p": 11.2,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Subang",
+   "pv": "Jawa Barat",
+   "y": 9.23,
+   "p": 10.7,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Purwakarta",
+   "pv": "Jawa Barat",
+   "y": 7.87,
+   "p": 6.37,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Karawang",
+   "pv": "Jawa Barat",
+   "y": 7.08,
+   "p": 8.98,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Bekasi",
+   "pv": "Jawa Barat",
+   "y": 4.36,
+   "p": 7.36,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Bandung Barat",
+   "pv": "Jawa Barat",
+   "y": 9.87,
+   "p": 9.88,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Pangandaran",
+   "pv": "Jawa Barat",
+   "y": 8.03,
+   "p": 11.85,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Kota Bogor",
+   "pv": "Jawa Barat",
+   "y": 5.89,
+   "p": 4.76,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Sukabumi",
+   "pv": "Jawa Barat",
+   "y": 6.9,
+   "p": 6.21,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Bandung",
+   "pv": "Jawa Barat",
+   "y": 3.78,
+   "p": 4.75,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Cirebon",
+   "pv": "Jawa Barat",
+   "y": 8.66,
+   "p": 5.09,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Bekasi",
+   "pv": "Jawa Barat",
+   "y": 3.96,
+   "p": 3.48,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Depok",
+   "pv": "Jawa Barat",
+   "y": 2.31,
+   "p": 3.8,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Cimahi",
+   "pv": "Jawa Barat",
+   "y": 4.2,
+   "p": 5.46,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Tasikmalaya",
+   "pv": "Jawa Barat",
+   "y": 10.84,
+   "p": 8.68,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Banjar",
+   "pv": "Jawa Barat",
+   "y": 5.73,
+   "p": 8.8,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Cilacap",
+   "pv": "Jawa Tengah",
+   "y": 9.41,
+   "p": 9.57,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Banyumas",
+   "pv": "Jawa Tengah",
+   "y": 11.15,
+   "p": 7.93,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Purbalingga",
+   "pv": "Jawa Tengah",
+   "y": 12.55,
+   "p": 10.66,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Banjarnegara",
+   "pv": "Jawa Tengah",
+   "y": 13.28,
+   "p": 8.2,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Kebumen",
+   "pv": "Jawa Tengah",
+   "y": 13.58,
+   "p": 11.15,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Purworejo",
+   "pv": "Jawa Tengah",
+   "y": 10.06,
+   "p": 9.89,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Wonosobo",
+   "pv": "Jawa Tengah",
+   "y": 13.34,
+   "p": 9.07,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Magelang",
+   "pv": "Jawa Tengah",
+   "y": 9.9,
+   "p": 6.72,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Boyolali",
+   "pv": "Jawa Tengah",
+   "y": 8.71,
+   "p": 6.53,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Klaten",
+   "pv": "Jawa Tengah",
+   "y": 11.0,
+   "p": 9.3,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Sukoharjo",
+   "pv": "Jawa Tengah",
+   "y": 6.83,
+   "p": 7.1,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Wonogiri",
+   "pv": "Jawa Tengah",
+   "y": 9.59,
+   "p": 7.11,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Karanganyar",
+   "pv": "Jawa Tengah",
+   "y": 8.48,
+   "p": 5.49,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Sragen",
+   "pv": "Jawa Tengah",
+   "y": 11.22,
+   "p": 7.48,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Grobogan",
+   "pv": "Jawa Tengah",
+   "y": 10.63,
+   "p": 11.12,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Blora",
+   "pv": "Jawa Tengah",
+   "y": 10.58,
+   "p": 11.16,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Rembang",
+   "pv": "Jawa Tengah",
+   "y": 13.01,
+   "p": 10.66,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Pati",
+   "pv": "Jawa Tengah",
+   "y": 8.24,
+   "p": 10.21,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Kudus",
+   "pv": "Jawa Tengah",
+   "y": 6.59,
+   "p": 7.22,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Jepara",
+   "pv": "Jawa Tengah",
+   "y": 5.79,
+   "p": 7.47,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Demak",
+   "pv": "Jawa Tengah",
+   "y": 10.87,
+   "p": 7.95,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Semarang",
+   "pv": "Jawa Tengah",
+   "y": 6.3,
+   "p": 7.0,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Temanggung",
+   "pv": "Jawa Tengah",
+   "y": 7.78,
+   "p": 7.1,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Kendal",
+   "pv": "Jawa Tengah",
+   "y": 8.4,
+   "p": 9.16,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Batang",
+   "pv": "Jawa Tengah",
+   "y": 7.79,
+   "p": 8.66,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Pekalongan",
+   "pv": "Jawa Tengah",
+   "y": 8.05,
+   "p": 8.24,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Pemalang",
+   "pv": "Jawa Tengah",
+   "y": 13.32,
+   "p": 7.95,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Tegal",
+   "pv": "Jawa Tengah",
+   "y": 6.16,
+   "p": 7.31,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Brebes",
+   "pv": "Jawa Tengah",
+   "y": 14.15,
+   "p": 9.33,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Kota Magelang",
+   "pv": "Jawa Tengah",
+   "y": 5.68,
+   "p": 4.9,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Surakarta",
+   "pv": "Jawa Tengah",
+   "y": 7.69,
+   "p": 4.34,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Salatiga",
+   "pv": "Jawa Tengah",
+   "y": 4.2,
+   "p": 5.43,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Semarang",
+   "pv": "Jawa Tengah",
+   "y": 3.8,
+   "p": 5.66,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Pekalongan",
+   "pv": "Jawa Tengah",
+   "y": 6.14,
+   "p": 5.77,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Tegal",
+   "pv": "Jawa Tengah",
+   "y": 7.28,
+   "p": 6.01,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kulon Progo",
+   "pv": "DI Yogyakarta",
+   "y": 14.53,
+   "p": 9.41,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Bantul",
+   "pv": "DI Yogyakarta",
+   "y": 11.54,
+   "p": 8.83,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Gunung Kidul",
+   "pv": "DI Yogyakarta",
+   "y": 14.15,
+   "p": 9.3,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Sleman",
+   "pv": "DI Yogyakarta",
+   "y": 6.71,
+   "p": 6.96,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Kota Yogyakarta",
+   "pv": "DI Yogyakarta",
+   "y": 6.14,
+   "p": 4.57,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Pacitan",
+   "pv": "Jawa Timur",
+   "y": 12.97,
+   "p": 9.71,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Ponorogo",
+   "pv": "Jawa Timur",
+   "y": 8.86,
+   "p": 6.86,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Trenggalek",
+   "pv": "Jawa Timur",
+   "y": 10.29,
+   "p": 10.93,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Tulungagung",
+   "pv": "Jawa Timur",
+   "y": 5.96,
+   "p": 10.41,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Blitar",
+   "pv": "Jawa Timur",
+   "y": 7.57,
+   "p": 11.7,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Kediri",
+   "pv": "Jawa Timur",
+   "y": 9.81,
+   "p": 9.2,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Malang",
+   "pv": "Jawa Timur",
+   "y": 8.78,
+   "p": 9.51,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Lumajang",
+   "pv": "Jawa Timur",
+   "y": 8.6,
+   "p": 10.72,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Jember",
+   "pv": "Jawa Timur",
+   "y": 8.67,
+   "p": 10.47,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Banyuwangi",
+   "pv": "Jawa Timur",
+   "y": 6.13,
+   "p": 10.14,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Bondowoso",
+   "pv": "Jawa Timur",
+   "y": 12.2,
+   "p": 8.23,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Situbondo",
+   "pv": "Jawa Timur",
+   "y": 11.17,
+   "p": 9.5,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Probolinggo",
+   "pv": "Jawa Timur",
+   "y": 16.31,
+   "p": 8.81,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Pasuruan",
+   "pv": "Jawa Timur",
+   "y": 8.21,
+   "p": 7.45,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Sidoarjo",
+   "pv": "Jawa Timur",
+   "y": 4.4,
+   "p": 6.56,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Mojokerto",
+   "pv": "Jawa Timur",
+   "y": 8.79,
+   "p": 8.14,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Jombang",
+   "pv": "Jawa Timur",
+   "y": 8.36,
+   "p": 10.6,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Nganjuk",
+   "pv": "Jawa Timur",
+   "y": 10.06,
+   "p": 10.63,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Madiun",
+   "pv": "Jawa Timur",
+   "y": 10.4,
+   "p": 10.87,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Magetan",
+   "pv": "Jawa Timur",
+   "y": 9.14,
+   "p": 7.65,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Ngawi",
+   "pv": "Jawa Timur",
+   "y": 13.62,
+   "p": 11.7,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Bojonegoro",
+   "pv": "Jawa Timur",
+   "y": 11.49,
+   "p": 11.88,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Tuban",
+   "pv": "Jawa Timur",
+   "y": 14.13,
+   "p": 7.59,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Lamongan",
+   "pv": "Jawa Timur",
+   "y": 12.03,
+   "p": 10.65,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Gresik",
+   "pv": "Jawa Timur",
+   "y": 9.95,
+   "p": 6.24,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Bangkalan",
+   "pv": "Jawa Timur",
+   "y": 18.25,
+   "p": 10.85,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Sampang",
+   "pv": "Jawa Timur",
+   "y": 20.61,
+   "p": 11.49,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Pamekasan",
+   "pv": "Jawa Timur",
+   "y": 12.77,
+   "p": 10.45,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Sumenep",
+   "pv": "Jawa Timur",
+   "y": 17.02,
+   "p": 11.27,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Kota Kediri",
+   "pv": "Jawa Timur",
+   "y": 6.04,
+   "p": 5.97,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Blitar",
+   "pv": "Jawa Timur",
+   "y": 6.6,
+   "p": 6.39,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Malang",
+   "pv": "Jawa Timur",
+   "y": 3.85,
+   "p": 4.47,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Probolinggo",
+   "pv": "Jawa Timur",
+   "y": 5.69,
+   "p": 7.01,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Pasuruan",
+   "pv": "Jawa Timur",
+   "y": 6.18,
+   "p": 7.24,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Mojokerto",
+   "pv": "Jawa Timur",
+   "y": 5.05,
+   "p": 4.73,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Madiun",
+   "pv": "Jawa Timur",
+   "y": 3.89,
+   "p": 7.88,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Surabaya",
+   "pv": "Jawa Timur",
+   "y": 3.56,
+   "p": 5.12,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Batu",
+   "pv": "Jawa Timur",
+   "y": 2.86,
+   "p": 5.98,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Pandeglang",
+   "pv": "Banten",
+   "y": 8.51,
+   "p": 11.18,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Lebak",
+   "pv": "Banten",
+   "y": 8.03,
+   "p": 9.2,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Tangerang",
+   "pv": "Banten",
+   "y": 6.42,
+   "p": 6.83,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Serang",
+   "pv": "Banten",
+   "y": 4.48,
+   "p": 8.41,
+   "k": 0,
+   "j": 1
+  },
+  {
+   "n": "Kota Tangerang",
+   "pv": "Banten",
+   "y": 5.19,
+   "p": 4.8,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Cilegon",
+   "pv": "Banten",
+   "y": 3.44,
+   "p": 4.95,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Serang",
+   "pv": "Banten",
+   "y": 5.51,
+   "p": 7.74,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Kota Tangerang Selatan",
+   "pv": "Banten",
+   "y": 2.39,
+   "p": 4.28,
+   "k": 1,
+   "j": 1
+  },
+  {
+   "n": "Jembrana",
+   "pv": "Bali",
+   "y": 4.33,
+   "p": 12.13,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tabanan",
+   "pv": "Bali",
+   "y": 4.23,
+   "p": 16.58,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Badung",
+   "pv": "Bali",
+   "y": 1.9,
+   "p": 10.29,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Gianyar",
+   "pv": "Bali",
+   "y": 3.71,
+   "p": 15.29,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Klungkung",
+   "pv": "Bali",
+   "y": 5.18,
+   "p": 15.75,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bangli",
+   "pv": "Bali",
+   "y": 4.83,
+   "p": 14.11,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Karangasem",
+   "pv": "Bali",
+   "y": 6.4,
+   "p": 18.46,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Buleleng",
+   "pv": "Bali",
+   "y": 5.2,
+   "p": 12.85,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Denpasar",
+   "pv": "Bali",
+   "y": 2.16,
+   "p": 4.89,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Lombok Barat",
+   "pv": "Nusa Tenggara Barat",
+   "y": 11.9,
+   "p": 7.99,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Lombok Tengah",
+   "pv": "Nusa Tenggara Barat",
+   "y": 10.68,
+   "p": 10.7,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Lombok Timur",
+   "pv": "Nusa Tenggara Barat",
+   "y": 13.53,
+   "p": 12.88,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sumbawa",
+   "pv": "Nusa Tenggara Barat",
+   "y": 11.79,
+   "p": 10.08,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Dompu",
+   "pv": "Nusa Tenggara Barat",
+   "y": 11.15,
+   "p": 12.05,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bima",
+   "pv": "Nusa Tenggara Barat",
+   "y": 12.59,
+   "p": 20.26,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sumbawa Barat",
+   "pv": "Nusa Tenggara Barat",
+   "y": 10.98,
+   "p": 10.09,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Lombok Utara",
+   "pv": "Nusa Tenggara Barat",
+   "y": 20.74,
+   "p": 11.39,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Mataram",
+   "pv": "Nusa Tenggara Barat",
+   "y": 7.15,
+   "p": 4.38,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Bima",
+   "pv": "Nusa Tenggara Barat",
+   "y": 7.33,
+   "p": 13.91,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Sumba Barat",
+   "pv": "Nusa Tenggara Timur",
+   "y": 26.47,
+   "p": 14.51,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sumba Timur",
+   "pv": "Nusa Tenggara Timur",
+   "y": 25.64,
+   "p": 13.67,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kupang",
+   "pv": "Nusa Tenggara Timur",
+   "y": 20.32,
+   "p": 6.32,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Timor Tengah Selatan",
+   "pv": "Nusa Tenggara Timur",
+   "y": 24.5,
+   "p": 14.28,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Timor Tengah Utara",
+   "pv": "Nusa Tenggara Timur",
+   "y": 20.17,
+   "p": 13.01,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Belu",
+   "pv": "Nusa Tenggara Timur",
+   "y": 12.79,
+   "p": 10.23,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Alor",
+   "pv": "Nusa Tenggara Timur",
+   "y": 18.29,
+   "p": 17.1,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Lembata",
+   "pv": "Nusa Tenggara Timur",
+   "y": 23.27,
+   "p": 16.03,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Flores Timur",
+   "pv": "Nusa Tenggara Timur",
+   "y": 10.88,
+   "p": 11.91,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sikka",
+   "pv": "Nusa Tenggara Timur",
+   "y": 11.25,
+   "p": 8.54,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Ende",
+   "pv": "Nusa Tenggara Timur",
+   "y": 21.31,
+   "p": 8.98,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Ngada",
+   "pv": "Nusa Tenggara Timur",
+   "y": 11.22,
+   "p": 12.11,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Manggarai",
+   "pv": "Nusa Tenggara Timur",
+   "y": 18.1,
+   "p": 10.92,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Rote Ndao",
+   "pv": "Nusa Tenggara Timur",
+   "y": 24.37,
+   "p": 13.65,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Manggarai Barat",
+   "pv": "Nusa Tenggara Timur",
+   "y": 16.09,
+   "p": 15.72,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sumba Tengah",
+   "pv": "Nusa Tenggara Timur",
+   "y": 29.23,
+   "p": 16.69,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sumba Barat Daya",
+   "pv": "Nusa Tenggara Timur",
+   "y": 25.66,
+   "p": 14.92,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Nagekeo",
+   "pv": "Nusa Tenggara Timur",
+   "y": 12.18,
+   "p": 12.87,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Manggarai Timur",
+   "pv": "Nusa Tenggara Timur",
+   "y": 23.51,
+   "p": 18.44,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sabu Raijua",
+   "pv": "Nusa Tenggara Timur",
+   "y": 27.18,
+   "p": 10.63,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Malaka",
+   "pv": "Nusa Tenggara Timur",
+   "y": 13.52,
+   "p": 11.93,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Kupang",
+   "pv": "Nusa Tenggara Timur",
+   "y": 7.57,
+   "p": 5.91,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Sambas",
+   "pv": "Kalimantan Barat",
+   "y": 6.37,
+   "p": 7.45,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bengkayang",
+   "pv": "Kalimantan Barat",
+   "y": 5.83,
+   "p": 10.85,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Landak",
+   "pv": "Kalimantan Barat",
+   "y": 8.9,
+   "p": 13.22,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Mempawah",
+   "pv": "Kalimantan Barat",
+   "y": 4.49,
+   "p": 7.16,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sanggau",
+   "pv": "Kalimantan Barat",
+   "y": 4.61,
+   "p": 9.71,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Ketapang",
+   "pv": "Kalimantan Barat",
+   "y": 8.44,
+   "p": 7.18,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sintang",
+   "pv": "Kalimantan Barat",
+   "y": 7.93,
+   "p": 9.2,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kapuas Hulu",
+   "pv": "Kalimantan Barat",
+   "y": 6.86,
+   "p": 7.09,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sekadau",
+   "pv": "Kalimantan Barat",
+   "y": 5.61,
+   "p": 9.55,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Melawi",
+   "pv": "Kalimantan Barat",
+   "y": 10.51,
+   "p": 11.77,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kayong Utara",
+   "pv": "Kalimantan Barat",
+   "y": 8.75,
+   "p": 9.85,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kubu Raya",
+   "pv": "Kalimantan Barat",
+   "y": 3.99,
+   "p": 7.79,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Pontianak",
+   "pv": "Kalimantan Barat",
+   "y": 4.0,
+   "p": 5.53,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Singkawang",
+   "pv": "Kalimantan Barat",
+   "y": 4.28,
+   "p": 6.51,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kotawaringin Barat",
+   "pv": "Kalimantan Tengah",
+   "y": 4.27,
+   "p": 9.59,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kotawaringin Timur",
+   "pv": "Kalimantan Tengah",
+   "y": 5.83,
+   "p": 10.37,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kapuas",
+   "pv": "Kalimantan Tengah",
+   "y": 5.48,
+   "p": 12.5,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Barito Selatan",
+   "pv": "Kalimantan Tengah",
+   "y": 4.94,
+   "p": 11.05,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Barito Utara",
+   "pv": "Kalimantan Tengah",
+   "y": 5.52,
+   "p": 13.85,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sukamara",
+   "pv": "Kalimantan Tengah",
+   "y": 4.02,
+   "p": 11.91,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Lamandau",
+   "pv": "Kalimantan Tengah",
+   "y": 3.33,
+   "p": 11.02,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Seruyan",
+   "pv": "Kalimantan Tengah",
+   "y": 6.72,
+   "p": 11.68,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Katingan",
+   "pv": "Kalimantan Tengah",
+   "y": 5.3,
+   "p": 12.65,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pulang Pisau",
+   "pv": "Kalimantan Tengah",
+   "y": 4.79,
+   "p": 10.14,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Gunung Mas",
+   "pv": "Kalimantan Tengah",
+   "y": 5.48,
+   "p": 14.06,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Barito Timur",
+   "pv": "Kalimantan Tengah",
+   "y": 6.1,
+   "p": 7.49,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Murung Raya",
+   "pv": "Kalimantan Tengah",
+   "y": 6.19,
+   "p": 24.66,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Palangka Raya",
+   "pv": "Kalimantan Tengah",
+   "y": 3.62,
+   "p": 9.28,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Tanah Laut",
+   "pv": "Kalimantan Selatan",
+   "y": 3.0,
+   "p": 7.41,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Baru",
+   "pv": "Kalimantan Selatan",
+   "y": 4.39,
+   "p": 7.6,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Banjar",
+   "pv": "Kalimantan Selatan",
+   "y": 2.74,
+   "p": 9.01,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Barito Kuala",
+   "pv": "Kalimantan Selatan",
+   "y": 4.31,
+   "p": 11.94,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tapin",
+   "pv": "Kalimantan Selatan",
+   "y": 2.91,
+   "p": 14.71,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Hulu Sungai Selatan",
+   "pv": "Kalimantan Selatan",
+   "y": 3.12,
+   "p": 11.34,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Hulu Sungai Tengah",
+   "pv": "Kalimantan Selatan",
+   "y": 5.03,
+   "p": 12.06,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Hulu Sungai Utara",
+   "pv": "Kalimantan Selatan",
+   "y": 4.81,
+   "p": 10.07,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tabalong",
+   "pv": "Kalimantan Selatan",
+   "y": 4.67,
+   "p": 6.97,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tanah Bumbu",
+   "pv": "Kalimantan Selatan",
+   "y": 3.13,
+   "p": 6.45,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Balangan",
+   "pv": "Kalimantan Selatan",
+   "y": 4.64,
+   "p": 8.81,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Banjarmasin",
+   "pv": "Kalimantan Selatan",
+   "y": 4.52,
+   "p": 6.88,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Banjar Baru",
+   "pv": "Kalimantan Selatan",
+   "y": 3.44,
+   "p": 5.75,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Paser",
+   "pv": "Kalimantan Timur",
+   "y": 8.13,
+   "p": 8.02,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kutai Barat",
+   "pv": "Kalimantan Timur",
+   "y": 8.72,
+   "p": 9.93,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kutai Kartanegara",
+   "pv": "Kalimantan Timur",
+   "y": 6.72,
+   "p": 8.05,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kutai Timur",
+   "pv": "Kalimantan Timur",
+   "y": 8.07,
+   "p": 7.99,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Berau",
+   "pv": "Kalimantan Timur",
+   "y": 4.44,
+   "p": 7.6,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Penajam Paser Utara",
+   "pv": "Kalimantan Timur",
+   "y": 5.78,
+   "p": 7.58,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Mahakam Ulu",
+   "pv": "Kalimantan Timur",
+   "y": 10.09,
+   "p": 14.88,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Balikpapan",
+   "pv": "Kalimantan Timur",
+   "y": 1.97,
+   "p": 5.09,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Samarinda",
+   "pv": "Kalimantan Timur",
+   "y": 3.45,
+   "p": 6.02,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Bontang",
+   "pv": "Kalimantan Timur",
+   "y": 3.21,
+   "p": 3.85,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Malinau",
+   "pv": "Kalimantan Utara",
+   "y": 5.56,
+   "p": 16.6,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bulungan",
+   "pv": "Kalimantan Utara",
+   "y": 7.26,
+   "p": 8.43,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tana Tidung",
+   "pv": "Kalimantan Utara",
+   "y": 4.56,
+   "p": 9.88,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Nunukan",
+   "pv": "Kalimantan Utara",
+   "y": 5.27,
+   "p": 10.26,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Tarakan",
+   "pv": "Kalimantan Utara",
+   "y": 5.03,
+   "p": 4.91,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Bolaang Mongondow",
+   "pv": "Sulawesi Utara",
+   "y": 6.98,
+   "p": 10.49,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Minahasa",
+   "pv": "Sulawesi Utara",
+   "y": 5.88,
+   "p": 9.83,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kepulauan Sangihe",
+   "pv": "Sulawesi Utara",
+   "y": 10.91,
+   "p": 8.18,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kepulauan Talaud",
+   "pv": "Sulawesi Utara",
+   "y": 8.34,
+   "p": 11.83,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Minahasa Selatan",
+   "pv": "Sulawesi Utara",
+   "y": 8.26,
+   "p": 9.68,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Minahasa Utara",
+   "pv": "Sulawesi Utara",
+   "y": 6.05,
+   "p": 7.43,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bolaang Mongondow Utara",
+   "pv": "Sulawesi Utara",
+   "y": 7.15,
+   "p": 13.1,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Siau Tagulandang Biaro",
+   "pv": "Sulawesi Utara",
+   "y": 8.32,
+   "p": 18.09,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Minahasa Tenggara",
+   "pv": "Sulawesi Utara",
+   "y": 10.31,
+   "p": 13.94,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bolaang Mongondow Selatan",
+   "pv": "Sulawesi Utara",
+   "y": 10.52,
+   "p": 15.26,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bolaang Mongondow Timur",
+   "pv": "Sulawesi Utara",
+   "y": 5.32,
+   "p": 14.75,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Manado",
+   "pv": "Sulawesi Utara",
+   "y": 4.99,
+   "p": 5.08,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Bitung",
+   "pv": "Sulawesi Utara",
+   "y": 5.81,
+   "p": 6.18,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Tomohon",
+   "pv": "Sulawesi Utara",
+   "y": 4.86,
+   "p": 6.98,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Kotamobagu",
+   "pv": "Sulawesi Utara",
+   "y": 5.14,
+   "p": 8.02,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Banggai Kepulauan",
+   "pv": "Sulawesi Tengah",
+   "y": 11.49,
+   "p": 12.16,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Banggai",
+   "pv": "Sulawesi Tengah",
+   "y": 6.23,
+   "p": 10.73,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Morowali",
+   "pv": "Sulawesi Tengah",
+   "y": 10.38,
+   "p": 5.97,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Poso",
+   "pv": "Sulawesi Tengah",
+   "y": 12.9,
+   "p": 12.66,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Donggala",
+   "pv": "Sulawesi Tengah",
+   "y": 14.66,
+   "p": 12.43,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Toli-Toli",
+   "pv": "Sulawesi Tengah",
+   "y": 12.2,
+   "p": 10.37,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Buol",
+   "pv": "Sulawesi Tengah",
+   "y": 12.48,
+   "p": 10.54,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Parigi Moutong",
+   "pv": "Sulawesi Tengah",
+   "y": 13.51,
+   "p": 12.5,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tojo Una-Una",
+   "pv": "Sulawesi Tengah",
+   "y": 14.67,
+   "p": 12.07,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sigi",
+   "pv": "Sulawesi Tengah",
+   "y": 10.47,
+   "p": 10.12,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Banggai Laut",
+   "pv": "Sulawesi Tengah",
+   "y": 12.71,
+   "p": 13.88,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Morowali Utara",
+   "pv": "Sulawesi Tengah",
+   "y": 10.38,
+   "p": 7.87,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Palu",
+   "pv": "Sulawesi Tengah",
+   "y": 5.26,
+   "p": 3.75,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kepulauan Selayar",
+   "pv": "Sulawesi Selatan",
+   "y": 10.61,
+   "p": 13.66,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bulukumba",
+   "pv": "Sulawesi Selatan",
+   "y": 6.06,
+   "p": 10.39,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bantaeng",
+   "pv": "Sulawesi Selatan",
+   "y": 7.68,
+   "p": 9.5,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Jeneponto",
+   "pv": "Sulawesi Selatan",
+   "y": 11.42,
+   "p": 11.64,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Takalar",
+   "pv": "Sulawesi Selatan",
+   "y": 7.27,
+   "p": 11.86,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Gowa",
+   "pv": "Sulawesi Selatan",
+   "y": 6.64,
+   "p": 9.73,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sinjai",
+   "pv": "Sulawesi Selatan",
+   "y": 7.41,
+   "p": 9.14,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Maros",
+   "pv": "Sulawesi Selatan",
+   "y": 8.9,
+   "p": 8.78,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pangkajene Dan Kepulauan",
+   "pv": "Sulawesi Selatan",
+   "y": 11.6,
+   "p": 9.13,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Barru",
+   "pv": "Sulawesi Selatan",
+   "y": 8.0,
+   "p": 8.42,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bone",
+   "pv": "Sulawesi Selatan",
+   "y": 9.13,
+   "p": 14.2,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Soppeng",
+   "pv": "Sulawesi Selatan",
+   "y": 6.65,
+   "p": 9.85,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Wajo",
+   "pv": "Sulawesi Selatan",
+   "y": 5.86,
+   "p": 10.42,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sidenreng Rappang",
+   "pv": "Sulawesi Selatan",
+   "y": 4.91,
+   "p": 9.98,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pinrang",
+   "pv": "Sulawesi Selatan",
+   "y": 8.38,
+   "p": 9.24,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Enrekang",
+   "pv": "Sulawesi Selatan",
+   "y": 10.73,
+   "p": 6.94,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Luwu",
+   "pv": "Sulawesi Selatan",
+   "y": 10.97,
+   "p": 9.51,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tana Toraja",
+   "pv": "Sulawesi Selatan",
+   "y": 10.54,
+   "p": 8.93,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Luwu Utara",
+   "pv": "Sulawesi Selatan",
+   "y": 10.74,
+   "p": 8.03,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Luwu Timur",
+   "pv": "Sulawesi Selatan",
+   "y": 5.79,
+   "p": 9.17,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Toraja Utara",
+   "pv": "Sulawesi Selatan",
+   "y": 10.05,
+   "p": 13.47,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Makassar",
+   "pv": "Sulawesi Selatan",
+   "y": 4.43,
+   "p": 5.75,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Parepare",
+   "pv": "Sulawesi Selatan",
+   "y": 4.44,
+   "p": 6.96,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Palopo",
+   "pv": "Sulawesi Selatan",
+   "y": 7.18,
+   "p": 6.11,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Buton",
+   "pv": "Sulawesi Tenggara",
+   "y": 13.46,
+   "p": 15.01,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Muna",
+   "pv": "Sulawesi Tenggara",
+   "y": 12.4,
+   "p": 11.91,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Konawe",
+   "pv": "Sulawesi Tenggara",
+   "y": 12.78,
+   "p": 6.16,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kolaka",
+   "pv": "Sulawesi Tenggara",
+   "y": 10.19,
+   "p": 7.28,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Konawe Selatan",
+   "pv": "Sulawesi Tenggara",
+   "y": 11.18,
+   "p": 6.09,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bombana",
+   "pv": "Sulawesi Tenggara",
+   "y": 10.14,
+   "p": 10.56,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Wakatobi",
+   "pv": "Sulawesi Tenggara",
+   "y": 13.4,
+   "p": 18.09,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kolaka Utara",
+   "pv": "Sulawesi Tenggara",
+   "y": 12.94,
+   "p": 9.12,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Buton Utara",
+   "pv": "Sulawesi Tenggara",
+   "y": 13.22,
+   "p": 13.98,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Konawe Utara",
+   "pv": "Sulawesi Tenggara",
+   "y": 11.89,
+   "p": 10.15,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kolaka Timur",
+   "pv": "Sulawesi Tenggara",
+   "y": 12.57,
+   "p": 8.35,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Konawe Kepulauan",
+   "pv": "Sulawesi Tenggara",
+   "y": 14.42,
+   "p": 13.4,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Muna Barat",
+   "pv": "Sulawesi Tenggara",
+   "y": 12.83,
+   "p": 16.25,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Buton Tengah",
+   "pv": "Sulawesi Tenggara",
+   "y": 13.4,
+   "p": 10.89,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Buton Selatan",
+   "pv": "Sulawesi Tenggara",
+   "y": 13.64,
+   "p": 11.52,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Kendari",
+   "pv": "Sulawesi Tenggara",
+   "y": 4.18,
+   "p": 6.77,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Baubau",
+   "pv": "Sulawesi Tenggara",
+   "y": 6.83,
+   "p": 6.82,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Boalemo",
+   "pv": "Gorontalo",
+   "y": 16.37,
+   "p": 10.09,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Gorontalo",
+   "pv": "Gorontalo",
+   "y": 14.89,
+   "p": 7.94,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pohuwato",
+   "pv": "Gorontalo",
+   "y": 15.24,
+   "p": 9.37,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Bone Bolango",
+   "pv": "Gorontalo",
+   "y": 13.16,
+   "p": 9.34,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Gorontalo Utara",
+   "pv": "Gorontalo",
+   "y": 15.89,
+   "p": 7.67,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Gorontalo",
+   "pv": "Gorontalo",
+   "y": 5.31,
+   "p": 6.82,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Majene",
+   "pv": "Sulawesi Barat",
+   "y": 12.98,
+   "p": 10.68,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Polewali Mandar",
+   "pv": "Sulawesi Barat",
+   "y": 14.02,
+   "p": 12.28,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Mamasa",
+   "pv": "Sulawesi Barat",
+   "y": 13.66,
+   "p": 11.86,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Mamuju",
+   "pv": "Sulawesi Barat",
+   "y": 6.99,
+   "p": 10.23,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Mamuju Utara",
+   "pv": "Sulawesi Barat",
+   "y": 4.96,
+   "p": 8.0,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Mamuju Tengah",
+   "pv": "Sulawesi Barat",
+   "y": 7.22,
+   "p": 10.48,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Maluku Tenggara Barat",
+   "pv": "Maluku",
+   "y": 23.38,
+   "p": 10.33,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Maluku Tenggara",
+   "pv": "Maluku",
+   "y": 21.16,
+   "p": 25.18,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Maluku Tengah",
+   "pv": "Maluku",
+   "y": 16.71,
+   "p": 10.43,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Buru",
+   "pv": "Maluku",
+   "y": 15.11,
+   "p": 11.67,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kepulauan Aru",
+   "pv": "Maluku",
+   "y": 23.1,
+   "p": 26.61,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Seram Bagian Barat",
+   "pv": "Maluku",
+   "y": 21.85,
+   "p": 12.36,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Seram Bagian Timur",
+   "pv": "Maluku",
+   "y": 20.9,
+   "p": 9.61,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Maluku Barat Daya",
+   "pv": "Maluku",
+   "y": 27.65,
+   "p": 14.6,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Buru Selatan",
+   "pv": "Maluku",
+   "y": 14.84,
+   "p": 19.57,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Ambon",
+   "pv": "Maluku",
+   "y": 4.34,
+   "p": 6.64,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Tual",
+   "pv": "Maluku",
+   "y": 19.39,
+   "p": 7.6,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Halmahera Barat",
+   "pv": "Maluku Utara",
+   "y": 7.9,
+   "p": 10.59,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Halmahera Tengah",
+   "pv": "Maluku Utara",
+   "y": 9.16,
+   "p": 14.37,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kepulauan Sula",
+   "pv": "Maluku Utara",
+   "y": 7.65,
+   "p": 12.09,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Halmahera Selatan",
+   "pv": "Maluku Utara",
+   "y": 4.81,
+   "p": 12.29,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Halmahera Utara",
+   "pv": "Maluku Utara",
+   "y": 4.35,
+   "p": 10.42,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Halmahera Timur",
+   "pv": "Maluku Utara",
+   "y": 10.54,
+   "p": 12.04,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pulau Morotai",
+   "pv": "Maluku Utara",
+   "y": 4.49,
+   "p": 10.5,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pulau Taliabu",
+   "pv": "Maluku Utara",
+   "y": 6.63,
+   "p": 20.29,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Ternate",
+   "pv": "Maluku Utara",
+   "y": 3.34,
+   "p": 10.68,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Kota Tidore Kepulauan",
+   "pv": "Maluku Utara",
+   "y": 6.54,
+   "p": 10.16,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Fakfak",
+   "pv": "Papua Barat",
+   "y": 19.86,
+   "p": 22.82,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kaimana",
+   "pv": "Papua Barat",
+   "y": 13.83,
+   "p": 27.66,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Teluk Wondama",
+   "pv": "Papua Barat",
+   "y": 27.57,
+   "p": 22.34,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Teluk Bintuni",
+   "pv": "Papua Barat",
+   "y": 25.34,
+   "p": 22.37,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Manokwari",
+   "pv": "Papua Barat",
+   "y": 17.38,
+   "p": 11.93,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Manokwari Selatan",
+   "pv": "Papua Barat",
+   "y": 26.52,
+   "p": 23.65,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pegunungan Arfak",
+   "pv": "Papua Barat",
+   "y": 30.88,
+   "p": 25.13,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Raja Ampat",
+   "pv": "Papua Barat Daya",
+   "y": 16.57,
+   "p": 16.37,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sorong",
+   "pv": "Papua Barat Daya",
+   "y": 25.1,
+   "p": 12.68,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sorong Selatan",
+   "pv": "Papua Barat Daya",
+   "y": 17.66,
+   "p": 29.58,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Maybrat",
+   "pv": "Papua Barat Daya",
+   "y": 29.0,
+   "p": 23.99,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tambrauw",
+   "pv": "Papua Barat Daya",
+   "y": 28.94,
+   "p": 17.69,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Sorong",
+   "pv": "Papua Barat Daya",
+   "y": 13.55,
+   "p": 14.22,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Jayapura",
+   "pv": "Papua",
+   "y": 13.03,
+   "p": 6.77,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kepulauan Yapen",
+   "pv": "Papua",
+   "y": 28.0,
+   "p": 14.58,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Biak Numfor",
+   "pv": "Papua",
+   "y": 25.73,
+   "p": 14.48,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Sarmi",
+   "pv": "Papua",
+   "y": 15.17,
+   "p": 10.72,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Keerom",
+   "pv": "Papua",
+   "y": 17.76,
+   "p": 5.73,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Waropen",
+   "pv": "Papua",
+   "y": 32.6,
+   "p": 12.75,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Supiori",
+   "pv": "Papua",
+   "y": 42.56,
+   "p": 16.79,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Mamberamo Raya",
+   "pv": "Papua",
+   "y": 35.09,
+   "p": 26.25,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Kota Jayapura",
+   "pv": "Papua",
+   "y": 12.03,
+   "p": 6.74,
+   "k": 1,
+   "j": 0
+  },
+  {
+   "n": "Merauke",
+   "pv": "Papua Selatan",
+   "y": 11.31,
+   "p": 8.31,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Boven Digoel",
+   "pv": "Papua Selatan",
+   "y": 21.96,
+   "p": 25.66,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Mappi",
+   "pv": "Papua Selatan",
+   "y": 28.46,
+   "p": 23.76,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Asmat",
+   "pv": "Papua Selatan",
+   "y": 28.47,
+   "p": 24.65,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Mimika",
+   "pv": "Papua Tengah",
+   "y": 13.7,
+   "p": 7.82,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Dogiyai",
+   "pv": "Papua Tengah",
+   "y": 29.34,
+   "p": 30.17,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Deiyai",
+   "pv": "Papua Tengah",
+   "y": 37.29,
+   "p": 28.91,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Nabire",
+   "pv": "Papua Tengah",
+   "y": 22.65,
+   "p": 12.27,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Paniai",
+   "pv": "Papua Tengah",
+   "y": 36.31,
+   "p": 30.82,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Intan Jaya",
+   "pv": "Papua Tengah",
+   "y": 39.21,
+   "p": 29.96,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Puncak",
+   "pv": "Papua Tengah",
+   "y": 36.94,
+   "p": 32.78,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Puncak Jaya",
+   "pv": "Papua Tengah",
+   "y": 35.46,
+   "p": 31.26,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Nduga",
+   "pv": "Papua Pegunungan",
+   "y": 32.89,
+   "p": 35.87,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Jayawijaya",
+   "pv": "Papua Pegunungan",
+   "y": 29.08,
+   "p": 17.63,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Lanny Jaya",
+   "pv": "Papua Pegunungan",
+   "y": 31.59,
+   "p": 35.13,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Tolikara",
+   "pv": "Papua Pegunungan",
+   "y": 28.75,
+   "p": 35.27,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Mamberamo Tengah",
+   "pv": "Papua Pegunungan",
+   "y": 32.2,
+   "p": 34.43,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Yalimo",
+   "pv": "Papua Pegunungan",
+   "y": 27.35,
+   "p": 27.94,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Yahukimo",
+   "pv": "Papua Pegunungan",
+   "y": 30.61,
+   "p": 38.15,
+   "k": 0,
+   "j": 0
+  },
+  {
+   "n": "Pegunungan Bintang",
+   "pv": "Papua Pegunungan",
+   "y": 25.87,
+   "p": 37.23,
+   "k": 0,
+   "j": 0
+  }
+ ],
+ "families": [
+  {
+   "k": "land cover",
+   "share": 0.493
+  },
+  {
+   "k": "buildings",
+   "share": 0.3935
+  },
+  {
+   "k": "lights",
+   "share": 0.0728
+  },
+  {
+   "k": "geography",
+   "share": 0.0261
+  },
+  {
+   "k": "population",
+   "share": 0.0146
+  }
+ ],
+ "nFeatures": 31,
+ "featureFamilies": {
+  "population": 3,
+  "lights": 6,
+  "buildings": 11,
+  "landcover": 9,
+  "geography": 2
+ },
+ "literature": [
+  {
+   "key": "putri",
+   "short": "Putri et al. 2022",
+   "cite": "Putri, Wijayanto & Sakti (2022), ISPRS Int. J. Geo-Inf. 11(5):275",
+   "doi": "10.3390/ijgi11050275",
+   "target": "monetary",
+   "target_label": "BPS poverty rate (P0)",
+   "unit": "38 regencies, East Java",
+   "n": 38,
+   "design": "insample",
+   "r2": 0.5,
+   "spearman": 0.77,
+   "pearson": 0.71,
+   "rmse_pp": 3.18,
+   "note": "One province, so the nominal poverty line is nearly constant across the sample. A constructed index correlated with the official rates, with no hold-out."
+  },
+  {
+   "key": "sartirano",
+   "short": "Sartirano et al. 2023",
+   "cite": "Sartirano, Kalimeri, Cattuto, Delam\u00f3nica, Garc\u00eda-Herranz, Mockler, Paolotti & Schifanella (2023), Frontiers in Big Data 6:1054156",
+   "doi": "10.3389/fdata.2023.1054156",
+   "target": "asset",
+   "target_label": "Susenas asset index",
+   "unit": "513 regencies, Indonesia",
+   "n": 513,
+   "design": "insample",
+   "r2": null,
+   "spearman": 0.75,
+   "pearson": null,
+   "rmse_pp": null,
+   "auroc_adm2": 0.79,
+   "auroc_adm1": 0.72,
+   "exclusion_error": 0.3282,
+   "untargeted_share": 0.5566,
+   "note": "Meta's Relative Wealth Index ranked against a Filmer\u2013Pritchett Susenas asset index at kabupaten level."
+  },
+  {
+   "key": "jean",
+   "short": "Jean et al. 2016",
+   "cite": "Jean, Burke, Xie, Davis, Lobell & Ermon (2016), Science 353(6301):790\u2013794",
+   "doi": "10.1126/science.aaf7894",
+   "target": "asset",
+   "target_label": "DHS asset index",
+   "unit": "survey clusters, 5 African countries",
+   "n": null,
+   "design": "randomcv",
+   "r2": 0.56,
+   "lo": 0.55,
+   "hi": 0.75,
+   "spearman": null,
+   "pearson": null,
+   "rmse_pp": null,
+   "note": "Pooled cross-validated r\u00b2 (Fig. 5B); per-country 0.55\u20130.75, all within-country random k-fold. Restricted to households below twice the international poverty line, r\u00b2 falls to about 0.12."
+  },
+  {
+   "key": "jean_cons",
+   "short": "Jean et al. 2016",
+   "cite": "Jean et al. (2016), Science 353(6301):790\u2013794",
+   "doi": "10.1126/science.aaf7894",
+   "target": "monetary",
+   "target_label": "consumption expenditure",
+   "unit": "survey clusters, 4 African countries",
+   "n": null,
+   "design": "randomcv",
+   "r2": 0.45,
+   "lo": 0.37,
+   "hi": 0.55,
+   "spearman": null,
+   "pearson": null,
+   "rmse_pp": null,
+   "note": "Pooled cross-validated r\u00b2 (Fig. 5A); per-country 0.37\u20130.55. Same imagery, same model, a monetary target instead of an asset one."
+  },
+  {
+   "key": "yeh",
+   "short": "Yeh et al. 2020",
+   "cite": "Yeh, Perez, Driscoll, Azzari, Tang, Lobell, Ermon & Burke (2020), Nature Communications 11:2583",
+   "doi": "10.1038/s41467-020-16185-w",
+   "target": "asset",
+   "target_label": "DHS asset wealth index",
+   "unit": "19,669 villages, 23 African countries",
+   "n": 19669,
+   "design": "spatial",
+   "r2": 0.67,
+   "spearman": null,
+   "pearson": null,
+   "rmse_pp": null,
+   "urban_r2": 0.4,
+   "rural_r2": 0.32,
+   "change_r2": 0.15,
+   "consumption_r2": 0.5,
+   "note": "Pooled r\u00b2 at village level under held-out-country validation. Fitted separately within urban and rural strata it is 0.40 and 0.32; for change over time, 0.15. Their own asset index correlates with log consumption at only r\u00b2 0.50."
+  },
+  {
+   "key": "chi",
+   "short": "Chi et al. 2022",
+   "cite": "Chi, Fang, Chatterjee & Blumenstock (2022), PNAS 119(3):e2113658119",
+   "doi": "10.1073/pnas.2113658119",
+   "target": "asset",
+   "target_label": "relative wealth index",
+   "unit": "2.4 km tiles, 135 countries",
+   "n": null,
+   "design": "spatial",
+   "r2": 0.56,
+   "lo": 0.56,
+   "hi": 0.7,
+   "spearman": null,
+   "pearson": null,
+   "rmse_pp": null,
+   "note": "Explains 56\u201370% of household wealth variation depending on the evaluation; the index is explicitly relative to others in the same country."
+  },
+  {
+   "key": "steele",
+   "short": "Steele et al. 2017",
+   "cite": "Steele, Sunds\u00f8y, Pezzulo, Alegana, Bird, Blumenstock, Bjelland, Eng\u00f8-Monsen, de Montjoye, Iqbal et al. (2017), J. R. Soc. Interface 14(127):20160690",
+   "doi": "10.1098/rsif.2016.0690",
+   "target": "asset",
+   "target_label": "DHS wealth index",
+   "unit": "600 survey clusters, Bangladesh",
+   "n": 600,
+   "design": "randomcv",
+   "r2": 0.76,
+   "spearman": null,
+   "pearson": null,
+   "rmse_pp": null,
+   "note": "Mobile-phone plus remote-sensing features, 80/20 hold-out."
+  },
+  {
+   "key": "steele_ppi",
+   "short": "Steele et al. 2017",
+   "cite": "Steele et al. (2017), J. R. Soc. Interface 14(127):20160690",
+   "doi": "10.1098/rsif.2016.0690",
+   "target": "monetary",
+   "target_label": "consumption poverty (PPI)",
+   "unit": "600 survey clusters, Bangladesh",
+   "n": 600,
+   "design": "randomcv",
+   "r2": 0.25,
+   "spearman": null,
+   "pearson": null,
+   "rmse_pp": null,
+   "urban_r2": 0.0,
+   "rural_r2": 0.18,
+   "note": "The identical features and units as the row above. In the urban subset the consumption-poverty r\u00b2 is 0.00."
+  },
+  {
+   "key": "engstrom",
+   "short": "Engstrom et al. 2022",
+   "cite": "Engstrom, Hersh & Newhouse (2022), World Bank Economic Review 36(2):382\u2013412",
+   "doi": "10.1093/wber/lhab015",
+   "target": "monetary",
+   "target_label": "poverty headcount rate",
+   "unit": "1,291 GN divisions, Sri Lanka",
+   "n": 1291,
+   "design": "randomcv",
+   "r2": 0.61,
+   "spearman": null,
+   "pearson": null,
+   "rmse_pp": null,
+   "asset_r2": 0.68,
+   "survey_truth_r2": 0.217,
+   "nightlights_only_r2": 0.2,
+   "note": "Random tenfold CV against a census-imputed poverty rate averaged over 100 simulations. Against the raw survey estimate the same model scores 0.217."
+  },
+  {
+   "key": "engstrom_sp",
+   "short": "Engstrom et al. 2022",
+   "cite": "Engstrom, Hersh & Newhouse (2022), World Bank Economic Review 36(2):382\u2013412",
+   "doi": "10.1093/wber/lhab015",
+   "target": "monetary",
+   "target_label": "poverty headcount, space held out",
+   "unit": "1,291 GN divisions, Sri Lanka",
+   "n": 1291,
+   "design": "spatial",
+   "r2": 0.45,
+   "rf_r2": 0.5643,
+   "spearman": 0.7,
+   "pearson": null,
+   "rmse_pp": null,
+   "note": "Leave-one-Divisional-Secretariat-out. Linear 0.4498, random forest 0.5643 \u2014 the only published spatially held-out satellite model of a monetary poverty headcount, and the closest analogue to this case."
+  }
+ ],
+ "pairs": [
+  {
+   "study": "Steele et al. 2017",
+   "where": "Bangladesh, 600 clusters",
+   "asset": 0.76,
+   "monetary": 0.25,
+   "asset_label": "DHS wealth index",
+   "monetary_label": "consumption poverty (PPI)"
+  },
+  {
+   "study": "Jean et al. 2016",
+   "where": "Africa, pooled cross-validated",
+   "asset": 0.56,
+   "monetary": 0.45,
+   "asset_label": "DHS asset index",
+   "monetary_label": "consumption expenditure"
+  },
+  {
+   "study": "Engstrom et al. 2022",
+   "where": "Sri Lanka, GN divisions",
+   "asset": 0.68,
+   "monetary": 0.61,
+   "asset_label": "asset index",
+   "monetary_label": "poverty headcount"
+  }
+ ],
+ "spatialPenalty": [
+  {
+   "study": "Ploton et al. 2020",
+   "field": "forest biomass, Central Africa",
+   "random": 0.53,
+   "spatial": 0.14,
+   "doi": "10.1038/s41467-020-18321-y"
+  },
+  {
+   "study": "Engstrom et al. 2022",
+   "field": "poverty headcount, Sri Lanka",
+   "random": 0.61,
+   "spatial": 0.4498,
+   "doi": "10.1093/wber/lhab015"
+  }
+ ],
+ "sae": {
+  "cite": "Feriyanto, Wijayanto, Wulansari & Parwanto (2024), Jurnal Aplikasi Statistika & Komputasi Statistik 16(2):205\u2013221",
+  "doi": "10.34123/jurnalasks.v16i2.799",
+  "unit": "626 kecamatan, West Java",
+  "n": 626,
+  "mean_rse": 0.1039,
+  "mean_rse_rs_only": 0.1048,
+  "bps_good": 0.25,
+  "bps_unusable": 0.5,
+  "note": "EBLUP small-area estimation of per-capita expenditure on Susenas plus PODES with night lights and land-surface temperature as auxiliaries. BPS treats a relative standard error at or under 25% as good to use and over 50% as unreliable."
+ }
+}

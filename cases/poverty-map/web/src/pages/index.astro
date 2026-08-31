@@ -33,6 +33,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
         <a href="#ch4">04 Below the line</a>
         <a href="#explore">Explore</a>
         <a href="#method">Method</a>
+        <a href="#review">Review</a>
       </nav>
       <span class="stamp" id="top-stamp">LOADING</span>
     </header>
@@ -399,6 +400,24 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
             <h3>Files this case publishes</h3>
             <ul class="cap" id="manifest-list"></ul>
           </article>
+        </div>
+      </section>
+
+      <!-- ═══════════════════════════ REVIEW ═══════════════════════════ -->
+      <section class="chapter review-cta" id="review" aria-labelledby="rv-h">
+        <div class="ch-head reveal">
+          <span class="chno">07</span>
+          <div>
+            <h2 id="rv-h">We had this case reviewed, adversarially.</h2>
+            <p class="lede">An independent read of the same data against the published literature.
+            It tests the defence this page used to give for its failing skill check — that the
+            target is a nominal poverty line no satellite can see — by handing the model that line
+            and by re-targeting it onto the line itself. Neither test supports the defence, and the
+            explanation that replaces it is a better one. It also finds that night lights and
+            population alone score higher than all thirty-one features, and reports what the
+            benchmarked disaggregation is really worth.</p>
+            <a class="cta big" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/article`}>Read the review article →</a>
+          </div>
         </div>
       </section>
     </main>
@@ -836,6 +855,7 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
           return;
         }
         const dec = statsJson.decomposition || {};
+        const dis = statsJson.disaggregation || {};
         const s = statsJson.skill;
         el.hidden = false;
         el.className = "verdict " + (statsJson.ships ? "ok" : "fail");
@@ -843,19 +863,26 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
           ? `<b>All hard gates pass.</b> Held out province by province, the model reaches ` +
             `R² ${fmt2(s.lopo.r2)} and Spearman ρ ${fmt2(s.lopo.spearman)} against the official ` +
             `${statsJson.latest_year} rates, and kecamatan estimates reproduce every regency total exactly.`
-          : `<b>The headline gate fails, and it is published failing.</b> Held out province by ` +
+          : `<b>The headline check fails, and it is published failing.</b> Held out province by ` +
             `province the model reaches R² ${fmt2(s.lopo.r2)}, ρ ${fmt2(s.lopo.spearman)} and ` +
-            `RMSE ${fmt1(s.lopo.rmse)} pp, against thresholds of 0.50, 0.70 and 4.0 pp. The ` +
-            `diagnosis is specific rather than general: ` +
-            `${dec.offset_share_of_sse == null ? "most" : d3.format(".0%")(dec.offset_share_of_sse)} ` +
-            `of the squared error is a single constant offset for an entire province. A satellite ` +
-            `can measure roofs and light; it cannot see the <em>nominal poverty line</em> those ` +
-            `roofs are judged against, and that line is what sets a province's level. Remove the ` +
-            `offsets and the ordering inside a province is ρ ` +
-            `${dec.within_province_spearman == null ? "—" : fmt2(dec.within_province_spearman)} ` +
-            `across ${dec.provinces_scored ?? "—"} provinces: real signal, still short of what ` +
-            `household targeting would need. What this case ships is therefore a benchmarked ` +
-            `<em>disaggregator</em> for exploration and prioritisation — not a substitute for the survey.`;
+            `RMSE ${fmt1(s.lopo.rmse)} pp, against thresholds of 0.50, 0.70 and 4.0 pp. Those ` +
+            `thresholds came from studies that never held space out; a random fold on these same ` +
+            `rows reports R² ${fmt2(s.random.r2)}, which is where those studies sit. ` +
+            `${dec.offset_share_of_sse == null ? "Most" : d3.format(".0%")(dec.offset_share_of_sse)} ` +
+            `of the squared error is a single constant offset for an entire province — the model ` +
+            `pulls every regency toward the middle. Remove the offsets and it orders regencies ` +
+            `inside their province at ρ ` +
+            `${dec.within_province_spearman == null ? "—" : fmt2(dec.within_province_spearman)}, ` +
+            `explaining R² ${dec.within_province_r2 == null ? "—" : fmt2(dec.within_province_r2)} ` +
+            `of the within-province variation, across ${dec.provinces_scored ?? "—"} provinces. ` +
+            (dis.benchmarked_model
+              ? `Run one level up, where truth exists, the benchmarking rule this case ships beats ` +
+                `giving every regency its province's rate on ` +
+                `${d3.format(".0%")(dis.win_rate)} of ${fmtI(dis.n)} regencies, cutting mean error ` +
+                `from ${fmt2(dis.flat_parent_rate.mae)} to ${fmt2(dis.benchmarked_model.mae)} pp. `
+              : "") +
+            `What ships is therefore a benchmarked <em>disaggregator</em> for exploration and ` +
+            `prioritisation — not a substitute for the survey, and not a targeting instrument.`;
       });
 
       sect("stat row", () => {
@@ -883,7 +910,7 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
                   lab: `Held-out skill, leave-one-province-out — ${g1.status}`,
                   sub: `ρ ${fmt2(rho)} · RMSE ${fmt1(g1.checks[2].value)} pp` +
                     (dec.within_province_spearman != null
-                      ? ` · but ρ ${fmt2(dec.within_province_spearman)} once the province's own level is set by BPS`
+                      ? ` · inside a province, ρ ${fmt2(dec.within_province_spearman)} but R² ${fmt2(dec.within_province_r2)}`
                       : "") };
               })()
             : { k: "pending", big: "—", lab: "Held-out skill, leave-one-province-out",
@@ -1424,17 +1451,17 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
         el.innerHTML =
           (g1.status === "pass"
             ? `The model reproduces the official ranking of ${s.lopo.n} regencies it was never trained on (Spearman ρ ${fmt2(s.lopo.spearman)}, RMSE ${fmt1(s.lopo.rmse)} pp). `
-            : `<b class="bad-inline">The held-out skill check fails on this run and goes up red</b> — R² ${fmt2(s.lopo.r2)}, ρ ${fmt2(s.lopo.spearman)}, RMSE ${fmt1(s.lopo.rmse)} pp against thresholds of 0.50, 0.70 and 4.0 pp. Those thresholds were set from an asset-wealth literature; the target here is a headcount against a <em>nominal, region-specific poverty line</em>, and no satellite can see a price level. `) +
+            : `<b class="bad-inline">The held-out skill check fails on this run and goes up red</b> — R² ${fmt2(s.lopo.r2)}, ρ ${fmt2(s.lopo.spearman)}, RMSE ${fmt1(s.lopo.rmse)} pp against thresholds of 0.50, 0.70 and 4.0 pp. Those thresholds came from studies that correlated an index with official rates on the units they already covered — none of them held space out, and this number does. `) +
           (inflate != null
             ? `A random k-fold on the same rows would have reported R² ${fmt2(s.random.r2)} instead of ${fmt2(s.lopo.r2)} — ${fmt2(inflate)} of pure fold design, and the reason the honest number is the published one. `
             : "") +
           (dec.offset_share_of_sse != null
-            ? `<b>${d3.format(".0%")(dec.offset_share_of_sse)} of the squared error is a single constant offset for a whole province</b> — the model cannot guess a price level from orbit. Strip the offsets and regencies are ordered inside their province at ρ ${fmt2(dec.within_province_spearman)} across ${dec.provinces_scored} provinces: the weaker half of the job, but the half chapter 4 actually needs, because benchmarking takes the level from BPS. `
+            ? `<b>${d3.format(".0%")(dec.offset_share_of_sse)} of the squared error is a single constant offset for a whole province</b> — the model pulls every regency toward the middle, so it under-calls the poorest provinces and over-calls the least poor. Strip the offsets and regencies are ordered inside their province at ρ ${fmt2(dec.within_province_spearman)} across ${dec.provinces_scored} provinces, though only R² ${fmt2(dec.within_province_r2)} of the within-province variation: the weaker half of the job, but the half chapter 4 actually needs, because benchmarking takes the level from BPS. `
             : "") +
           (s.temporal_strict_2025?.spearman != null
             ? `The temporal test tells the same story twice: ρ ${fmt2(s.temporal_2025.spearman)} when the model has seen the regency in earlier years, ρ ${fmt2(s.temporal_strict_2025.spearman)} when the province is held out too. `
             : "") +
-          `Off-Java R² is ${s.lopo_offjava?.r2 == null ? "—" : fmt2(s.lopo_offjava.r2)} against ${s.lopo_java?.r2 == null ? "—" : fmt2(s.lopo_java.r2)} on Java, and urban kota ${s.lopo_kota?.r2 == null ? "—" : fmt2(s.lopo_kota.r2)}` +
+          `Off-Java R² is ${s.lopo_offjava?.r2 == null ? "—" : fmt2(s.lopo_offjava.r2)} against ${s.lopo_java?.r2 == null ? "—" : fmt2(s.lopo_java.r2)} on Java — but R² is scaled by each group's own spread, and in percentage points the off-Java error is ${s.lopo_offjava?.rmse == null ? "—" : fmt1(s.lopo_offjava.rmse)} pp against Java's ${s.lopo_java?.rmse == null ? "—" : fmt1(s.lopo_java.rmse)} pp, so read both. Urban kota R² is ${s.lopo_kota?.r2 == null ? "—" : fmt2(s.lopo_kota.r2)}` +
           (statsJson.kota_indicative || statsJson.offjava_indicative
             ? " — below zero for cities, so every kota estimate here is labelled indicative."
             : ".");
@@ -1547,9 +1574,11 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
         }
         const top = ledger.families.rows[0];
         el.innerHTML = `${top[0]} alone accounts for ${d3.format(".0%")(top[2])} of the model's ` +
-          `attribution. That is a defensible finding and also a warning: the roof and land-cover ` +
-          `layers are single-vintage, so this model reads <em>where</em> poverty is far better ` +
-          `than <em>when</em> it changes.`;
+          `attribution. Read that as what the model <em>uses</em>, not as what it earns: ` +
+          `attribution is measured in-sample, and held out province by province the roof family ` +
+          `improves the <em>ordering</em> of regencies far more than the level of their rates. ` +
+          `It is also a warning about time — the roof and land-cover layers are single-vintage, ` +
+          `so this model reads <em>where</em> poverty is far better than <em>when</em> it changes.`;
       });
 
       /* ══════════════════════════ CH4 — below the line ════════════════════════════ */
@@ -1650,14 +1679,27 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
             "of how much resolution the model really adds.";
           return;
         }
+        const dis = statsJson?.disaggregation;
         el.innerHTML =
           `Inside a typical regency the model spreads the official rate over ` +
           `${fmt1(contrasts.spread_median)} pp of range, reaching ${fmt1(contrasts.spread_max)} pp ` +
           `at the extreme — variation the published series cannot show. But only ` +
           `<b>${fmtI(contrasts.n_separable)} of ${fmtI(contrasts.n_regencies)}</b> regencies have a ` +
           `poorest and a least-poor kecamatan whose intervals actually clear each other, because ` +
-          `those intervals carry the province's own out-of-sample error. Both numbers are the ` +
-          `product: a map fine enough to argue about, honest enough to say where the argument stops.`;
+          `those intervals carry the province's own out-of-sample error. ` +
+          (dis?.benchmarked_model
+            ? `Nothing official exists below the regency, so this layer cannot be scored where it ` +
+              `operates — but the identical rule can be scored one level up. Given each province's ` +
+              `official rate and asked to distribute it among that province's regencies, the ` +
+              `held-out model beats giving every regency its province's rate on ` +
+              `<b>${d3.format(".1%")(dis.win_rate)} of ${fmtI(dis.n)}</b> regencies, cutting mean ` +
+              `error from ${fmt2(dis.flat_parent_rate.mae)} pp to ` +
+              `<b>${fmt2(dis.benchmarked_model.mae)} pp</b> and lifting R² from ` +
+              `${fmt2(dis.flat_parent_rate.r2)} to ${fmt2(dis.benchmarked_model.r2)}. That is the ` +
+              `honest measure of what disaggregation adds, and it is a real margin rather than a ` +
+              `large one. `
+            : "") +
+          `A map fine enough to argue about, honest enough to say where the argument stops.`;
       });
 
       /* ══════════════════════════ EXPLORE ═════════════════════════════════════════ */
@@ -2183,8 +2225,11 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
       .stat.official .stat-big { color: var(--official); }
       .stat.model .stat-big { color: var(--accent); }
       .stat.pending .stat-big { color: var(--ink-muted); }
+      /* Two values plus a separator is the longest thing a tile carries; let it size down
+         rather than break "1.9" away from its per-cent sign. */
+      .stat-big:has(.vs) { font-size: clamp(1.35rem, 2.5vw, 1.95rem); white-space: nowrap; }
       .stat-big .vs { font-family: var(--font-data); font-size: 13px; color: var(--ink-muted);
-        margin: 0 8px; letter-spacing: 0.1em; }
+        margin: 0 7px; letter-spacing: 0.1em; }
       .stat-lab { display: block; margin-top: 8px; font-size: 14px; color: var(--ink); }
       .stat-sub { display: block; margin-top: 6px; text-transform: none; letter-spacing: 0.02em; }
 
@@ -2344,6 +2389,16 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
         transform 700ms cubic-bezier(.2,.7,.3,1); }
       .reveal.in { opacity: 1; transform: none; }
       @media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } }
+
+      /* Review hand-off — the article is a separate page, so it gets a real door. */
+      .review-cta { padding-top: 4vh; }
+      .review-cta .lede { color: var(--ink-muted); }
+      .cta.big { display: inline-block; margin-top: 16px; font-family: var(--font-data);
+        font-size: 0.82rem; letter-spacing: 0.08em; color: var(--accent);
+        border: 1px solid var(--accent); border-radius: 4px; padding: 13px 22px;
+        text-decoration: none; transition: background 0.18s ease, transform 0.18s ease; }
+      .cta.big:hover { background: var(--accent-ink); transform: translateY(-1px); }
+      @media (prefers-reduced-motion: reduce) { .cta.big { transition: none; } }
 
       .foot { max-width: var(--content-width); margin: 40px auto 0; padding: 20px 22px 56px;
         border-top: 1px solid var(--hairline); display: grid; gap: 8px; }
