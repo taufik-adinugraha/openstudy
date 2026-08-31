@@ -28,19 +28,21 @@ import "../styles/tokens.css";
 
       <div class="hero-copy">
         <span class="stamp">CASE H · FOREST &amp; COMMODITY WATCH</span>
-        <h1>The forest moved last&nbsp;week.<br /><em>Whose supply chain did it move into?</em></h1>
+        <h1>The forest moved last&nbsp;week.<br /><em>How close did it come to a supply chain?</em></h1>
         <p class="lede">Radar sees through the monsoon. Every week, Sentinel-1 flags forest that
         has just been cleared somewhere across the archipelago. Global Forest Watch shows you
         the pixels. This page asks the question a compliance desk actually has to answer —
         <strong>was that clearing inside an oil-palm estate, on its edge, inside a mill's
-        sourcing radius, on peat, in primary forest?</strong></p>
+        sourcing radius, on peat, in primary forest?</strong> — and then asks how unusual the
+        answer is, against a country where half the alertable forest already sits inside
+        somebody's 50&nbsp;km radius.</p>
       </div>
 
       <div class="hud" id="hud" aria-live="polite">
         <div class="hud-week"><b id="hud-date">—</b><span id="hud-weekno">week —</span></div>
         <div class="hud-figs">
           <div class="fig"><b id="hud-ha">0</b><span>hectares alerted, cumulative</span></div>
-          <div class="fig"><b id="hud-linked">—</b><span>linked to palm or a mill</span></div>
+          <div class="fig"><b id="hud-linked">—</b><span>inside a catchment or mapped palm</span></div>
         </div>
         <div class="hud-scrub">
           <button id="hud-play" class="play" aria-label="Pause the timelapse">❚❚</button>
@@ -92,7 +94,10 @@ import "../styles/tokens.css";
 
         <p class="sowhat reveal"><b>So what.</b> A single headline hectare figure is unusable for
         compliance. The rest of this page therefore never reports a number without the definition,
-        the sensor and the version string attached to it.</p>
+        the sensor and the version string attached to it. We have since put a number on the gap:
+        <b id="plantshare">—</b> of Indonesia's tree-cover loss since 2001 falls inside land already
+        mapped as plantation, which is loss but not deforestation. The
+        <a href="./article#s4">review article</a> shows the year-by-year split.</p>
       </section>
 
       <!-- ══ 02 ═══════════════════════════════════════════════════════════════════ -->
@@ -117,11 +122,14 @@ import "../styles/tokens.css";
           </div>
           <div class="tabs" id="ledger-tabs" role="tablist"></div>
           <figure id="ledger" class="chart"></figure>
-          <figcaption class="note">The first week of January 2020 is inflated: RADD's Indonesian
-          archive starts on 2020-01-01, so the initial detection batch all carries that date. It
-          is left in rather than smoothed away. Events are dated by their <em>first</em> alert;
-          the counts are clipped to Indonesian province polygons, because the 10-degree radar
-          tiles also cover Malaysia, Brunei, Papua New Guinea and Timor-Leste.</figcaption>
+          <figcaption class="note">Both ends of the series are artefacts and are left in rather
+          than smoothed away. The first two weeks of 2020 carry 10,619 and 9,907&nbsp;ha against a
+          median week of 1,815&nbsp;ha, because RADD's Indonesian archive starts on 2020-01-01 and
+          the initial detection batch all carries that date. The final weeks fall away because the
+          tile version was cut on 2026-08-19 and detections near the cut have not yet had a second
+          pass to confirm them. Events are dated by their <em>first</em> alert; the counts are
+          clipped to Indonesian province polygons, because the 10-degree radar tiles also cover
+          Malaysia, Brunei, Papua New Guinea and Timor-Leste.</figcaption>
         </div>
 
         <p class="sowhat reveal"><b>So what.</b> Alerts arrive as a continuous stream, not an annual
@@ -155,21 +163,24 @@ import "../styles/tokens.css";
         <div class="flags reveal" id="flags"></div>
 
         <p class="sowhat reveal"><b>So what.</b> The linked share is the number an EUDR desk, a
-        trader and an NGO all need and none of them can get off a public map. The unlinked share is
-        the honest residual — frontier clearing that no mill catchment or mapped estate explains.
-        And because RADD can only see inside forest that was primary in 2001, every one of these
-        shares is a <em>floor</em>, not an estimate.</p>
+        trader and an NGO all need and none of them can get off a public map. But a share is only
+        informative against its base rate, and half of Indonesia's alertable forest already sits
+        inside somebody's 50&nbsp;km radius — so <em>read the lift, not the share</em>. The
+        <a href="./article#s5">review article</a> computes both, province by province, and finds
+        the mill-catchment flag is strongly informative on the Kalimantan and Papua frontier and
+        worth almost nothing in Riau.</p>
       </section>
 
       <!-- ══ 04 ═══════════════════════════════════════════════════════════════════ -->
       <section class="chapter" id="ch4">
         <div class="ch-head reveal">
           <span class="ch-num">04</span>
-          <h2>The mills, ranked by pressure</h2>
+          <h2>The mills, as a screening order</h2>
           <p class="ch-lede">A mill cannot be blamed for a clearing inside its catchment — a
-          50&nbsp;km radius is a sourcing hypothesis, not a chain of custody. It is, however, exactly
-          the screen a due-diligence team runs first. Alert pressure = alerted hectares in the
-          catchment over the trailing twelve months.</p>
+          50&nbsp;km radius is a sourcing hypothesis, not a chain of custody, and the catchments
+          overlap so heavily that most alerted hectares sit inside several at once. It is, however,
+          exactly the screen a due-diligence team runs first. Alert pressure = alerted hectares in
+          the catchment over the trailing twelve months.</p>
         </div>
 
         <div class="panel reveal">
@@ -177,6 +188,7 @@ import "../styles/tokens.css";
             <h3>Alert pressure by mill</h3>
             <p>Circle area is alerted hectares in the catchment; a ring marks RSPO-certified
             mills. Hover for the mill card.</p>
+            <p class="note" id="millnote"></p>
           </div>
           <div class="millwrap">
             <canvas id="millmap" aria-label="Palm oil mills sized by alert pressure"></canvas>
@@ -185,7 +197,9 @@ import "../styles/tokens.css";
         </div>
 
         <p class="sowhat reveal"><b>So what.</b> Pressure ranking turns 1,000-odd mills into a
-        shortlist of a dozen worth a field visit — which is the entire value of the exercise.</p>
+        shortlist of a dozen worth a field visit — which is the entire value of the exercise, and
+        the limit of it. Under the EU Deforestation Regulation an operator needs the plot polygon,
+        not a radius; this is the triage that decides which plots to ask for first.</p>
       </section>
 
       <!-- ══ EXPLORE ═════════════════════════════════════════════════════════════ -->
@@ -303,6 +317,22 @@ import "../styles/tokens.css";
           Government concession services remain available as a live, labelled reference overlay at
           view time.</p>
           <div id="rejected" class="rejected"></div>
+        </div>
+      </section>
+
+      <!-- ══ 07 · REVIEW ═════════════════════════════════════════════════════════ -->
+      <section class="chapter review-cta" id="review">
+        <div class="ch-head reveal">
+          <span class="ch-num">07</span>
+          <h2>We had this instrument reviewed, adversarially.</h2>
+          <p class="ch-lede">An independent read of the same data against the published literature.
+          It computes the base rate this page never had — half of Indonesia's alertable forest is
+          already inside a mill catchment, so the linked share is a lift of 1.76×, not a finding of
+          near-universal palm linkage. It shows the mill-catchment flag is worth 2.4× on the
+          Kalimantan frontier and nothing at all in Riau, measures how much of Indonesia's
+          "tree-cover loss" is plantation rather than deforestation, and corrects three claims this
+          page used to make.</p>
+          <a class="cta big" href="./article">Read the review article →</a>
         </div>
       </section>
     </main>
@@ -424,6 +454,17 @@ import "../styles/tokens.css";
                 background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 70%);
                 border-radius: 0 var(--radius) var(--radius) 0; }
       .sowhat b { color: var(--accent); }
+      .sowhat a { color: var(--accent); }
+
+      /* Review hand-off — the article is a separate page, so it gets a real door. */
+      .review-cta { padding-top: 4vh; }
+      .review-cta .ch-head { margin-bottom: 0; display: flex; flex-direction: column; }
+      .cta.big { align-self: flex-start; margin-top: 22px; font-family: var(--font-data);
+        font-size: 0.82rem; letter-spacing: 0.08em; color: var(--accent);
+        border: 1px solid var(--accent); border-radius: 4px; padding: 13px 22px;
+        text-decoration: none; transition: background 0.18s ease, transform 0.18s ease; }
+      .cta.big:hover { background: var(--accent-ink); transform: translateY(-1px); }
+      @media (prefers-reduced-motion: reduce) { .cta.big { transition: none; } }
 
       .bigstat { display: flex; align-items: center; gap: clamp(16px, 4vw, 46px); flex-wrap: wrap;
                  margin: 0 0 40px; }
@@ -489,6 +530,8 @@ import "../styles/tokens.css";
                text-transform: uppercase; color: var(--c); }
       .cc b { font-family: var(--font-display); font-size: 1.9rem; line-height: 1; display: block; }
       .cc p { margin: 8px 0 0; font-size: 12.5px; color: var(--ink-muted); line-height: 1.45; }
+      .cc p.cc-alt { margin-top: 10px; padding-top: 10px; color: var(--c);
+                     border-top: 1px dashed color-mix(in srgb, var(--c) 40%, transparent); }
 
       .flags { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
       .flag { border: 1px dashed color-mix(in srgb, var(--loss) 50%, var(--hairline));
@@ -499,7 +542,9 @@ import "../styles/tokens.css";
       .millwrap { display: grid; gap: 16px; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); }
       #millmap { width: 100%; aspect-ratio: 16 / 9; display: block; border-radius: 8px;
                  background: color-mix(in srgb, var(--ground) 70%, #000); cursor: crosshair; }
-      .milltable { max-height: 340px; overflow-y: auto; }
+      .milltable { max-height: 340px; overflow: auto; }
+      .milltable table { min-width: 22rem; }
+      .milltable td { word-break: break-word; }
       table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
       th { text-align: left; font-family: var(--font-data); font-size: 10.5px; letter-spacing: 0.1em;
            text-transform: uppercase; color: var(--ink-muted); font-weight: 500;
@@ -580,9 +625,11 @@ import "../styles/tokens.css";
       .method-steps li { margin-bottom: 9px; }
       .method-steps b { color: var(--ink); }
       .lic { display: grid; gap: 8px; }
-      .lic-row { display: grid; grid-template-columns: 15rem auto 1fr; gap: 12px; align-items: baseline;
-                 font-size: 12.5px; padding: 8px 0; border-bottom: 1px solid color-mix(in srgb, var(--hairline) 60%, transparent); }
-      .lic-row code { font-size: 11.5px; }
+      .lic-row { display: grid; grid-template-columns: minmax(0, 15rem) auto minmax(0, 1fr); gap: 12px;
+                 align-items: baseline; font-size: 12.5px; padding: 8px 0;
+                 border-bottom: 1px solid color-mix(in srgb, var(--hairline) 60%, transparent); }
+      .lic-row code { font-size: 11.5px; overflow-wrap: anywhere; }
+      .lic-row .cite { overflow-wrap: anywhere; }
       .lic-row .lc { font-family: var(--font-data); font-size: 10.5px; letter-spacing: 0.08em;
                      color: var(--accent); white-space: nowrap; }
       .lic-row .cite { color: var(--ink-muted); }
@@ -613,6 +660,10 @@ import "../styles/tokens.css";
         .explorer { grid-template-columns: 1fr; grid-template-areas: "ctl" "map" "det"; }
         .millwrap { grid-template-columns: 1fr; }
         .hud { grid-template-columns: 1fr; }
+      }
+      @media (max-width: 640px) {
+        .lic-row { grid-template-columns: 1fr; gap: 4px; }
+        .lic-row .lc { white-space: normal; }
       }
       @media (prefers-reduced-motion: reduce) {
         html { scroll-behavior: auto; }
@@ -652,7 +703,7 @@ import "../styles/tokens.css";
         "PALM-EDGE": { c: "#CE7A38", label: "Palm — edge",
           note: "Touches mapped plantation without being inside it — the expanding margin of an existing estate." },
         "MILL-CATCHMENT": { c: "#E0A63F", label: "Mill catchment",
-          note: "Outside mapped palm but inside the 50 km fresh-fruit-bunch radius of at least one mill." },
+          note: "Outside mapped palm but inside the 50 km fresh-fruit-bunch radius of at least one mill — a proximity class, not an attribution. Half of all alertable forest is already in one." },
         "UNLINKED": { c: "#7A8A7C", label: "Unlinked",
           note: "No mapped estate and no mill within 50 km. Frontier clearing the palm system does not explain." },
       };
@@ -698,7 +749,7 @@ import "../styles/tokens.css";
       /* ══ boot ═════════════════════════════════════════════════════ */
       boot();
       async function boot() {
-        const [stats, adm1, ign, clusters, ledger, linkage, mills] = await Promise.all([
+        const [stats, adm1, ign, clusters, ledger, linkage, mills, review] = await Promise.all([
           grab("stats.json").catch((e) => (console.warn(e), null)),
           grab("adm1.json").catch((e) => (console.warn(e), null)),
           grab("ignition.json").catch((e) => (console.warn(e), null)),
@@ -706,17 +757,18 @@ import "../styles/tokens.css";
           grab("ledger.json").catch((e) => (console.warn(e), null)),
           grab("linkage.json").catch((e) => (console.warn(e), null)),
           grab("mills.json").catch((e) => (console.warn(e), null)),
+          grab("review.json").catch((e) => (console.warn(e), null)),
         ]);
         if (!stats && !adm1) {
           failBanner("View-models not published yet — run `make export` on the pipeline host.");
         }
         sect("hero", () => hero(adm1, ign, stats));
-        sect("chapter 1", () => chapter1(stats, adm1));
-        sect("chapter 2", () => chapter2(stats, ledger));
-        sect("chapter 3", () => chapter3(stats, linkage));
-        sect("chapter 4", () => chapter4(mills, adm1));
+        sect("chapter 1", () => chapter1(stats, adm1, review));
+        sect("chapter 2", () => chapter2(stats, ledger, review));
+        sect("chapter 3", () => chapter3(stats, linkage, review));
+        sect("chapter 4", () => chapter4(mills, adm1, review));
         sect("explorer", () => explorer(clusters, adm1, mills));
-        sect("methodology", () => methodology(stats));
+        sect("methodology", () => methodology(stats, review));
       }
 
       /* ══ geometry helpers (shared by every canvas) ════════════════ */
@@ -873,7 +925,10 @@ import "../styles/tokens.css";
       }
 
       /* ══ 01 — divergence + small multiples ═══════════════════════ */
-      function chapter1(stats, adm1) {
+      function chapter1(stats, adm1, review) {
+        const ps = document.getElementById("plantshare");
+        if (ps && review?.plantation_loss_grand_share != null)
+          ps.textContent = pct(review.plantation_loss_grand_share, 1);
         const dv = stats?.divergence;
         const our24 = dv?.gfw_tree_cover_loss_ha?.["2024"] ?? dv?.gfw_published_ha?.["2024"];
         document.getElementById("s-loss24").textContent = fmt(our24);
@@ -977,15 +1032,19 @@ import "../styles/tokens.css";
       }
 
       /* ══ 02 — alert stats + weekly ledger ════════════════════════ */
-      function chapter2(stats, ledger) {
+      function chapter2(stats, ledger, review) {
         const host = document.getElementById("alertstats");
         const c = stats?.clusters;
-        const keep = stats?.gates?.["G-H2"]?.event_floor_keeps_share_of_ha;
+        const keepNat = review?.event_floor_keeps_national;
+        const keep = keepNat ?? stats?.gates?.["G-H2"]?.event_floor_keeps_share_of_ha;
         const tiles = [
           ["events detected", c ? fmt(c.n) : "—", c ? `≥ ${c.min_cluster_ha} ha · ${c.first_date} → ${c.last_date}` : "pipeline pending"],
           ["hectares in those events", c ? fmt(c.ha) : "—",
-           keep != null ? `${pct(keep, 0)} of every alerted hectare in the three reconciliation provinces — the rest are detections below the ${c?.min_cluster_ha} ha event floor` : "geodetic pixel area, cos-latitude weighted"],
-          ["linked to palm or a mill", stats?.linkage ? pct(stats.linkage.linked_share, 1) : "—", "of alerted hectares — a floor, see below"],
+           keep != null ? `${pct(keep, 0)} of every alerted hectare nationally — the rest are detections below the ${c?.min_cluster_ha} ha event floor, and they sit further from mills than the ones we keep` : "geodetic pixel area, cos-latitude weighted"],
+          ["inside a mill catchment or mapped palm", stats?.linkage ? pct(stats.linkage.linked_share, 1) : "—",
+           review?.domain_base != null
+             ? `of alerted hectares — against ${pct(review.domain_base, 1)} of all alertable forest, a lift of ${review.lift.toFixed(2)}×. Without the size floor it is ${pct(review.unfiltered_share, 1)}.`
+             : "of alerted hectares — a floor, see below"],
           ["on peat", stats?.linkage ? pct(stats.linkage.peat_share, 1) : "—", "Miettinen et al. via gfw_peatlands"],
         ];
         host.innerHTML = tiles.map(([lab, v, sub]) =>
@@ -1069,28 +1128,49 @@ import "../styles/tokens.css";
       }
 
       /* ══ 03 — class cards + quarterly composition ════════════════ */
-      function chapter3(stats, linkage) {
+      function chapter3(stats, linkage, review) {
         const cards = document.getElementById("classcards");
         const share = stats?.linkage?.by_class_share ?? {};
         const ha = stats?.linkage?.by_class_ha ?? {};
+        // The tight-radius class is the informative one: publish it beside the 50 km class
+        // rather than only inside the review article.
+        const tight = (k) => (k === "MILL-CATCHMENT" && review?.best_radius_km != null)
+          ? `<p class="cc-alt">At ${review.best_radius_km}&nbsp;km — the most discriminating
+             radius we tested — ${pct(review.best_radius_alert, 1)} of alerted hectares fall
+             inside, against a base rate of ${pct(review.best_radius_base, 1)}: a lift of
+             ${review.best_radius_lift.toFixed(2)}× rather than
+             ${review.lift.toFixed(2)}×.</p>` : "";
         cards.innerHTML = CLS_ORDER.map((k) => `
           <div class="cc" style="--c:${CLS[k].c}">
             <h4>${CLS[k].label}</h4>
             <b>${share[k] != null ? pct(share[k], 1) : "—"}</b>
             <p>${ha[k] != null ? fmt(ha[k]) + " ha · " : ""}${CLS[k].note}</p>
+            ${tight(k)}
           </div>`).join("");
 
         const fl = document.getElementById("flags");
         const dom = stats?.radd_domain;
+        const jn = review && review.java_ha != null
+          ? `Java and Nusa Tenggara — which have almost none left — return
+             ${fmt(review.java_ha, 0)}&nbsp;ha and ${fmt(review.nusa_ha, 0)}&nbsp;ha between them,
+             under 1.3&thinsp;% of the national total from ${review.provinces_with_alerts} of 34
+             provinces that produce any.`
+          : "";
+        const domTxt = review?.domain_share_of_land != null
+          ? `which we measure at ${(review.domain_ha / 1e6).toFixed(1)}&nbsp;Mha,
+             ${pct(review.domain_share_of_land, 1)} of Indonesian land`
+          : "the 2001 primary-forest mask";
+        const palmTxt = review?.palm_in_domain_share != null
+          ? `only ${pct(review.palm_in_domain_share, 1)} of the oil palm this case maps lies
+             inside that mask, so an estate`
+          : "an estate";
         const primaryNote = dom?.structural
           ? `<b style="font-size:1rem;color:var(--loss);display:inline">Structural, not a finding.</b>
              We measured it: RADD only issues alerts inside the 2001 primary humid tropical
-             forest mask, which covers 6–28&thinsp;% of the land in these tiles. Every alert is in
-             primary forest by construction, and Java and Nusa Tenggara — which have almost none
-             left — return no alerts at all. <b style="display:inline">This also makes the
-             palm-linked share above a floor:</b> an estate that was already plantation in 2001 is
-             outside RADD's domain and can never raise an alert, so replanting is largely
-             invisible to this sensor.`
+             forest mask, ${domTxt}. Every alert is in primary forest by construction. ${jn}
+             <b style="font-size:1rem;display:inline">This also caps the palm-extent classes:</b> ${palmTxt}
+             that was already plantation in 2001 can never raise an alert and replanting is
+             largely invisible to this sensor.`
           : "Inside primary forest as mapped in 2001 (Turubanova / Margono) — irreplaceable rather than merely forested.";
         fl.innerHTML = [
           ["on peat", stats?.linkage?.peat_share,
@@ -1182,8 +1262,15 @@ import "../styles/tokens.css";
       }
 
       /* ══ 04 — mills ══════════════════════════════════════════════ */
-      function chapter4(mills, adm1) {
+      function chapter4(mills, adm1, review) {
         const cv = document.getElementById("millmap"), tbl = document.getElementById("milltable");
+        const mph = document.getElementById("millnote");
+        if (mph && review?.mills_per_hectare != null)
+          mph.innerHTML = `Catchments overlap heavily: an alerted hectare inside one falls inside
+            <b>${review.mills_per_hectare.toFixed(2)} catchments on average</b>. The hectare figures
+            below are therefore <em>not additive</em> — summed over every mill they come to about
+            seven times the hectares that exist. Read the column as a screening order, not as a
+            quantity of clearing attributable to each mill.`;
         if (!mills?.rows?.length) {
           pendingBox(tbl, "Mill pressure pending", "Run the link and export stages.");
           return;
@@ -1523,13 +1610,13 @@ import "../styles/tokens.css";
       }
 
       /* ══ 06 — methodology ════════════════════════════════════════ */
-      function methodology(stats) {
+      function methodology(stats, review) {
         const host = document.getElementById("gates");
         const DESC = {
           "G-H1": ["Hansen reconciliation", "Our tree-cover-loss hectares per province per year against GFW's own server-side aggregation of the same tiles over the same COD-AB geometry, ±5 %."],
           "G-H2": ["Alert reconciliation", "Our RADD hectares for the trailing twelve months against GFW's aggregation over the same province geometry, ±10 %."],
-          "G-H3": ["Two-sensor agreement", "Share of high-confidence events ≥ 5 ha that carry a GLAD-L optical alert within ±60 days."],
-          "G-H4": ["Linkage sanity", "Palm and mill-linked share of alerted hectares in Riau against the ≥ 25 % literature floor."],
+          "G-H3": ["Two-sensor agreement", "Share of high-confidence events ≥ 5 ha that carry a GLAD-L optical alert within ±60 days. That subset is 4 % of events and 35 % of hectares, and the confirmation rate rises with event size, so this is a check on optical detection of large clearings — not a general agreement rate."],
+          "G-H4": ["Linkage sanity", "Palm and mill-linked share of alerted hectares in Riau. Reported against Riau's own base rate, because a fixed floor cannot fail here."],
         };
         const g = stats?.gates ?? {};
         host.innerHTML = ["G-H1", "G-H2", "G-H3", "G-H4"].map((id) => {
@@ -1556,17 +1643,29 @@ import "../styles/tokens.css";
             }
           }
           if (id === "G-H2" && r?.max_abs_pct_diff != null)
-            num = `Worst deviation ${r.max_abs_pct_diff.toFixed(2)} % over ${r.window_start} → ${r.window_end}. ${r.note ?? ""}`;
+            num = `Worst deviation ${r.max_abs_pct_diff.toFixed(2)} % over ${r.window_start} →
+              ${r.window_end}, compared on unfiltered alert hectares because GFW's aggregation
+              counts every alert pixel. The ≥ 0.5 ha event floor keeps
+              ${pct(r.event_floor_keeps_share_of_ha, 0)} of those hectares in these three
+              provinces${review?.event_floor_keeps_national != null
+                ? ` and ${pct(review.event_floor_keeps_national, 0)} nationally` : ""} — stated
+              rather than netted out.`;
           if (id === "G-H3" && r?.agreement_share != null)
             num = `${pct(r.agreement_share, 1)} of ${fmt(r.n_clusters)} high-confidence events ≥ 5 ha. ${r.note ?? ""}`;
           if (id === "G-H4" && r?.riau_linked_share != null) {
             const bc = r.by_class ?? {};
             num = `Riau linked share ${pct(r.riau_linked_share, 1)} of ${fmt(r.riau_alert_ha)}
-              alerted ha — comfortably over the floor, but read the composition before quoting it:
+              alerted ha, composed of
               ` + CLS_ORDER.filter((k) => bc[k]).map((k) => `${CLS[k].label} ${pct(bc[k], 1)}`).join(", ") +
-              `. The mill catchment does nearly all the work, and a 50 km radius is a wide net;
-              the palm-extent classes stay small because RADD cannot see inside land that was
-              already plantation in 2001. ${r.note ?? ""}`;
+              `. <b style="display:inline;color:var(--loss)">Read against the base rate, this
+              carries almost no information</b>: ${review?.riau_base != null
+                ? `${pct(review.riau_base, 1)} of Riau's alertable forest is inside a mill
+                   catchment already, so the observed share is a lift of only
+                   ${review.riau_lift.toFixed(2)}× and no threshold below
+                   ${pct(review.riau_base, 0)} could have failed.`
+                : "most of Riau's alertable forest is inside a mill catchment already."}
+              Nationally the lift is ${review?.lift != null ? review.lift.toFixed(2) + "×" : "—"}.
+              The check is retained as a plumbing sanity test, not as evidence about palm.`;
           }
           if (!num) num = r?.reason ? `Not evaluated: ${r.reason}` : "Not evaluated yet.";
           return `<div class="gate"><span class="id">CHECK ${Object.keys(DESC).indexOf(id) + 1}</span>

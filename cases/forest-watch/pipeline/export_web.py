@@ -149,6 +149,56 @@ def main(argv: list[str]) -> None:
                                        "UNLINKED"],
                            "rows": clean(q.round(1).to_dict("records"))})
 
+    # --- review view-model -------------------------------------------------------------------
+    # The base rate, the lift and the unfiltered share, so the dashboard can print a denominator
+    # next to every conditional share instead of quoting it bare.  Written by pipeline/baserate.py.
+    br_path = config.DATA_DIR / "baserate.json"
+    if br_path.exists():
+        br = json.loads(br_path.read_text())
+        cat, ctl = br.get("catchment", {}), br.get("controls", {})
+        ef = ctl.get("event_floor", {})
+        n50 = cat.get("national", {}).get("50", {})
+        best = max(cat.get("national", {}).items(),
+                   key=lambda kv: kv[1].get("lift_vs_domain") or 0, default=(None, {}))
+        prov = cat.get("by_province", {})
+        java = ("Banten", "West Java", "Central Java", "East Java", "Yogyakarta",
+                "Jakarta Special Capital Region")
+        nusa = ("West Nusa Tenggara", "East Nusa Tenggara", "Bali")
+        byp = linked.groupby("province").ha.sum()
+        write("review.json", {
+            "generated": br.get("generated"),
+            "radius_km": config.MILL_RADIUS_KM,
+            "domain_base": n50.get("domain_base"),
+            "land_base": n50.get("land_base"),
+            "alert_share": n50.get("alert_ha_share"),
+            "lift": n50.get("lift_vs_domain"),
+            "best_radius_km": int(best[0]) if best[0] else None,
+            "best_radius_lift": best[1].get("lift_vs_domain"),
+            "best_radius_alert": best[1].get("alert_ha_share"),
+            "best_radius_base": best[1].get("domain_base"),
+            "unfiltered_share": ef.get("unfiltered_within_50km"),
+            "event_floor_keeps_national": ef.get("event_floor_keeps"),
+            "mills_per_hectare": ctl.get("identifiability", {})
+                                    .get("mills_claiming_a_hectare", {})
+                                    .get("mean_over_alert_ha_in_catchment"),
+            "domain_ha": cat.get("domain_ha"),
+            "land_ha": cat.get("land_ha"),
+            "domain_share_of_land": cat.get("domain_share_of_land"),
+            "palm_in_domain_share": ctl.get("palm_extent", {})
+                                       .get("sdpt_palm_in_radd_domain_share"),
+            "sdpt_palm_ha": ctl.get("palm_extent", {}).get("sdpt_ha", {}).get("oil_palm"),
+            "riau_base": prov.get("Riau", {}).get("domain_base_50"),
+            "riau_lift": prov.get("Riau", {}).get("lift_50"),
+            "java_ha": float(byp.reindex(java).fillna(0).sum()),
+            "nusa_ha": float(byp.reindex(nusa).fillna(0).sum()),
+            "provinces_with_alerts": int((byp > 0).sum()),
+            "plantation_loss_share": br.get("loss_split", {}).get("in_plantation_share", {}),
+            "plantation_loss_grand_share": (
+                sum(br.get("loss_split", {}).get("in_plantation_ha", {}).values())
+                / sum(br.get("loss_split", {}).get("total_ha", {}).values())
+                if br.get("loss_split", {}).get("total_ha") else None),
+        })
+
     # --- mills -------------------------------------------------------------------------------
     if config.MILLS_SCORED.exists():
         m = pd.read_parquet(config.MILLS_SCORED)

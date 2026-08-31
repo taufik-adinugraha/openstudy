@@ -78,28 +78,68 @@ inside at least one palm-mill sourcing catchment or mapped oil-palm estate; 13.6
 | **G-H1** Hansen reconciliation ±5 % | **fail** (diagnosed) | 335 province-years; median deviation **0.69 %**, 99.7 % inside tolerance. The single exceedance is **Jakarta 2017: 1.08 ha against 1.15 ha** — a 0.07 ha difference. All 324 province-years above 100 ha pass, worst 3.98 %. Reported as computed, not re-cut. |
 | **G-H2** RADD reconciliation ±10 % | **pass** | Riau +8.2 %, Central Kalimantan +1.8 %, Papua +0.9 %, on unfiltered alert hectares |
 | **G-H3** GLAD-L agreement ≥ 60 % | **pass** | **78.6 %** of 17,062 high-confidence events ≥ 5 ha |
-| **G-H4** Riau linked share ≥ 25 % | **pass** | **97.9 %** of 61,455 ha — but 87.1 pp of that is mill-catchment, so read the composition before quoting it |
+| **G-H4** Riau linked share ≥ 25 % | **pass, but vacuous** | **97.9 %** of 61,455 ha, 87.1 pp of it mill-catchment. The review measured Riau's base rate: **94.8 %** of Riau's alertable forest is already inside a mill catchment, so the gate is a **1.03× lift** and no threshold below 95 % could have failed. It also tested a proximity share against Gaveau et al.'s *direct-conversion* floor, which is a different quantity. Retained as a plumbing sanity test and relabelled on the page. |
+
+## Review (2026-08-31) — `/forest/article`
+
+An adversarial review of this case, published as its own page and driven entirely by
+`pipeline/article.py` from this case's own outputs. Two new pipeline stages:
+
+- `pipeline/baserate.py` — three tests the case never ran on itself: (a) a 445 m lattice sample
+  of RADD's entire detection domain with the distance to the nearest of 1,396 mills at every
+  point, giving the base rate; (b) 2001–2025 Hansen loss crossed at native 30 m with SDPT
+  plantation extent and the 2001 primary mask; (c) the catchment share recomputed with no event
+  floor, plus catchment overlap and radar-vs-optical lead.
+- `pipeline/article.py` — assembles `web/src/data/article.json`, which the article page imports.
+
+Headline findings, all from this case's own data:
+
+| Finding | Number |
+|---|---|
+| Base rate: alertable forest within 50 km of a mill | **42.5 %** (all Indonesian land: 51.9 %) |
+| Observed alerted share | 74.8 % → **lift 1.76×** |
+| Same, with no 0.5 ha event floor | 59.2 % → **lift 1.39×** |
+| Lift at 10 km (the maximum tested) | **3.01×** — 50 km is the second-least informative radius tested |
+| Riau lift / North Kalimantan lift | **1.03× / 2.43×** |
+| Mills claiming each in-catchment hectare | mean **8.58**, median 6, max 67 |
+| Per-mill pressure summed vs hectares that exist | **7.14× over-count** — the column is not additive |
+| Tree-cover loss 2001–2025 inside mapped plantation | **43.3 %** of 33.36 Mha (oil palm 9.51, rubber 2.81, wood fibre 2.12 Mha) |
+| Our primary-forest loss vs GFW published | **+0.71 % (2023), +0.75 % (2024)** — a new, passing reconciliation |
+| Radar lead over optical, in-window pairs | median **+20 days**, radar first in **78 %** |
 
 Two findings that change the story rather than decorate it:
 
 1. **RADD's detection domain in Indonesia is the UMD 2001 primary-forest mask.** 100 % of alert
-   pixels fall inside a mask covering 6–28 % of the land in these tiles, and Java and Nusa
-   Tenggara return no alerts at all. So the in-primary flag carries no information, and the
-   palm-linked share is a **floor**: an estate that was already plantation in 2001 is outside
-   RADD's domain and can never raise an alert. Both are stated on the page.
-2. **The 0.5 ha event floor keeps only 18–31 % of alerted hectares.** The page publishes that
-   ratio next to the event count instead of quietly reporting the filtered total as "the" number.
+   pixels fall inside it. `pipeline/baserate.py` measures that mask at **94.6 Mha, 49.7 % of
+   Indonesian land** — close to Turubanova et al. (2018)'s published Indonesian primary-forest
+   area, which is an independent check on our raster handling — and finds only **13.7 %** of the
+   mapped oil-palm estate inside it. So the in-primary flag carries no information, and the
+   palm-extent classes are structurally capped: an estate that was already plantation in 2001 is
+   outside RADD's domain and can never raise an alert. Both are stated on the page.
+   *(Corrected 2026-08-31: an earlier version of this note said the mask covers "6–28 % of the
+   land in these tiles" — that was the share of each 10-degree tile square, ocean included — and
+   said Java and Nusa Tenggara "return no alerts at all". They return 2,590 ha and 6,978 ha.)*
+2. **The 0.5 ha event floor keeps only 33 % of alerted hectares nationally** (18–31 % in the three
+   reconciliation provinces). The page publishes that ratio next to the event count instead of
+   quietly reporting the filtered total as "the" number. The review found the floor is not
+   neutral: dropped detections sit further from mills than the ones kept, so the floor lifts the
+   published mill-catchment share from 59.2 % to 74.8 %.
 
 ## Decisions pending user verification
 
 1. **`gfw_planted_forests` (SDPT v2) replaces Descals-from-Zenodo as the palm layer.** It is
    plain CC BY 4.0, already on the identical 10-degree tile grid (so co-location with the alerts
    is exact rather than a spatial join), and 205 MB instead of 300 MB of Zenodo downloads.
-   Trade-off: SDPT is a compilation of national/NGO polygon datasets, so it under-maps
-   smallholder palm relative to Descals' 10 m remote-sensed extent — which biases the
-   PALM-INTERNAL share **down** and the UNLINKED share **up**. The published number is therefore
-   conservative, which is the right direction for a compliance claim. Swapping in Descals later
-   is a one-layer change.
+   **Corrected 2026-08-31 by the review.** This entry previously asserted that SDPT, being a
+   compilation of national/NGO polygon datasets, *under-maps* smallholder palm relative to
+   Descals' 10 m remote-sensed extent, and concluded that the published palm-linked share was
+   therefore conservative. Measured on the review's own lattice (`pipeline/baserate.py --test c`),
+   SDPT maps **19.07 Mha** of Indonesian oil palm against Descals et al. (2021)'s 11.54 Mha
+   mapped / 12.05 Mha estimated and Gaveau et al. (2022)'s 16.24 Mha mapped / 18.83 Mha
+   omission-adjusted — **1.65× Descals**, not a fraction of it. Polygon compilations carry whole
+   estate blocks including unplanted ground, so the bias runs the other way. The conservatism
+   argument is withdrawn. Swapping in Descals remains a one-layer change and would now be a
+   *tightening* rather than a loosening.
 2. **The palm raster band is `simpleName`, not `simpleType`.** `simpleType` in Indonesia carries
    only three values (0 / "Planted forest" / "Tree crops") and cannot say "oil palm";
    `simpleName` can. The value→class mapping is **calibrated empirically at ingest time**

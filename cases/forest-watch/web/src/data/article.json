@@ -1,0 +1,4110 @@
+{
+ "generated": "2026-08-31",
+ "stats_generated": "2026-08-30",
+ "vintages": {
+  "radd": "wur_radd_alerts v20260823",
+  "glad": "umd_glad_landsat_alerts v20260829",
+  "tcl30": "umd_tree_cover_loss v1.13",
+  "palm": "gfw_planted_forests v20231128",
+  "peat": "gfw_peatlands v20230315",
+  "primary": "umd_regional_primary_forest_2001 v201901",
+  "mills": "gfw_universal_mill_list v202508"
+ },
+ "licences": {
+  "wur_radd_alerts": "CC BY 4.0",
+  "umd_glad_landsat_alerts": "CC BY 4.0",
+  "umd_tree_cover_loss": "CC BY 4.0",
+  "gfw_planted_forests": "CC BY 4.0",
+  "gfw_peatlands": "CC BY 4.0",
+  "umd_regional_primary_forest_2001": "CC BY 4.0",
+  "gfw_universal_mill_list": "CC BY 4.0",
+  "geoBoundaries IDN ADM1 (gbOpen)": "CC BY 3.0 IGO / ODbL upstream"
+ },
+ "citations": {
+  "radd": "Reiche et al. 2021. Source: \"RADD alerts\". WUR, accessed through Global Nature Watch",
+  "glad": "Hansen et al. 2016. Source: \"GLAD-L alerts\". GLAD/UMD, accessed through Global Nature Watch",
+  "tcl30": "Hansen et al. 2013, High-Resolution Global Maps of 21st-Century Forest Cover Change; accessed through Global Nature Watch",
+  "palm": "Richter et al. 2024, Spatial Database of Planted Trees (SDPT) v2, WRI; accessed through Global Nature Watch",
+  "peat": "Global peatland extent (Miettinen et al. 2016 for Indonesia); accessed through Global Nature Watch",
+  "primary": "Turubanova et al. 2018 / Margono et al. 2014 primary forest 2001; accessed through Global Nature Watch",
+  "mills": "WRI, Rainforest Alliance, Proforest, Daemeter, Trase, Earthworm, Auriga, CIFOR, Transitions, J. Benedict, R. Heilmayr, K. Carlson, \"Universal Mill List\"; accessed through Global Nature Watch"
+ },
+ "record": {
+  "events": 404287,
+  "ha": 763642.875,
+  "first_date": "2020-01-01",
+  "last_date": "2026-08-19",
+  "min_cluster_ha": 0.5,
+  "mill_radius_km": 50,
+  "n_mills": 1396,
+  "dropped_outside_events": 166789,
+  "dropped_outside_ha": 258962.1,
+  "hi_conf_ha_share": 0.9888,
+  "peat_share": 0.1361,
+  "peat_in_catchment": 0.8545,
+  "by_class_share": {
+   "MILL-CATCHMENT": 0.7072,
+   "PALM-EDGE": 0.0248,
+   "PALM-INTERNAL": 0.0178,
+   "UNLINKED": 0.2503
+  },
+  "by_class_ha": {
+   "MILL-CATCHMENT": 540015.375,
+   "PALM-EDGE": 18912.882812,
+   "PALM-INTERNAL": 13576.643555,
+   "UNLINKED": 191138.015625
+  },
+  "linked_share_ha": 0.7497,
+  "linked_share_events": 0.6973
+ },
+ "gates": {
+  "G-H3": {
+   "status": "pass",
+   "threshold": 0.6,
+   "agreement_share": 0.786074,
+   "n_clusters": 17062,
+   "window_days": 60,
+   "note": "GLAD-L is optical and 30 m; under persistent cloud it legitimately misses what radar sees, so a shortfall is evidence about sensors, not a bug"
+  },
+  "G-H4": {
+   "status": "pass",
+   "floor": 0.25,
+   "riau_linked_share": 0.979345,
+   "riau_alert_ha": 61455.265625,
+   "by_class": {
+    "MILL-CATCHMENT": 0.871279,
+    "PALM-EDGE": 0.043769,
+    "PALM-INTERNAL": 0.064297,
+    "UNLINKED": 0.020655
+   },
+   "note": "literature floor: Gaveau et al. 2022 put ~32 % of 2001-19 Indonesian forest loss as direct conversion to oil palm"
+  },
+  "G-H2": {
+   "status": "pass",
+   "tolerance_pct": 10,
+   "window_start": "2025-08-19",
+   "window_end": "2026-08-19",
+   "max_abs_pct_diff": 8.171457,
+   "event_floor_keeps_share_of_ha": 0.217742,
+   "note": "compared on unfiltered alert hectares, because GFW's aggregation counts every alert pixel. The >= 0.5 ha event floor that the rest of the page uses keeps 22% of those hectares \u2014 stated rather than netted out",
+   "comparator": "wur_radd_alerts v20260823 raster analysis over the same province geometry",
+   "errors": {},
+   "rows": [
+    {
+     "province": "Riau",
+     "ours_ha": 14672.238281,
+     "gfw_ha": 13563.87228,
+     "events_ha": 4569.333496,
+     "events": 2219,
+     "gfw_pixels": 1102140,
+     "pct_diff": 8.171457
+    },
+    {
+     "province": "Central Kalimantan",
+     "ours_ha": 66478.015625,
+     "gfw_ha": 65280.73172,
+     "events_ha": 18509.023438,
+     "events": 10435,
+     "gfw_pixels": 5305074,
+     "pct_diff": 1.834054
+    },
+    {
+     "province": "Papua",
+     "ours_ha": 128488.421875,
+     "gfw_ha": 127311.09304,
+     "events_ha": 22568.828125,
+     "events": 9487,
+     "gfw_pixels": 10373362,
+     "pct_diff": 0.924765
+    }
+   ]
+  },
+  "G-H1": {
+   "status": "fail",
+   "tolerance_pct": 5,
+   "n_comparisons": 335,
+   "max_abs_pct_diff": 5.947403,
+   "median_abs_pct_diff": 0.691257,
+   "within_tolerance_share": 0.997015,
+   "materiality_floor_ha": 100.0,
+   "n_material": 324,
+   "max_abs_pct_diff_material": 3.983174,
+   "status_material": "pass",
+   "exceedances": [
+    {
+     "province": "Jakarta Special Capital Region",
+     "year": 2017,
+     "ours_ha": 1.077749,
+     "gfw_ha": 1.1459,
+     "pct_diff": -5.947403
+    }
+   ],
+   "worst": {
+    "province": "Jakarta Special Capital Region",
+    "year": 2017,
+    "ours_ha": 1.077749,
+    "gfw_ha": 1.1459,
+    "pct_diff": -5.947403
+   },
+   "comparator": "umd_tree_cover_loss v1.13 raster analysis over COD-AB province geometry",
+   "errors": {},
+   "rows": [
+    {
+     "province": "Bali",
+     "year": 2015,
+     "ours_ha": 133.121415,
+     "gfw_ha": 132.32442,
+     "pct_diff": 0.602304
+    },
+    {
+     "province": "Bali",
+     "year": 2016,
+     "ours_ha": 156.494825,
+     "gfw_ha": 155.54808,
+     "pct_diff": 0.608651
+    },
+    {
+     "province": "Bali",
+     "year": 2017,
+     "ours_ha": 264.541984,
+     "gfw_ha": 262.95398,
+     "pct_diff": 0.60391
+    },
+    {
+     "province": "Bali",
+     "year": 2018,
+     "ours_ha": 304.536672,
+     "gfw_ha": 302.41739,
+     "pct_diff": 0.70078
+    },
+    {
+     "province": "Bali",
+     "year": 2019,
+     "ours_ha": 708.992783,
+     "gfw_ha": 704.28315,
+     "pct_diff": 0.668713
+    },
+    {
+     "province": "Bali",
+     "year": 2020,
+     "ours_ha": 166.081319,
+     "gfw_ha": 165.07504,
+     "pct_diff": 0.609589
+    },
+    {
+     "province": "Bali",
+     "year": 2021,
+     "ours_ha": 200.792369,
+     "gfw_ha": 198.98056,
+     "pct_diff": 0.910546
+    },
+    {
+     "province": "Bali",
+     "year": 2022,
+     "ours_ha": 264.157152,
+     "gfw_ha": 262.352,
+     "pct_diff": 0.688065
+    },
+    {
+     "province": "Bali",
+     "year": 2023,
+     "ours_ha": 563.24532,
+     "gfw_ha": 558.12036,
+     "pct_diff": 0.918254
+    },
+    {
+     "province": "Bali",
+     "year": 2024,
+     "ours_ha": 169.621668,
+     "gfw_ha": 168.5774,
+     "pct_diff": 0.619459
+    },
+    {
+     "province": "West Nusa Tenggara",
+     "year": 2015,
+     "ours_ha": 4463.617933,
+     "gfw_ha": 4430.47653,
+     "pct_diff": 0.748032
+    },
+    {
+     "province": "West Nusa Tenggara",
+     "year": 2016,
+     "ours_ha": 4054.264121,
+     "gfw_ha": 4025.72656,
+     "pct_diff": 0.70888
+    },
+    {
+     "province": "West Nusa Tenggara",
+     "year": 2017,
+     "ours_ha": 6234.62931,
+     "gfw_ha": 6191.51168,
+     "pct_diff": 0.696399
+    },
+    {
+     "province": "West Nusa Tenggara",
+     "year": 2018,
+     "ours_ha": 8180.964105,
+     "gfw_ha": 8130.27314,
+     "pct_diff": 0.623484
+    },
+    {
+     "province": "West Nusa Tenggara",
+     "year": 2019,
+     "ours_ha": 8756.552258,
+     "gfw_ha": 8697.98557,
+     "pct_diff": 0.673336
+    },
+    {
+     "province": "West Nusa Tenggara",
+     "year": 2020,
+     "ours_ha": 6635.152359,
+     "gfw_ha": 6591.88521,
+     "pct_diff": 0.65637
+    },
+    {
+     "province": "West Nusa Tenggara",
+     "year": 2021,
+     "ours_ha": 4845.381139,
+     "gfw_ha": 4812.93489,
+     "pct_diff": 0.674147
+    },
+    {
+     "province": "West Nusa Tenggara",
+     "year": 2022,
+     "ours_ha": 5651.323391,
+     "gfw_ha": 5613.83606,
+     "pct_diff": 0.667767
+    },
+    {
+     "province": "West Nusa Tenggara",
+     "year": 2023,
+     "ours_ha": 9992.452615,
+     "gfw_ha": 9919.68861,
+     "pct_diff": 0.733531
+    },
+    {
+     "province": "West Nusa Tenggara",
+     "year": 2024,
+     "ours_ha": 6192.357455,
+     "gfw_ha": 6151.49677,
+     "pct_diff": 0.66424
+    },
+    {
+     "province": "Banten",
+     "year": 2015,
+     "ours_ha": 2681.271543,
+     "gfw_ha": 2661.31198,
+     "pct_diff": 0.74999
+    },
+    {
+     "province": "Banten",
+     "year": 2016,
+     "ours_ha": 1984.14762,
+     "gfw_ha": 1968.53658,
+     "pct_diff": 0.793028
+    },
+    {
+     "province": "Banten",
+     "year": 2017,
+     "ours_ha": 3517.84294,
+     "gfw_ha": 3490.89169,
+     "pct_diff": 0.772045
+    },
+    {
+     "province": "Banten",
+     "year": 2018,
+     "ours_ha": 3422.545941,
+     "gfw_ha": 3397.52058,
+     "pct_diff": 0.736577
+    },
+    {
+     "province": "Banten",
+     "year": 2019,
+     "ours_ha": 4691.788291,
+     "gfw_ha": 4619.38455,
+     "pct_diff": 1.567389
+    },
+    {
+     "province": "Banten",
+     "year": 2020,
+     "ours_ha": 2047.396935,
+     "gfw_ha": 2032.12,
+     "pct_diff": 0.751773
+    },
+    {
+     "province": "Banten",
+     "year": 2021,
+     "ours_ha": 1927.483,
+     "gfw_ha": 1911.8281,
+     "pct_diff": 0.818845
+    },
+    {
+     "province": "Banten",
+     "year": 2022,
+     "ours_ha": 1556.824023,
+     "gfw_ha": 1545.69232,
+     "pct_diff": 0.720176
+    },
+    {
+     "province": "Banten",
+     "year": 2023,
+     "ours_ha": 3783.411664,
+     "gfw_ha": 3750.25376,
+     "pct_diff": 0.884151
+    },
+    {
+     "province": "Banten",
+     "year": 2024,
+     "ours_ha": 3282.031229,
+     "gfw_ha": 3255.40821,
+     "pct_diff": 0.817809
+    },
+    {
+     "province": "Central Java",
+     "year": 2015,
+     "ours_ha": 1801.11445,
+     "gfw_ha": 1790.04644,
+     "pct_diff": 0.618309
+    },
+    {
+     "province": "Central Java",
+     "year": 2016,
+     "ours_ha": 2237.307704,
+     "gfw_ha": 2222.91154,
+     "pct_diff": 0.647627
+    },
+    {
+     "province": "Central Java",
+     "year": 2017,
+     "ours_ha": 3374.175961,
+     "gfw_ha": 3351.76533,
+     "pct_diff": 0.668622
+    },
+    {
+     "province": "Central Java",
+     "year": 2018,
+     "ours_ha": 2472.844571,
+     "gfw_ha": 2455.56316,
+     "pct_diff": 0.703766
+    },
+    {
+     "province": "Central Java",
+     "year": 2019,
+     "ours_ha": 2730.45296,
+     "gfw_ha": 2713.02538,
+     "pct_diff": 0.642367
+    },
+    {
+     "province": "Central Java",
+     "year": 2020,
+     "ours_ha": 2707.31,
+     "gfw_ha": 2690.72082,
+     "pct_diff": 0.616533
+    },
+    {
+     "province": "Central Java",
+     "year": 2021,
+     "ours_ha": 2088.626559,
+     "gfw_ha": 2076.5535,
+     "pct_diff": 0.581399
+    },
+    {
+     "province": "Central Java",
+     "year": 2022,
+     "ours_ha": 1974.982784,
+     "gfw_ha": 1961.91572,
+     "pct_diff": 0.666036
+    },
+    {
+     "province": "Central Java",
+     "year": 2023,
+     "ours_ha": 4667.363446,
+     "gfw_ha": 4642.06119,
+     "pct_diff": 0.545065
+    },
+    {
+     "province": "Central Java",
+     "year": 2024,
+     "ours_ha": 2723.937604,
+     "gfw_ha": 2708.98465,
+     "pct_diff": 0.551976
+    },
+    {
+     "province": "West Java",
+     "year": 2015,
+     "ours_ha": 3541.062436,
+     "gfw_ha": 3516.55646,
+     "pct_diff": 0.696874
+    },
+    {
+     "province": "West Java",
+     "year": 2016,
+     "ours_ha": 3751.97225,
+     "gfw_ha": 3728.59921,
+     "pct_diff": 0.626858
+    },
+    {
+     "province": "West Java",
+     "year": 2017,
+     "ours_ha": 5804.497228,
+     "gfw_ha": 5769.41526,
+     "pct_diff": 0.608068
+    },
+    {
+     "province": "West Java",
+     "year": 2018,
+     "ours_ha": 4636.863606,
+     "gfw_ha": 4608.58977,
+     "pct_diff": 0.613503
+    },
+    {
+     "province": "West Java",
+     "year": 2019,
+     "ours_ha": 7062.29927,
+     "gfw_ha": 7016.25611,
+     "pct_diff": 0.656235
+    },
+    {
+     "province": "West Java",
+     "year": 2020,
+     "ours_ha": 3533.773276,
+     "gfw_ha": 3509.59305,
+     "pct_diff": 0.688975
+    },
+    {
+     "province": "West Java",
+     "year": 2021,
+     "ours_ha": 2609.475838,
+     "gfw_ha": 2591.84543,
+     "pct_diff": 0.680226
+    },
+    {
+     "province": "West Java",
+     "year": 2022,
+     "ours_ha": 2712.028689,
+     "gfw_ha": 2694.53642,
+     "pct_diff": 0.649175
+    },
+    {
+     "province": "West Java",
+     "year": 2023,
+     "ours_ha": 5656.474148,
+     "gfw_ha": 5619.39855,
+     "pct_diff": 0.659779
+    },
+    {
+     "province": "West Java",
+     "year": 2024,
+     "ours_ha": 4503.51104,
+     "gfw_ha": 4476.27405,
+     "pct_diff": 0.608475
+    },
+    {
+     "province": "Central Kalimantan",
+     "year": 2015,
+     "ours_ha": 214571.522275,
+     "gfw_ha": 213143.0706,
+     "pct_diff": 0.670184
+    },
+    {
+     "province": "Central Kalimantan",
+     "year": 2016,
+     "ours_ha": 494973.429341,
+     "gfw_ha": 491652.29909,
+     "pct_diff": 0.675504
+    },
+    {
+     "province": "Central Kalimantan",
+     "year": 2017,
+     "ours_ha": 103267.410648,
+     "gfw_ha": 102575.96589,
+     "pct_diff": 0.674081
+    },
+    {
+     "province": "Central Kalimantan",
+     "year": 2018,
+     "ours_ha": 110911.218516,
+     "gfw_ha": 110159.65874,
+     "pct_diff": 0.682246
+    },
+    {
+     "province": "Central Kalimantan",
+     "year": 2019,
+     "ours_ha": 122421.664612,
+     "gfw_ha": 121598.4712,
+     "pct_diff": 0.676977
+    },
+    {
+     "province": "Central Kalimantan",
+     "year": 2020,
+     "ours_ha": 90985.61633,
+     "gfw_ha": 90392.41849,
+     "pct_diff": 0.656247
+    },
+    {
+     "province": "Central Kalimantan",
+     "year": 2021,
+     "ours_ha": 53280.200319,
+     "gfw_ha": 52921.21024,
+     "pct_diff": 0.678348
+    },
+    {
+     "province": "Central Kalimantan",
+     "year": 2022,
+     "ours_ha": 73099.688261,
+     "gfw_ha": 72600.06095,
+     "pct_diff": 0.688191
+    },
+    {
+     "province": "Central Kalimantan",
+     "year": 2023,
+     "ours_ha": 145621.36967,
+     "gfw_ha": 144658.52643,
+     "pct_diff": 0.665597
+    },
+    {
+     "province": "Central Kalimantan",
+     "year": 2024,
+     "ours_ha": 119327.857291,
+     "gfw_ha": 118530.8464,
+     "pct_diff": 0.672408
+    },
+    {
+     "province": "South Kalimantan",
+     "year": 2015,
+     "ours_ha": 74187.181745,
+     "gfw_ha": 73695.10832,
+     "pct_diff": 0.667715
+    },
+    {
+     "province": "South Kalimantan",
+     "year": 2016,
+     "ours_ha": 66707.917525,
+     "gfw_ha": 66265.4167,
+     "pct_diff": 0.66777
+    },
+    {
+     "province": "South Kalimantan",
+     "year": 2017,
+     "ours_ha": 37680.96193,
+     "gfw_ha": 37430.22799,
+     "pct_diff": 0.66987
+    },
+    {
+     "province": "South Kalimantan",
+     "year": 2018,
+     "ours_ha": 37855.819315,
+     "gfw_ha": 37606.47617,
+     "pct_diff": 0.663032
+    },
+    {
+     "province": "South Kalimantan",
+     "year": 2019,
+     "ours_ha": 45093.906369,
+     "gfw_ha": 44794.22854,
+     "pct_diff": 0.66901
+    },
+    {
+     "province": "South Kalimantan",
+     "year": 2020,
+     "ours_ha": 21148.515853,
+     "gfw_ha": 20994.08065,
+     "pct_diff": 0.735613
+    },
+    {
+     "province": "South Kalimantan",
+     "year": 2021,
+     "ours_ha": 21758.510959,
+     "gfw_ha": 21609.39124,
+     "pct_diff": 0.690069
+    },
+    {
+     "province": "South Kalimantan",
+     "year": 2022,
+     "ours_ha": 17848.296907,
+     "gfw_ha": 17728.01918,
+     "pct_diff": 0.678461
+    },
+    {
+     "province": "South Kalimantan",
+     "year": 2023,
+     "ours_ha": 51488.880106,
+     "gfw_ha": 51160.30837,
+     "pct_diff": 0.64224
+    },
+    {
+     "province": "South Kalimantan",
+     "year": 2024,
+     "ours_ha": 27944.409674,
+     "gfw_ha": 27749.88803,
+     "pct_diff": 0.700982
+    },
+    {
+     "province": "West Kalimantan",
+     "year": 2015,
+     "ours_ha": 269646.504988,
+     "gfw_ha": 267829.34895,
+     "pct_diff": 0.678475
+    },
+    {
+     "province": "West Kalimantan",
+     "year": 2016,
+     "ours_ha": 288478.676151,
+     "gfw_ha": 286521.40619,
+     "pct_diff": 0.683115
+    },
+    {
+     "province": "West Kalimantan",
+     "year": 2017,
+     "ours_ha": 182530.501168,
+     "gfw_ha": 181290.03266,
+     "pct_diff": 0.684245
+    },
+    {
+     "province": "West Kalimantan",
+     "year": 2018,
+     "ours_ha": 160387.343003,
+     "gfw_ha": 159304.09811,
+     "pct_diff": 0.679986
+    },
+    {
+     "province": "West Kalimantan",
+     "year": 2019,
+     "ours_ha": 144137.508405,
+     "gfw_ha": 143172.60564,
+     "pct_diff": 0.673944
+    },
+    {
+     "province": "West Kalimantan",
+     "year": 2020,
+     "ours_ha": 122773.753266,
+     "gfw_ha": 121940.55946,
+     "pct_diff": 0.683279
+    },
+    {
+     "province": "West Kalimantan",
+     "year": 2021,
+     "ours_ha": 109849.540902,
+     "gfw_ha": 109099.4703,
+     "pct_diff": 0.687511
+    },
+    {
+     "province": "West Kalimantan",
+     "year": 2022,
+     "ours_ha": 138437.428146,
+     "gfw_ha": 137504.74313,
+     "pct_diff": 0.678293
+    },
+    {
+     "province": "West Kalimantan",
+     "year": 2023,
+     "ours_ha": 208118.317255,
+     "gfw_ha": 206699.89883,
+     "pct_diff": 0.686221
+    },
+    {
+     "province": "West Kalimantan",
+     "year": 2024,
+     "ours_ha": 175129.329312,
+     "gfw_ha": 173946.28883,
+     "pct_diff": 0.680118
+    },
+    {
+     "province": "Central Sulawesi",
+     "year": 2015,
+     "ours_ha": 92243.67089,
+     "gfw_ha": 91581.60771,
+     "pct_diff": 0.722922
+    },
+    {
+     "province": "Central Sulawesi",
+     "year": 2016,
+     "ours_ha": 74571.771397,
+     "gfw_ha": 74003.8018,
+     "pct_diff": 0.767487
+    },
+    {
+     "province": "Central Sulawesi",
+     "year": 2017,
+     "ours_ha": 37189.999055,
+     "gfw_ha": 36907.11957,
+     "pct_diff": 0.766463
+    },
+    {
+     "province": "Central Sulawesi",
+     "year": 2018,
+     "ours_ha": 37911.197992,
+     "gfw_ha": 37605.40469,
+     "pct_diff": 0.813163
+    },
+    {
+     "province": "Central Sulawesi",
+     "year": 2019,
+     "ours_ha": 45671.641163,
+     "gfw_ha": 45324.28883,
+     "pct_diff": 0.766371
+    },
+    {
+     "province": "Central Sulawesi",
+     "year": 2020,
+     "ours_ha": 26797.044344,
+     "gfw_ha": 26577.91054,
+     "pct_diff": 0.824496
+    },
+    {
+     "province": "Central Sulawesi",
+     "year": 2021,
+     "ours_ha": 22470.314634,
+     "gfw_ha": 22292.58966,
+     "pct_diff": 0.797238
+    },
+    {
+     "province": "Central Sulawesi",
+     "year": 2022,
+     "ours_ha": 24478.054207,
+     "gfw_ha": 24302.87904,
+     "pct_diff": 0.7208
+    },
+    {
+     "province": "Central Sulawesi",
+     "year": 2023,
+     "ours_ha": 43033.146503,
+     "gfw_ha": 42711.7041,
+     "pct_diff": 0.752586
+    },
+    {
+     "province": "Central Sulawesi",
+     "year": 2024,
+     "ours_ha": 28576.938272,
+     "gfw_ha": 28360.0326,
+     "pct_diff": 0.764829
+    },
+    {
+     "province": "Gorontalo",
+     "year": 2015,
+     "ours_ha": 13216.874948,
+     "gfw_ha": 13131.71138,
+     "pct_diff": 0.648534
+    },
+    {
+     "province": "Gorontalo",
+     "year": 2016,
+     "ours_ha": 10887.380271,
+     "gfw_ha": 10817.20137,
+     "pct_diff": 0.648771
+    },
+    {
+     "province": "Gorontalo",
+     "year": 2017,
+     "ours_ha": 7858.152998,
+     "gfw_ha": 7799.42251,
+     "pct_diff": 0.753011
+    },
+    {
+     "province": "Gorontalo",
+     "year": 2018,
+     "ours_ha": 7977.958241,
+     "gfw_ha": 7923.12152,
+     "pct_diff": 0.69211
+    },
+    {
+     "province": "Gorontalo",
+     "year": 2019,
+     "ours_ha": 10938.988114,
+     "gfw_ha": 10865.12705,
+     "pct_diff": 0.679799
+    },
+    {
+     "province": "Gorontalo",
+     "year": 2020,
+     "ours_ha": 3014.922345,
+     "gfw_ha": 2993.16214,
+     "pct_diff": 0.726997
+    },
+    {
+     "province": "Gorontalo",
+     "year": 2021,
+     "ours_ha": 2182.161256,
+     "gfw_ha": 2164.50187,
+     "pct_diff": 0.815864
+    },
+    {
+     "province": "Gorontalo",
+     "year": 2022,
+     "ours_ha": 2795.390756,
+     "gfw_ha": 2775.07341,
+     "pct_diff": 0.732137
+    },
+    {
+     "province": "Gorontalo",
+     "year": 2023,
+     "ours_ha": 8214.398022,
+     "gfw_ha": 8155.90336,
+     "pct_diff": 0.717206
+    },
+    {
+     "province": "Gorontalo",
+     "year": 2024,
+     "ours_ha": 4630.072697,
+     "gfw_ha": 4596.63363,
+     "pct_diff": 0.727469
+    },
+    {
+     "province": "North Sulawesi",
+     "year": 2015,
+     "ours_ha": 15703.584517,
+     "gfw_ha": 15590.47343,
+     "pct_diff": 0.725514
+    },
+    {
+     "province": "North Sulawesi",
+     "year": 2016,
+     "ours_ha": 8823.555539,
+     "gfw_ha": 8754.8157,
+     "pct_diff": 0.785166
+    },
+    {
+     "province": "North Sulawesi",
+     "year": 2017,
+     "ours_ha": 5813.773217,
+     "gfw_ha": 5772.09138,
+     "pct_diff": 0.722127
+    },
+    {
+     "province": "North Sulawesi",
+     "year": 2018,
+     "ours_ha": 7481.125397,
+     "gfw_ha": 7426.97775,
+     "pct_diff": 0.729067
+    },
+    {
+     "province": "North Sulawesi",
+     "year": 2019,
+     "ours_ha": 8972.127116,
+     "gfw_ha": 8905.73033,
+     "pct_diff": 0.745551
+    },
+    {
+     "province": "North Sulawesi",
+     "year": 2020,
+     "ours_ha": 3143.415803,
+     "gfw_ha": 3116.60004,
+     "pct_diff": 0.860417
+    },
+    {
+     "province": "North Sulawesi",
+     "year": 2021,
+     "ours_ha": 2839.280504,
+     "gfw_ha": 2816.73519,
+     "pct_diff": 0.800406
+    },
+    {
+     "province": "North Sulawesi",
+     "year": 2022,
+     "ours_ha": 2748.646355,
+     "gfw_ha": 2727.78463,
+     "pct_diff": 0.764786
+    },
+    {
+     "province": "North Sulawesi",
+     "year": 2023,
+     "ours_ha": 5829.351909,
+     "gfw_ha": 5779.97135,
+     "pct_diff": 0.854339
+    },
+    {
+     "province": "North Sulawesi",
+     "year": 2024,
+     "ours_ha": 3466.076167,
+     "gfw_ha": 3417.90031,
+     "pct_diff": 1.409516
+    },
+    {
+     "province": "South Sulawesi",
+     "year": 2015,
+     "ours_ha": 29197.77757,
+     "gfw_ha": 28997.89015,
+     "pct_diff": 0.689317
+    },
+    {
+     "province": "South Sulawesi",
+     "year": 2016,
+     "ours_ha": 32197.575139,
+     "gfw_ha": 31972.28939,
+     "pct_diff": 0.704628
+    },
+    {
+     "province": "South Sulawesi",
+     "year": 2017,
+     "ours_ha": 24559.788728,
+     "gfw_ha": 24392.98306,
+     "pct_diff": 0.683826
+    },
+    {
+     "province": "South Sulawesi",
+     "year": 2018,
+     "ours_ha": 19796.745334,
+     "gfw_ha": 19665.72364,
+     "pct_diff": 0.666244
+    },
+    {
+     "province": "South Sulawesi",
+     "year": 2019,
+     "ours_ha": 23507.002348,
+     "gfw_ha": 23350.17279,
+     "pct_diff": 0.671642
+    },
+    {
+     "province": "South Sulawesi",
+     "year": 2020,
+     "ours_ha": 14649.293234,
+     "gfw_ha": 14549.54434,
+     "pct_diff": 0.685581
+    },
+    {
+     "province": "South Sulawesi",
+     "year": 2021,
+     "ours_ha": 10511.940311,
+     "gfw_ha": 10443.14404,
+     "pct_diff": 0.65877
+    },
+    {
+     "province": "South Sulawesi",
+     "year": 2022,
+     "ours_ha": 16604.867182,
+     "gfw_ha": 16493.24331,
+     "pct_diff": 0.676785
+    },
+    {
+     "province": "South Sulawesi",
+     "year": 2023,
+     "ours_ha": 27602.379329,
+     "gfw_ha": 27414.28879,
+     "pct_diff": 0.686104
+    },
+    {
+     "province": "South Sulawesi",
+     "year": 2024,
+     "ours_ha": 9829.141543,
+     "gfw_ha": 9755.65468,
+     "pct_diff": 0.753275
+    },
+    {
+     "province": "Southeast Sulawesi",
+     "year": 2015,
+     "ours_ha": 42926.256927,
+     "gfw_ha": 42604.52552,
+     "pct_diff": 0.755158
+    },
+    {
+     "province": "Southeast Sulawesi",
+     "year": 2016,
+     "ours_ha": 37659.262861,
+     "gfw_ha": 37388.03043,
+     "pct_diff": 0.725453
+    },
+    {
+     "province": "Southeast Sulawesi",
+     "year": 2017,
+     "ours_ha": 26847.921047,
+     "gfw_ha": 26640.81404,
+     "pct_diff": 0.777405
+    },
+    {
+     "province": "Southeast Sulawesi",
+     "year": 2018,
+     "ours_ha": 24092.724706,
+     "gfw_ha": 23913.98578,
+     "pct_diff": 0.747424
+    },
+    {
+     "province": "Southeast Sulawesi",
+     "year": 2019,
+     "ours_ha": 35006.416547,
+     "gfw_ha": 34748.25319,
+     "pct_diff": 0.742953
+    },
+    {
+     "province": "Southeast Sulawesi",
+     "year": 2020,
+     "ours_ha": 18855.686567,
+     "gfw_ha": 18691.47849,
+     "pct_diff": 0.878518
+    },
+    {
+     "province": "Southeast Sulawesi",
+     "year": 2021,
+     "ours_ha": 12462.567657,
+     "gfw_ha": 12352.06237,
+     "pct_diff": 0.89463
+    },
+    {
+     "province": "Southeast Sulawesi",
+     "year": 2022,
+     "ours_ha": 13049.805037,
+     "gfw_ha": 12951.16485,
+     "pct_diff": 0.761632
+    },
+    {
+     "province": "Southeast Sulawesi",
+     "year": 2023,
+     "ours_ha": 34084.319836,
+     "gfw_ha": 33823.97875,
+     "pct_diff": 0.769694
+    },
+    {
+     "province": "Southeast Sulawesi",
+     "year": 2024,
+     "ours_ha": 16938.484109,
+     "gfw_ha": 16810.80731,
+     "pct_diff": 0.759492
+    },
+    {
+     "province": "West Sulawesi",
+     "year": 2015,
+     "ours_ha": 14143.358774,
+     "gfw_ha": 14042.41279,
+     "pct_diff": 0.718865
+    },
+    {
+     "province": "West Sulawesi",
+     "year": 2016,
+     "ours_ha": 13549.779823,
+     "gfw_ha": 13472.68465,
+     "pct_diff": 0.572233
+    },
+    {
+     "province": "West Sulawesi",
+     "year": 2017,
+     "ours_ha": 12564.772191,
+     "gfw_ha": 12491.0861,
+     "pct_diff": 0.589909
+    },
+    {
+     "province": "West Sulawesi",
+     "year": 2018,
+     "ours_ha": 12851.588617,
+     "gfw_ha": 12765.88302,
+     "pct_diff": 0.671364
+    },
+    {
+     "province": "West Sulawesi",
+     "year": 2019,
+     "ours_ha": 12887.131843,
+     "gfw_ha": 12806.17073,
+     "pct_diff": 0.632204
+    },
+    {
+     "province": "West Sulawesi",
+     "year": 2020,
+     "ours_ha": 8553.9911,
+     "gfw_ha": 8496.60429,
+     "pct_diff": 0.675409
+    },
+    {
+     "province": "West Sulawesi",
+     "year": 2021,
+     "ours_ha": 9909.919246,
+     "gfw_ha": 9845.54875,
+     "pct_diff": 0.653803
+    },
+    {
+     "province": "West Sulawesi",
+     "year": 2022,
+     "ours_ha": 10221.097483,
+     "gfw_ha": 10148.88686,
+     "pct_diff": 0.711513
+    },
+    {
+     "province": "West Sulawesi",
+     "year": 2023,
+     "ours_ha": 14845.980923,
+     "gfw_ha": 14738.29375,
+     "pct_diff": 0.730662
+    },
+    {
+     "province": "West Sulawesi",
+     "year": 2024,
+     "ours_ha": 8747.320552,
+     "gfw_ha": 8686.92084,
+     "pct_diff": 0.695295
+    },
+    {
+     "province": "Aceh",
+     "year": 2015,
+     "ours_ha": 34184.522687,
+     "gfw_ha": 33951.07294,
+     "pct_diff": 0.687606
+    },
+    {
+     "province": "Aceh",
+     "year": 2016,
+     "ours_ha": 50358.188959,
+     "gfw_ha": 50040.28043,
+     "pct_diff": 0.635305
+    },
+    {
+     "province": "Aceh",
+     "year": 2017,
+     "ours_ha": 46131.020379,
+     "gfw_ha": 45814.84896,
+     "pct_diff": 0.690107
+    },
+    {
+     "province": "Aceh",
+     "year": 2018,
+     "ours_ha": 46375.975666,
+     "gfw_ha": 46064.31703,
+     "pct_diff": 0.676573
+    },
+    {
+     "province": "Aceh",
+     "year": 2019,
+     "ours_ha": 28766.980728,
+     "gfw_ha": 28567.33652,
+     "pct_diff": 0.698855
+    },
+    {
+     "province": "Aceh",
+     "year": 2020,
+     "ours_ha": 30463.501896,
+     "gfw_ha": 30265.96602,
+     "pct_diff": 0.652667
+    },
+    {
+     "province": "Aceh",
+     "year": 2021,
+     "ours_ha": 32028.982646,
+     "gfw_ha": 31812.03275,
+     "pct_diff": 0.681974
+    },
+    {
+     "province": "Aceh",
+     "year": 2022,
+     "ours_ha": 29896.651589,
+     "gfw_ha": 29695.12808,
+     "pct_diff": 0.678642
+    },
+    {
+     "province": "Aceh",
+     "year": 2023,
+     "ours_ha": 39169.643229,
+     "gfw_ha": 38929.47549,
+     "pct_diff": 0.61693
+    },
+    {
+     "province": "Aceh",
+     "year": 2024,
+     "ours_ha": 46310.725013,
+     "gfw_ha": 46002.0033,
+     "pct_diff": 0.671105
+    },
+    {
+     "province": "Bengkulu",
+     "year": 2015,
+     "ours_ha": 20935.025236,
+     "gfw_ha": 20793.3684,
+     "pct_diff": 0.68126
+    },
+    {
+     "province": "Bengkulu",
+     "year": 2016,
+     "ours_ha": 25247.493937,
+     "gfw_ha": 25081.16767,
+     "pct_diff": 0.663152
+    },
+    {
+     "province": "Bengkulu",
+     "year": 2017,
+     "ours_ha": 27902.760873,
+     "gfw_ha": 27711.87671,
+     "pct_diff": 0.688817
+    },
+    {
+     "province": "Bengkulu",
+     "year": 2018,
+     "ours_ha": 25507.141884,
+     "gfw_ha": 25326.50075,
+     "pct_diff": 0.713249
+    },
+    {
+     "province": "Bengkulu",
+     "year": 2019,
+     "ours_ha": 18777.890153,
+     "gfw_ha": 18646.77256,
+     "pct_diff": 0.703165
+    },
+    {
+     "province": "Bengkulu",
+     "year": 2020,
+     "ours_ha": 16758.380297,
+     "gfw_ha": 16648.00804,
+     "pct_diff": 0.662976
+    },
+    {
+     "province": "Bengkulu",
+     "year": 2021,
+     "ours_ha": 14673.205725,
+     "gfw_ha": 14579.79013,
+     "pct_diff": 0.64072
+    },
+    {
+     "province": "Bengkulu",
+     "year": 2022,
+     "ours_ha": 24186.69341,
+     "gfw_ha": 24016.16437,
+     "pct_diff": 0.710059
+    },
+    {
+     "province": "Bengkulu",
+     "year": 2023,
+     "ours_ha": 30544.645912,
+     "gfw_ha": 30328.20904,
+     "pct_diff": 0.713649
+    },
+    {
+     "province": "Bengkulu",
+     "year": 2024,
+     "ours_ha": 21374.026676,
+     "gfw_ha": 21222.75994,
+     "pct_diff": 0.712757
+    },
+    {
+     "province": "Jambi",
+     "year": 2015,
+     "ours_ha": 61613.457312,
+     "gfw_ha": 61206.35606,
+     "pct_diff": 0.665129
+    },
+    {
+     "province": "Jambi",
+     "year": 2016,
+     "ours_ha": 159857.637797,
+     "gfw_ha": 158751.71127,
+     "pct_diff": 0.696639
+    },
+    {
+     "province": "Jambi",
+     "year": 2017,
+     "ours_ha": 87215.982486,
+     "gfw_ha": 86628.23887,
+     "pct_diff": 0.678467
+    },
+    {
+     "province": "Jambi",
+     "year": 2018,
+     "ours_ha": 69885.657911,
+     "gfw_ha": 69413.99527,
+     "pct_diff": 0.679492
+    },
+    {
+     "province": "Jambi",
+     "year": 2019,
+     "ours_ha": 68499.765886,
+     "gfw_ha": 68041.74597,
+     "pct_diff": 0.673145
+    },
+    {
+     "province": "Jambi",
+     "year": 2020,
+     "ours_ha": 79592.615535,
+     "gfw_ha": 79065.78752,
+     "pct_diff": 0.666316
+    },
+    {
+     "province": "Jambi",
+     "year": 2021,
+     "ours_ha": 74099.842097,
+     "gfw_ha": 73600.81506,
+     "pct_diff": 0.678018
+    },
+    {
+     "province": "Jambi",
+     "year": 2022,
+     "ours_ha": 76559.029149,
+     "gfw_ha": 76029.71585,
+     "pct_diff": 0.696193
+    },
+    {
+     "province": "Jambi",
+     "year": 2023,
+     "ours_ha": 94630.91919,
+     "gfw_ha": 94008.96676,
+     "pct_diff": 0.661588
+    },
+    {
+     "province": "Jambi",
+     "year": 2024,
+     "ours_ha": 91902.476888,
+     "gfw_ha": 91293.20761,
+     "pct_diff": 0.667376
+    },
+    {
+     "province": "Lampung",
+     "year": 2015,
+     "ours_ha": 14169.676023,
+     "gfw_ha": 14071.32317,
+     "pct_diff": 0.69896
+    },
+    {
+     "province": "Lampung",
+     "year": 2016,
+     "ours_ha": 16330.028086,
+     "gfw_ha": 16216.26864,
+     "pct_diff": 0.701514
+    },
+    {
+     "province": "Lampung",
+     "year": 2017,
+     "ours_ha": 11815.974941,
+     "gfw_ha": 11734.16574,
+     "pct_diff": 0.697188
+    },
+    {
+     "province": "Lampung",
+     "year": 2018,
+     "ours_ha": 10354.685885,
+     "gfw_ha": 10287.23881,
+     "pct_diff": 0.655638
+    },
+    {
+     "province": "Lampung",
+     "year": 2019,
+     "ours_ha": 13269.750974,
+     "gfw_ha": 13174.97458,
+     "pct_diff": 0.719367
+    },
+    {
+     "province": "Lampung",
+     "year": 2020,
+     "ours_ha": 9542.476213,
+     "gfw_ha": 9474.50717,
+     "pct_diff": 0.717389
+    },
+    {
+     "province": "Lampung",
+     "year": 2021,
+     "ours_ha": 7667.215836,
+     "gfw_ha": 7613.08985,
+     "pct_diff": 0.71096
+    },
+    {
+     "province": "Lampung",
+     "year": 2022,
+     "ours_ha": 7066.936179,
+     "gfw_ha": 7014.04634,
+     "pct_diff": 0.754056
+    },
+    {
+     "province": "Lampung",
+     "year": 2023,
+     "ours_ha": 21760.562798,
+     "gfw_ha": 21606.95238,
+     "pct_diff": 0.710931
+    },
+    {
+     "province": "Lampung",
+     "year": 2024,
+     "ours_ha": 12988.5002,
+     "gfw_ha": 12902.50848,
+     "pct_diff": 0.666473
+    },
+    {
+     "province": "Riau",
+     "year": 2015,
+     "ours_ha": 91688.664021,
+     "gfw_ha": 91053.07926,
+     "pct_diff": 0.698038
+    },
+    {
+     "province": "Riau",
+     "year": 2016,
+     "ours_ha": 148330.014257,
+     "gfw_ha": 147330.35224,
+     "pct_diff": 0.678517
+    },
+    {
+     "province": "Riau",
+     "year": 2017,
+     "ours_ha": 124862.526948,
+     "gfw_ha": 124008.25853,
+     "pct_diff": 0.68888
+    },
+    {
+     "province": "Riau",
+     "year": 2018,
+     "ours_ha": 101212.551148,
+     "gfw_ha": 100520.84187,
+     "pct_diff": 0.688125
+    },
+    {
+     "province": "Riau",
+     "year": 2019,
+     "ours_ha": 103349.654294,
+     "gfw_ha": 102651.18282,
+     "pct_diff": 0.680432
+    },
+    {
+     "province": "Riau",
+     "year": 2020,
+     "ours_ha": 94310.94374,
+     "gfw_ha": 93677.45234,
+     "pct_diff": 0.676247
+    },
+    {
+     "province": "Riau",
+     "year": 2021,
+     "ours_ha": 96506.729404,
+     "gfw_ha": 95851.18708,
+     "pct_diff": 0.683917
+    },
+    {
+     "province": "Riau",
+     "year": 2022,
+     "ours_ha": 87020.214519,
+     "gfw_ha": 86435.74778,
+     "pct_diff": 0.676186
+    },
+    {
+     "province": "Riau",
+     "year": 2023,
+     "ours_ha": 114305.004134,
+     "gfw_ha": 113528.4616,
+     "pct_diff": 0.684007
+    },
+    {
+     "province": "Riau",
+     "year": 2024,
+     "ours_ha": 100304.665537,
+     "gfw_ha": 99643.41235,
+     "pct_diff": 0.66362
+    },
+    {
+     "province": "West Sumatra",
+     "year": 2015,
+     "ours_ha": 22044.564661,
+     "gfw_ha": 21906.37674,
+     "pct_diff": 0.630811
+    },
+    {
+     "province": "West Sumatra",
+     "year": 2016,
+     "ours_ha": 38517.838076,
+     "gfw_ha": 38241.28768,
+     "pct_diff": 0.723172
+    },
+    {
+     "province": "West Sumatra",
+     "year": 2017,
+     "ours_ha": 51097.124502,
+     "gfw_ha": 50746.17033,
+     "pct_diff": 0.691588
+    },
+    {
+     "province": "West Sumatra",
+     "year": 2018,
+     "ours_ha": 38005.862336,
+     "gfw_ha": 37743.45375,
+     "pct_diff": 0.695243
+    },
+    {
+     "province": "West Sumatra",
+     "year": 2019,
+     "ours_ha": 30926.902609,
+     "gfw_ha": 30703.1353,
+     "pct_diff": 0.728809
+    },
+    {
+     "province": "West Sumatra",
+     "year": 2020,
+     "ours_ha": 30257.588157,
+     "gfw_ha": 30028.6325,
+     "pct_diff": 0.762458
+    },
+    {
+     "province": "West Sumatra",
+     "year": 2021,
+     "ours_ha": 35952.407878,
+     "gfw_ha": 35711.02365,
+     "pct_diff": 0.675938
+    },
+    {
+     "province": "West Sumatra",
+     "year": 2022,
+     "ours_ha": 35542.974291,
+     "gfw_ha": 35278.92806,
+     "pct_diff": 0.748453
+    },
+    {
+     "province": "West Sumatra",
+     "year": 2023,
+     "ours_ha": 36778.96314,
+     "gfw_ha": 36526.29916,
+     "pct_diff": 0.691732
+    },
+    {
+     "province": "West Sumatra",
+     "year": 2024,
+     "ours_ha": 32949.716751,
+     "gfw_ha": 32711.21003,
+     "pct_diff": 0.729128
+    },
+    {
+     "province": "South Sumatra",
+     "year": 2015,
+     "ours_ha": 169245.270928,
+     "gfw_ha": 168119.16574,
+     "pct_diff": 0.669826
+    },
+    {
+     "province": "South Sumatra",
+     "year": 2016,
+     "ours_ha": 275660.859049,
+     "gfw_ha": 273854.47535,
+     "pct_diff": 0.659614
+    },
+    {
+     "province": "South Sumatra",
+     "year": 2017,
+     "ours_ha": 125046.477582,
+     "gfw_ha": 124213.72911,
+     "pct_diff": 0.670416
+    },
+    {
+     "province": "South Sumatra",
+     "year": 2018,
+     "ours_ha": 126395.76506,
+     "gfw_ha": 125563.32937,
+     "pct_diff": 0.662961
+    },
+    {
+     "province": "South Sumatra",
+     "year": 2019,
+     "ours_ha": 102793.308995,
+     "gfw_ha": 102109.51216,
+     "pct_diff": 0.66967
+    },
+    {
+     "province": "South Sumatra",
+     "year": 2020,
+     "ours_ha": 108788.346295,
+     "gfw_ha": 108069.66343,
+     "pct_diff": 0.665018
+    },
+    {
+     "province": "South Sumatra",
+     "year": 2021,
+     "ours_ha": 78275.818564,
+     "gfw_ha": 77749.08552,
+     "pct_diff": 0.677478
+    },
+    {
+     "province": "South Sumatra",
+     "year": 2022,
+     "ours_ha": 88322.081529,
+     "gfw_ha": 87744.16486,
+     "pct_diff": 0.658638
+    },
+    {
+     "province": "South Sumatra",
+     "year": 2023,
+     "ours_ha": 140094.317378,
+     "gfw_ha": 139163.99592,
+     "pct_diff": 0.668507
+    },
+    {
+     "province": "South Sumatra",
+     "year": 2024,
+     "ours_ha": 121399.742984,
+     "gfw_ha": 120582.57415,
+     "pct_diff": 0.677684
+    },
+    {
+     "province": "North Sumatra",
+     "year": 2015,
+     "ours_ha": 53655.954161,
+     "gfw_ha": 53285.76396,
+     "pct_diff": 0.694726
+    },
+    {
+     "province": "North Sumatra",
+     "year": 2016,
+     "ours_ha": 80464.393836,
+     "gfw_ha": 79894.81454,
+     "pct_diff": 0.712911
+    },
+    {
+     "province": "North Sumatra",
+     "year": 2017,
+     "ours_ha": 75181.401048,
+     "gfw_ha": 74677.66532,
+     "pct_diff": 0.674547
+    },
+    {
+     "province": "North Sumatra",
+     "year": 2018,
+     "ours_ha": 66861.547876,
+     "gfw_ha": 66410.21397,
+     "pct_diff": 0.679615
+    },
+    {
+     "province": "North Sumatra",
+     "year": 2019,
+     "ours_ha": 52370.815814,
+     "gfw_ha": 52009.2567,
+     "pct_diff": 0.695182
+    },
+    {
+     "province": "North Sumatra",
+     "year": 2020,
+     "ours_ha": 51212.997905,
+     "gfw_ha": 50848.01331,
+     "pct_diff": 0.717795
+    },
+    {
+     "province": "North Sumatra",
+     "year": 2021,
+     "ours_ha": 58993.548631,
+     "gfw_ha": 58588.55139,
+     "pct_diff": 0.691257
+    },
+    {
+     "province": "North Sumatra",
+     "year": 2022,
+     "ours_ha": 49961.71213,
+     "gfw_ha": 49619.06825,
+     "pct_diff": 0.690549
+    },
+    {
+     "province": "North Sumatra",
+     "year": 2023,
+     "ours_ha": 65804.528661,
+     "gfw_ha": 65334.02777,
+     "pct_diff": 0.720147
+    },
+    {
+     "province": "North Sumatra",
+     "year": 2024,
+     "ours_ha": 65237.34443,
+     "gfw_ha": 64787.22994,
+     "pct_diff": 0.694758
+    },
+    {
+     "province": "East Nusa Tenggara",
+     "year": 2015,
+     "ours_ha": 7468.493362,
+     "gfw_ha": 7416.80363,
+     "pct_diff": 0.696927
+    },
+    {
+     "province": "East Nusa Tenggara",
+     "year": 2016,
+     "ours_ha": 7411.806528,
+     "gfw_ha": 7361.10509,
+     "pct_diff": 0.688775
+    },
+    {
+     "province": "East Nusa Tenggara",
+     "year": 2017,
+     "ours_ha": 10414.91224,
+     "gfw_ha": 10343.62302,
+     "pct_diff": 0.689209
+    },
+    {
+     "province": "East Nusa Tenggara",
+     "year": 2018,
+     "ours_ha": 5216.523342,
+     "gfw_ha": 5182.92681,
+     "pct_diff": 0.648215
+    },
+    {
+     "province": "East Nusa Tenggara",
+     "year": 2019,
+     "ours_ha": 7844.167022,
+     "gfw_ha": 7792.54426,
+     "pct_diff": 0.662464
+    },
+    {
+     "province": "East Nusa Tenggara",
+     "year": 2020,
+     "ours_ha": 6557.59707,
+     "gfw_ha": 6507.88609,
+     "pct_diff": 0.763858
+    },
+    {
+     "province": "East Nusa Tenggara",
+     "year": 2021,
+     "ours_ha": 9843.911043,
+     "gfw_ha": 9783.15307,
+     "pct_diff": 0.621047
+    },
+    {
+     "province": "East Nusa Tenggara",
+     "year": 2022,
+     "ours_ha": 7043.201324,
+     "gfw_ha": 7000.76412,
+     "pct_diff": 0.60618
+    },
+    {
+     "province": "East Nusa Tenggara",
+     "year": 2023,
+     "ours_ha": 8866.587236,
+     "gfw_ha": 8811.58767,
+     "pct_diff": 0.624173
+    },
+    {
+     "province": "East Nusa Tenggara",
+     "year": 2024,
+     "ours_ha": 6531.472069,
+     "gfw_ha": 6482.06277,
+     "pct_diff": 0.762247
+    },
+    {
+     "province": "Maluku",
+     "year": 2015,
+     "ours_ha": 49493.26086,
+     "gfw_ha": 49103.55222,
+     "pct_diff": 0.793647
+    },
+    {
+     "province": "Maluku",
+     "year": 2016,
+     "ours_ha": 28179.694032,
+     "gfw_ha": 27953.48614,
+     "pct_diff": 0.80923
+    },
+    {
+     "province": "Maluku",
+     "year": 2017,
+     "ours_ha": 7457.373506,
+     "gfw_ha": 7389.01692,
+     "pct_diff": 0.925111
+    },
+    {
+     "province": "Maluku",
+     "year": 2018,
+     "ours_ha": 11406.41183,
+     "gfw_ha": 11285.87509,
+     "pct_diff": 1.068032
+    },
+    {
+     "province": "Maluku",
+     "year": 2019,
+     "ours_ha": 17452.231807,
+     "gfw_ha": 17309.4521,
+     "pct_diff": 0.824866
+    },
+    {
+     "province": "Maluku",
+     "year": 2020,
+     "ours_ha": 5805.339612,
+     "gfw_ha": 5747.68254,
+     "pct_diff": 1.003136
+    },
+    {
+     "province": "Maluku",
+     "year": 2021,
+     "ours_ha": 3830.122809,
+     "gfw_ha": 3790.1826,
+     "pct_diff": 1.053781
+    },
+    {
+     "province": "Maluku",
+     "year": 2022,
+     "ours_ha": 5203.067795,
+     "gfw_ha": 5147.67529,
+     "pct_diff": 1.076068
+    },
+    {
+     "province": "Maluku",
+     "year": 2023,
+     "ours_ha": 14711.594321,
+     "gfw_ha": 14560.08569,
+     "pct_diff": 1.040575
+    },
+    {
+     "province": "Maluku",
+     "year": 2024,
+     "ours_ha": 5337.587338,
+     "gfw_ha": 5288.69907,
+     "pct_diff": 0.924391
+    },
+    {
+     "province": "North Maluku",
+     "year": 2015,
+     "ours_ha": 45715.592026,
+     "gfw_ha": 45350.71234,
+     "pct_diff": 0.804573
+    },
+    {
+     "province": "North Maluku",
+     "year": 2016,
+     "ours_ha": 27021.964992,
+     "gfw_ha": 26789.5769,
+     "pct_diff": 0.867457
+    },
+    {
+     "province": "North Maluku",
+     "year": 2017,
+     "ours_ha": 10647.786016,
+     "gfw_ha": 10544.00992,
+     "pct_diff": 0.984218
+    },
+    {
+     "province": "North Maluku",
+     "year": 2018,
+     "ours_ha": 12453.889623,
+     "gfw_ha": 12314.09997,
+     "pct_diff": 1.1352
+    },
+    {
+     "province": "North Maluku",
+     "year": 2019,
+     "ours_ha": 14235.003679,
+     "gfw_ha": 14110.97854,
+     "pct_diff": 0.878927
+    },
+    {
+     "province": "North Maluku",
+     "year": 2020,
+     "ours_ha": 7460.14892,
+     "gfw_ha": 7394.20548,
+     "pct_diff": 0.891826
+    },
+    {
+     "province": "North Maluku",
+     "year": 2021,
+     "ours_ha": 6055.324228,
+     "gfw_ha": 6000.18786,
+     "pct_diff": 0.918911
+    },
+    {
+     "province": "North Maluku",
+     "year": 2022,
+     "ours_ha": 6399.90992,
+     "gfw_ha": 6324.06762,
+     "pct_diff": 1.199265
+    },
+    {
+     "province": "North Maluku",
+     "year": 2023,
+     "ours_ha": 11974.248049,
+     "gfw_ha": 11850.08923,
+     "pct_diff": 1.047746
+    },
+    {
+     "province": "North Maluku",
+     "year": 2024,
+     "ours_ha": 7349.565082,
+     "gfw_ha": 7289.73619,
+     "pct_diff": 0.820728
+    },
+    {
+     "province": "East Java",
+     "year": 2015,
+     "ours_ha": 2922.149495,
+     "gfw_ha": 2902.69738,
+     "pct_diff": 0.670139
+    },
+    {
+     "province": "East Java",
+     "year": 2016,
+     "ours_ha": 3186.785978,
+     "gfw_ha": 3164.37976,
+     "pct_diff": 0.708076
+    },
+    {
+     "province": "East Java",
+     "year": 2017,
+     "ours_ha": 4720.600522,
+     "gfw_ha": 4689.52003,
+     "pct_diff": 0.662765
+    },
+    {
+     "province": "East Java",
+     "year": 2018,
+     "ours_ha": 4341.120403,
+     "gfw_ha": 4312.0119,
+     "pct_diff": 0.675056
+    },
+    {
+     "province": "East Java",
+     "year": 2019,
+     "ours_ha": 5158.437375,
+     "gfw_ha": 5125.03354,
+     "pct_diff": 0.651778
+    },
+    {
+     "province": "East Java",
+     "year": 2020,
+     "ours_ha": 4937.141132,
+     "gfw_ha": 4905.91115,
+     "pct_diff": 0.636579
+    },
+    {
+     "province": "East Java",
+     "year": 2021,
+     "ours_ha": 3543.90265,
+     "gfw_ha": 3520.60585,
+     "pct_diff": 0.661727
+    },
+    {
+     "province": "East Java",
+     "year": 2022,
+     "ours_ha": 2939.471432,
+     "gfw_ha": 2920.64857,
+     "pct_diff": 0.644475
+    },
+    {
+     "province": "East Java",
+     "year": 2023,
+     "ours_ha": 6389.554918,
+     "gfw_ha": 6350.35695,
+     "pct_diff": 0.617256
+    },
+    {
+     "province": "East Java",
+     "year": 2024,
+     "ours_ha": 4549.305929,
+     "gfw_ha": 4519.84369,
+     "pct_diff": 0.651842
+    },
+    {
+     "province": "Bangka-Belitung Islands",
+     "year": 2015,
+     "ours_ha": 41656.571383,
+     "gfw_ha": 41372.58682,
+     "pct_diff": 0.686408
+    },
+    {
+     "province": "Bangka-Belitung Islands",
+     "year": 2016,
+     "ours_ha": 58762.136735,
+     "gfw_ha": 58362.76319,
+     "pct_diff": 0.684295
+    },
+    {
+     "province": "Bangka-Belitung Islands",
+     "year": 2017,
+     "ours_ha": 25812.654189,
+     "gfw_ha": 25635.92102,
+     "pct_diff": 0.689397
+    },
+    {
+     "province": "Bangka-Belitung Islands",
+     "year": 2018,
+     "ours_ha": 22648.38321,
+     "gfw_ha": 22496.14662,
+     "pct_diff": 0.676723
+    },
+    {
+     "province": "Bangka-Belitung Islands",
+     "year": 2019,
+     "ours_ha": 25760.334798,
+     "gfw_ha": 25577.68747,
+     "pct_diff": 0.714089
+    },
+    {
+     "province": "Bangka-Belitung Islands",
+     "year": 2020,
+     "ours_ha": 24825.914577,
+     "gfw_ha": 24650.28629,
+     "pct_diff": 0.71248
+    },
+    {
+     "province": "Bangka-Belitung Islands",
+     "year": 2021,
+     "ours_ha": 31252.931681,
+     "gfw_ha": 31038.30752,
+     "pct_diff": 0.691482
+    },
+    {
+     "province": "Bangka-Belitung Islands",
+     "year": 2022,
+     "ours_ha": 34321.69479,
+     "gfw_ha": 34087.46977,
+     "pct_diff": 0.687129
+    },
+    {
+     "province": "Bangka-Belitung Islands",
+     "year": 2023,
+     "ours_ha": 50748.077608,
+     "gfw_ha": 50402.77748,
+     "pct_diff": 0.685082
+    },
+    {
+     "province": "Bangka-Belitung Islands",
+     "year": 2024,
+     "ours_ha": 31280.993377,
+     "gfw_ha": 31066.93816,
+     "pct_diff": 0.689013
+    },
+    {
+     "province": "Riau Islands",
+     "year": 2015,
+     "ours_ha": 5750.687144,
+     "gfw_ha": 5686.03596,
+     "pct_diff": 1.137017
+    },
+    {
+     "province": "Riau Islands",
+     "year": 2016,
+     "ours_ha": 12907.382507,
+     "gfw_ha": 12786.35998,
+     "pct_diff": 0.946497
+    },
+    {
+     "province": "Riau Islands",
+     "year": 2017,
+     "ours_ha": 7868.739799,
+     "gfw_ha": 7796.3217,
+     "pct_diff": 0.928875
+    },
+    {
+     "province": "Riau Islands",
+     "year": 2018,
+     "ours_ha": 6214.71549,
+     "gfw_ha": 6162.38943,
+     "pct_diff": 0.84912
+    },
+    {
+     "province": "Riau Islands",
+     "year": 2019,
+     "ours_ha": 8774.918703,
+     "gfw_ha": 8692.36768,
+     "pct_diff": 0.949695
+    },
+    {
+     "province": "Riau Islands",
+     "year": 2020,
+     "ours_ha": 8622.10605,
+     "gfw_ha": 8532.38757,
+     "pct_diff": 1.051505
+    },
+    {
+     "province": "Riau Islands",
+     "year": 2021,
+     "ours_ha": 4354.182884,
+     "gfw_ha": 4315.18917,
+     "pct_diff": 0.903639
+    },
+    {
+     "province": "Riau Islands",
+     "year": 2022,
+     "ours_ha": 2817.791553,
+     "gfw_ha": 2792.02067,
+     "pct_diff": 0.923019
+    },
+    {
+     "province": "Riau Islands",
+     "year": 2023,
+     "ours_ha": 3326.673981,
+     "gfw_ha": 3288.28907,
+     "pct_diff": 1.167322
+    },
+    {
+     "province": "Riau Islands",
+     "year": 2024,
+     "ours_ha": 2592.414906,
+     "gfw_ha": 2567.77073,
+     "pct_diff": 0.95975
+    },
+    {
+     "province": "Papua",
+     "year": 2015,
+     "ours_ha": 82860.368079,
+     "gfw_ha": 82318.08706,
+     "pct_diff": 0.658763
+    },
+    {
+     "province": "Papua",
+     "year": 2016,
+     "ours_ha": 84011.29129,
+     "gfw_ha": 83439.15119,
+     "pct_diff": 0.685697
+    },
+    {
+     "province": "Papua",
+     "year": 2017,
+     "ours_ha": 50013.850287,
+     "gfw_ha": 49678.13121,
+     "pct_diff": 0.675788
+    },
+    {
+     "province": "Papua",
+     "year": 2018,
+     "ours_ha": 35316.436086,
+     "gfw_ha": 35067.27112,
+     "pct_diff": 0.710534
+    },
+    {
+     "province": "Papua",
+     "year": 2019,
+     "ours_ha": 34894.957875,
+     "gfw_ha": 34654.66269,
+     "pct_diff": 0.693399
+    },
+    {
+     "province": "Papua",
+     "year": 2020,
+     "ours_ha": 30231.911883,
+     "gfw_ha": 30022.16107,
+     "pct_diff": 0.698653
+    },
+    {
+     "province": "Papua",
+     "year": 2021,
+     "ours_ha": 26601.778558,
+     "gfw_ha": 26410.96977,
+     "pct_diff": 0.72246
+    },
+    {
+     "province": "Papua",
+     "year": 2022,
+     "ours_ha": 28703.180836,
+     "gfw_ha": 28501.07094,
+     "pct_diff": 0.709131
+    },
+    {
+     "province": "Papua",
+     "year": 2023,
+     "ours_ha": 23378.50053,
+     "gfw_ha": 23198.48064,
+     "pct_diff": 0.775999
+    },
+    {
+     "province": "Papua",
+     "year": 2024,
+     "ours_ha": 23027.522477,
+     "gfw_ha": 22870.67505,
+     "pct_diff": 0.685801
+    },
+    {
+     "province": "West Papua",
+     "year": 2015,
+     "ours_ha": 43004.570756,
+     "gfw_ha": 42670.63933,
+     "pct_diff": 0.782579
+    },
+    {
+     "province": "West Papua",
+     "year": 2016,
+     "ours_ha": 27071.291984,
+     "gfw_ha": 26868.92314,
+     "pct_diff": 0.753171
+    },
+    {
+     "province": "West Papua",
+     "year": 2017,
+     "ours_ha": 16081.902446,
+     "gfw_ha": 15961.20104,
+     "pct_diff": 0.756218
+    },
+    {
+     "province": "West Papua",
+     "year": 2018,
+     "ours_ha": 20695.931604,
+     "gfw_ha": 20542.5343,
+     "pct_diff": 0.74673
+    },
+    {
+     "province": "West Papua",
+     "year": 2019,
+     "ours_ha": 16987.934782,
+     "gfw_ha": 16852.58245,
+     "pct_diff": 0.803155
+    },
+    {
+     "province": "West Papua",
+     "year": 2020,
+     "ours_ha": 16498.545653,
+     "gfw_ha": 16360.58448,
+     "pct_diff": 0.843253
+    },
+    {
+     "province": "West Papua",
+     "year": 2021,
+     "ours_ha": 12328.357668,
+     "gfw_ha": 12237.53881,
+     "pct_diff": 0.742133
+    },
+    {
+     "province": "West Papua",
+     "year": 2022,
+     "ours_ha": 14050.899595,
+     "gfw_ha": 13942.53865,
+     "pct_diff": 0.777197
+    },
+    {
+     "province": "West Papua",
+     "year": 2023,
+     "ours_ha": 16579.828819,
+     "gfw_ha": 16446.70673,
+     "pct_diff": 0.809415
+    },
+    {
+     "province": "West Papua",
+     "year": 2024,
+     "ours_ha": 12007.377097,
+     "gfw_ha": 11917.76531,
+     "pct_diff": 0.751918
+    },
+    {
+     "province": "East Kalimantan",
+     "year": 2015,
+     "ours_ha": 185540.311237,
+     "gfw_ha": 184299.24307,
+     "pct_diff": 0.673398
+    },
+    {
+     "province": "East Kalimantan",
+     "year": 2016,
+     "ours_ha": 316654.043887,
+     "gfw_ha": 314502.18896,
+     "pct_diff": 0.68421
+    },
+    {
+     "province": "East Kalimantan",
+     "year": 2017,
+     "ours_ha": 136018.92461,
+     "gfw_ha": 135096.13972,
+     "pct_diff": 0.683058
+    },
+    {
+     "province": "East Kalimantan",
+     "year": 2018,
+     "ours_ha": 149291.364768,
+     "gfw_ha": 148289.45136,
+     "pct_diff": 0.675647
+    },
+    {
+     "province": "East Kalimantan",
+     "year": 2019,
+     "ours_ha": 133351.48434,
+     "gfw_ha": 132453.55896,
+     "pct_diff": 0.677917
+    },
+    {
+     "province": "East Kalimantan",
+     "year": 2020,
+     "ours_ha": 92570.860827,
+     "gfw_ha": 91949.85656,
+     "pct_diff": 0.675373
+    },
+    {
+     "province": "East Kalimantan",
+     "year": 2021,
+     "ours_ha": 75040.259138,
+     "gfw_ha": 74544.87864,
+     "pct_diff": 0.66454
+    },
+    {
+     "province": "East Kalimantan",
+     "year": 2022,
+     "ours_ha": 62244.194218,
+     "gfw_ha": 61833.25108,
+     "pct_diff": 0.664599
+    },
+    {
+     "province": "East Kalimantan",
+     "year": 2023,
+     "ours_ha": 135982.903992,
+     "gfw_ha": 135080.16984,
+     "pct_diff": 0.668295
+    },
+    {
+     "province": "East Kalimantan",
+     "year": 2024,
+     "ours_ha": 111509.202285,
+     "gfw_ha": 110778.30051,
+     "pct_diff": 0.659788
+    },
+    {
+     "province": "North Kalimantan",
+     "year": 2015,
+     "ours_ha": 48093.190983,
+     "gfw_ha": 47758.85581,
+     "pct_diff": 0.700049
+    },
+    {
+     "province": "North Kalimantan",
+     "year": 2016,
+     "ours_ha": 38865.965001,
+     "gfw_ha": 38589.28801,
+     "pct_diff": 0.716979
+    },
+    {
+     "province": "North Kalimantan",
+     "year": 2017,
+     "ours_ha": 33695.48009,
+     "gfw_ha": 33474.9894,
+     "pct_diff": 0.658673
+    },
+    {
+     "province": "North Kalimantan",
+     "year": 2018,
+     "ours_ha": 36818.897429,
+     "gfw_ha": 36559.30234,
+     "pct_diff": 0.710066
+    },
+    {
+     "province": "North Kalimantan",
+     "year": 2019,
+     "ours_ha": 29416.127956,
+     "gfw_ha": 29203.16826,
+     "pct_diff": 0.729235
+    },
+    {
+     "province": "North Kalimantan",
+     "year": 2020,
+     "ours_ha": 24720.910618,
+     "gfw_ha": 24540.75337,
+     "pct_diff": 0.734115
+    },
+    {
+     "province": "North Kalimantan",
+     "year": 2021,
+     "ours_ha": 19307.703088,
+     "gfw_ha": 19159.97691,
+     "pct_diff": 0.771014
+    },
+    {
+     "province": "North Kalimantan",
+     "year": 2022,
+     "ours_ha": 17770.158173,
+     "gfw_ha": 17646.51531,
+     "pct_diff": 0.700664
+    },
+    {
+     "province": "North Kalimantan",
+     "year": 2023,
+     "ours_ha": 26493.664247,
+     "gfw_ha": 26306.00589,
+     "pct_diff": 0.713367
+    },
+    {
+     "province": "North Kalimantan",
+     "year": 2024,
+     "ours_ha": 19972.129382,
+     "gfw_ha": 19828.53448,
+     "pct_diff": 0.724183
+    },
+    {
+     "province": "Special Region of Yogyakarta",
+     "year": 2015,
+     "ours_ha": 42.098036,
+     "gfw_ha": 41.5942,
+     "pct_diff": 1.211313
+    },
+    {
+     "province": "Special Region of Yogyakarta",
+     "year": 2016,
+     "ours_ha": 67.038346,
+     "gfw_ha": 66.5812,
+     "pct_diff": 0.686599
+    },
+    {
+     "province": "Special Region of Yogyakarta",
+     "year": 2017,
+     "ours_ha": 109.31121,
+     "gfw_ha": 108.5563,
+     "pct_diff": 0.695409
+    },
+    {
+     "province": "Special Region of Yogyakarta",
+     "year": 2018,
+     "ours_ha": 139.840137,
+     "gfw_ha": 138.87589,
+     "pct_diff": 0.694323
+    },
+    {
+     "province": "Special Region of Yogyakarta",
+     "year": 2019,
+     "ours_ha": 69.580238,
+     "gfw_ha": 69.09513,
+     "pct_diff": 0.702087
+    },
+    {
+     "province": "Special Region of Yogyakarta",
+     "year": 2020,
+     "ours_ha": 55.915714,
+     "gfw_ha": 55.38276,
+     "pct_diff": 0.96231
+    },
+    {
+     "province": "Special Region of Yogyakarta",
+     "year": 2021,
+     "ours_ha": 71.477859,
+     "gfw_ha": 70.99963,
+     "pct_diff": 0.673566
+    },
+    {
+     "province": "Special Region of Yogyakarta",
+     "year": 2022,
+     "ours_ha": 35.663405,
+     "gfw_ha": 35.42364,
+     "pct_diff": 0.676852
+    },
+    {
+     "province": "Special Region of Yogyakarta",
+     "year": 2023,
+     "ours_ha": 109.236435,
+     "gfw_ha": 105.05203,
+     "pct_diff": 3.983174
+    },
+    {
+     "province": "Special Region of Yogyakarta",
+     "year": 2024,
+     "ours_ha": 108.537434,
+     "gfw_ha": 106.80417,
+     "pct_diff": 1.622843
+    },
+    {
+     "province": "Jakarta Special Capital Region",
+     "year": 2015,
+     "ours_ha": 0.153951,
+     "gfw_ha": 0.15279,
+     "pct_diff": 0.759585
+    },
+    {
+     "province": "Jakarta Special Capital Region",
+     "year": 2017,
+     "ours_ha": 1.077749,
+     "gfw_ha": 1.1459,
+     "pct_diff": -5.947403
+    },
+    {
+     "province": "Jakarta Special Capital Region",
+     "year": 2020,
+     "ours_ha": 0.154013,
+     "gfw_ha": 0.15314,
+     "pct_diff": 0.57019
+    },
+    {
+     "province": "Jakarta Special Capital Region",
+     "year": 2023,
+     "ours_ha": 0.154019,
+     "gfw_ha": 0.15314,
+     "pct_diff": 0.573866
+    },
+    {
+     "province": "Jakarta Special Capital Region",
+     "year": 2024,
+     "ours_ha": 0.461914,
+     "gfw_ha": 0.45854,
+     "pct_diff": 0.735735
+    }
+   ]
+  }
+ },
+ "divergence": {
+  "gfw_tree_cover_loss_ha": {
+   "2023": 1405150.699346,
+   "2024": 1128194.856382
+  },
+  "gfw_published_ha": {
+   "2023": 1395285,
+   "2024": 1120264
+  },
+  "klhk_ha": {
+   "2023": {
+    "gross": 133800
+   },
+   "2024": {
+    "gross": 216200,
+    "net": 175400
+   }
+  },
+  "auriga_2024_ha": {
+   "Indonesia": 261575,
+   "Kalimantan Tengah": 33389,
+   "Riau": 20812
+  },
+  "explanation": "These numbers disagree because they measure different things, and all of them are correct. GFW's 'tree cover loss' is gross removal of >=5 m tree canopy at >=30 % density, from satellite, and counts an oil-palm estate being replanted and a pulpwood block being harvested exactly as it counts primary forest being cleared. KLHK's 'deforestation' is a change in legal-and-biophysical forest cover between two annual land-cover maps, excludes planted forest and harvest inside production concessions, and is reported net of reforestation. Neither is a corrected version of the other; a number is only meaningful with its definition attached."
+ },
+ "loss": {
+  "years": [
+   2001,
+   2002,
+   2003,
+   2004,
+   2005,
+   2006,
+   2007,
+   2008,
+   2009,
+   2010,
+   2011,
+   2012,
+   2013,
+   2014,
+   2015,
+   2016,
+   2017,
+   2018,
+   2019,
+   2020,
+   2021,
+   2022,
+   2023,
+   2024,
+   2025
+  ],
+  "total_ha": [
+   749651.0,
+   861764.0,
+   548667.0,
+   1298452.0,
+   1190957.0,
+   1443304.0,
+   1397361.0,
+   1406029.0,
+   1958517.0,
+   1288519.0,
+   1554315.0,
+   2275930.0,
+   1147255.0,
+   1907438.0,
+   1758542.0,
+   2438939.0,
+   1309605.0,
+   1227426.0,
+   1185287.0,
+   968225.0,
+   847364.0,
+   891528.0,
+   1405151.0,
+   1128195.0,
+   1169827.0
+  ],
+  "oil_palm_ha": [
+   236867.0,
+   246791.0,
+   148242.0,
+   477800.0,
+   493815.0,
+   618715.0,
+   547745.0,
+   579385.0,
+   830642.0,
+   555236.0,
+   601361.0,
+   768504.0,
+   330206.0,
+   411320.0,
+   345282.0,
+   319992.0,
+   247311.0,
+   235181.0,
+   206411.0,
+   203690.0,
+   198315.0,
+   181906.0,
+   279502.0,
+   235199.0,
+   213595.0
+  ],
+  "wood_fibre_ha": [
+   59899.0,
+   69691.0,
+   26213.0,
+   131700.0,
+   115505.0,
+   121771.0,
+   167835.0,
+   163756.0,
+   125435.0,
+   152256.0,
+   176040.0,
+   226083.0,
+   78607.0,
+   69062.0,
+   87100.0,
+   90299.0,
+   59608.0,
+   40518.0,
+   39889.0,
+   28462.0,
+   23707.0,
+   13995.0,
+   19426.0,
+   15896.0,
+   19532.0
+  ],
+  "rubber_ha": [
+   53663.0,
+   66194.0,
+   35628.0,
+   105555.0,
+   95755.0,
+   93585.0,
+   94831.0,
+   110592.0,
+   180740.0,
+   134323.0,
+   191441.0,
+   338514.0,
+   263136.0,
+   363720.0,
+   85480.0,
+   94750.0,
+   74167.0,
+   64810.0,
+   63193.0,
+   43130.0,
+   39657.0,
+   37427.0,
+   65026.0,
+   49386.0,
+   59991.0
+  ],
+  "outside_plantation_ha": [
+   399222.0,
+   479088.0,
+   338584.0,
+   583396.0,
+   485882.0,
+   609233.0,
+   586949.0,
+   552296.0,
+   821699.0,
+   446705.0,
+   585474.0,
+   942829.0,
+   475306.0,
+   1063336.0,
+   1240679.0,
+   1933898.0,
+   928519.0,
+   886918.0,
+   875794.0,
+   692943.0,
+   585685.0,
+   658200.0,
+   1041197.0,
+   827714.0,
+   876709.0
+  ],
+  "primary_2001_ha": [
+   115173.0,
+   273678.0,
+   250136.0,
+   482518.0,
+   481618.0,
+   471673.0,
+   529724.0,
+   472674.0,
+   688489.0,
+   544959.0,
+   617949.0,
+   861273.0,
+   476269.0,
+   741752.0,
+   671279.0,
+   935132.0,
+   375729.0,
+   342316.0,
+   326043.0,
+   271877.0,
+   204365.0,
+   231599.0,
+   294447.0,
+   260764.0,
+   297689.0
+  ],
+  "primary_outside_plantation_ha": [
+   74761.0,
+   176325.0,
+   177188.0,
+   236016.0,
+   201795.0,
+   225603.0,
+   272176.0,
+   198729.0,
+   298202.0,
+   192785.0,
+   211036.0,
+   358342.0,
+   202664.0,
+   450978.0,
+   530058.0,
+   853722.0,
+   330491.0,
+   313071.0,
+   303154.0,
+   257254.0,
+   193398.0,
+   220854.0,
+   281802.0,
+   248862.0,
+   287651.0
+  ],
+  "in_plantation_share": [
+   0.4675,
+   0.4441,
+   0.3829,
+   0.5507,
+   0.592,
+   0.5779,
+   0.58,
+   0.6072,
+   0.5804,
+   0.6533,
+   0.6233,
+   0.5857,
+   0.5857,
+   0.4425,
+   0.2945,
+   0.2071,
+   0.291,
+   0.2774,
+   0.2611,
+   0.2843,
+   0.3088,
+   0.2617,
+   0.259,
+   0.2663,
+   0.2506
+  ],
+  "grand_total_ha": 33358245.0,
+  "grand_plantation_ha": 14439990.0,
+  "grand_plantation_share": 0.4329,
+  "grand_by_class_mha": {
+   "none": 18.918,
+   "oil_palm": 9.513,
+   "rubber": 2.805,
+   "wood_fibre": 2.122
+  },
+  "share_first": 0.4675,
+  "share_peak": 0.6533,
+  "share_peak_year": 2010,
+  "share_last": 0.2506,
+  "gfw_published_primary_loss": {
+   "2023": 292374,
+   "2024": 258812
+  },
+  "our_primary_loss": {
+   "2023": 294447.0,
+   "2024": 260764.0
+  },
+  "primary_reconciliation_pct": {
+   "2023": 0.71,
+   "2024": 0.75
+  },
+  "method": "Hansen umd_tree_cover_loss v1.13 year__tcd30_2000 crossed at native 30 m with SDPT v2 planted-tree extent (simpleName: 1 oil palm, 2 wood fibre or timber, 3 rubber) and the UMD 2001 primary-forest mask, over Indonesian province polygons, with geodetic pixel area."
+ },
+ "catchment": {
+  "bins_km": [
+   0,
+   5,
+   10,
+   15,
+   20,
+   25,
+   30,
+   40,
+   50,
+   75,
+   100,
+   150,
+   1000
+  ],
+  "cum": {
+   "land": [
+    0.0488,
+    0.1373,
+    0.2161,
+    0.2812,
+    0.3364,
+    0.3839,
+    0.46,
+    0.5187,
+    0.609,
+    0.6692,
+    0.7623,
+    1.0
+   ],
+   "domain": [
+    0.0139,
+    0.0532,
+    0.1039,
+    0.1572,
+    0.2097,
+    0.2603,
+    0.3497,
+    0.4254,
+    0.5485,
+    0.633,
+    0.7615,
+    1.0
+   ],
+   "alert": [
+    0.0367,
+    0.1599,
+    0.3022,
+    0.4258,
+    0.5234,
+    0.6031,
+    0.6863,
+    0.7478,
+    0.8303,
+    0.8731,
+    0.9218,
+    1.0
+   ],
+   "unfiltered": [
+    0.0244,
+    0.1018,
+    0.1954,
+    0.2868,
+    0.3643,
+    0.4337,
+    0.5239,
+    0.5917,
+    0.6949,
+    0.7516,
+    0.8338,
+    1.0
+   ]
+  },
+  "land_ha": 190283225.0,
+  "domain_ha": 94553066.0,
+  "domain_share_of_land": 0.4969,
+  "national": {
+   "5": {
+    "land_base": 0.0488,
+    "domain_base": 0.0139,
+    "alert_ha_share": 0.0367,
+    "alert_event_share": 0.0309,
+    "lift_vs_domain": 2.6458,
+    "lift_vs_land": 0.7515
+   },
+   "10": {
+    "land_base": 0.1373,
+    "domain_base": 0.0532,
+    "alert_ha_share": 0.1599,
+    "alert_event_share": 0.1354,
+    "lift_vs_domain": 3.0072,
+    "lift_vs_land": 1.164
+   },
+   "20": {
+    "land_base": 0.2812,
+    "domain_base": 0.1572,
+    "alert_ha_share": 0.4258,
+    "alert_event_share": 0.37,
+    "lift_vs_domain": 2.7092,
+    "lift_vs_land": 1.5143
+   },
+   "30": {
+    "land_base": 0.3839,
+    "domain_base": 0.2603,
+    "alert_ha_share": 0.6031,
+    "alert_event_share": 0.5338,
+    "lift_vs_domain": 2.317,
+    "lift_vs_land": 1.5708
+   },
+   "40": {
+    "land_base": 0.46,
+    "domain_base": 0.3497,
+    "alert_ha_share": 0.6863,
+    "alert_event_share": 0.6295,
+    "lift_vs_domain": 1.9622,
+    "lift_vs_land": 1.4918
+   },
+   "50": {
+    "land_base": 0.5187,
+    "domain_base": 0.4254,
+    "alert_ha_share": 0.7478,
+    "alert_event_share": 0.6973,
+    "lift_vs_domain": 1.7579,
+    "lift_vs_land": 1.4417
+   },
+   "75": {
+    "land_base": 0.609,
+    "domain_base": 0.5485,
+    "alert_ha_share": 0.8303,
+    "alert_event_share": 0.7933,
+    "lift_vs_domain": 1.5138,
+    "lift_vs_land": 1.3634
+   },
+   "100": {
+    "land_base": 0.6692,
+    "domain_base": 0.633,
+    "alert_ha_share": 0.8731,
+    "alert_event_share": 0.8372,
+    "lift_vs_domain": 1.3795,
+    "lift_vs_land": 1.3047
+   }
+  },
+  "radii": [
+   5,
+   10,
+   20,
+   30,
+   40,
+   50,
+   75,
+   100
+  ],
+  "method": "Systematic lattice sample of the UMD 2001 primary humid-tropical-forest mask (RADD's detection domain) at 445 m spacing, clipped to Indonesian province polygons, with great-circle distance to the nearest Universal Mill List mill at every sample.",
+  "lattice_m": 445.3,
+  "headline": {
+   "domain_base": 0.4254,
+   "land_base": 0.5187,
+   "alert": 0.7478,
+   "alert_events": 0.6973,
+   "lift": 1.76,
+   "unfiltered": 0.5917,
+   "unfiltered_lift": 1.39
+  },
+  "best_radius": {
+   "km": 10,
+   "lift": 3.01,
+   "base": 0.0532,
+   "alert": 0.1599
+  },
+  "provinces": [
+   {
+    "province": "Central Kalimantan",
+    "alert_ha": 101893.9844,
+    "domain_ha": 8810902.8309,
+    "land_ha": 15454060.0455,
+    "domain_base_50": 0.6404,
+    "land_base_50": 0.7676,
+    "alert_share_50": 0.848,
+    "lift_50": 1.3241
+   },
+   {
+    "province": "Papua",
+    "alert_ha": 76818.375,
+    "domain_ha": 24852303.8719,
+    "land_ha": 31802407.08,
+    "domain_base_50": 0.1422,
+    "land_base_50": 0.1403,
+    "alert_share_50": 0.2617,
+    "lift_50": 1.841
+   },
+   {
+    "province": "West Kalimantan",
+    "alert_ha": 75137.4688,
+    "domain_ha": 6915025.0798,
+    "land_ha": 14782231.0176,
+    "domain_base_50": 0.5975,
+    "land_base_50": 0.7883,
+    "alert_share_50": 0.8786,
+    "lift_50": 1.4706
+   },
+   {
+    "province": "East Kalimantan",
+    "alert_ha": 69652.6719,
+    "domain_ha": 6324867.9159,
+    "land_ha": 12739868.7312,
+    "domain_base_50": 0.6853,
+    "land_base_50": 0.8391,
+    "alert_share_50": 0.9761,
+    "lift_50": 1.4244
+   },
+   {
+    "province": "Riau",
+    "alert_ha": 61455.2656,
+    "domain_ha": 3672620.1739,
+    "land_ha": 9017530.8191,
+    "domain_base_50": 0.9475,
+    "land_base_50": 0.9645,
+    "alert_share_50": 0.9792,
+    "lift_50": 1.0335
+   },
+   {
+    "province": "West Papua",
+    "alert_ha": 44954.0156,
+    "domain_ha": 8646560.6073,
+    "land_ha": 9669139.6101,
+    "domain_base_50": 0.2163,
+    "land_base_50": 0.2242,
+    "alert_share_50": 0.4708,
+    "lift_50": 2.1764
+   },
+   {
+    "province": "Aceh",
+    "alert_ha": 43804.9453,
+    "domain_ha": 3389768.8137,
+    "land_ha": 5718115.6059,
+    "domain_base_50": 0.7566,
+    "land_base_50": 0.7648,
+    "alert_share_50": 0.8607,
+    "lift_50": 1.1376
+   },
+   {
+    "province": "North Kalimantan",
+    "alert_ha": 37857.7656,
+    "domain_ha": 6365847.6262,
+    "land_ha": 7161507.7148,
+    "domain_base_50": 0.3309,
+    "land_base_50": 0.3925,
+    "alert_share_50": 0.8046,
+    "lift_50": 2.4317
+   },
+   {
+    "province": "West Sumatra",
+    "alert_ha": 37798.1367,
+    "domain_ha": 2297778.6588,
+    "land_ha": 4284044.2667,
+    "domain_base_50": 0.582,
+    "land_base_50": 0.6292,
+    "alert_share_50": 0.8509,
+    "lift_50": 1.4619
+   },
+   {
+    "province": "Jambi",
+    "alert_ha": 37735.875,
+    "domain_ha": 1624152.7797,
+    "land_ha": 4941477.1732,
+    "domain_base_50": 0.8609,
+    "land_base_50": 0.924,
+    "alert_share_50": 0.8523,
+    "lift_50": 0.9899
+   },
+   {
+    "province": "Central Sulawesi",
+    "alert_ha": 31639.1914,
+    "domain_ha": 4045671.4727,
+    "land_ha": 6085893.9581,
+    "domain_base_50": 0.5521,
+    "land_base_50": 0.506,
+    "alert_share_50": 0.685,
+    "lift_50": 1.2408
+   },
+   {
+    "province": "North Sumatra",
+    "alert_ha": 27169.7188,
+    "domain_ha": 2110702.2566,
+    "land_ha": 7278701.1052,
+    "domain_base_50": 0.9029,
+    "land_base_50": 0.8682,
+    "alert_share_50": 0.8993,
+    "lift_50": 0.996
+   },
+   {
+    "province": "Southeast Sulawesi",
+    "alert_ha": 19283.1484,
+    "domain_ha": 2012287.2144,
+    "land_ha": 3655615.0688,
+    "domain_base_50": 0.4824,
+    "land_base_50": 0.5194,
+    "alert_share_50": 0.6719,
+    "lift_50": 1.3928
+   },
+   {
+    "province": "Bengkulu",
+    "alert_ha": 16352.7578,
+    "domain_ha": 819191.8843,
+    "land_ha": 2115253.4427,
+    "domain_base_50": 0.9923,
+    "land_base_50": 0.9777,
+    "alert_share_50": 0.9984,
+    "lift_50": 1.0062
+   },
+   {
+    "province": "West Sulawesi",
+    "alert_ha": 11265.5586,
+    "domain_ha": 900412.3902,
+    "land_ha": 1626704.0651,
+    "domain_base_50": 0.5623,
+    "land_base_50": 0.5246,
+    "alert_share_50": 0.7774,
+    "lift_50": 1.3826
+   },
+   {
+    "province": "North Maluku",
+    "alert_ha": 11233.002,
+    "domain_ha": 2280411.5932,
+    "land_ha": 3153583.7956,
+    "domain_base_50": 0.0333,
+    "land_base_50": 0.0324,
+    "alert_share_50": 0.0118,
+    "lift_50": 0.3528
+   },
+   {
+    "province": "Maluku",
+    "alert_ha": 8396.5879,
+    "domain_ha": 3014883.2633,
+    "land_ha": 4641410.4955,
+    "domain_base_50": 0.0,
+    "land_base_50": 0.0,
+    "alert_share_50": 0.0,
+    "lift_50": null
+   },
+   {
+    "province": "South Sulawesi",
+    "alert_ha": 8199.3945,
+    "domain_ha": 1516582.3548,
+    "land_ha": 4647686.68,
+    "domain_base_50": 0.5663,
+    "land_base_50": 0.2824,
+    "alert_share_50": 0.6983,
+    "lift_50": 1.2332
+   },
+   {
+    "province": "Gorontalo",
+    "alert_ha": 7662.6777,
+    "domain_ha": 732266.2518,
+    "land_ha": 1206765.2974,
+    "domain_base_50": 0.7017,
+    "land_base_50": 0.6793,
+    "alert_share_50": 0.9202,
+    "lift_50": 1.3114
+   },
+   {
+    "province": "South Sumatra",
+    "alert_ha": 7176.0474,
+    "domain_ha": 890382.2305,
+    "land_ha": 8637189.0042,
+    "domain_base_50": 0.9048,
+    "land_base_50": 0.975,
+    "alert_share_50": 0.9184,
+    "lift_50": 1.015
+   },
+   {
+    "province": "Bangka-Belitung Islands",
+    "alert_ha": 6458.9795,
+    "domain_ha": 240153.1443,
+    "land_ha": 1739412.1396,
+    "domain_base_50": 0.9162,
+    "land_base_50": 0.9816,
+    "alert_share_50": 0.9995,
+    "lift_50": 1.0909
+   },
+   {
+    "province": "South Kalimantan",
+    "alert_ha": 6071.8398,
+    "domain_ha": 696681.4163,
+    "land_ha": 3754028.9333,
+    "domain_base_50": 0.9429,
+    "land_base_50": 0.9731,
+    "alert_share_50": 0.9854,
+    "lift_50": 1.0451
+   },
+   {
+    "province": "West Nusa Tenggara",
+    "alert_ha": 6024.5586,
+    "domain_ha": 436017.1826,
+    "land_ha": 1973793.9708,
+    "domain_base_50": 0.0,
+    "land_base_50": 0.0,
+    "alert_share_50": 0.0,
+    "lift_50": null
+   }
+  ]
+ },
+ "floor": {
+  "grid_deg": 0.05,
+  "unfiltered_ha": 2326554.0,
+  "event_table_ha": 763643.0,
+  "keeps": 0.3282,
+  "filtered_within_50": 0.7478,
+  "unfiltered_within_50": 0.5917,
+  "gap_pp": 15.6,
+  "by_size": [
+   {
+    "band": "0.5-1",
+    "events": 197501,
+    "ha": 152172.0,
+    "within_50km_ha_share": 0.6635,
+    "median_mill_km": 30.6
+   },
+   {
+    "band": "1-2",
+    "events": 134085,
+    "ha": 182755.0,
+    "within_50km_ha_share": 0.7138,
+    "median_mill_km": 27.0
+   },
+   {
+    "band": "2-5",
+    "events": 55590,
+    "ha": 163157.0,
+    "within_50km_ha_share": 0.7624,
+    "median_mill_km": 23.1
+   },
+   {
+    "band": "5-20",
+    "events": 14872,
+    "ha": 126375.0,
+    "within_50km_ha_share": 0.7995,
+    "median_mill_km": 20.2
+   },
+   {
+    "band": "20-100",
+    "events": 1995,
+    "ha": 74637.0,
+    "within_50km_ha_share": 0.8244,
+    "median_mill_km": 18.2
+   },
+   {
+    "band": "100+",
+    "events": 244,
+    "ha": 64547.0,
+    "within_50km_ha_share": 0.8168,
+    "median_mill_km": 19.7
+   }
+  ],
+  "gate_keeps_focus_provinces": 0.2177,
+  "note": "The unfiltered grid is 0.05 degrees (~5.5 km), so a cell's mill distance is its centre's; that is coarse against a 50 km radius but unbiased."
+ },
+ "identifiability": {
+  "mills": {
+   "mean_over_alert_ha_in_catchment": 8.581,
+   "median": 6.0,
+   "p90": 19.0,
+   "max": 67.0,
+   "share_of_catchment_ha_with_2plus_mills": 0.886,
+   "share_of_catchment_ha_with_5plus_mills": 0.613
+  },
+  "pressure_sum_ha": 780633.0,
+  "in_catchment_12m_ha": 109384.0,
+  "alert_12m_ha": 153267.0,
+  "double_count": 7.14,
+  "n_mills_with_pressure": 1348,
+  "n_mills": 1396
+ },
+ "deforested_islands": {
+  "java_ha": 2590.2,
+  "java_share": 0.00339,
+  "nusa_ha": 6977.5,
+  "nusa_share": 0.00914,
+  "provinces_with_alerts": 32,
+  "provinces_total": 34,
+  "smallest": [
+   {
+    "province": "Banten",
+    "ha": 14.2
+   },
+   {
+    "province": "Bali",
+    "ha": 161.6
+   },
+   {
+    "province": "West Java",
+    "ha": 421.7
+   },
+   {
+    "province": "Lampung",
+    "ha": 435.9
+   },
+   {
+    "province": "Central Java",
+    "ha": 508.9
+   },
+   {
+    "province": "East Nusa Tenggara",
+    "ha": 791.3
+   },
+   {
+    "province": "North Sulawesi",
+    "ha": 1319.6
+   },
+   {
+    "province": "East Java",
+    "ha": 1645.4
+   }
+  ]
+ },
+ "domain": {
+  "primary_share_of_alert_ha": 1.0,
+  "domain_share_of_land": 0.4969,
+  "sdpt_palm_ha": 19072149.0,
+  "sdpt_wood_fibre_ha": 3140259.0,
+  "sdpt_rubber_ha": 6909168.0,
+  "palm_in_domain_share": 0.1368,
+  "palm_in_domain_ha": 2608127.0,
+  "descals_mapped_mha": 11.54,
+  "descals_estimate_mha": 12.05,
+  "gaveau_mapped_mha": 16.24,
+  "gaveau_adjusted_mha": 18.83,
+  "sdpt_vs_descals": 1.653,
+  "sdpt_vs_gaveau": 1.174
+ },
+ "sensors": {
+  "agree_all_events": 0.5142,
+  "agree_all_ha": 0.6496,
+  "gate_share": 0.7861,
+  "gate_n": 17062,
+  "gate_event_share": 0.0422,
+  "gate_ha_share": 0.3456,
+  "by_size": [
+   {
+    "band": "0.5-1",
+    "events": 197501,
+    "agree": 0.4274
+   },
+   {
+    "band": "1-2",
+    "events": 134085,
+    "agree": 0.5457
+   },
+   {
+    "band": "2-5",
+    "events": 55590,
+    "agree": 0.6633
+   },
+   {
+    "band": "5-20",
+    "events": 14872,
+    "agree": 0.7759
+   },
+   {
+    "band": "20-100",
+    "events": 1995,
+    "agree": 0.8456
+   },
+   {
+    "band": "100+",
+    "events": 244,
+    "agree": 0.8689
+   }
+  ],
+  "lead": {
+   "n_matched": 207889.0,
+   "n_in_window": 122399.0,
+   "out_of_window_share": 0.41,
+   "mean": 17.64,
+   "median": 20.0,
+   "p25": 3.0,
+   "p75": 38.0,
+   "share_radar_first": 0.78
+  },
+  "lead_hist": [
+   2539,
+   2764,
+   3221,
+   3690,
+   4747,
+   8440,
+   16743,
+   17509,
+   18247,
+   15679,
+   14180,
+   14640
+  ],
+  "lead_edges": [
+   -60,
+   -50,
+   -40,
+   -30,
+   -20,
+   -10,
+   0,
+   10,
+   20,
+   30,
+   40,
+   50,
+   60
+  ],
+  "window_days": 60
+ },
+ "weekly": {
+  "weeks": [
+   "2019-12-30",
+   "2020-01-06",
+   "2020-01-13",
+   "2020-01-20",
+   "2020-01-27",
+   "2020-02-03",
+   "2020-02-10",
+   "2020-02-17",
+   "2020-02-24",
+   "2020-03-02",
+   "2020-03-09",
+   "2020-03-16",
+   "2020-03-23",
+   "2020-03-30",
+   "2020-04-06",
+   "2020-04-13",
+   "2020-04-20",
+   "2020-04-27",
+   "2020-05-04",
+   "2020-05-11",
+   "2020-05-18",
+   "2020-05-25",
+   "2020-06-01",
+   "2020-06-08",
+   "2020-06-15",
+   "2020-06-22",
+   "2020-06-29",
+   "2020-07-06",
+   "2020-07-13",
+   "2020-07-20",
+   "2020-07-27",
+   "2020-08-03",
+   "2020-08-10",
+   "2020-08-17",
+   "2020-08-24",
+   "2020-08-31",
+   "2020-09-07",
+   "2020-09-14",
+   "2020-09-21",
+   "2020-09-28",
+   "2020-10-05",
+   "2020-10-12",
+   "2020-10-19",
+   "2020-10-26",
+   "2020-11-02",
+   "2020-11-09",
+   "2020-11-16",
+   "2020-11-23",
+   "2020-11-30",
+   "2020-12-07",
+   "2020-12-14",
+   "2020-12-21",
+   "2020-12-28",
+   "2021-01-04",
+   "2021-01-11",
+   "2021-01-18",
+   "2021-01-25",
+   "2021-02-01",
+   "2021-02-08",
+   "2021-02-15",
+   "2021-02-22",
+   "2021-03-01",
+   "2021-03-08",
+   "2021-03-15",
+   "2021-03-22",
+   "2021-03-29",
+   "2021-04-05",
+   "2021-04-12",
+   "2021-04-19",
+   "2021-04-26",
+   "2021-05-03",
+   "2021-05-10",
+   "2021-05-17",
+   "2021-05-24",
+   "2021-05-31",
+   "2021-06-07",
+   "2021-06-14",
+   "2021-06-21",
+   "2021-06-28",
+   "2021-07-05",
+   "2021-07-12",
+   "2021-07-19",
+   "2021-07-26",
+   "2021-08-02",
+   "2021-08-09",
+   "2021-08-16",
+   "2021-08-23",
+   "2021-08-30",
+   "2021-09-06",
+   "2021-09-13",
+   "2021-09-20",
+   "2021-09-27",
+   "2021-10-04",
+   "2021-10-11",
+   "2021-10-18",
+   "2021-10-25",
+   "2021-11-01",
+   "2021-11-08",
+   "2021-11-15",
+   "2021-11-22",
+   "2021-11-29",
+   "2021-12-06",
+   "2021-12-13",
+   "2021-12-20",
+   "2021-12-27",
+   "2022-01-03",
+   "2022-01-10",
+   "2022-01-17",
+   "2022-01-24",
+   "2022-01-31",
+   "2022-02-07",
+   "2022-02-14",
+   "2022-02-21",
+   "2022-02-28",
+   "2022-03-07",
+   "2022-03-14",
+   "2022-03-21",
+   "2022-03-28",
+   "2022-04-04",
+   "2022-04-11",
+   "2022-04-18",
+   "2022-04-25",
+   "2022-05-02",
+   "2022-05-09",
+   "2022-05-16",
+   "2022-05-23",
+   "2022-05-30",
+   "2022-06-06",
+   "2022-06-13",
+   "2022-06-20",
+   "2022-06-27",
+   "2022-07-04",
+   "2022-07-11",
+   "2022-07-18",
+   "2022-07-25",
+   "2022-08-01",
+   "2022-08-08",
+   "2022-08-15",
+   "2022-08-22",
+   "2022-08-29",
+   "2022-09-05",
+   "2022-09-12",
+   "2022-09-19",
+   "2022-09-26",
+   "2022-10-03",
+   "2022-10-10",
+   "2022-10-17",
+   "2022-10-24",
+   "2022-10-31",
+   "2022-11-07",
+   "2022-11-14",
+   "2022-11-21",
+   "2022-11-28",
+   "2022-12-05",
+   "2022-12-12",
+   "2022-12-19",
+   "2022-12-26",
+   "2023-01-02",
+   "2023-01-09",
+   "2023-01-16",
+   "2023-01-23",
+   "2023-01-30",
+   "2023-02-06",
+   "2023-02-13",
+   "2023-02-20",
+   "2023-02-27",
+   "2023-03-06",
+   "2023-03-13",
+   "2023-03-20",
+   "2023-03-27",
+   "2023-04-03",
+   "2023-04-10",
+   "2023-04-17",
+   "2023-04-24",
+   "2023-05-01",
+   "2023-05-08",
+   "2023-05-15",
+   "2023-05-22",
+   "2023-05-29",
+   "2023-06-05",
+   "2023-06-12",
+   "2023-06-19",
+   "2023-06-26",
+   "2023-07-03",
+   "2023-07-10",
+   "2023-07-17",
+   "2023-07-24",
+   "2023-07-31",
+   "2023-08-07",
+   "2023-08-14",
+   "2023-08-21",
+   "2023-08-28",
+   "2023-09-04",
+   "2023-09-11",
+   "2023-09-18",
+   "2023-09-25",
+   "2023-10-02",
+   "2023-10-09",
+   "2023-10-16",
+   "2023-10-23",
+   "2023-10-30",
+   "2023-11-06",
+   "2023-11-13",
+   "2023-11-20",
+   "2023-11-27",
+   "2023-12-04",
+   "2023-12-11",
+   "2023-12-18",
+   "2023-12-25",
+   "2024-01-01",
+   "2024-01-08",
+   "2024-01-15",
+   "2024-01-22",
+   "2024-01-29",
+   "2024-02-05",
+   "2024-02-12",
+   "2024-02-19",
+   "2024-02-26",
+   "2024-03-04",
+   "2024-03-11",
+   "2024-03-18",
+   "2024-03-25",
+   "2024-04-01",
+   "2024-04-08",
+   "2024-04-15",
+   "2024-04-22",
+   "2024-04-29",
+   "2024-05-06",
+   "2024-05-13",
+   "2024-05-20",
+   "2024-05-27",
+   "2024-06-03",
+   "2024-06-10",
+   "2024-06-17",
+   "2024-06-24",
+   "2024-07-01",
+   "2024-07-08",
+   "2024-07-15",
+   "2024-07-22",
+   "2024-07-29",
+   "2024-08-05",
+   "2024-08-12",
+   "2024-08-19",
+   "2024-08-26",
+   "2024-09-02",
+   "2024-09-09",
+   "2024-09-16",
+   "2024-09-23",
+   "2024-09-30",
+   "2024-10-07",
+   "2024-10-14",
+   "2024-10-21",
+   "2024-10-28",
+   "2024-11-04",
+   "2024-11-11",
+   "2024-11-18",
+   "2024-11-25",
+   "2024-12-02",
+   "2024-12-09",
+   "2024-12-16",
+   "2024-12-23",
+   "2024-12-30",
+   "2025-01-06",
+   "2025-01-13",
+   "2025-01-20",
+   "2025-01-27",
+   "2025-02-03",
+   "2025-02-10",
+   "2025-02-17",
+   "2025-02-24",
+   "2025-03-03",
+   "2025-03-10",
+   "2025-03-17",
+   "2025-03-24",
+   "2025-03-31",
+   "2025-04-07",
+   "2025-04-14",
+   "2025-04-21",
+   "2025-04-28",
+   "2025-05-05",
+   "2025-05-12",
+   "2025-05-19",
+   "2025-05-26",
+   "2025-06-02",
+   "2025-06-09",
+   "2025-06-16",
+   "2025-06-23",
+   "2025-06-30",
+   "2025-07-07",
+   "2025-07-14",
+   "2025-07-21",
+   "2025-07-28",
+   "2025-08-04",
+   "2025-08-11",
+   "2025-08-18",
+   "2025-08-25",
+   "2025-09-01",
+   "2025-09-08",
+   "2025-09-15",
+   "2025-09-22",
+   "2025-09-29",
+   "2025-10-06",
+   "2025-10-13",
+   "2025-10-20",
+   "2025-10-27",
+   "2025-11-03",
+   "2025-11-10",
+   "2025-11-17",
+   "2025-11-24",
+   "2025-12-01",
+   "2025-12-08",
+   "2025-12-15",
+   "2025-12-22",
+   "2025-12-29",
+   "2026-01-05",
+   "2026-01-12",
+   "2026-01-19",
+   "2026-01-26",
+   "2026-02-02",
+   "2026-02-09",
+   "2026-02-16",
+   "2026-02-23",
+   "2026-03-02",
+   "2026-03-09",
+   "2026-03-16",
+   "2026-03-23",
+   "2026-03-30",
+   "2026-04-06",
+   "2026-04-13",
+   "2026-04-20",
+   "2026-04-27",
+   "2026-05-04",
+   "2026-05-11",
+   "2026-05-18",
+   "2026-05-25",
+   "2026-06-01",
+   "2026-06-08",
+   "2026-06-15",
+   "2026-06-22",
+   "2026-06-29",
+   "2026-07-06",
+   "2026-07-13",
+   "2026-07-20",
+   "2026-07-27",
+   "2026-08-03",
+   "2026-08-10",
+   "2026-08-17"
+  ],
+  "ha": [
+   10618.6,
+   9907.0,
+   3102.2,
+   3627.7,
+   1453.8,
+   1966.2,
+   990.4,
+   1532.7,
+   1085.1,
+   1526.6,
+   1422.9,
+   1263.6,
+   1978.9,
+   1020.5,
+   2002.0,
+   1667.3,
+   817.0,
+   1427.9,
+   956.5,
+   2183.3,
+   1368.4,
+   1748.2,
+   2029.8,
+   1622.6,
+   3291.4,
+   1582.8,
+   2608.9,
+   2921.3,
+   1452.0,
+   2325.4,
+   1838.2,
+   3094.9,
+   8676.9,
+   4130.2,
+   3588.9,
+   1797.1,
+   2480.0,
+   1830.6,
+   1816.5,
+   2134.9,
+   1356.6,
+   2162.3,
+   1206.4,
+   1471.2,
+   1451.4,
+   1248.6,
+   1388.7,
+   1096.0,
+   1939.9,
+   1090.8,
+   1178.0,
+   1094.5,
+   922.8,
+   1542.7,
+   1429.1,
+   1293.6,
+   1602.6,
+   1348.3,
+   1660.1,
+   1820.1,
+   1477.3,
+   838.1,
+   1293.9,
+   1333.0,
+   649.6,
+   1213.3,
+   588.6,
+   1076.8,
+   704.9,
+   804.2,
+   906.8,
+   659.5,
+   1075.6,
+   1008.6,
+   1224.1,
+   1662.2,
+   784.3,
+   1554.5,
+   3326.1,
+   2969.5,
+   1395.2,
+   2398.2,
+   1888.7,
+   2694.6,
+   3905.7,
+   1863.0,
+   1477.8,
+   1989.1,
+   864.4,
+   1742.0,
+   1637.6,
+   1833.6,
+   1744.9,
+   991.4,
+   2485.4,
+   1291.7,
+   681.4,
+   3112.8,
+   2145.4,
+   1643.7,
+   1301.1,
+   1598.8,
+   1294.9,
+   1614.0,
+   1914.3,
+   1187.5,
+   1550.0,
+   1268.9,
+   2296.7,
+   1310.1,
+   1922.9,
+   2546.3,
+   1408.3,
+   1511.1,
+   1055.7,
+   2575.4,
+   1475.7,
+   1141.5,
+   1168.0,
+   653.3,
+   1446.0,
+   689.1,
+   1006.3,
+   1449.8,
+   975.0,
+   2011.8,
+   857.9,
+   2213.9,
+   1874.5,
+   2923.0,
+   2127.8,
+   799.8,
+   2317.2,
+   1177.8,
+   1908.3,
+   1741.9,
+   3865.1,
+   3321.0,
+   1476.8,
+   1711.0,
+   1916.7,
+   1819.9,
+   1510.3,
+   1111.8,
+   2084.6,
+   1271.1,
+   1246.7,
+   2708.8,
+   1296.1,
+   2048.1,
+   1712.0,
+   2231.4,
+   2068.4,
+   1721.1,
+   1984.5,
+   1147.1,
+   1964.5,
+   1199.7,
+   2508.8,
+   1203.9,
+   1513.1,
+   1598.5,
+   1399.7,
+   1820.2,
+   1745.2,
+   1979.5,
+   1768.9,
+   1431.7,
+   1754.4,
+   1712.0,
+   1540.2,
+   2177.1,
+   701.5,
+   1383.2,
+   1294.0,
+   1964.9,
+   1323.1,
+   2067.2,
+   2818.3,
+   2254.7,
+   2006.5,
+   3364.7,
+   3082.4,
+   3935.0,
+   1466.0,
+   3929.9,
+   7174.7,
+   6234.5,
+   8244.5,
+   8759.5,
+   2739.3,
+   6617.6,
+   2757.4,
+   2196.6,
+   2341.7,
+   3100.8,
+   1531.6,
+   1443.6,
+   1108.3,
+   2222.0,
+   1690.2,
+   1994.9,
+   1839.2,
+   1081.0,
+   1446.9,
+   1556.8,
+   1460.2,
+   1460.1,
+   806.2,
+   1622.5,
+   1091.4,
+   1645.9,
+   1262.8,
+   1216.5,
+   1319.8,
+   982.7,
+   1648.5,
+   1148.7,
+   1516.3,
+   1633.1,
+   969.1,
+   1209.4,
+   964.2,
+   946.5,
+   1156.2,
+   1484.9,
+   1841.7,
+   775.7,
+   2719.8,
+   2618.1,
+   1812.1,
+   1780.5,
+   1084.0,
+   3657.3,
+   4488.6,
+   9681.2,
+   4650.3,
+   2800.3,
+   4672.5,
+   1926.7,
+   3194.1,
+   3068.4,
+   2486.9,
+   2807.6,
+   1479.5,
+   2415.5,
+   1557.2,
+   1935.9,
+   1671.1,
+   1550.4,
+   2380.1,
+   1272.4,
+   2449.7,
+   1930.4,
+   1151.9,
+   1489.0,
+   1323.8,
+   2164.9,
+   1264.3,
+   1814.6,
+   1042.8,
+   1333.8,
+   1687.2,
+   1085.9,
+   2538.5,
+   1852.4,
+   1611.5,
+   2043.3,
+   1839.8,
+   1877.2,
+   1319.3,
+   1757.1,
+   1385.6,
+   1894.4,
+   1792.1,
+   1241.0,
+   3126.2,
+   1933.8,
+   2438.1,
+   3309.5,
+   1731.4,
+   2167.1,
+   2340.4,
+   3734.9,
+   3928.7,
+   4233.2,
+   3374.2,
+   1990.7,
+   3742.7,
+   2599.5,
+   5664.9,
+   4695.3,
+   4789.8,
+   4673.7,
+   2747.2,
+   3166.3,
+   3131.1,
+   2920.8,
+   2888.5,
+   4853.4,
+   4572.3,
+   3180.2,
+   2620.8,
+   4265.2,
+   3174.1,
+   5990.4,
+   2651.0,
+   6116.8,
+   6452.7,
+   4410.2,
+   3608.2,
+   1840.1,
+   2734.2,
+   2273.3,
+   2418.9,
+   3418.0,
+   3148.8,
+   2674.2,
+   1357.5,
+   2216.9,
+   1963.5,
+   2071.3,
+   2282.6,
+   1670.4,
+   1962.1,
+   1612.6,
+   2412.4,
+   2848.7,
+   2113.6,
+   2375.6,
+   2319.6,
+   4665.1,
+   2592.9,
+   3349.8,
+   4239.1,
+   3107.4,
+   4233.9,
+   3319.9,
+   5855.1,
+   3524.7,
+   3786.3,
+   947.6,
+   1300.5,
+   155.2,
+   167.6,
+   7.4,
+   2.4
+  ],
+  "median": 1814.6,
+  "first_two_ha": 20526.0,
+  "first_two_vs_median": 5.66
+ }
+}
