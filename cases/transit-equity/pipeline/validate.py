@@ -4,7 +4,7 @@ G-G1  Timetable sanity (hard). For each published-timetable OD in config.VALIDAT
       in-vehicle time (sum of the non-walking legs of the fastest itinerary in the departure
       window) must land within ±15 % or ±8 min of the operator's own figure, whichever is
       larger.
-G-G2  NOT EVALUATED — it needs live Google Routes API calls, which the user has not
+G-G2  NOT EVALUATED — it needs live Google Routes API calls, which were not
       authorised. Recorded as pending, with the reason, rather than skipped silently.
 G-G3  Network integrity (hard). ≥ 98 % of GTFS stops snap to the street graph within 200 m
       (R5's own snapper, the same one the matrix uses), and no kelurahan origin is left
@@ -410,8 +410,9 @@ def main() -> None:
     stats["G-G1"] = gate_g1(tn)
     stats["G-G3"] = gate_g3(tn, acc)
     stats["G-G2"] = {"gate": "G-G2", "hard": False, "pass": None, "status": "NOT EVALUATED",
-                     "reason": "requires live Google Routes API calls; the user has not "
-                               "authorised them, so no external routing comparison was made."}
+                     "reason": "requires live Google Routes API calls, which were not "
+                               "authorised for this run, so no external routing comparison "
+                               "was made."}
     hard = [stats[g].get("pass") for g in ("G-G1", "G-G3", "G-G4")]
     stats["gates_passed"] = sum(1 for h in hard if h)
     stats["gates_hard"] = len(hard)

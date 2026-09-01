@@ -22,6 +22,14 @@ const g2 = gates.find((g: any) => g.id === "G-I2");
 const g3 = gates.find((g: any) => g.id === "G-I3");
 const g4 = gates.find((g: any) => g.id === "G-I4");
 const g5 = gates.find((g: any) => g.id === "G-I5");
+
+// Per-gate outcomes, never a tally: the house rule is that "0/5" hides which gate failed.
+const gateOutcomes = gates.map((g: any) => ({
+  id: g.id,
+  pass: g.pass === true,
+  evaluated: g.evaluated !== false,
+}));
+const allRed = gateOutcomes.length > 0 && gateOutcomes.every((g) => !g.pass);
 const kabs = S?.kabupaten ?? [];
 const fmt = (n: number | null | undefined, d = 0) =>
   n === null || n === undefined || Number.isNaN(n)
@@ -355,9 +363,13 @@ const CHAPTERS = [
             <span>of the rice fields found ({S?.review?.year ?? "—"})</span>
           </div>
           <div class="stat">
-            <b style={S?.gates_passed === 0 ? "color:var(--alert)" : ""}>
-              {S?.gates_passed ?? "—"}/{S?.gates_total ?? 5}
-            </b><span>gates passed — all red</span>
+            <b class="gate-ids" style={allRed ? "color:var(--alert)" : ""}>
+              {gateOutcomes.length
+                ? gateOutcomes.map((g) => (
+                    <span class="gate-id">{g.id.replace("G-", "")}<i>{g.pass ? "✓" : g.evaluated ? "✗" : "·"}</i></span>
+                  ))
+                : "—"}
+            </b><span>{allRed ? "every gate red — none passed" : "gate outcomes, one by one"}</span>
           </div>
           <div class="stat"><b class="mono" style="font-size:1.15rem">{sarLast}</b><span>last acquisition</span></div>
         </div>
@@ -611,9 +623,9 @@ const CHAPTERS = [
         <div class="chap-head">
           <div class="chap-no">08</div>
           <div>
-            <h2>We had this instrument reviewed, adversarially.</h2>
+            <h2>Audited adversarially, by its own author.</h2>
             <p class="lede" style="margin-top:10px">
-              An independent read of the same data against the published literature. It factors the
+              A second read of the same data against the published literature, written to attack the first. It was done by the person who built the instrument — no external reviewer has checked it, and one person reviews everything here — if you would like to be the first, breaking a gate here is worth more than another instrument. It factors the
               shortfall against the official survey and finds that three-quarters of it is fields
               never found, not crops never counted — so the diagnosis this page used to give was the
               wrong way round. It then takes radar looks away from Karawang's own record and
@@ -1896,7 +1908,13 @@ const CHAPTERS = [
           color: var(--ink-muted, #93a198); }
         .colophon b { color: var(--ink, #e8ede9); font-weight: 600; }
         .colophon .sm { font-size: 0.78rem; }
-      </style>
+      
+      /* Per-gate outcomes in a hero stat: five ids with their own mark, because the
+         house rule forbids reporting them as a count. */
+      .gate-ids { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+      .gate-id { font-size: 0.62em; letter-spacing: 0.04em; white-space: nowrap; }
+      .gate-id i { font-style: normal; margin-left: 2px; }
+</style>
       <div>
         <h3>Instrument</h3>
         <p>Method, models, evaluation and instrument · <b><a href="https://openstudy.id/people/#taufik-adi-nugraha" style="color:inherit">Taufik Adi Nugraha</a></b>
@@ -1910,8 +1928,7 @@ const CHAPTERS = [
       <div>
         <h3>Domain interpretation · open</h3>
         <p>This instrument has no domain author yet. Someone in agricultural statistics or rice agronomy. Detected harvested area has an R² of −11.09 against KSA before calibration and 0.82 after. What is missing is whether that calibration is legitimate or is fitting the answer, what KSA's own method assumes, and whether harvest-timing prediction is actionable for anyone.</p>
-        <p class="sm">Write the interpretation and take <b>first author</b>; the studio is
-        <b>methods co-author</b> for the analysis and evaluation already built here.</p>
+        <p class="sm">Write the interpretation and take <b>first author</b>; the instrument's author above becomes <b>methods co-author</b> for the analysis and evaluation already built here.</p>
       </div>
     </section>
   </body>

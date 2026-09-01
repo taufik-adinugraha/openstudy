@@ -87,7 +87,7 @@ to everything we tested; the levels are not.
   distance makes 11.2 a lower bound by ~10–15 %, so the gap is real: the bus times routed here
   are conservative, not optimistic.
 - **G-G2 · external routing check — NOT EVALUATED.** It requires live Google Routes API calls,
-  which the user has not authorised. Recorded as pending with that reason.
+  which were not authorised for this run. Recorded as pending with that reason.
 - **G-G3 · network integrity — FAIL.** 99.44 % of 8,568 GTFS stops snap to the street graph
   within 200 m (gate needs 98 %), but 15 of 1,511 origins cannot be routed at all: 5 in
   Kepulauan Seribu (no road link, outside the routable clip) and **10 on the mainland**
@@ -112,7 +112,7 @@ to everything we tested; the levels are not.
 - **Gates**: published-timetable OD sample within ±15 %/±8 min (G-G1, hard); stop-snapping
   ≥ 98 % within 200 m and zero unreachable origins (G-G3, hard); monotonicity + ITDP
   People-Near-Transit replication against the 2016 anchors (G-G4). **G-G2 (Google Routes
-  comparison) is NOT evaluated** — it needs live Google Routes API calls the user has not
+  comparison) is NOT evaluated** — it needs live Google Routes API calls that were not
   authorised; `stats.json` records it as pending with that reason.
 - **Jobs are a proxy** — GHS-BUILT-S NRES floorspace, named "job-dense floorspace", never
   "jobs".

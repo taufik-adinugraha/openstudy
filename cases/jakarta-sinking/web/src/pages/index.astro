@@ -299,15 +299,8 @@ const flooded = S?.most_flooded ?? [];
 
     <section class="chapter review-cta">
       <span class="eyebrow">05 · Review</span>
-      <h2>We had this case reviewed, adversarially.</h2>
-      <p>An independent read of the same data against the published literature, and against the GNSS
-      archive that was already on this case's disk. It reproduces the depositors' own per-municipality
-      table to {R?.replication_max_err != null ? `${R.replication_max_err.toFixed(3)} cm/yr` : "three decimal places"},
-      shows that the GNSS gap this page used to blame on a reference frame is really a period gap —
-      Jakarta's subsidence has roughly halved while its neighbours' has accelerated — prices the three
-      assumptions inside the clock, and demonstrates that the exposure ranking is
-      {radarOff != null ? ` ρ = ${radarOff} identical` : " almost identical"} to the same ranking with
-      the radar switched off. Every correction it asked for has been applied above.</p>
+      <h2>Audited adversarially, by its own author.</h2>
+      <p>A second read of the same data against the published literature, and against the GNSS record — written to attack the first. It was done by the person who built the instrument; no external reviewer has checked it — if you would like to be the first, breaking a gate here is worth more than another instrument.</p>
       <a class="cta big" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/article`}>Read the review article →</a>
     </section>
 
@@ -1053,8 +1046,7 @@ const flooded = S?.most_flooded ?? [];
       <div>
         <h3>Domain interpretation · open</h3>
         <p>This instrument has no domain author yet. Someone in geodesy or hydrogeology. The instrument measures how fast the ground is moving and which kelurahan move fastest. What is missing is the mechanism — how much is groundwater extraction against natural compaction and load, what the coastal defence programme assumes, and which measurements would settle it.</p>
-        <p class="sm">Write the interpretation and take <b>first author</b>; the studio is
-        <b>methods co-author</b> for the analysis and evaluation already built here.</p>
+        <p class="sm">Write the interpretation and take <b>first author</b>; the instrument's author above becomes <b>methods co-author</b> for the analysis and evaluation already built here.</p>
       </div>
     </section>
   </body>

@@ -505,7 +505,7 @@
     "hard": false,
     "pass": null,
     "status": "NOT EVALUATED",
-    "reason": "requires live Google Routes API calls; the user has not authorised them, so no external routing comparison was made."
+    "reason": "requires live Google Routes API calls, which were not authorised for this run, so no external routing comparison was made."
   },
   "gates_passed": 1,
   "gates_hard": 3,
@@ -524,7 +524,7 @@
       "hard": false,
       "pass": null,
       "status": "NOT EVALUATED",
-      "reason": "requires live Google Routes API calls; the user has not authorised them, so no external routing comparison was made."
+      "reason": "requires live Google Routes API calls, which were not authorised for this run, so no external routing comparison was made."
     },
     {
       "id": "G-G3",

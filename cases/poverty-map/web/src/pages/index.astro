@@ -137,6 +137,19 @@ import "maplibre-gl/dist/maplibre-gl.css";
           </div>
         </div>
 
+        <div class="panel pad reveal" style="margin-top:var(--space-4)">
+          <span class="stamp">Corrected after review · updated 1 September 2026</span>
+          <p class="prose" style="margin-top:10px">
+            This page used to explain the province offsets with a single sentence — <b>"No
+            satellite can see a price level."</b> The review tested it on this case's own data
+            and it is false: the same features predict a held-out province's poverty line, and
+            handing the model the true line closes only a small part of the shortfall. The
+            claim is <b>withdrawn</b> and replaced by the tail-statistic explanation, which the
+            evidence does support. The full accounting, including four other claims that did
+            not survive, is in <a href="./article/#corrections">the review article</a>.
+          </p>
+        </div>
+
         <div class="gate-grid reveal" id="gate-grid"></div>
 
         <div class="grid-2 reveal">
@@ -408,8 +421,8 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
         <div class="ch-head reveal">
           <span class="chno">07</span>
           <div>
-            <h2 id="rv-h">We had this case reviewed, adversarially.</h2>
-            <p class="lede">An independent read of the same data against the published literature.
+            <h2 id="rv-h">Audited adversarially, by its own author.</h2>
+            <p class="lede">A second read of the same data against the published literature, written to attack the first. It was done by the person who built the instrument — no external reviewer has checked it, and one person reviews everything here — if you would like to be the first, breaking a gate here is worth more than another instrument.
             It tests the defence this page used to give for its failing skill check — that the
             target is a nominal poverty line no satellite can see — by handing the model that line
             and by re-targeting it onto the line itself. Neither test supports the defence, and the
@@ -2449,8 +2462,7 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
       <div>
         <h3>Domain interpretation · open</h3>
         <p>This instrument has no domain author yet. Someone who knows BPS poverty measurement. The model downscales to kecamatan with spatial cross-validation. What is missing is whether estimates at that resolution can responsibly be used for targeting, what Susenas sampling actually supports, and where a sub-district figure would do harm.</p>
-        <p class="sm">Write the interpretation and take <b>first author</b>; the studio is
-        <b>methods co-author</b> for the analysis and evaluation already built here.</p>
+        <p class="sm">Write the interpretation and take <b>first author</b>; the instrument's author above becomes <b>methods co-author</b> for the analysis and evaluation already built here.</p>
       </div>
     </section>
   </body>
