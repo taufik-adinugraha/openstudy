@@ -1,0 +1,368 @@
+#!/usr/bin/env bash
+# Move data between this laptop and the demo server. Pipelines run here; the server
+# only serves what they produced.
+#
+# The split matters because the two sides hold different things. Pipelines need the
+# raw inputs — 13 GB of parquet across ten cases — and the server needs none of it:
+# every page reads a handful of small JSON files, 42 MB in total. So the raw data
+# stays on whichever machine does the work, and only the JSON crosses.
+#
+# Two directories per case are web-facing and nothing else is:
+#   web/src/data/     imported at build time (article.json and friends)
+#   web/public/data/  served as files and fetched by the page
+# Source code is never synced by this script. A data push that can also change code
+# is a deploy, and a deploy wants review.
+#
+# Usage:
+#   ops/data status [case...]        what differs between here and the server
+#   ops/data push [case...] [--yes]  send local JSON, then rebuild the pages that read it
+#                                    (plan unless --yes; --no-rebuild to skip the rebuild)
+#   ops/data pull [case...]          bring the server's JSON here (42 MB)
+#   ops/data pull --raw [case...]    bring the raw pipeline inputs here (13 GB)
+#                                    add --yes to skip the confirmation
+#   ops/data restore <timestamp>     put a backed-up set of JSON back
+#   ops/data host [<ip>]             show, or point everything at a new server address
+#
+# push keeps a timestamped copy of what it overwrote, on the server, under
+# ops/backups/ — a bad push is then one command from being undone.
+
+set -uo pipefail
+
+# The server's address is expected to change: no Elastic IP is held, so every stop
+# and start hands out a new one. It lives in one file, so a change is one command
+# rather than an edit in eight places. DEMO_HOST still wins, for a one-off.
+HOSTFILE="${DEMO_HOSTFILE:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/ops/state/HOST}"
+HOST="${DEMO_HOST:-$( [[ -s "$HOSTFILE" ]] && cat "$HOSTFILE" || echo ubuntu@52.77.253.154 )}"
+KEY="${DEMO_KEY:-/Users/mbairm3512/Dropbox/AWS PEM/key-pair-VM-Singapore.pem}"
+REMOTE_ROOT="${DEMO_REMOTE_ROOT:-/home/ubuntu/demo-lab}"
+LOCAL_ROOT="${DEMO_LOCAL_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+WEB_DIRS=(web/src/data web/public/data)
+
+SSH=(ssh -n -i "$KEY" -o ConnectTimeout=40 -o BatchMode=yes)
+# --inplace is not optional: without it rsync writes a temp file and renames, and
+# Astro's dev watcher fires on a path that no longer exists, throws ENOENT and serves
+# an error overlay in place of the page.
+RSYNC=(rsync -a --inplace --human-readable)
+
+die() { printf '%s\n' "$*" >&2; exit 1; }
+have_key() { [[ -r "$KEY" ]] || die "cannot read the ssh key at $KEY (set DEMO_KEY)"; }
+
+cases() {
+  if (( $# )); then printf '%s\n' "$@"; return; fi
+  find "$LOCAL_ROOT/cases" -maxdepth 1 -mindepth 1 -type d -exec basename {} \; | sort
+}
+
+# ── status: what a push would change, before it changes anything ─────────────────
+
+cmd_status() {
+  have_key
+  local list; list=$(cases "$@")
+  # One ssh round trip for every hash on the far side; per-file ssh would take minutes.
+  local remote_hashes
+  remote_hashes=$("${SSH[@]}" "$HOST" "cd $REMOTE_ROOT 2>/dev/null || exit 0
+    for c in $(printf '%s ' $list); do
+      for d in ${WEB_DIRS[*]}; do
+        [ -d \"cases/\$c/\$d\" ] || continue
+        find \"cases/\$c/\$d\" -type f -name '*.json' -exec sha256sum {} + 2>/dev/null
+      done
+    done" 2>/dev/null)
+
+  printf '%-19s %-34s %s\n' CASE FILE STATE
+  local changed=0 same=0 new=0 gone=0
+  while read -r c; do
+    for d in "${WEB_DIRS[@]}"; do
+      local dir="$LOCAL_ROOT/cases/$c/$d"
+      [[ -d "$dir" ]] || continue
+      while IFS= read -r f; do
+        local rel="${f#$LOCAL_ROOT/}"
+        local mine; mine=$(shasum -a 256 "$f" | awk '{print $1}')
+        local theirs; theirs=$(printf '%s\n' "$remote_hashes" | awk -v p="$rel" '$2 == p {print $1}')
+        if [[ -z "$theirs" ]]; then
+          printf '%-19s %-34s new here\n' "$c" "$(basename "$f")"; (( new++ ))
+        elif [[ "$mine" != "$theirs" ]]; then
+          printf '%-19s %-34s differs\n' "$c" "$(basename "$f")"; (( changed++ ))
+        else
+          (( same++ ))
+        fi
+      done < <(find "$dir" -type f -name '*.json' 2>/dev/null)
+    done
+  done <<< "$list"
+
+  # Files the server has and this laptop does not: a push would leave them in place,
+  # which is usually right but worth seeing, because it is also how a stale file lives
+  # forever on the server after being deleted here.
+  while read -r line; do
+    local p; p=$(printf '%s' "$line" | awk '{print $2}')
+    [[ -z "$p" ]] && continue
+    [[ -f "$LOCAL_ROOT/$p" ]] && continue
+    printf '%-19s %-34s only on server\n' "$(printf '%s' "$p" | cut -d/ -f2)" "$(basename "$p")"
+    (( gone++ ))
+  done <<< "$remote_hashes"
+
+  printf '\n  %d differ · %d new here · %d only on server · %d identical\n' \
+    "$changed" "$new" "$gone" "$same"
+  (( changed + new == 0 )) && echo "  nothing to push"
+}
+
+# ── push: local JSON to the server, reversibly ───────────────────────────────────
+
+cmd_push() {
+  have_key
+  local yes=0 rebuild=1 args=()
+  for a in "$@"; do
+    case "$a" in
+      --yes|-y)     yes=1 ;;
+      --no-rebuild) rebuild=0 ;;
+      *)            args+=("$a") ;;
+    esac
+  done
+  local list; list=$(cases "${args[@]+"${args[@]}"}")
+
+  local present=()
+  while read -r c; do
+    for d in "${WEB_DIRS[@]}"; do
+      [[ -d "$LOCAL_ROOT/cases/$c/$d" ]] && present+=("cases/$c/$d")
+    done
+  done <<< "$list"
+  (( ${#present[@]} )) || die "no web data directories found locally for: $(tr '\n' ' ' <<< "$list")"
+
+  if (( ! yes )); then
+    echo "would push these directories to $HOST:"
+    printf '  %s\n' "${present[@]}"
+    echo
+    echo "changes:"
+    for p in "${present[@]}"; do
+      "${RSYNC[@]}" --dry-run --itemize-changes \
+        -e "ssh -i \"$KEY\" -o ConnectTimeout=40" \
+        "$LOCAL_ROOT/$p/" "$HOST:$REMOTE_ROOT/$p/" 2>/dev/null \
+        | awk -v p="$p" '$1 ~ /^[<>ch.]/ && $2 != "./" {printf "  %s  %s/%s\n", $1, p, $2}'
+    done
+    echo
+    echo "re-run with --yes to apply. Nothing has been changed."
+    return
+  fi
+
+  local stamp; stamp=$(date -u +%Y%m%dT%H%M%SZ)
+  echo "backing up what is there now → ops/backups/$stamp"
+  "${SSH[@]}" "$HOST" "cd $REMOTE_ROOT && mkdir -p ops/backups/$stamp && \
+    for p in ${present[*]}; do
+      [ -d \"\$p\" ] || continue
+      mkdir -p \"ops/backups/$stamp/\$p\"
+      cp -a \"\$p/.\" \"ops/backups/$stamp/\$p/\" 2>/dev/null
+    done && du -sh ops/backups/$stamp | cut -f1" \
+    | sed 's/^/  saved /' || die "backup failed — not pushing"
+
+  for p in "${present[@]}"; do
+    printf '  → %s\n' "$p"
+    "${RSYNC[@]}" -e "ssh -i \"$KEY\" -o ConnectTimeout=40" \
+      "$LOCAL_ROOT/$p/" "$HOST:$REMOTE_ROOT/$p/" || die "rsync failed on $p"
+  done
+
+  # Verify by hash rather than trusting rsync's exit code: a partial write that still
+  # exits 0 is the failure that would otherwise be found by a visitor.
+  echo
+  echo "verifying:"
+  local bad=0
+  for p in "${present[@]}"; do
+    local theirs; theirs=$("${SSH[@]}" "$HOST" \
+      "cd $REMOTE_ROOT && find $p -type f -name '*.json' -exec sha256sum {} + 2>/dev/null")
+    while IFS= read -r f; do
+      local rel="${f#$LOCAL_ROOT/}"
+      local mine; mine=$(shasum -a 256 "$f" | awk '{print $1}')
+      local t; t=$(printf '%s\n' "$theirs" | awk -v q="$rel" '$2 == q {print $1}')
+      if [[ "$mine" != "$t" ]]; then
+        printf '  MISMATCH %s\n' "$rel"; (( bad++ ))
+      fi
+    done < <(find "$LOCAL_ROOT/$p" -type f -name '*.json' 2>/dev/null)
+  done
+  if (( bad )); then
+    die "  $bad file(s) do not match. Restore with: ops/data restore $stamp"
+  fi
+  echo "  every file matches by sha256"
+
+  # The server serves built output now, and every page imports its JSON at build time.
+  # Landing a new file next to the source without rebuilding changes nothing a visitor
+  # can see — the worst kind of failure, because the push reports success while the site
+  # keeps showing yesterday. So the affected apps are rebuilt and republished here.
+  if (( rebuild )); then
+    local pushed=()
+    while read -r c; do
+      for pd in "${present[@]}"; do
+        [[ "$pd" == "cases/$c/"* ]] && { pushed+=("$c"); break; }
+      done
+    done <<< "$list"
+    if (( ${#pushed[@]} )); then
+      echo
+      echo "rebuilding on the server so the pages pick it up:"
+      if ! "${SSH[@]}" "$HOST" "cd $REMOTE_ROOT && ops/serve-static build ${pushed[*]} && ops/serve-static publish ${pushed[*]}" 2>&1 \
+        | grep -E "^──|ok |FAILED|:[0-9]{4}|app\(s\) published" | sed 's/^/  /'
+      then
+        echo "  rebuild failed — the server is still serving the previous build"
+        echo "  ops/data restore $stamp   # to undo the data change too"
+        return 1
+      fi
+    fi
+  else
+    echo
+    echo "  --no-rebuild: the files are on the server, but no page shows them until"
+    echo "  ops/serve-static build <case> && ops/serve-static publish <case>"
+  fi
+  echo
+  echo "backup kept at ops/backups/$stamp on the server (ops/data restore $stamp to undo)"
+}
+
+cmd_restore() {
+  have_key
+  local stamp="${1:?usage: ops/data restore <timestamp>}"
+  "${SSH[@]}" "$HOST" "cd $REMOTE_ROOT && [ -d ops/backups/$stamp ] || { echo 'no such backup'; exit 1; }
+    cd ops/backups/$stamp && find . -mindepth 3 -maxdepth 3 -type d | while read -r p; do
+      p=\${p#./}; mkdir -p $REMOTE_ROOT/\$p && cp -a \"\$p/.\" \"$REMOTE_ROOT/\$p/\" && echo \"  restored \$p\"
+    done" || die "restore failed"
+}
+
+# ── pull ────────────────────────────────────────────────────────────────────────
+#
+# Two kinds, because they differ by three orders of magnitude. The JSON is what the
+# server is currently serving and what a push would overwrite, so it comes down first
+# and by default: 447 of these files exist only on the server, because every pipeline
+# so far ran there. The raw parquet is only needed to re-run a pipeline.
+#
+# Both back up whatever they replace here. This tree is not under version control, so
+# a careless pull is otherwise unrecoverable.
+
+cmd_pull() {
+  have_key
+  local raw=0 args=()
+  for a in "$@"; do case "$a" in --raw) raw=1 ;; *) args+=("$a") ;; esac; done
+  (( raw )) && { pull_raw "${args[@]+"${args[@]}"}"; return; }
+
+  local list_arr=(); mapfile -t list_arr < <(cases "${args[@]+"${args[@]}"}")
+  local stamp; stamp=$(date -u +%Y%m%dT%H%M%SZ)
+  local backup="$LOCAL_ROOT/ops/backups/$stamp"
+  echo "pulling web JSON from $HOST"
+  # One listing instead of twenty existence checks, each of which was an ssh round trip.
+  local remote_dirs
+  remote_dirs=$("${SSH[@]}" "$HOST" "cd $REMOTE_ROOT && for c in ${list_arr[*]}; do
+    for d in ${WEB_DIRS[*]}; do [ -d \"cases/\$c/\$d\" ] && echo \"cases/\$c/\$d\"; done
+  done" 2>/dev/null)
+  local got=0
+  for c in "${list_arr[@]}"; do
+    for d in "${WEB_DIRS[@]}"; do
+      grep -qx "cases/$c/$d" <<< "$remote_dirs" || continue
+      if [[ -d "$LOCAL_ROOT/cases/$c/$d" ]]; then
+        mkdir -p "$backup/cases/$c/$d"
+        cp -a "$LOCAL_ROOT/cases/$c/$d/." "$backup/cases/$c/$d/" 2>/dev/null
+      fi
+      mkdir -p "$LOCAL_ROOT/cases/$c/$d"
+      "${RSYNC[@]}" -e "ssh -i \"$KEY\" -o ConnectTimeout=40" \
+        "$HOST:$REMOTE_ROOT/cases/$c/$d/" "$LOCAL_ROOT/cases/$c/$d/" < /dev/null \
+        && { printf '  ← cases/%s/%s\n' "$c" "$d"; (( got++ )); }
+    done
+  done
+  echo
+  echo "  $got directory/ies pulled"
+  [[ -d "$backup" ]] && echo "  what was here before: ops/backups/$stamp"
+}
+
+pull_raw() {
+  local yes=0 args=()
+  for a in "$@"; do case "$a" in --yes|-y) yes=1 ;; *) args+=("$a") ;; esac; done
+  local list; list=$(cases "${args[@]+"${args[@]}"}")
+  echo "raw pipeline data on the server:"
+  local sizes
+  sizes=$("${SSH[@]}" "$HOST" "cd $REMOTE_ROOT && for c in $(printf '%s ' $list); do
+    [ -d \"cases/\$c/data\" ] && printf '%s\t%s\n' \"\$c\" \"\$(du -sm cases/\$c/data | cut -f1)\"
+  done")
+  printf '%s\n' "$sizes" | awk -F'\t' '$1 != "" {printf "  %-19s %6d MB\n", $1, $2; t += $2} END {printf "  %-19s %6d MB\n", "total", t}'
+  echo
+  echo "  (the server keeps its copy; this only adds it here)"
+  if (( ! yes )); then
+    read -r -p "pull these to $LOCAL_ROOT? [y/N] " ans
+    [[ "$ans" == [yY]* ]] || { echo "nothing pulled"; return; }
+  fi
+  local rows=(); mapfile -t rows < <(printf '%s\n' "$sizes")
+  for row in "${rows[@]}"; do
+    local c="${row%%$'\t'*}"
+    [[ -z "$c" ]] && continue
+    printf '  ← cases/%s/data\n' "$c"
+    mkdir -p "$LOCAL_ROOT/cases/$c/data"
+    # --progress only when someone is watching. It writes a carriage-return line per
+    # file, which is fine on a terminal and megabytes of noise in a redirected log.
+    # (--info=progress2 would be tidier but is rsync 3.1+; macOS ships openrsync,
+    # which reports itself 2.6.9-compatible and rejects it outright.)
+    local prog=(); [[ -t 1 ]] && prog=(--progress)
+    "${RSYNC[@]}" "${prog[@]+"${prog[@]}"}" -e "ssh -i \"$KEY\" -o ConnectTimeout=40" \
+      "$HOST:$REMOTE_ROOT/cases/$c/data/" "$LOCAL_ROOT/cases/$c/data/" < /dev/null \
+      || die "pull failed on $c"
+  done
+}
+
+# ── host: the address changes, so changing it is a command, not an edit ─────────
+
+cmd_host() {
+  local want="${1:-}"
+  if [[ -z "$want" ]]; then
+    echo "  host      $HOST"
+    echo -n "  ssh       "
+    if "${SSH[@]}" "$HOST" true 2>/dev/null; then echo "reachable"; else echo "NOT reachable"; fi
+    show_urls
+    return
+  fi
+
+  [[ "$want" == *@* ]] || want="ubuntu@$want"     # an ip, a hostname, or user@host
+  echo -n "  testing $want ... "
+  if ! ssh -n -i "$KEY" -o ConnectTimeout=25 -o BatchMode=yes \
+       -o StrictHostKeyChecking=accept-new "$want" "test -d $REMOTE_ROOT" 2>/dev/null; then
+    die "cannot reach it, or $REMOTE_ROOT is not there. Nothing was changed."
+  fi
+  echo "ok"
+
+  local old="${HOST#*@}" newip="${want#*@}"
+  mkdir -p "$(dirname "$HOSTFILE")"
+  printf '%s\n' "$want" > "$HOSTFILE"
+  echo "  saved to ${HOSTFILE#$LOCAL_ROOT/}"
+
+  # Documentation carrying a dead address is worse than none, and these READMEs are
+  # what someone reads to find the demo.
+  local changed=0 f
+  if [[ "$old" != "$newip" ]]; then
+    while IFS= read -r f; do
+      [[ -f "$f" ]] || continue
+      python3 -c 'import sys,pathlib; q=pathlib.Path(sys.argv[1]); q.write_text(q.read_text(errors="replace").replace(sys.argv[2], sys.argv[3]))' \
+        "$f" "$old" "$newip" && { printf '  updated  %s\n' "${f#$LOCAL_ROOT/}"; (( changed++ )); }
+    # .claude holds stale agent worktrees — copies of the tree from earlier runs.
+    # Rewriting an address inside them touches a hundred files nobody reads and hides
+    # the handful that matter in the output.
+    done < <(grep -rl "$old" "$LOCAL_ROOT" --include='*.md' --include='*.sh' \
+               --exclude-dir=node_modules --exclude-dir=.venv --exclude-dir=dist \
+               --exclude-dir=.claude --exclude-dir=.git 2>/dev/null)
+  fi
+  printf '  %d file(s) updated\n' "$changed"
+
+  HOST="$want"
+  show_urls
+}
+
+# The links to hand out again, read from what the server is actually serving rather
+# than from a list here that would drift.
+show_urls() {
+  local ip="${HOST#*@}" manifest
+  manifest=$(ssh -n -i "$KEY" -o ConnectTimeout=30 -o BatchMode=yes "$HOST" \
+    "cat $REMOTE_ROOT/ops/state/apps.tsv 2>/dev/null")
+  [[ -z "$manifest" ]] && return
+  echo
+  echo "  demo links at this address:"
+  # One origin now, a slug per case. The ports in the manifest are what the apps used
+  # to be served on, not where anyone should be sent.
+  printf '%s\n' "$manifest" | awk -F'\t' -v ip="${DEMO_URL_BASE:-http://$ip}" \
+    '$3 != "" {printf "    %s%s\n", ip, ($3 == "/" ? "/" : $3 "/")}' | sort -u
+}
+
+case "${1:-status}" in
+  status)  shift; cmd_status "$@" ;;
+  host)    shift; cmd_host "$@" ;;
+  push)    shift; cmd_push "$@" ;;
+  pull)    shift; cmd_pull "$@" ;;
+  restore) shift; cmd_restore "$@" ;;
+  *)       die "usage: ops/data {status|push|pull|restore}" ;;
+esac

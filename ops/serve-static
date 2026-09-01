@@ -1,0 +1,346 @@
+#!/usr/bin/env bash
+# Serve the twelve demo apps as static files from one nginx instead of twelve Astro
+# dev servers.
+#
+# The dev servers cost 4,579 MB between them — a file watcher, a Vite graph and a
+# module cache each, for pages that are already fully static (`output: "static"`, no
+# adapter, every route prerendered). One nginx serving the built output costs tens of
+# megabytes, which is the difference between needing a 16 GB box and a 4 GB one.
+#
+# Everything is served from one origin, each case under its own slug: /nightlights,
+# /forest, /haze and so on, which is what the base paths already were. That is what
+# makes a domain and a certificate possible — https cannot be issued for a bare IP, and
+# a page served over https cannot call an API over http on another port.
+#
+# The old ports keep working. One server block carries every `listen` directive, so
+# :80 and :4321-:4334 all serve the identical tree and a link someone was sent last
+# week resolves the same as a link sent today.
+#
+# Layout: /srv/demo/web holds the site at its root and each case in a directory named
+# by its slug, which is exactly what each app's `base` already expects. nginx then
+# needs one plain `root` — `alias` combined with `try_files` is a well-known source of
+# surprises, and there is no reason to invite them here.
+#
+# Copied rather than symlinked, for two reasons. /home/ubuntu is drwxr-x---, so nginx
+# cannot traverse into a dist that lives there, and the alternative — opening the home
+# directory to every local user — is a worse trade than copying 54 MB. And a copy means
+# a rebuild cannot half-serve: the live site changes when the new output is complete,
+# not while Vite is still writing it.
+#
+# Usage:
+#   ops/serve-static manifest            derive port/base/dir for every app
+#   ops/serve-static build [app...]      astro build, one app at a time
+#   ops/serve-static install             nginx, its config, and the served copy
+#   ops/serve-static publish [app...]    copy freshly built output into the served tree
+#   ops/serve-static cutover             stop the dev servers, start nginx
+#   ops/serve-static verify              fetch every port/base and check the titles
+#   ops/serve-static rollback            dev servers back, nginx off
+
+set -uo pipefail
+
+ROOT="${SERVE_ROOT:-/home/ubuntu/demo-lab}"
+STATE="$ROOT/ops/state"
+MANIFEST="$STATE/apps.tsv"
+SRV="/srv/demo"
+WEB="/srv/demo/web"
+API_PORT="${API_PORT:-4330}"
+# The domain, once there is one. Kept in a file rather than in this script so that
+# `ops/tls` can set it and this generator can stay the single writer of the config.
+DOMAIN="$(cat "$STATE/DOMAIN" 2>/dev/null || echo _)"
+CERTDIR="/etc/letsencrypt/live/$DOMAIN"
+CONF="/etc/nginx/sites-available/demo-lab"
+
+mkdir -p "$STATE"
+die() { printf '%s\n' "$*" >&2; exit 1; }
+
+# ── manifest ────────────────────────────────────────────────────────────────────
+#
+# Derived from the running units while they still exist, then written down. After
+# cutover the units are disabled and cannot be asked, so the answer has to be saved
+# before it is needed rather than after.
+
+cmd_manifest() {
+  : > "$MANIFEST.tmp"
+  for u in $(systemctl list-units 'demo-*' --all --no-legend --plain | awk '{print $1}'); do
+    local wd port base
+    wd=$(systemctl show -p WorkingDirectory --value "$u" 2>/dev/null)
+    port=$(systemctl show -p ExecStart --value "$u" 2>/dev/null | grep -oE 'port [0-9]+' | awk '{print $2}')
+    [[ -z "$port" || -z "$wd" || ! -d "$wd" ]] && continue
+    [[ -f "$wd/astro.config.mjs" ]] || continue        # the API is not an Astro app
+    base=$(grep -oE 'base: *"[^"]+"' "$wd/astro.config.mjs" 2>/dev/null | head -1 | sed 's/.*"\(.*\)"/\1/')
+    base="${base:-/}"
+    printf '%s\t%s\t%s\t%s\n' "${u%.service}" "$port" "$base" "$wd" >> "$MANIFEST.tmp"
+  done
+  sort -k2,2n "$MANIFEST.tmp" > "$MANIFEST" && rm -f "$MANIFEST.tmp"
+  awk -F'\t' '{printf "  %-22s :%s  %-14s %s\n", $1, $2, $3, $4}' "$MANIFEST"
+  printf '  %d app(s)\n' "$(wc -l < "$MANIFEST")"
+}
+
+need_manifest() { [[ -s "$MANIFEST" ]] || cmd_manifest >/dev/null; }
+
+# ── build ───────────────────────────────────────────────────────────────────────
+
+cmd_build() {
+  need_manifest
+  local want=("$@") built=0 failed=()
+  while IFS=$'\t' read -r unit port base wd; do
+    if (( ${#want[@]} )); then
+      local hit=0
+      for w in "${want[@]}"; do [[ "$unit" == *"$w"* || "$wd" == *"$w"* ]] && hit=1; done
+      (( hit )) || continue
+    fi
+    printf '── %s (%s) ──\n' "$unit" "$base"
+    # One at a time. Twelve concurrent Vite builds is how a 4 GB box runs out of memory
+    # doing the very thing meant to make it fit.
+    if (cd "$wd" && npx astro build >/tmp/build.$unit.log 2>&1); then
+      printf '  ok   %s\n' "$(du -sh "$wd/dist" 2>/dev/null | cut -f1)"
+      (( built++ ))
+    else
+      printf '  FAILED — tail of /tmp/build.%s.log:\n' "$unit"
+      tail -6 "/tmp/build.$unit.log" | sed 's/^/    /'
+      failed+=("$unit")
+    fi
+  done < "$MANIFEST"
+  printf '\n%d built' "$built"
+  (( ${#failed[@]} )) && printf ', %d failed: %s' "${#failed[@]}" "${failed[*]}"
+  echo
+  (( ${#failed[@]} )) && return 1
+  return 0
+}
+
+# ── install ─────────────────────────────────────────────────────────────────────
+
+cmd_install() {
+  need_manifest
+  command -v nginx >/dev/null 2>&1 || {
+    echo "installing nginx"
+    sudo apt-get update -qq && sudo apt-get install -y -qq nginx || die "apt failed"
+  }
+
+  cmd_publish
+
+  echo "writing $CONF"
+  local ports=(80)
+  while IFS=$'\t' read -r unit port base wd; do ports+=("$port"); done < "$MANIFEST"
+
+  # sudo, because /etc/letsencrypt/live is 0700 root: an unprivileged test always
+  # says the certificate is missing, and the TLS block then silently never appears.
+  local tls=0
+  if [[ "$DOMAIN" != "_" ]] && sudo test -s "$CERTDIR/fullchain.pem"; then tls=1; fi
+
+  {
+    echo "# generated by ops/serve-static. One origin, one slug per case."
+    echo "#"
+    echo "# Every old port listens alongside :80 on the same tree, so a link handed out"
+    echo "# before the move resolves exactly like one handed out after it."
+    echo "#"
+    echo "# The TLS block is written here rather than by certbot's nginx plugin, because"
+    echo "# this script rewrites this file and would erase anything certbot added to it."
+    echo "# The certificate is obtained with certonly --webroot; only the paths are"
+    echo "# assumed, and they are the standard ones."
+
+    if (( tls )); then
+      # http stays up for the ACME challenge and to send everything else to https
+      echo "server {"
+      for pt in "${ports[@]}"; do
+        echo "    listen $pt;"
+        echo "    listen [::]:$pt;"
+      done
+      echo "    server_name $DOMAIN;"
+      echo "    location /.well-known/acme-challenge/ { root $WEB; }"
+      echo "    location / { return 301 https://\$host\$request_uri; }"
+      echo "}"
+      echo "server {"
+      echo "    listen 443 ssl;"
+      echo "    listen [::]:443 ssl;"
+      echo "    http2 on;"
+      echo "    server_name $DOMAIN;"
+      echo "    ssl_certificate     $CERTDIR/fullchain.pem;"
+      echo "    ssl_certificate_key $CERTDIR/privkey.pem;"
+      echo "    ssl_protocols TLSv1.2 TLSv1.3;"
+      echo "    ssl_prefer_server_ciphers off;"
+      echo "    ssl_session_cache shared:SSL:2m;"
+      echo "    ssl_session_timeout 1h;"
+      echo "    add_header Strict-Transport-Security \"max-age=15552000\" always;"
+      echo "    add_header X-Content-Type-Options nosniff always;"
+      echo "    add_header Referrer-Policy strict-origin-when-cross-origin always;"
+    else
+      echo "server {"
+      for pt in "${ports[@]}"; do
+        echo "    listen $pt;"
+        echo "    listen [::]:$pt;"
+      done
+      echo "    server_name $DOMAIN;"
+      echo "    location /.well-known/acme-challenge/ { root $WEB; }"
+    fi
+    echo "    root $WEB;"
+    echo "    index index.html;"
+    echo "    charset utf-8;"
+    echo "    access_log off;"
+    echo "    # a little above the app's own 8 MB limit, so an oversized upload gets"
+    echo "    # the API's explanation rather than nginx's bare 413"
+    echo "    client_max_body_size 12m;"
+    echo ""
+    echo "    # Pustaka's API, same origin, so the page works over https without"
+    echo "    # reaching for another port."
+    echo "    location /knowledge/api/ {"
+    echo "        proxy_pass http://127.0.0.1:$API_PORT/api/;"
+    echo "        proxy_http_version 1.1;"
+    echo "        proxy_set_header Host \$host;"
+    echo "        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;"
+    echo "        proxy_set_header X-Forwarded-Proto \$scheme;"
+    echo "        proxy_read_timeout 180s;   # a model call is not a static file"
+    echo "    }"
+    echo ""
+    echo "    location / { try_files \$uri \$uri/ \$uri/index.html =404; }"
+    echo "    # hashed filenames, so they can be cached hard"
+    echo "    location ~* /_astro/ { expires 1y; add_header Cache-Control \"public, immutable\"; }"
+    echo "    location ~* \\.(json|csv)\$ { expires 5m; }"
+    echo "    gzip on;"
+    echo "    gzip_types text/css application/javascript application/json image/svg+xml;"
+    echo "    gzip_min_length 1024;"
+    echo "}"
+  } | sudo tee "$CONF" >/dev/null
+  if (( tls )); then
+    echo "  https enabled for $DOMAIN"
+  elif [[ "$DOMAIN" != "_" ]]; then
+    echo "  http only — no certificate at $CERTDIR yet (ops/tls cert)"
+  fi
+
+  sudo ln -sfn "$CONF" /etc/nginx/sites-enabled/demo-lab
+  sudo rm -f /etc/nginx/sites-enabled/default
+  # Two worker processes is plenty for static files and keeps the footprint honest.
+  sudo sed -i 's/^worker_processes .*/worker_processes 2;/' /etc/nginx/nginx.conf
+  sudo nginx -t || die "nginx rejected the config — nothing was switched over"
+  echo "  nginx config is valid"
+  # Before the first cutover the dev servers still hold 4321-4334, and nginx — which
+  # apt starts on :80 the moment it is installed — must not be running. After cutover
+  # nginx *is* the site, and stopping it here would take the site down every time a
+  # domain or certificate is configured. So: reload if it is serving, hold if not.
+  if systemctl is-enabled --quiet nginx 2>/dev/null && systemctl is-active --quiet nginx; then
+    sudo systemctl reload nginx && echo "  nginx reloaded onto the new config"
+  elif systemctl is-enabled --quiet nginx 2>/dev/null; then
+    sudo systemctl start nginx && echo "  nginx started on the new config"
+  else
+    sudo systemctl stop nginx >/dev/null 2>&1
+    echo "  nginx held down until cutover"
+  fi
+}
+
+# ── publish: put the built output where nginx can read it ───────────────────────
+
+cmd_publish() {
+  need_manifest
+  local want=("$@") done_n=0
+  echo "copying built output into $WEB"
+  sudo mkdir -p "$WEB"
+  while IFS=$'\t' read -r unit port base wd; do
+    if (( ${#want[@]} )); then
+      local hit=0
+      for w in "${want[@]}"; do [[ "$unit" == *"$w"* || "$wd" == *"$w"* ]] && hit=1; done
+      (( hit )) || continue
+    fi
+    [[ -d "$wd/dist" ]] || { echo "  skip $unit — no dist, run build first"; continue; }
+    local target="$WEB"
+    [[ "$base" == "/" ]] || target="$WEB/${base#/}"
+    sudo mkdir -p "$target"
+    # --delete removes whatever the source no longer has, which is what keeps a
+    # renamed asset from lingering. At the tree root that is a trap: every case slug
+    # is a sibling of the site's own files, so a plain --delete there removes all of
+    # them. Publishing the site by itself did exactly that once. Excluding the slugs
+    # is the fix, and it is derived from the manifest so it cannot drift.
+    local excl=()
+    if [[ "$base" == "/" ]]; then
+      local b
+      while IFS=$'\t' read -r _ _ b _; do
+        [[ "$b" == "/" ]] || excl+=(--exclude "/${b#/}/")
+      done < "$MANIFEST"
+    fi
+    sudo rsync -a --delete "${excl[@]+"${excl[@]}"}" "$wd/dist/" "$target/" \
+      || { echo "  FAILED $unit"; continue; }
+    # the source, not the target: at the root the target is the whole tree, and
+    # reporting 54 MB for a 1 MB site is just misleading
+    printf '  %-14s %s\n' "$base" "$(du -sh "$wd/dist" | cut -f1)"
+    (( done_n++ ))
+  done < "$MANIFEST"
+  # nginx runs as www-data and needs to read every file and traverse every directory.
+  sudo chmod -R a+rX "$SRV"
+  printf '  %d app(s) published\n' "$done_n"
+}
+
+# ── cutover and rollback ────────────────────────────────────────────────────────
+
+cmd_cutover() {
+  need_manifest
+  sudo nginx -t >/dev/null 2>&1 || die "run install first — nginx has no valid config"
+  echo "stopping the dev servers"
+  while IFS=$'\t' read -r unit port base wd; do
+    sudo systemctl disable --now "$unit.service" >/dev/null 2>&1 \
+      && printf '  stopped %s\n' "$unit"
+  done < "$MANIFEST"
+  echo "starting nginx"
+  # restart, not `enable --now`: apt may have left it running on the default config,
+  # in which case --now is a no-op and the new server blocks never take effect.
+  sudo systemctl enable nginx >/dev/null 2>&1
+  sudo systemctl restart nginx || die "nginx failed to start — run rollback"
+  sleep 2
+  systemctl is-active --quiet nginx && echo "  nginx is up" || die "nginx did not start"
+  echo
+  free -m | awk 'NR==2 {printf "  memory now: %d MB used of %d MB\n", $3, $2}'
+}
+
+cmd_rollback() {
+  need_manifest
+  echo "stopping nginx"
+  sudo systemctl disable --now nginx >/dev/null 2>&1
+  echo "starting the dev servers"
+  while IFS=$'\t' read -r unit port base wd; do
+    sudo systemctl enable --now "$unit.service" >/dev/null 2>&1 \
+      && printf '  started %s\n' "$unit"
+  done < "$MANIFEST"
+  echo "  give them ~40s to compile"
+}
+
+# ── verify ──────────────────────────────────────────────────────────────────────
+#
+# A title is checked, not just a status code. Astro serves its own compile errors as a
+# 200 with an error page, so "it responded" is not the same as "it works".
+
+cmd_verify() {
+  need_manifest
+  local host="${1:-127.0.0.1}" port_override="${2:-}" bad=0
+  while IFS=$'\t' read -r unit port base wd; do
+    [[ -n "$port_override" ]] && port="$port_override"
+    local url="http://$host:$port${base%/}/"
+    local body code title
+    code=$(curl -s -o /tmp/v.html -w '%{http_code}' --max-time 25 "$url")
+    title=$(python3 - <<PY
+import re
+try: h = open("/tmp/v.html", encoding="utf8", errors="replace").read()
+except OSError: h = ""
+m = re.search(r"<title>(.*?)</title>", h, re.S)
+print((m.group(1).strip() if m else "NO TITLE")[:52].replace("\n", " "))
+PY
+)
+    local flag="ok"
+    if [[ "$code" != "200" ]]; then flag="HTTP $code"; (( bad++ ))
+    elif [[ "$title" == "NO TITLE" || "$title" == *"404"* || "$title" == *"rror"* ]]; then
+      flag="BAD TITLE"; (( bad++ ))
+    fi
+    printf '  %-22s :%-5s %-9s %s\n' "$unit" "$port" "$flag" "$title"
+  done < "$MANIFEST"
+  echo
+  (( bad )) && { echo "  $bad app(s) not serving correctly"; return 1; }
+  echo "  every app serves a real page"
+}
+
+case "${1:-manifest}" in
+  manifest) shift; cmd_manifest "$@" ;;
+  publish)  shift; cmd_publish "$@" ;;
+  build)    shift; cmd_build "$@" ;;
+  install)  shift; cmd_install "$@" ;;
+  cutover)  shift; cmd_cutover "$@" ;;
+  rollback) shift; cmd_rollback "$@" ;;
+  verify)   shift; cmd_verify "$@" ;;
+  *)        die "usage: serve-static {manifest|build|publish|install|cutover|verify|rollback}" ;;
+esac

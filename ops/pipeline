@@ -1,0 +1,377 @@
+#!/usr/bin/env bash
+# One data pipeline at a time, on whichever machine is allowed to run them.
+#
+# Pipelines belong on a workstation now: the server serves, and `ops/data push` moves
+# the JSON they produce. A box marked `server` in ops/state/ROLE refuses to start work.
+#
+# Two failures on the old server-side setup shaped this.
+#
+#   Pipelines ran concurrently. Nothing stopped a second fetch from starting while the
+#   first was still downloading, so they competed for memory and for the same
+#   rate-limited upstreams, and a failure could not be attributed to either.
+#
+#   Pipelines were OOM-killed by their own cap. Every kill in that syslog reads
+#   constraint=CONSTRAINT_MEMCG with oom_memcg pointing at the unit itself: ~10 GB was
+#   free while the unit died at a MemoryMax typed in by hand. Two runs died at 3,129
+#   and 3,128 MB — the signature of a ceiling, not a leak. So every run's peak is
+#   recorded, and a cap is only ever proposed from measurement.
+#
+# Usage:
+#   pipeline start <name> [--wait] [--fg] [--mem 3G] -- <command...>
+#   pipeline run [--plan] [--keep-going] <case...>  each case's refresh, one after another
+#   pipeline status | history [n] | logs <name> [-f] | stop [name]
+#
+# Backends: systemd where it exists (cgroup caps, real accounting), and a portable
+# path for macOS, which ships neither cgroups nor flock. The portable path cannot cap
+# memory — it measures the peak instead, which is what a cap should be derived from.
+
+set -uo pipefail
+
+ROOT="${PIPELINE_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+STATE="${PIPELINE_STATE:-$ROOT/ops/state}"
+LOGS="$STATE/logs"
+LOCKDIR="$STATE/running.lock"        # a directory: mkdir is atomic everywhere
+LEDGER="$STATE/runs.tsv"
+PREFIX="pipe-"
+
+mkdir -p "$STATE" "$LOGS"
+[[ -f "$LEDGER" ]] || printf 'started\tname\tended\texit\tpeak_mb\tcap_mb\tcmd\n' > "$LEDGER"
+
+if command -v systemd-run >/dev/null 2>&1 && [[ -d /run/systemd/system ]]; then
+  BACKEND=systemd
+else
+  BACKEND=portable
+fi
+
+die() { printf '%s\n' "$*" >&2; exit 1; }
+now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+role() { cat "$STATE/ROLE" 2>/dev/null || echo workstation; }
+
+# ── ledger ──────────────────────────────────────────────────────────────────────
+
+ledger_open() {                       # name, cap_mb, command
+  local flat; flat=$(printf '%s' "$3" | tr '\n\t' '  ' | cut -c1-200)
+  printf '%s\t%s\t\t\t\t%s\t%s\n' "$(now)" "$1" "$2" "$flat" >> "$LEDGER"
+}
+
+ledger_close() {                      # name, exit, peak_mb
+  python3 - "$LEDGER" "$1" "$(now)" "$2" "$3" <<'PY'
+import sys
+ledger, name, ended, code, peak = sys.argv[1:6]
+rows = open(ledger).read().splitlines()
+for i in range(len(rows) - 1, 0, -1):          # newest still-open row for this name
+    f = rows[i].split("\t")
+    if len(f) >= 5 and f[1] == name and not f[2]:
+        f[2], f[3], f[4] = ended, code, peak
+        rows[i] = "\t".join(f)
+        break
+open(ledger, "w").write("\n".join(rows) + "\n")
+PY
+}
+
+recorded_peak() {                     # the highest peak this pipeline has reached
+  awk -F'\t' -v n="$1" '$2 == n && $5 ~ /^[0-9]+$/ && $5 + 0 > p {p = $5} END {print p + 0}' "$LEDGER"
+}
+
+# ── memory the machine can spare, on either platform ────────────────────────────
+
+total_mb() {
+  if [[ -r /proc/meminfo ]]; then awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo
+  else sysctl -n hw.memsize 2>/dev/null | awk '{printf "%d", $1/1048576}'
+  fi
+}
+
+spare_mb() {
+  local total held free
+  total=$(total_mb)
+  held=$(ps -eo rss,comm 2>/dev/null | awk '/node|python|uvicorn|Chrome|Code/ {s += $1} END {printf "%d", s/1024}')
+  free=$(( total - held - 1024 ))     # 1 GB for the OS and page cache
+  if (( free < 512 )); then free=512; fi
+  printf '%d' "$free"
+}
+
+# ── single flight ───────────────────────────────────────────────────────────────
+#
+# A lock directory rather than flock, which macOS does not ship. mkdir either creates
+# or fails, atomically. The PID inside lets a lock left by a crash be told apart from
+# one held by live work.
+
+lock_acquire() {                      # name → 0 and locked, or 1 printing the holder
+  if mkdir "$LOCKDIR" 2>/dev/null; then
+    printf '%s\n%s\n' "$1" "$$" > "$LOCKDIR/owner"; return 0
+  fi
+  local who pid
+  who=$(sed -n 1p "$LOCKDIR/owner" 2>/dev/null)
+  pid=$(sed -n 2p "$LOCKDIR/owner" 2>/dev/null)
+  if [[ -n "$pid" ]] && ! kill -0 "$pid" 2>/dev/null; then
+    echo "clearing a lock left by ${who:-a previous run} (pid $pid is gone)" >&2
+    rm -rf "$LOCKDIR"
+    lock_acquire "$1"; return $?
+  fi
+  printf '%s' "${who:-unknown}"; return 1
+}
+
+lock_holder() { sed -n 1p "$LOCKDIR/owner" 2>/dev/null; }
+lock_pid()    { sed -n 2p "$LOCKDIR/owner" 2>/dev/null; }
+lock_release() { rm -rf "$LOCKDIR"; }
+
+# ── start ───────────────────────────────────────────────────────────────────────
+
+cmd_start() {
+  if [[ "$(role)" == "server" ]]; then
+    die "this machine is marked as a server in ops/state/ROLE, and pipelines no longer
+run here. Run it on your laptop, then send the result with:  ops/data push <case>"
+  fi
+
+  local name="${1:-}" wait=0 fg=0 mem="" args=()
+  shift || true
+  [[ -n "$name" ]] || die "usage: pipeline start <name> [--wait] [--fg] [--mem 3G] -- <command...>"
+  while (( $# )); do
+    case "$1" in
+      --wait) wait=1; shift ;;
+      --fg)   fg=1; shift ;;
+      --mem)  mem="${2:?--mem needs a value}"; shift 2 ;;
+      --)     shift; args=("$@"); break ;;
+      *)      die "unexpected argument: $1" ;;
+    esac
+  done
+  (( ${#args[@]} )) || die "no command given (put it after --)"
+
+  local held
+  while ! held=$(lock_acquire "$name"); do
+    if (( ! wait )); then
+      die "refusing: $held is already running. Pass --wait to queue, or 'pipeline stop'."
+    fi
+    printf '  waiting for %s to finish…\r' "$held" >&2
+    sleep 15
+  done
+
+  local spare peak cap
+  spare=$(spare_mb); peak=$(recorded_peak "$name")
+  cap="$mem"
+  if [[ -z "$cap" ]]; then
+    cap=$spare
+    if (( peak > 0 && peak * 125 / 100 > cap )); then cap=$(( peak * 125 / 100 )); fi
+    cap="${cap}M"
+  fi
+  # A cap the machine cannot honour is last time's OOM, rescheduled.
+  if (( peak > spare )); then
+    echo "warning: $name peaked at ${peak} MB before; this machine can spare ${spare} MB." >&2
+    echo "  Expect it to end the same way. Free memory, or make the pipeline stream." >&2
+  fi
+
+  echo "starting $name  [$BACKEND]" >&2
+  if (( peak > 0 )); then echo "  previous peak  ${peak} MB" >&2; fi
+  echo "  command        ${args[*]}" >&2
+  ledger_open "$name" "$(printf '%s' "$cap" | tr -dc '0-9')" "${args[*]}"
+
+  if [[ "$BACKEND" == systemd ]]; then
+    if ! sudo systemd-run --unit="${PREFIX}${name}" --collect \
+      --working-directory="${PIPELINE_CWD:-$ROOT}" \
+      -p MemoryAccounting=yes -p MemoryMax="$cap" -p MemorySwapMax=0 \
+      -p CPUQuota="${PIPELINE_CPU:-200%}" -p Nice=10 \
+      -p EnvironmentFile=-"$ROOT/.env" \
+      -p ExecStopPost="/bin/bash $ROOT/ops/pipeline reap $name" \
+      --setenv=PYTHONUNBUFFERED=1 -- "${args[@]}" >&2
+    then
+      ledger_close "$name" "start-failed" "-"; lock_release; die "systemd-run refused"
+    fi
+    lock_release      # systemd owns the run; single flight falls to unit state
+    echo "  logs           ops/pipeline logs $name -f" >&2
+    return
+  fi
+
+  # Portable: run detached, measure the peak, close the ledger ourselves. The
+  # supervising subshell holds the lock for the life of the run, and its PID in the
+  # lock file is what status and stop act on.
+  local log="$LOGS/$name.log"
+  : > "$log"
+  run_body() {
+    printf '%s\n%s\n' "$name" "$BASHPID" > "$LOCKDIR/owner"
+    cd "${PIPELINE_CWD:-$ROOT}" || exit 1
+    if [[ -f "$ROOT/.env" ]]; then set -a; . "$ROOT/.env"; set +a; fi
+    export PYTHONUNBUFFERED=1
+    # /usr/bin/time -l reports maximum resident set size on macOS, in bytes.
+    /usr/bin/time -l "${args[@]}" >> "$log" 2>&1
+    local code=$?
+    local peak_mb; peak_mb=$(awk '/maximum resident set size/ {printf "%d", $1/1048576; exit}' "$log")
+    ledger_close "$name" "$code" "${peak_mb:--}"
+    lock_release
+    return $code
+  }
+  if (( fg )); then
+    run_body; return $?
+  fi
+  ( run_body ) &
+  disown
+  sleep 1
+  echo "  logs           ops/pipeline logs $name -f" >&2
+}
+
+# ── run: every named case's own refresh, strictly one after another ──────────────
+#
+# The convention across the ten cases is a Makefile target: `refresh` where the case
+# has one, `rebuild` otherwise. Detected rather than assumed, because a typo'd target
+# makes `make` exit 2 immediately and look like a pipeline that failed instantly.
+
+case_target() {
+  local mk="$ROOT/cases/$1/Makefile"
+  [[ -f "$mk" ]] || return 1
+  for t in refresh rebuild rebuild-all all; do
+    grep -qE "^${t}:" "$mk" && { printf '%s' "$t"; return 0; }
+  done
+  return 1
+}
+
+cmd_run() {
+  local keep=0 plan=0 list=()
+  for a in "$@"; do
+    case "$a" in
+      --keep-going|-k) keep=1 ;;
+      --plan|-n)       plan=1 ;;
+      *)               list+=("$a") ;;
+    esac
+  done
+  (( ${#list[@]} )) || die "usage: pipeline run [--keep-going] <case...>
+  cases: $(find "$ROOT/cases" -maxdepth 1 -mindepth 1 -type d -exec basename {} \; | sort | tr '\n' ' ')"
+
+  # Resolve every target before running any of them: finding out that case seven has
+  # no usable target, an hour into case six, wastes the hour.
+  local targets=()
+  for c in "${list[@]}"; do
+    local t; t=$(case_target "$c") || die "no refresh/rebuild/all target in cases/$c/Makefile"
+    targets+=("$t")
+  done
+
+  echo "running ${#list[@]} pipeline(s) in order:"
+  for i in "${!list[@]}"; do
+    local pk; pk=$(recorded_peak "${list[i]}")
+    printf '  %d. %-18s make %-12s%s\n' $(( i + 1 )) "${list[i]}" "${targets[i]}" \
+      "$( (( pk > 0 )) && printf 'last peak %s MB' "$pk" )"
+  done
+  echo
+  if (( plan )); then
+    printf 'plan only — nothing was run. Spare memory here: %d MB\n' "$(spare_mb)"
+    return
+  fi
+
+  local failed=() ok=()
+  for i in "${!list[@]}"; do
+    local c="${list[i]}" t="${targets[i]}"
+    printf '── [%d/%d] %s ──\n' $(( i + 1 )) "${#list[@]}" "$c"
+    if PIPELINE_CWD="$ROOT/cases/$c" cmd_start "$c" --fg --wait -- make "$t"; then
+      ok+=("$c"); echo "  ok"
+    else
+      failed+=("$c")
+      echo "  FAILED — see: ops/pipeline logs $c"
+      if (( ! keep )); then
+        echo
+        echo "stopping here. Pass --keep-going to run the rest anyway."
+        break
+      fi
+    fi
+  done
+
+  echo
+  printf 'done: %d ok' "${#ok[@]}"
+  (( ${#failed[@]} )) && printf ', %d failed (%s)' "${#failed[@]}" "$(printf '%s ' "${failed[@]}")"
+  echo
+  if (( ${#ok[@]} )); then
+    echo
+    echo "publish what changed:"
+    echo "  ops/data status ${ok[*]}"
+    echo "  ops/data push ${ok[*]} --yes"
+  fi
+}
+
+# systemd calls this as the unit stops, so a kill still records its peak
+cmd_reap() {
+  local name="${1:?}" unit="${PREFIX}${1}.service" peak status code
+  peak=$(systemctl show -p MemoryPeak --value "$unit" 2>/dev/null)
+  status=$(systemctl show -p Result --value "$unit" 2>/dev/null)
+  code=$(systemctl show -p ExecMainStatus --value "$unit" 2>/dev/null)
+  if [[ "$peak" =~ ^[0-9]+$ ]]; then peak=$(( peak / 1048576 )); else peak="-"; fi
+  if [[ "$status" == "oom-kill" ]]; then code="oom"; fi
+  ledger_close "$name" "${code:-?}" "$peak"
+}
+
+# ── status, history, logs, stop ──────────────────────────────────────────────────
+
+cmd_status() {
+  printf 'role     %-12s backend  %s\n' "$(role)" "$BACKEND"
+  local running="" pid=""
+  if [[ "$BACKEND" == systemd ]]; then
+    running=$(systemctl list-units "${PREFIX}*.service" --state=running --no-legend --plain 2>/dev/null | awk 'NR==1{print $1}')
+    running="${running#$PREFIX}"; running="${running%.service}"
+  elif [[ -d "$LOCKDIR" ]]; then
+    pid=$(lock_pid)
+    if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then running=$(lock_holder); fi
+  fi
+  if [[ -n "$running" ]]; then
+    printf 'RUNNING  %s' "$running"
+    if [[ -n "$pid" ]]; then
+      local rss; rss=$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ')
+      [[ -n "$rss" ]] && printf '  (supervisor %s)' "$pid"
+    fi
+    echo
+  else
+    echo "IDLE     no pipeline running"
+  fi
+  printf 'memory   %d MB total, %d MB spare for a pipeline\n' "$(total_mb)" "$(spare_mb)"
+  echo
+  cmd_history 6
+}
+
+cmd_history() {
+  local n="${1:-12}"
+  echo "last $n run(s):"
+  local rows; rows=$(awk -F'\t' 'NR > 1 && $1 != "started"' "$LEDGER" | tail -n "$n")
+  if [[ -z "$rows" ]]; then echo "  (none yet)"; return; fi
+  printf '%s\n' "$rows" | awk -F'\t' '{
+    printf "  %-17s %-14s %-11s peak %6s MB  cap %6s MB\n",
+      substr($1, 6, 11), $2, ($4 == "" ? "running" : "exit " $4),
+      ($5 == "" ? "-" : $5), ($6 == "" ? "-" : $6) }'
+}
+
+cmd_logs() {
+  local name="${1:?usage: pipeline logs <name> [-f]}"; shift || true
+  if [[ "$BACKEND" == systemd ]]; then
+    journalctl -u "${PREFIX}${name}.service" -o cat --no-pager "$@" 2>/dev/null | tail -200
+  else
+    local log="$LOGS/$name.log"
+    [[ -f "$log" ]] || die "no log for $name yet"
+    if [[ "${1:-}" == "-f" ]]; then tail -f "$log"; else tail -200 "$log"; fi
+  fi
+}
+
+cmd_stop() {
+  local name="${1:-}"
+  [[ -z "$name" ]] && name=$(lock_holder)
+  [[ -z "$name" ]] && { echo "nothing running"; return; }
+  echo "stopping $name" >&2
+  if [[ "$BACKEND" == systemd ]]; then
+    sudo systemctl stop "${PREFIX}${name}.service"
+    return
+  fi
+  local pid; pid=$(lock_pid)
+  if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
+    pkill -TERM -P "$pid" 2>/dev/null
+    kill -TERM "$pid" 2>/dev/null
+    sleep 3
+    pkill -KILL -P "$pid" 2>/dev/null; kill -KILL "$pid" 2>/dev/null
+  fi
+  ledger_close "$name" "stopped" "-"
+  lock_release
+  echo "  stopped" >&2
+}
+
+case "${1:-status}" in
+  start)   shift; cmd_start "$@" ;;
+  run)     shift; cmd_run "$@" ;;
+  reap)    shift; cmd_reap "$@" ;;
+  status)  shift; cmd_status "$@" ;;
+  history) shift; cmd_history "$@" ;;
+  logs)    shift; cmd_logs "$@" ;;
+  stop)    shift; cmd_stop "$@" ;;
+  *)       die "usage: pipeline {start|status|history|logs|stop}" ;;
+esac

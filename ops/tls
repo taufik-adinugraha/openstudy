@@ -1,0 +1,242 @@
+#!/usr/bin/env bash
+# A free domain, https, and a DNS record that follows a changing IP.
+#
+# Run this on the server.
+#
+# Three separate problems, in the order they have to be solved:
+#
+#   1. a name.  https cannot be issued for a bare IP, so a domain is not a nicety here,
+#      it is the precondition. DuckDNS gives a free subdomain and, unlike most free
+#      providers, an update API with no monthly confirmation ritual.
+#
+#   2. a record that keeps up.  No Elastic IP is held, so the address changes on every
+#      stop and start. `ops/tls ddns` installs a timer that pushes the current address
+#      to DuckDNS, which is what makes an Elastic IP unnecessary rather than merely
+#      skipped.
+#
+#   3. a certificate.  Obtained with `certonly --webroot`, never with the nginx plugin:
+#      ops/serve-static rewrites the site config and would erase anything the plugin
+#      added to it. The generator writes the TLS block itself; this only fetches keys.
+#
+# Usage:
+#   ops/tls domain <name>              record the domain and rewrite the config
+#   ops/tls ddns <subdomain> <token>   keep DuckDNS pointed at this machine
+#   ops/tls cert [--staging]           obtain the certificate and turn https on
+#   ops/tls status                     domain, record, certificate, renewal timer
+
+set -uo pipefail
+
+ROOT="${SERVE_ROOT:-/home/ubuntu/demo-lab}"
+STATE="$ROOT/ops/state"
+WEB="/srv/demo/web"
+DOMAIN_FILE="$STATE/DOMAIN"
+DDNS_ENV="/etc/duckdns.env"
+
+mkdir -p "$STATE"
+die() { printf '%s\n' "$*" >&2; exit 1; }
+domain() { cat "$DOMAIN_FILE" 2>/dev/null; }
+
+public_ip() {
+  local t
+  t=$(curl -s -X PUT --max-time 5 "http://169.254.169.254/latest/api/token" \
+        -H "X-aws-ec2-metadata-token-ttl-seconds: 60")
+  curl -s --max-time 5 -H "X-aws-ec2-metadata-token: $t" \
+    http://169.254.169.254/latest/meta-data/public-ipv4
+}
+
+# ── the name ────────────────────────────────────────────────────────────────────
+
+cmd_domain() {
+  local d="${1:-}"
+  [[ -n "$d" ]] || die "usage: ops/tls domain <name>   e.g. fmv-demo.duckdns.org"
+  [[ "$d" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$ ]] \
+    || die "that does not look like a hostname: $d"
+
+  # Resolve before committing. A config naming a domain that points somewhere else
+  # produces a certificate request that fails for reasons nobody enjoys debugging.
+  local resolved mine
+  resolved=$(getent hosts "$d" 2>/dev/null | awk 'NR==1{print $1}')
+  mine=$(public_ip)
+  printf '  %-14s %s\n' "domain" "$d"
+  printf '  %-14s %s\n' "resolves to" "${resolved:-nothing yet}"
+  printf '  %-14s %s\n' "this machine" "${mine:-unknown}"
+  if [[ -z "$resolved" ]]; then
+    echo "  note: no DNS record yet. Recording the domain anyway; set the record, then"
+    echo "        run ops/tls cert."
+  elif [[ "$resolved" != "$mine" ]]; then
+    echo "  warning: the record points elsewhere. A certificate request will fail until"
+    echo "           it points here — ops/tls ddns can keep it correct automatically."
+  fi
+
+  printf '%s\n' "$d" > "$DOMAIN_FILE"
+  echo "  saved to ops/state/DOMAIN"
+  "$ROOT/ops/serve-static" install >/dev/null 2>&1 \
+    && sudo systemctl reload nginx 2>/dev/null \
+    && echo "  nginx now answers for $d"
+}
+
+# ── a record that keeps up ──────────────────────────────────────────────────────
+
+cmd_ddns() {
+  local sub="${1:-}" token="${2:-}"
+  [[ -n "$sub" && -n "$token" ]] || die \
+"usage: ops/tls ddns <subdomain> <token>
+
+Create the subdomain at https://www.duckdns.org (sign in, type a name, copy the
+token). Pass the bare subdomain, not the full host: 'fmv-demo', not
+'fmv-demo.duckdns.org'."
+
+  # The token is a credential. 0600, root-owned, and never in a unit file or an
+  # argument list where `ps` would show it.
+  printf 'DUCKDNS_SUBDOMAIN=%s\nDUCKDNS_TOKEN=%s\n' "$sub" "$token" \
+    | sudo tee "$DDNS_ENV" >/dev/null
+  sudo chmod 600 "$DDNS_ENV"; sudo chown root:root "$DDNS_ENV"
+  echo "  credentials written to $DDNS_ENV (0600)"
+
+  sudo tee /usr/local/bin/duckdns-update >/dev/null <<'SCRIPT'
+#!/usr/bin/env bash
+# Push this machine's current public address to DuckDNS. Called by a timer; the
+# address is left to DuckDNS to detect, which is correct behind a NAT and identical
+# to the metadata answer on a plain public instance.
+set -uo pipefail
+. /etc/duckdns.env
+out=$(curl -s --max-time 20 \
+  "https://www.duckdns.org/update?domains=${DUCKDNS_SUBDOMAIN}&token=${DUCKDNS_TOKEN}&ip=")
+printf '%s duckdns: %s\n' "$(date -u +%FT%TZ)" "$out"
+[[ "$out" == "OK" ]] || exit 1
+SCRIPT
+  sudo chmod 755 /usr/local/bin/duckdns-update
+
+  sudo tee /etc/systemd/system/duckdns.service >/dev/null <<'UNIT'
+[Unit]
+Description=Point the DuckDNS record at this machine
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/duckdns.env
+ExecStart=/usr/local/bin/duckdns-update
+UNIT
+
+  sudo tee /etc/systemd/system/duckdns.timer >/dev/null <<'UNIT'
+[Unit]
+Description=Keep the DuckDNS record current
+
+[Timer]
+# Soon after boot, because that is when the address has just changed, then steadily.
+OnBootSec=45s
+OnUnitActiveSec=5min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
+UNIT
+
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now duckdns.timer >/dev/null 2>&1
+  echo -n "  first update: "
+  sudo systemctl start duckdns.service && journalctl -u duckdns -n 1 -o cat --no-pager
+  printf '%s\n' "$sub.duckdns.org" > "$DOMAIN_FILE"
+  echo "  domain set to $sub.duckdns.org"
+}
+
+# ── the certificate ─────────────────────────────────────────────────────────────
+
+cmd_cert() {
+  local staging=() d; d=$(domain)
+  [[ -n "$d" && "$d" != "_" ]] || die "no domain yet — ops/tls domain <name>"
+  for a in "$@"; do [[ "$a" == "--staging" ]] && staging=(--staging); done
+
+  command -v certbot >/dev/null 2>&1 || {
+    echo "  installing certbot"
+    sudo apt-get update -qq && sudo apt-get install -y -qq certbot || die "apt failed"
+  }
+
+  # The challenge is served as a plain file out of the same tree nginx already serves,
+  # so nothing about the running config has to change to get a certificate.
+  sudo mkdir -p "$WEB/.well-known/acme-challenge"
+  sudo chmod -R a+rX "$WEB/.well-known"
+  echo -n "  challenge path reachable: "
+  echo ok | sudo tee "$WEB/.well-known/acme-challenge/probe" >/dev/null
+  local probe; probe=$(curl -s --max-time 20 "http://$d/.well-known/acme-challenge/probe")
+  sudo rm -f "$WEB/.well-known/acme-challenge/probe"
+  if [[ "$probe" != "ok" ]]; then
+    echo "no"
+    die "Let's Encrypt has to fetch http://$d/.well-known/... and could not.
+Check that the DNS record points here and that port 80 is open to the internet."
+  fi
+  echo "yes"
+
+  # A staging certificate is not browser-trusted, and --keep-until-expiring would
+  # happily leave it in place because it has not expired. Replace it deliberately.
+  if [[ ${#staging[@]} -eq 0 ]] && sudo test -s "/etc/letsencrypt/live/$d/fullchain.pem" && \
+     sudo openssl x509 -issuer -noout -in "/etc/letsencrypt/live/$d/fullchain.pem" \
+       | grep -qi "staging"; then
+    echo "  replacing the staging certificate with a real one"
+    sudo certbot delete --cert-name "$d" --non-interactive >/dev/null 2>&1
+  fi
+  sudo certbot certonly --webroot -w "$WEB" -d "$d" \
+    --non-interactive --agree-tos --register-unsafely-without-email \
+    --keep-until-expiring "${staging[@]+"${staging[@]}"}" || die "certbot failed"
+
+  "$ROOT/ops/serve-static" install >/dev/null 2>&1
+  sudo nginx -t >/dev/null 2>&1 || die "the new config is invalid — nothing reloaded"
+  sudo systemctl reload nginx
+  sleep 1
+
+  # Say it is on only when it is. This claimed success once while nginx had no 443
+  # block at all, because the certificate check had been made as the wrong user.
+  local listening test_cert
+  listening=$(sudo ss -tlnH 2>/dev/null | grep -c ':443 ')
+  test_cert=$(sudo certbot certificates 2>/dev/null | grep -c "INVALID: TEST_CERT")
+  if (( listening == 0 )); then
+    echo "  NOT on: nginx is not listening on 443."
+    echo "  config has $(grep -c 'listen 443' /etc/nginx/sites-available/demo-lab) listen-443 directive(s)."
+    return 1
+  fi
+  if (( test_cert > 0 )); then
+    echo "  serving on 443, but with a STAGING certificate — browsers will refuse it."
+    echo "  run: sudo certbot delete --cert-name $d   then  ops/tls cert"
+    return 1
+  fi
+  echo "  https is on: https://$d/"
+  systemctl is-enabled certbot.timer >/dev/null 2>&1 \
+    && echo "  renewal: certbot.timer is enabled" \
+    || echo "  renewal: certbot.timer is NOT enabled — sudo systemctl enable --now certbot.timer"
+}
+
+# ── status ──────────────────────────────────────────────────────────────────────
+
+cmd_status() {
+  local d; d=$(domain)
+  printf '  %-14s %s\n' "domain" "${d:-none set}"
+  printf '  %-14s %s\n' "this machine" "$(public_ip)"
+  [[ -n "$d" && "$d" != "_" ]] && \
+    printf '  %-14s %s\n' "resolves to" "$(getent hosts "$d" 2>/dev/null | awk 'NR==1{print $1}' || echo 'nothing')"
+  if [[ -n "$d" ]] && sudo test -s "/etc/letsencrypt/live/$d/fullchain.pem"; then
+    local iss end
+    end=$(sudo openssl x509 -enddate -noout -in "/etc/letsencrypt/live/$d/fullchain.pem" | cut -d= -f2)
+    iss=$(sudo openssl x509 -issuer -noout -in "/etc/letsencrypt/live/$d/fullchain.pem")
+    if grep -qi staging <<< "$iss"; then
+      printf '  %-14s %s\n' "certificate" "STAGING (not browser-trusted), expires $end"
+    else
+      printf '  %-14s %s\n' "certificate" "valid until $end"
+    fi
+  else
+    printf '  %-14s %s\n' "certificate" "none"
+  fi
+  printf '  %-14s %s\n' "port 443" \
+    "$( (( $(sudo ss -tlnH 2>/dev/null | grep -c ':443 ') )) && echo listening || echo "not listening" )"
+  printf '  %-14s %s\n' "ddns timer" "$(systemctl is-active duckdns.timer 2>/dev/null || echo inactive)"
+  printf '  %-14s %s\n' "renewal timer" "$(systemctl is-active certbot.timer 2>/dev/null || echo inactive)"
+  printf '  %-14s %s\n' "nginx" "$(systemctl is-active nginx 2>/dev/null)"
+}
+
+case "${1:-status}" in
+  domain) shift; cmd_domain "$@" ;;
+  ddns)   shift; cmd_ddns "$@" ;;
+  cert)   shift; cmd_cert "$@" ;;
+  status) shift; cmd_status "$@" ;;
+  *)      die "usage: ops/tls {domain|ddns|cert|status}" ;;
+esac

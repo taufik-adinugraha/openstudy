@@ -33,3 +33,11 @@ cases/*/tools/
 
 # agent worktrees (managed by the harness)
 .claude/worktrees/
+
+# operational state — runtime, not source
+ops/state/
+ops/backups/
+
+# rebuilt at startup from corpus/, and it accumulates a spend ledger and
+# upload records that have no business in version control
+platform/knowledge/api/knowledge.db

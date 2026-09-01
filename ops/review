@@ -1,0 +1,343 @@
+#!/usr/bin/env python3
+"""Review every case against the house rules.
+
+Each case already has its own ``validate.py`` checking the science — the gates that
+belong to that subject and no other. This checks the rules that apply to all of them:
+what has to be stated, what must never appear, and what has to still be true.
+
+Two layers, because the rules are not all the same kind of thing.
+
+  MECHANICAL  Checkable by reading the files. Free, fast, and safe to run on every
+              build. A licence that is not stated is not stated; there is nothing to
+              judge. These are the checks in this file.
+
+  JUDGEMENT   Whether a finding is framed as "our run" or as a verdict, whether a
+              baseline contains the easy knowledge, whether the headline follows from
+              what the gates establish. A regex cannot answer these. They are listed
+              here as PENDING with the question spelled out, and are answered by the
+              model pass in ``ops/review-judgement`` — which costs money and is not run
+              automatically.
+
+The distinction matters more than it looks. A checker that guesses at judgement rules
+produces confident wrong answers, and this project has already been bitten twice by
+checks whose method could not support their conclusion. So a rule this file cannot
+decide is reported as undecided, never as a pass.
+
+Usage:
+  ops/review                 every case
+  ops/review air-quality     one case
+  ops/review --json          machine-readable, for CI
+"""
+
+from __future__ import annotations
+
+import json
+import re
+import sys
+from dataclasses import dataclass, field
+from datetime import date, datetime
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+CASES = ROOT / "cases"
+
+# ── the house rules ─────────────────────────────────────────────────────────────
+#
+# id, what it requires, and how bad a violation is. `auto` says whether this file can
+# decide it. Everything here traces to a decision made deliberately: the internal-jargon
+# rule exists because a client asked what "gate G-A1" meant; the vintage rule exists
+# because an article and a live dashboard that disagree undermine each other.
+
+BLOCK, WARN, NOTE = "block", "warn", "note"
+
+
+@dataclass
+class Finding:
+    rule: str
+    level: str
+    message: str
+    where: str = ""
+
+
+@dataclass
+class CaseReport:
+    case: str
+    findings: list[Finding] = field(default_factory=list)
+    pending: list[str] = field(default_factory=list)
+
+    def add(self, rule: str, level: str, message: str, where: str = "") -> None:
+        self.findings.append(Finding(rule, level, message, where))
+
+    @property
+    def blocks(self) -> int:
+        return sum(f.level == BLOCK for f in self.findings)
+
+    @property
+    def warns(self) -> int:
+        return sum(f.level == WARN for f in self.findings)
+
+
+# Words that would mean personal data is present. Checked against column names in the
+# case's published JSON, not against prose — "nama" in a sentence is fine, a column of
+# them is not.
+# Fields that identify a person on their own. `name` is deliberately NOT here: gates
+# have names, stations have names, countries and languages have names, and treating the
+# word as evidence produced 279 "blocking" findings on one case, every one of them wrong.
+PERSONAL = re.compile(
+    r"^(nik|ktp|npwp|no_ktp|passport|paspor|email|e_mail|phone|telepon|telp|no_hp|"
+    r"alamat|address|street|tgl_lahir|birth_?date|dob|nomor_rekening|account_no)$", re.I)
+
+# `name` counts only in company: a name beside an address or an email is a person; a
+# name beside a threshold and a pass/fail is a gate.
+NAMEISH = re.compile(r"^(nama|name|full_?name|nama_lengkap)$", re.I)
+
+# Internal shorthand that should never reach a reader. The gate ids are the live
+# example: they are meaningful in the pipeline and meaningless on a page.
+JARGON = [
+    (re.compile(r"\bG-[A-Z]\d\b"), "internal gate id"),
+    (re.compile(r"\bCase [A-Z]\b"), "internal case letter"),
+    (re.compile(r"\bTODO\b"), "TODO left in published content"),
+    (re.compile(r"\bFIXME\b"), "FIXME left in published content"),
+    (re.compile(r"lorem ipsum", re.I), "placeholder text"),
+]
+
+# A claim about someone's data needs a licence beside it.
+LICENCE_HINT = re.compile(r"licen[cs]e|CC[ -]BY|CC0|ODbL|public domain|terms of use", re.I)
+
+
+def web_json(case_dir: Path) -> list[Path]:
+    out = []
+    for sub in ("web/src/data", "web/public/data"):
+        d = case_dir / sub
+        if d.is_dir():
+            out.extend(sorted(p for p in d.rglob("*.json")))
+    return out
+
+
+def page_text(case_dir: Path) -> tuple[str, list[Path]]:
+    """The prose a reader actually sees, concatenated, plus which files it came from."""
+    pages = sorted((case_dir / "web/src/pages").glob("*.astro")) if (case_dir / "web/src/pages").is_dir() else []
+    return "\n".join(p.read_text(encoding="utf8", errors="replace") for p in pages), pages
+
+
+# ── mechanical checks ───────────────────────────────────────────────────────────
+
+def check_jargon(rep: CaseReport, case_dir: Path) -> None:
+    """R1 — no internal shorthand in what a reader actually receives.
+
+    Checked against the BUILD OUTPUT, not the source. A gate id in an .astro file may
+    sit in frontmatter, a comment, or a variable that never renders — reading the source
+    reported four cases as leaking jargon when only one of them does. The built HTML is
+    the only artifact that answers the question being asked.
+    """
+    dist = case_dir / "web/dist"
+    if not dist.is_dir():
+        rep.add("R1 jargon", NOTE,
+                "UNCHECKED — no build output. Run `astro build` in web/ first.", "web/dist")
+        return
+    for page in sorted(dist.rglob("*.html")):
+        text = page.read_text(encoding="utf8", errors="replace")
+        for pattern, what in JARGON:
+            for m in sorted(set(pattern.findall(text))):
+                rep.add("R1 jargon", WARN, f"{what}: {m!r}",
+                        str(page.relative_to(dist)))
+
+
+def check_personal_data(rep: CaseReport, case_dir: Path) -> None:
+    """R2 — no personal data in anything published."""
+    def scan(node, path, src):
+        if isinstance(node, dict):
+            keys = [str(k) for k in node]
+            hard = [k for k in keys if PERSONAL.match(k)]
+            for k in hard:
+                rep.add("R2 personal data", BLOCK,
+                        f"field {k!r} at {path or '<root>'}", src)
+            # a name is only a person's name when something else about a person is
+            # sitting next to it
+            if not hard and any(NAMEISH.match(k) for k in keys) and len(keys) > 1:
+                pass    # nothing identifying alongside it; not a finding
+            for k, v in node.items():
+                scan(v, f"{path}.{k}" if path else k, src)
+        elif isinstance(node, list) and node:
+            scan(node[0], f"{path}[]", src)
+
+    for f in web_json(case_dir):
+        try:
+            scan(json.loads(f.read_text(encoding="utf8")), "", f.name)
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            rep.add("R2 personal data", WARN, f"could not parse: {e}", f.name)
+
+
+def check_licences(rep: CaseReport, case_dir: Path) -> None:
+    """R3 — every source names its licence somewhere a reader can find it."""
+    text, pages = page_text(case_dir)
+    readme = case_dir / "README.md"
+    corpus = text + (readme.read_text(encoding="utf8", errors="replace") if readme.exists() else "")
+    if not LICENCE_HINT.search(corpus):
+        rep.add("R3 licences", BLOCK,
+                "no licence stated on any page or in the README", "case")
+
+
+def check_vintage(rep: CaseReport, case_dir: Path) -> None:
+    """R4 — the data's vintage is stated, so a reader knows what they are looking at."""
+    seen = None
+    for f in web_json(case_dir):
+        try:
+            d = json.loads(f.read_text(encoding="utf8"))
+        except Exception:  # noqa: BLE001
+            continue
+        if isinstance(d, dict):
+            for key in ("vintage", "generated_utc", "retrieved_utc", "generated", "as_of"):
+                if d.get(key):
+                    seen = f"{f.name}:{key}"
+                    break
+        if seen:
+            break
+    if not seen:
+        rep.add("R4 vintage", WARN,
+                "no vintage / generated timestamp in any published JSON", "case")
+    else:
+        rep.add("R4 vintage", NOTE, f"vintage found at {seen}", "case")
+
+
+def check_gates(rep: CaseReport, case_dir: Path) -> None:
+    """R5 — gates are published with an explicit outcome, including the failures."""
+    found = False
+    for f in web_json(case_dir):
+        try:
+            d = json.loads(f.read_text(encoding="utf8"))
+        except Exception:  # noqa: BLE001
+            continue
+        gates = d.get("gates") if isinstance(d, dict) else None
+        if not gates:
+            continue
+        found = True
+        # The rule is "an outcome is published", not "an outcome is spelled the way I
+        # expected". Cases record it as a boolean `pass`, as a status string, or as a
+        # word like "disclosed" for a gate that reports a limitation instead of a verdict.
+        # All three satisfy the rule; only silence does not.
+        for g in gates if isinstance(gates, list) else []:
+            if not isinstance(g, dict):
+                continue
+            has_outcome = any(
+                g.get(k) is not None
+                for k in ("pass", "passed", "status", "result", "state", "verdict", "outcome"))
+            if not has_outcome:
+                rep.add("R5 gates", BLOCK,
+                        f"gate {g.get('id', '?')} published with no outcome of any kind", f.name)
+    if not found:
+        rep.add("R5 gates", WARN, "no gates published in any JSON", "case")
+
+
+def check_raw_data_shipped(rep: CaseReport, case_dir: Path) -> None:
+    """R6 — the web output carries findings, not redistributed source data."""
+    for sub in ("web/src/data", "web/public/data"):
+        d = case_dir / sub
+        if not d.is_dir():
+            continue
+        for f in d.rglob("*"):
+            if f.suffix.lower() in (".parquet", ".tif", ".tiff", ".nc", ".zip", ".shp", ".gpkg"):
+                rep.add("R6 no redistribution", BLOCK,
+                        f"raw source format in web output: {f.name}", sub)
+            elif f.is_file() and f.stat().st_size > 8 * 1024 * 1024:
+                rep.add("R6 no redistribution", WARN,
+                        f"{f.name} is {f.stat().st_size / 1048576:.1f} MB — is this a finding "
+                        f"or a copy of the source?", sub)
+
+
+def check_article(rep: CaseReport, case_dir: Path) -> None:
+    """R7 — an article exists and is separable from the live dashboard."""
+    art = case_dir / "web/src/pages/article.astro"
+    idx = case_dir / "web/src/pages/index.astro"
+    if not idx.exists():
+        rep.add("R7 article", BLOCK, "no dashboard page", "web/src/pages")
+    if not art.exists():
+        rep.add("R7 article", NOTE, "no static article — dashboard only", "web/src/pages")
+
+
+# ── judgement rules: named, not guessed at ──────────────────────────────────────
+
+JUDGEMENT = [
+    ("J1 framing",
+     "Are findings stated as what THIS run found, rather than as a verdict on the "
+     "original work?"),
+    ("J2 baseline",
+     "Is the model scored against a naive rival that already contains the easy "
+     "knowledge, rather than against nothing?"),
+    ("J3 failures",
+     "Are failed gates presented as plainly as the passes, or are they buried?"),
+    ("J4 named actors",
+     "Does the case accuse a named company or project of wrongdoing?"),
+    ("J5 claim support",
+     "Does the headline claim follow from what the gates actually establish?"),
+]
+
+
+def review_case(case_dir: Path) -> CaseReport:
+    rep = CaseReport(case_dir.name)
+    check_jargon(rep, case_dir)
+    check_personal_data(rep, case_dir)
+    check_licences(rep, case_dir)
+    check_vintage(rep, case_dir)
+    check_gates(rep, case_dir)
+    check_raw_data_shipped(rep, case_dir)
+    check_article(rep, case_dir)
+    rep.pending = [f"{rid}: {q}" for rid, q in JUDGEMENT]
+    return rep
+
+
+# ── output ──────────────────────────────────────────────────────────────────────
+
+MARK = {BLOCK: "BLOCK", WARN: "warn ", NOTE: "note "}
+
+
+def main() -> int:
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    as_json = "--json" in sys.argv
+    show_notes = "--notes" in sys.argv
+
+    dirs = [CASES / a for a in args] if args else sorted(
+        d for d in CASES.iterdir() if d.is_dir())
+    missing = [d.name for d in dirs if not d.is_dir()]
+    if missing:
+        print(f"no such case: {', '.join(missing)}", file=sys.stderr)
+        return 2
+
+    reports = [review_case(d) for d in dirs]
+
+    if as_json:
+        print(json.dumps([{
+            "case": r.case,
+            "findings": [vars(f) for f in r.findings],
+            "pending_judgement": r.pending,
+        } for r in reports], indent=2))
+        return 1 if any(r.blocks for r in reports) else 0
+
+    print(f"house rules · {len(reports)} case(s) · {date.today().isoformat()}\n")
+    for r in reports:
+        shown = [f for f in r.findings if show_notes or f.level != NOTE]
+        head = f"{r.case}"
+        if r.blocks:
+            head += f"   {r.blocks} BLOCKING"
+        elif r.warns:
+            head += f"   {r.warns} warning(s)"
+        else:
+            head += "   mechanical checks clean"
+        print(f"  {head}")
+        for f in shown:
+            loc = f" [{f.where}]" if f.where else ""
+            print(f"    {MARK[f.level]} {f.rule:22} {f.message}{loc}")
+        print()
+
+    tb = sum(r.blocks for r in reports)
+    tw = sum(r.warns for r in reports)
+    print(f"  {tb} blocking · {tw} warning(s) across {len(reports)} case(s)")
+    print(f"  {len(JUDGEMENT)} judgement rule(s) per case are UNDECIDED here —")
+    print("  they need the model pass, which this file deliberately does not guess at:")
+    for rid, q in JUDGEMENT:
+        print(f"    {rid:16} {q}")
+    return 1 if tb else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
