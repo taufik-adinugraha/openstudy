@@ -16,7 +16,6 @@ const asset = (f) => `${import.meta.env.BASE_URL.replace(/\/$/, "")}/${f}`;
 
 const DEMOS = {
   nightlights: "/nightlights",
-  knowledge: "/lab/knowledge",
   trade: "/trade",
   jakarta: "/jakarta",
   narrative: "/narrative",
@@ -3779,35 +3778,6 @@ const DEMOS = {
       </a>
     </section>
 
-    <section class="platform">
-      <p class="kicker">NOT A CASE STUDY · A PRODUCT THAT RUNS ON YOUR OWN DOCUMENTS</p>
-      <h2>Every case above reads public data. This one reads yours.</h2>
-
-      <div class="case live" data-case="knowledge">
-        <div class="case-visual provenance-live">
-          <div class="try-chips" id="try-chips"></div>
-          <div class="try-answer" id="try-answer" hidden></div>
-          <div class="try-sources stamp dim" id="try-sources"></div>
-          <form id="try-form">
-            <input id="try-q" type="text" autocomplete="off"
-                   placeholder="Coba tanya di sini — try it right here…" />
-            <button type="submit">Ask</button>
-          </form>
-          <span class="stamp dim" id="try-status">LIVE — ANSWERS FROM REAL DOCUMENTS, CITED &amp; VERIFIED</span>
-        </div>
-        <div class="case-body">
-          <span class="badge">PLATFORM · LIVE — TRY IT HERE</span>
-          <h2>Provenance — Knowledge Assistant</h2>
-          <p>Upload your organization’s documents; ask in Bahasa Indonesia or
-          English; every answer cites the exact pasal, page, and verbatim quote —
-          verified against the source, never invented. Runs on your
-          infrastructure; only the final question leaves it.</p>
-          <a class="cta" href={DEMOS.knowledge} target="_blank" rel="noopener">Open the full demo →</a>
-          <span class="meta">RAG · VERIFIED CITATIONS · MULTILINGUAL RETRIEVAL · UU PDP–AWARE</span>
-        </div>
-      </div>
-    </section>
-
     <footer id="contact" class="foot">
       <h2>Built end-to-end, in the open.</h2>
       <p>Acquisition → pipelines → models → validation → dashboards. If your
@@ -3819,78 +3789,6 @@ const DEMOS = {
       <span class="stamp dim">DEMO LAB · JAKARTA · SOURCES CREDITED ON EVERY CASE</span>
     </footer>
 
-    <script>
-      // Homepage taste of Provenance — real answers from the real API.
-      // Host-aware: works on localhost and when served from the dev server IP.
-      /* Same origin, so the page works over https without mixed content and does not
-         care what the server's address is this week. A bare `astro dev` has no proxy
-         in front of it, so there the API is addressed directly. */
-      const LOCAL = location.hostname === "localhost" || location.hostname === "127.0.0.1";
-      const API = LOCAL ? `http://${location.hostname}:4330/api` : "/lab/knowledge/api";
-      const chips = document.getElementById("try-chips");
-      const answerEl = document.getElementById("try-answer");
-      const sourcesEl = document.getElementById("try-sources");
-      const statusEl = document.getElementById("try-status");
-      const input = document.getElementById("try-q");
-
-      const QUESTIONS = [
-        "Berapa hari cuti yang boleh dibawa ke tahun depan?",
-        "Batas waktu notifikasi kebocoran data pribadi?",
-        "What is the per diem for domestic travel?",
-      ];
-      chips.innerHTML = QUESTIONS.map((q) => `<button type="button">${q}</button>`).join("");
-      chips.querySelectorAll("button").forEach((b) =>
-        b.addEventListener("click", () => { input.value = b.textContent; tryAsk(); }));
-
-      function renderAnswer(text) {
-        const safe = text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
-        return safe
-          .replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")
-          .replace(/\[(\d+)\]/g, '<span class="tcite">$1</span>')
-          .replace(/\n+/g, "<br>");
-      }
-
-      async function tryAsk() {
-        const q = input.value.trim();
-        if (!q) return;
-        answerEl.hidden = false;
-        answerEl.textContent = "Mencari di dokumen…";
-        sourcesEl.textContent = "";
-        try {
-          const res = await fetch(`${API}/ask`, { method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ question: q }) }).then((r) => r.json());
-          answerEl.innerHTML = renderAnswer(res.answer || "");
-          const cites = (res.citations || []).filter((c) => c.source);
-          sourcesEl.innerHTML = cites.slice(0, 3).map((c) =>
-            `${c.verified ? "✓ " : ""}${c.source.doc_title}${c.source.pasal ? " · " + c.source.pasal : ""}${c.source.page ? " · hal. " + c.source.page : ""}`
-          ).join("<br>");
-          statusEl.textContent = `${(res.mode || "").toUpperCase()} · ${res.latency_s}s — FULL EXPERIENCE IN THE DEMO →`;
-        } catch {
-          answerEl.textContent = "The demo API isn't running — open the full demo instead.";
-        }
-      }
-      document.getElementById("try-form").addEventListener("submit", (e) => {
-        e.preventDefault(); tryAsk();
-      });
-
-      /* Entrance reveal for the case gallery. The hidden state is applied only once
-         this runs, so a JS failure leaves every card visible rather than blank. */
-      (() => {
-        const cases = [...document.querySelectorAll(".case")];
-        if (!cases.length || !("IntersectionObserver" in window)) return;
-        const wraps = [...document.querySelectorAll(".cases, .platform")];
-        if (!wraps.length) return;
-        wraps.forEach((w) => w.classList.add("reveal-on"));
-        if (matchMedia("(prefers-reduced-motion: reduce)").matches) { cases.forEach((c) => c.classList.add("in")); return; }
-        const io = new IntersectionObserver((entries) => {
-          entries.forEach((en) => { if (en.isIntersecting) { en.target.classList.add("in"); io.unobserve(en.target); } });
-        }, { rootMargin: "0px 0px -12% 0px", threshold: 0.08 });
-        cases.forEach((c) => io.observe(c));
-        // belt and braces: never leave a card stuck invisible
-        setTimeout(() => cases.forEach((c) => c.classList.add("in")), 4000);
-      })();
-    </script>
 
     <style is:global>
       body { margin: 0; }
@@ -3910,15 +3808,6 @@ const DEMOS = {
       .sub { margin: 0; font-size: 1.1rem; line-height: 1.65; color: var(--ink-muted); max-width: 38rem; }
 
       .cases { max-width: 62rem; margin: 0 auto; padding: 0 24px 10vh; display: flex; flex-direction: column; gap: 28px; }
-
-      /* Provenance is a platform product, not a public-data case study, so it sits below
-         the gallery behind a rule rather than competing inside it. */
-      .platform { max-width: 62rem; margin: 0 auto; padding: 0 24px 10vh;
-        display: flex; flex-direction: column; gap: 10px; }
-      .platform::before { content: ""; display: block; height: 1px;
-        background: var(--hairline); margin-bottom: 7vh; }
-      .platform h2 { margin: 0 0 14px; font-size: 1.5rem; letter-spacing: -0.01em; max-width: 26ch; }
-      .platform .kicker { margin: 0; }
       *, *::before, *::after { box-sizing: border-box; }
       .case { display: grid; grid-template-columns: 1.1fr 1fr; border: 1px solid var(--hairline); border-radius: 8px;
         overflow: hidden; background: linear-gradient(160deg, var(--surface-raised), var(--surface) 70%); text-decoration: none; color: var(--ink);
@@ -3975,18 +3864,6 @@ const DEMOS = {
       .platform { padding-top: 4vh; }
       .section-head { display: flex; flex-direction: column; gap: 8px; }
       .section-sub { margin: 0; color: var(--ink-muted); max-width: 34rem; }
-      .provenance-live { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 26px; }
-      .provenance-live > * { width: min(420px, 100%); }
-      .try-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-      .try-chips button { background: none; border: 1px solid var(--hairline); color: var(--ink-muted); border-radius: 16px; padding: 5px 11px; font-size: 0.75rem; cursor: pointer; font-family: var(--font-body); }
-      .try-chips button:hover { border-color: var(--accent); color: var(--accent); }
-      .try-answer { background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 10px; padding: 12px 16px; font-size: 0.85rem; line-height: 1.6; max-height: 190px; overflow-y: auto; }
-      .try-answer .tcite { display: inline-flex; min-width: 15px; height: 15px; align-items: center; justify-content: center; border: 1px solid var(--accent); border-radius: 3px; color: var(--accent); font-size: 0.75rem; margin: 0 2px; font-family: var(--font-data); }
-      .try-sources { line-height: 1.7; }
-      #try-form { display: flex; gap: 8px; }
-      #try-q { flex: 1; background: var(--surface-raised); border: 1px solid var(--hairline); border-radius: 8px; color: var(--ink); padding: 10px 14px; font-family: var(--font-body); font-size: 0.85rem; }
-      #try-q:focus-visible { outline: 2px solid var(--accent); }
-      #try-form button { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; padding: 0 18px; font-family: var(--font-display); font-weight: 600; cursor: pointer; }
       @keyframes pulse-bar { 50% { transform: scaleY(0.55); } }
       /* air-quality visual: haze layers drifting across a hidden sun */
       .aq-visual, .forest-visual, .transit-visual { padding: 0; overflow: hidden; }
