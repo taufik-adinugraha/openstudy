@@ -10,7 +10,7 @@ import { INSTRUMENTS, OPEN_COUNT, BASE } from "../data/instruments.js";
 >
   <section class="hero">
     <p class="eyebrow">Open data · Indonesia · instruments, not dashboards</p>
-    <h1>The research is theirs.<br /><em>The instrument is mine.</em></h1>
+    <h1>The meaning is yours.<br /><em>The measurement is ours.</em></h1>
     <p class="lead">
       A finding in a paper is a static figure and a table. This studio does the whole
       quantitative half — the acquisition pipeline, the models, their evaluation against
@@ -38,7 +38,7 @@ import { INSTRUMENTS, OPEN_COUNT, BASE } from "../data/instruments.js";
         non-specialist can use, and no journal will host it for you. That is the gap.
       </p>
       <div class="callout">
-        <p><b>You have a finding. The studio builds the instrument. You keep the research.</b></p>
+        <p><b>You have a finding. The studio builds the measurement. The interpretation stays yours.</b></p>
         <p class="dim">
           No claim on your finding, no editorial control over your interpretation, no veto
           on your conclusions. The studio does the quantitative work and says so; the
@@ -97,7 +97,7 @@ import { INSTRUMENTS, OPEN_COUNT, BASE } from "../data/instruments.js";
       <h2>What you get, and what you should know</h2>
       <div class="sides">
         <div class="side good">
-          <h4>What you get</h4>
+          <h3>What you get</h3>
           <ul>
             <li>A <b>working instrument</b> for your finding, built for you, free</li>
             <li><b>First author.</b> The research is yours; the studio is methods
@@ -108,7 +108,7 @@ import { INSTRUMENTS, OPEN_COUNT, BASE } from "../data/instruments.js";
           </ul>
         </div>
         <div class="side warn">
-          <h4>What you should know</h4>
+          <h3>What you should know</h3>
           <ul>
             <li><b>Not peer reviewed.</b> Gates are checking, not refereeing</li>
             <li>This site has <b>no audience yet</b>. You are betting it gets one</li>
@@ -152,7 +152,7 @@ import { INSTRUMENTS, OPEN_COUNT, BASE } from "../data/instruments.js";
           <li class="card">
             <div class="card-head">
               <a class="card-title" href={`${BASE}/${i.slug}/`} target="_blank" rel="noopener">
-                {i.title} <span class="arrow">→</span>
+                {i.title} <span class="arrow" aria-hidden="true">→</span>
               </a>
               <span class="chip">seeking author</span>
             </div>
@@ -227,7 +227,11 @@ import { INSTRUMENTS, OPEN_COUNT, BASE } from "../data/instruments.js";
     color: var(--ground); background: var(--accent);
   }
   .cta.ghost { background: transparent; color: var(--accent); }
-  .cta:hover { background: color-mix(in srgb, var(--accent) 85%, var(--ink)); color: var(--ground); }
+  .cta { box-shadow: 0 0 28px -10px var(--glow); }
+  .cta:hover {
+    background: color-mix(in srgb, var(--accent) 88%, var(--ink)); color: var(--ground);
+    box-shadow: 0 0 34px -6px var(--glow);
+  }
   .cta.ghost:hover { background: var(--panel); color: var(--accent); }
 
   .sec .col.wide { max-width: none; }
@@ -243,14 +247,16 @@ import { INSTRUMENTS, OPEN_COUNT, BASE } from "../data/instruments.js";
     font-family: var(--serif); font-weight: 600; font-size: 1.18rem;
     text-decoration: none; color: var(--ink);
   }
-  .card-title:hover { color: var(--accent); }
-  .card-title .arrow { color: var(--faint); font-size: 0.9rem; }
+  .card-title:hover { color: var(--accent); text-shadow: 0 0 22px var(--glow); }
+  .card-title .arrow { color: var(--muted); font-size: 0.9rem; }
   .card-title:hover .arrow { color: var(--accent); }
   .chip {
     font-family: var(--sans); font-size: 0.64rem; font-weight: 600;
     letter-spacing: 0.1em; text-transform: uppercase;
     color: var(--flag); border: 1px solid currentColor;
     padding: 0.15rem 0.45rem; white-space: nowrap;
+    text-shadow: 0 0 14px var(--glow-flag);
+    box-shadow: 0 0 18px -12px var(--glow-flag);
   }
   .card-line { margin: 0 0 0.6rem; color: var(--muted); max-width: 62ch; }
   .card-found, .card-gap {

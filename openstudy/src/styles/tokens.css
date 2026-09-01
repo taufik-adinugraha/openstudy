@@ -1,24 +1,36 @@
-/* openstudy.id — the studio's own type and colour.
+/* openstudy.id — dark first, because the subject is instruments and an instrument
+ * emits light.
  *
- * Deliberately not the demo lab's palette. That one is an instrument panel: dark, high
- * contrast, a spectral accent per case. This site is a document — it explains an
- * arrangement and asks someone to take part in it — so it reads like paper, with one
- * accent and one alarm colour, and nothing else competing for attention.
+ * The ground is near-black with a green-blue bias; the accent is a phosphor teal that
+ * reads like a readout rather than a brand colour. The glow is deliberate and narrow:
+ * it lands on the headline accent, the section labels, the call to action and the status
+ * chips — the things that would be lit on a real panel — and never on body text, table
+ * cells or paragraphs, where a shadow only makes reading harder.
  *
- * The neutral carries a faint green bias rather than being a flat grey, and the accent
- * is a deep teal that survives on both grounds. Oxide red is reserved: it marks a
- * failed gate or a risk a reader must not miss, and appears nowhere decorative.
+ * Three text weights: --ink, --muted, and nothing dimmer. --faint measures 3.48:1 and is
+ * therefore not a text colour at all — it marks list bullets and hairlines, where
+ * contrast rules do not apply. Everything readable uses --ink or --muted, both of which
+ * clear 4.5:1 on both surfaces in both themes.
+ *
+ * --glow is a token rather than a rule inside a media query, so components apply it
+ * unconditionally: in the light theme it resolves to transparent and the same shadow
+ * declaration simply does nothing. A glow on paper looks like a printing fault.
  */
 
 :root {
-  --ground:  #F4F6F5;
-  --panel:   #EAEEEC;
-  --ink:     #16211E;
-  --muted:   #5C6A66;
-  --faint:   #8A9793;
-  --accent:  #1F5F5B;
-  --flag:    #A62B1F;
-  --rule:    #D3DAD7;
+  /* dark is the default here, not the override */
+  --ground:  #0A0E0D;
+  --panel:   #121918;
+  --ink:     #E8EFEC;
+  --muted:   #9BAAA5;
+  --faint:   #5D6B67;      /* decoration only — bullets and hairlines */
+  --accent:  #4FD8C0;
+  --flag:    #FF7F6B;
+  --rule:    #1E2926;
+
+  --glow:      color-mix(in srgb, var(--accent) 42%, transparent);
+  --glow-soft: color-mix(in srgb, var(--accent) 14%, transparent);
+  --glow-flag: color-mix(in srgb, var(--flag) 34%, transparent);
 
   --serif: "Newsreader", Georgia, "Times New Roman", serif;
   --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
@@ -28,28 +40,36 @@
   --rail: 11rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --ground: #101513;
-    --panel:  #182020;
-    --ink:    #E7EDEA;
-    --muted:  #9DAAA5;
-    --faint:  #6E7C78;
-    --accent: #64ABA2;
-    --flag:   #E4796A;
-    --rule:   #2A3533;
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --ground:  #F5F7F6;
+    --panel:   #E9EEEC;
+    --ink:     #101614;
+    --muted:   #54625E;
+    --faint:   #A3AEAA;
+    --accent:  #116B60;
+    --flag:    #A8301F;
+    --rule:    #D2DAD7;
+
+    --glow:      transparent;
+    --glow-soft: transparent;
+    --glow-flag: transparent;
   }
 }
 
-:root[data-theme="dark"] {
-  --ground: #101513;
-  --panel:  #182020;
-  --ink:    #E7EDEA;
-  --muted:  #9DAAA5;
-  --faint:  #6E7C78;
-  --accent: #64ABA2;
-  --flag:   #E4796A;
-  --rule:   #2A3533;
+:root[data-theme="light"] {
+  --ground:  #F5F7F6;
+  --panel:   #E9EEEC;
+  --ink:     #101614;
+  --muted:   #54625E;
+  --faint:   #A3AEAA;
+  --accent:  #116B60;
+  --flag:    #A8301F;
+  --rule:    #D2DAD7;
+
+  --glow:      transparent;
+  --glow-soft: transparent;
+  --glow-flag: transparent;
 }
 
 * { box-sizing: border-box; }
@@ -57,7 +77,10 @@
 html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
 }
 
 body {
@@ -70,6 +93,23 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* One ambient wash behind the top of the page, so the ground is not flat black. Fixed
+   rather than animated: a drifting gradient behind text is a distraction, and a static
+   one still reads as a lit panel. Inert in the light theme, where --glow-soft is
+   transparent. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 70vh;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(58% 55% at 20% 0%, var(--glow-soft), transparent 70%),
+    radial-gradient(44% 40% at 88% 6%, var(--glow-soft), transparent 72%);
+}
+.topbar, main, .foot { position: relative; z-index: 1; }
+
 /* ── shell ───────────────────────────────────────────────────────────── */
 
 .wrap {
@@ -81,8 +121,8 @@ body {
 .topbar {
   border-bottom: 1px solid var(--rule);
   position: sticky; top: 0; z-index: 20;
-  background: color-mix(in srgb, var(--ground) 94%, transparent);
-  backdrop-filter: blur(6px);
+  background: color-mix(in srgb, var(--ground) 88%, transparent);
+  backdrop-filter: blur(8px);
 }
 .topbar .wrap {
   display: flex; align-items: baseline; gap: 1.6rem;
@@ -93,15 +133,19 @@ body {
   font-family: var(--sans); font-weight: 600; font-size: 0.9rem;
   letter-spacing: 0.02em; text-decoration: none; color: var(--ink);
 }
-.brand span { color: var(--accent); }
+.brand span { color: var(--accent); text-shadow: 0 0 14px var(--glow); }
 .nav { display: flex; gap: 1.15rem; flex-wrap: wrap; margin-left: auto; }
 .nav a {
   font-family: var(--sans); font-size: 0.78rem; letter-spacing: 0.05em;
   text-decoration: none; color: var(--muted);
   padding-bottom: 2px; border-bottom: 1px solid transparent;
+  transition: color .15s ease, border-color .15s ease;
 }
 .nav a:hover, .nav a:focus-visible { color: var(--ink); border-bottom-color: var(--accent); }
-.nav a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); }
+.nav a[aria-current="page"] {
+  color: var(--ink); border-bottom-color: var(--accent);
+  box-shadow: 0 2px 12px -7px var(--glow);
+}
 
 main { padding: clamp(2.5rem, 6vw, 4.5rem) 0 5rem; }
 
@@ -111,7 +155,10 @@ h1 {
   font-weight: 600; font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.06;
   letter-spacing: -0.018em; margin: 0 0 0.7rem; text-wrap: balance;
 }
-h1 em { font-style: italic; font-weight: 400; color: var(--accent); }
+h1 em {
+  font-style: italic; font-weight: 400; color: var(--accent);
+  text-shadow: 0 0 36px var(--glow);
+}
 h2 {
   font-weight: 600; font-size: 1.6rem; line-height: 1.2;
   letter-spacing: -0.012em; margin: 0 0 0.8rem; text-wrap: balance;
@@ -124,6 +171,7 @@ p { margin: 0 0 1rem; }
 .lead { font-size: 1.12rem; color: var(--muted); max-width: 48ch; }
 .measure { max-width: var(--measure); }
 a { color: var(--accent); text-underline-offset: 2px; text-decoration-thickness: 1px; }
+a:hover { text-shadow: 0 0 16px var(--glow); }
 a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 1px; }
 ul { padding-left: 1.1rem; margin: 0 0 1rem; }
 li { margin-bottom: 0.42rem; }
@@ -131,11 +179,12 @@ li::marker { color: var(--faint); }
 code {
   font-family: var(--mono); font-size: 0.86em;
   background: var(--panel); padding: 0.1em 0.35em; border-radius: 2px;
+  border: 1px solid var(--rule);
 }
 .flag { color: var(--flag); }
-.dim { color: var(--faint); }
+.dim { color: var(--muted); }
 
-/* ── section with a label rail, as in the plan ───────────────────────── */
+/* ── section with a label rail ────────────────────────────────────────── */
 
 .sec {
   display: grid; grid-template-columns: var(--rail) minmax(0, var(--measure));
@@ -148,10 +197,12 @@ code {
   font-family: var(--sans); font-size: 0.72rem; font-weight: 600;
   letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
   padding-top: 0.42rem;
+  text-shadow: 0 0 18px var(--glow);
 }
 .rail span {
-  display: block; color: var(--faint); font-weight: 400;
+  display: block; color: var(--muted); font-weight: 400;
   letter-spacing: 0.03em; text-transform: none; margin-top: 0.3rem;
+  text-shadow: none;
 }
 .col > *:first-child { margin-top: 0; }
 .col > *:last-child { margin-bottom: 0; }
@@ -165,8 +216,12 @@ code {
 .callout {
   background: var(--panel); border-left: 3px solid var(--accent);
   padding: 1.3rem 1.4rem; margin: 1.4rem 0;
+  box-shadow: -8px 0 30px -20px var(--glow);
 }
-.callout.warn { border-left-color: var(--flag); }
+.callout.warn {
+  border-left-color: var(--flag);
+  box-shadow: -8px 0 30px -20px var(--glow-flag);
+}
 .callout > *:last-child { margin-bottom: 0; }
 
 .tw { overflow-x: auto; margin: 1.3rem 0; }
@@ -177,7 +232,7 @@ th, td {
 }
 th {
   font-size: 0.7rem; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase;
-  color: var(--faint); border-bottom-color: var(--ink);
+  color: var(--muted); border-bottom-color: var(--accent);
 }
 td:last-child, th:last-child { padding-right: 0; }
 .yes { color: var(--accent); font-weight: 600; }
@@ -185,13 +240,15 @@ td:last-child, th:last-child { padding-right: 0; }
 
 .sides { display: grid; grid-template-columns: 1fr 1fr; gap: 0 2rem; margin: 1.4rem 0; }
 @media (max-width: 700px) { .sides { grid-template-columns: 1fr; gap: 1.6rem; } }
-.side h4 {
+/* h3 rather than h4: these sit directly under an h2, and skipping a level breaks the
+   document outline for anyone navigating by headings. */
+.side h3 {
   font-family: var(--sans); font-size: 0.72rem; font-weight: 600;
   letter-spacing: 0.09em; text-transform: uppercase;
   margin: 0 0 0.7rem; padding-bottom: 0.5rem; border-bottom: 1px solid currentColor;
 }
-.side.good h4 { color: var(--accent); }
-.side.warn h4 { color: var(--flag); }
+.side.good h3 { color: var(--accent); text-shadow: 0 0 18px var(--glow); }
+.side.warn h3 { color: var(--flag); text-shadow: 0 0 18px var(--glow-flag); }
 .side ul { margin: 0; padding-left: 1.05rem; font-size: 0.99rem; }
 .side li { margin-bottom: 0.6rem; }
 
@@ -206,8 +263,13 @@ td:last-child, th:last-child { padding-right: 0; }
 /* ── footer ──────────────────────────────────────────────────────────── */
 
 .foot {
-  border-top: 2px solid var(--ink); margin-top: 4rem;
-  font-family: var(--sans); font-size: 0.8rem; color: var(--faint);
+  border-top: 1px solid var(--accent); margin-top: 4rem;
+  font-family: var(--sans); font-size: 0.8rem; color: var(--muted);
+  box-shadow: 0 -16px 44px -36px var(--glow);
 }
-.foot .wrap { display: flex; flex-wrap: wrap; gap: 0.5rem 2rem; padding-top: 1.3rem; padding-bottom: 3rem; }
+.foot .wrap {
+  display: flex; flex-wrap: wrap; gap: 0.5rem 2rem;
+  padding-top: 1.3rem; padding-bottom: 3rem;
+}
 .foot a { color: var(--muted); }
+.foot a:hover { color: var(--accent); }

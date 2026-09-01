@@ -1,0 +1,171 @@
+---
+import Page from "../layouts/Page.astro";
+import { INSTRUMENTS } from "../data/instruments.js";
+
+// Contributors, and what each has actually done. Roles are recorded per instrument
+// rather than as a standing title: someone who wrote the pipeline for one case and
+// designed the analysis for another is credited differently on each, which is the
+// point of using CRediT at all.
+const PEOPLE = [
+  {
+    slug: "taufik-adi-nugraha",
+    name: "Taufik Adi Nugraha",
+    what: "Data science · statistics · machine learning · software engineering",
+    email: "taufik@openstudy.id",
+    orcid: "0009-0006-0753-4496",
+    linkedin: null,   // fill in
+    roles: {
+      "every instrument": "Methodology · Formal analysis · Validation · Software · Data curation · Visualization",
+    },
+    lacks: "Domain expertise in any of these subjects. That is what a collaborating author brings, and why the interpretation sections are open.",
+    judgements: [
+      {
+        case: "nightlights",
+        text: "Re-ran the levels regression on annual composites 2012–2025 rather than accepting the published relationship. Rural R² of 0.825 in 2015 against 0.01 in the benchmark study pointed at the sensor product rather than at electrification — so the case reports the discontinuity instead of the correlation.",
+      },
+      {
+        case: "rice",
+        text: "Calibrated the radar detector to the official survey with an interpretable OLS per kabupaten-month, carrying cropping intensity and observation density, rather than a single national scale factor. A scale factor would have made the headline agree and taught nothing; this keeps the residual structure visible — where detection over- and under-counts, and against what.",
+      },
+      {
+        case: "fire-haze",
+        text: "Required the ignition model to clear both a per-cell day-of-year climatology and the CEMS Fire Weather Index, at every lead, with the climatology fitted on training folds only. A baseline fitted on the full record has seen the test set, which is a common and quiet way to publish skill that is not there.",
+      },
+      {
+        case: "forest-watch",
+        text: "Computed the base rate before believing the headline. Three-quarters of alerted hectares fall inside a mill catchment — but sampling the alertable domain itself gives the share chance alone would produce, which is what makes the number informative or empty.",
+      },
+      {
+        case: "provenance",
+        text: "Replaced a similarity threshold with a model relevance judgement after measuring that a question about a policy absent from the corpus scored 0.723 — above several answerable questions. No threshold can separate an adjacent topic from an answerable one, so the gate became a reading task and the threshold was demoted to a cost filter.",
+      },
+      {
+        case: "provenance",
+        text: "Benchmarked five embedding models on the live corpus and found the entire multilingual-e5 family inverts — unanswerable questions outscoring answerable ones at every model size. The cause was range, not capacity. Also found that one hosted model silently returns a single vector for a batch, which had truncated an index to 28 of 1,383 rows.",
+      },
+    ],
+    corrections: [
+      "Published a nowcast that is 41% worse than carrying last year forward, with the 99.5% intercept share stated, instead of dropping the model.",
+      "Replaced a gate tally that read 'one of three passed' with per-gate outcomes, which exposed two failing hard gates that the count had hidden.",
+      "Rewrote a house-rules checker four times after it produced three hundred false findings — a field named 'name' is not personal data, a gate id in an HTML attribute is not visible to a reader, and an outcome recorded as a boolean is still an outcome.",
+    ],
+  },
+];
+---
+
+<Page
+  title="Contributors"
+  description="Who has worked on these instruments, what they did on each one, and how to reach them."
+  current="/people/"
+>
+  <h1>Contributors</h1>
+  <p class="lead">
+    Roles are recorded per instrument, not as a standing title. What follows is evidence
+    rather than credentials — the methodological decisions actually made, and the ones that
+    had to be corrected. Judge it yourself.
+  </p>
+
+  {PEOPLE.map((p) => (
+    <>
+      <section class="sec">
+        <div class="rail">Contributor<span>{Object.keys(p.roles).length === 1 ? "all instruments" : "per instrument"}</span></div>
+        <div class="col">
+          <h2 id={p.slug}>{p.name}</h2>
+          <p class="what">{p.what}</p>
+
+          <div class="tw">
+            <table>
+              <thead><tr><th>Instrument</th><th>CRediT roles</th></tr></thead>
+              <tbody>
+                {Object.entries(p.roles).map(([k, v]) => (
+                  <tr><td>{k}</td><td>{v}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="callout warn">
+            <p><b>What this contributor does not have.</b> {p.lacks}</p>
+          </div>
+
+          <h3>Contact</h3>
+          <ul class="contact">
+            <li><b>Email</b> · <a href={`mailto:${p.email}`}>{p.email}</a></li>
+            <li><b>ORCID</b> · {p.orcid
+              ? <a href={`https://orcid.org/${p.orcid}`}>{p.orcid}</a>
+              : <span class="dim">not yet registered</span>}</li>
+            <li><b>LinkedIn</b> · {p.linkedin
+              ? <a href={p.linkedin}>{p.linkedin.replace(/^https?:\/\//, "")}</a>
+              : <span class="dim">to be added</span>}</li>
+          </ul>
+          <p class="dim">
+            If one of the <a href="/">open instruments</a> is your subject, this is the
+            person to write to.
+          </p>
+        </div>
+      </section>
+
+      <section class="sec">
+        <div class="rail">Judgements<span>decisions on the record</span></div>
+        <div class="col">
+          <h2>Methodological decisions, with reasons</h2>
+          <p>
+            Each of these is a choice that could have gone the other way, and each is
+            defensible or attackable on its merits. That is the standard a methods credit
+            should be held to.
+          </p>
+          <ul class="judgements">
+            {p.judgements.map((j) => (
+              <li>
+                <span class="tag">{j.case}</span>
+                <p>{j.text}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <section class="sec">
+        <div class="rail">Corrections<span>what went wrong</span></div>
+        <div class="col">
+          <h2>Errors found and published</h2>
+          <p>
+            A page of successes is not evidence of judgement. These are cases where the
+            first answer was wrong and the record says so.
+          </p>
+          <ul>
+            {p.corrections.map((c) => <li>{c}</li>)}
+          </ul>
+          <div class="aside">
+            Implementation on these instruments was AI-assisted, disclosed on every case.
+            The judgements above — which estimator, which baseline, what counts as failure —
+            are the contributor's, and so is accountability for them.
+          </div>
+        </div>
+      </section>
+    </>
+  ))}
+</Page>
+
+<style>
+  .what {
+    font-family: var(--sans); font-size: 0.86rem; letter-spacing: 0.02em;
+    color: var(--accent); text-shadow: 0 0 18px var(--glow);
+    margin: 0 0 1.1rem;
+  }
+  .contact { list-style: none; padding: 0; margin: 0 0 1rem; font-family: var(--sans); font-size: 0.88rem; }
+  .contact li { margin-bottom: 0.4rem; }
+  .contact b {
+    font-size: 0.7rem; letter-spacing: 0.09em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+  .judgements { list-style: none; padding: 0; margin: 1.3rem 0 0; }
+  .judgements li { border-top: 1px solid var(--rule); padding: 1.1rem 0; margin: 0; }
+  .judgements li:first-child { border-top-color: var(--accent); }
+  .judgements p { margin: 0.4rem 0 0; }
+  .tag {
+    font-family: var(--sans); font-size: 0.66rem; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent);
+    text-shadow: 0 0 14px var(--glow);
+  }
+</style>
