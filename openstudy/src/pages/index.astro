@@ -10,12 +10,12 @@ import { INSTRUMENTS, OPEN_COUNT, BASE } from "../data/instruments.js";
 >
   <section class="hero">
     <p class="eyebrow">Open data · Indonesia · instruments, not dashboards</p>
-    <h1>The meaning is yours.<br /><em>The measurement is ours.</em></h1>
+    <h1>Measured carefully.<br /><em>Not yet explained.</em></h1>
     <p class="lead">
-      A finding in a paper is a static figure and a table. This studio does the whole
-      quantitative half — the acquisition pipeline, the models, their evaluation against
-      honest baselines, and an interactive instrument — and hands the interpretation back
-      to the person who knows the subject.
+      Ten analytical instruments on Indonesian open data: pipelines, models, and
+      evaluation against baselines that already contain the easy knowledge. Each one is
+      complete as measurement and deliberately short of an explanation — which is the part
+      that needs someone who knows the subject.
     </p>
     <div class="hero-actions">
       <a class="cta" href="#instruments">{OPEN_COUNT} instruments seeking an author</a>
@@ -38,12 +38,9 @@ import { INSTRUMENTS, OPEN_COUNT, BASE } from "../data/instruments.js";
         non-specialist can use, and no journal will host it for you. That is the gap.
       </p>
       <div class="callout">
-        <p><b>You have a finding. The studio builds the measurement. The interpretation stays yours.</b></p>
-        <p class="dim">
-          No claim on your finding, no editorial control over your interpretation, no veto
-          on your conclusions. The studio does the quantitative work and says so; the
-          finding stays yours.
-        </p>
+        <p><b>So the work is split by what it takes, not by who owns it.</b> Measurement
+        needs statistics, models and software. Explanation needs the subject. Both get
+        named credit for what they did, and neither has a veto over the other.</p>
       </div>
     </div>
   </section>
@@ -51,15 +48,15 @@ import { INSTRUMENTS, OPEN_COUNT, BASE } from "../data/instruments.js";
   <section class="sec">
     <div class="rail">How<span>what each side brings</span></div>
     <div class="col">
-      <h2>The trade, stated plainly</h2>
+      <h2>How a case comes together</h2>
       <div class="tw">
         <table>
-          <thead><tr><th>The studio does</th><th>You bring</th></tr></thead>
+          <thead><tr><th>Measurement</th><th>Explanation</th></tr></thead>
           <tbody>
             <tr>
               <td><b>Method.</b> Which estimator, which baseline, what would count as
                 working — decided and written down before anything runs</td>
-              <td><b>The question,</b> and why it matters in your field</td>
+              <td><b>The question,</b> and why it matters where it is asked</td>
             </tr>
             <tr>
               <td><b>Models.</b> Built, tuned and scored — statistical or machine-learned,
@@ -82,58 +79,139 @@ import { INSTRUMENTS, OPEN_COUNT, BASE } from "../data/instruments.js";
         </table>
       </div>
       <p>
-        Credit is recorded with <a href="/contribute/#credit">CRediT roles</a>, so nobody
-        has to pretend. You lead: Conceptualization, Investigation, Writing. The studio
-        takes the quantitative roles — Methodology, Formal analysis, Validation, Software,
-        Data curation, Visualization. What the studio does not have is the one thing that
-        makes a case worth doing: knowledge of your subject.
+        Credit follows the work with <a href="/contribute/#credit">CRediT roles</a>, so
+        nobody has to pretend: Methodology, Formal analysis, Validation, Software, Data
+        curation and Visualization on one side of that table; Conceptualization,
+        Investigation and Writing on the other. Whoever did a thing is credited for it.
+      </p>
+      <p>
+        On the instruments published so far, the measurement column is done and the
+        explanation column is empty. Both halves are open to anyone who can fill them —
+        a domain researcher most obviously, but equally someone who can improve a model or
+        break an evaluation.
       </p>
     </div>
   </section>
 
-  <section class="sec">
-    <div class="rail">Both sides<span>read this before deciding</span></div>
-    <div class="col">
-      <h2>What you get, and what you should know</h2>
-      <div class="sides">
-        <div class="side good">
-          <h3>What you get</h3>
-          <ul>
-            <li>A <b>working instrument</b> for your finding, built for you, free</li>
-            <li><b>First author.</b> The research is yours; the studio is methods
-              co-author</li>
-            <li>You <b>keep copyright</b> and can republish anywhere</li>
-            <li>A <b>DOI</b> if you want one — archived, citable, versioned</li>
-            <li>Thresholds fixed before results, so the evaluation is defensible</li>
-          </ul>
-        </div>
-        <div class="side warn">
-          <h3>What you should know</h3>
-          <ul>
-            <li><b>Not peer reviewed.</b> Gates are checking, not refereeing</li>
-            <li>This site has <b>no audience yet</b>. You are betting it gets one</li>
-            <li>Publishing here first makes it a <b>preprint</b> — check your journal</li>
-            <li><b>Failed gates are published.</b> If the instrument does not support your
-              finding, the page says so</li>
-            <li>Pipelines are <b>built with AI assistance</b>, disclosed on every case</li>
-            <li>It runs on one person's time and money. <b>It could stop.</b></li>
-          </ul>
-        </div>
-      </div>
-      <div class="callout warn">
-        <p>
-          The fourth item on the right is the one to be sure about before starting.
-          Validation thresholds are set before any result is seen and never moved to fit
-          an outcome. If the instrument contradicts your finding, that is what gets
-          published — and it is the whole reason the rest of it is worth believing.
-        </p>
-      </div>
-      <p class="dim">
-        Longer versions: <a href="/contribute/">how to contribute</a> ·
-        <a href="/publishing/">publishing and DOIs</a> ·
-        <a href="/rights/">rights and licences</a> ·
-        <a href="/standards/">the standard every instrument meets</a>.
+  <section class="sec" id="who">
+    <div class="rail">Who you are<span>the terms differ</span></div>
+    <div class="col wide">
+      <h2>Two ways in, and they are not the same offer</h2>
+      <p>
+        A domain researcher and someone who builds models are being asked for different
+        things and getting different things back. Rather than write one page that assumes
+        which you are, pick.
       </p>
+
+      <fieldset class="roles">
+        <legend class="sr-only">Choose how you would take part</legend>
+        <input type="radio" name="role" id="role-researcher" checked />
+        <label for="role-researcher">I know a subject</label>
+        <input type="radio" name="role" id="role-builder" />
+        <label for="role-builder">I build models and software</label>
+
+        <div class="panel panel-researcher">
+          <p class="panel-intro">
+            You have a finding, a dataset you understand, or a question nobody has measured
+            properly. The measurement gets built for you.
+          </p>
+          <div class="sides">
+            <div class="side good">
+              <h3>What you get</h3>
+              <ul>
+                <li>A <b>working instrument</b> for your subject — pipeline, models,
+                  evaluation, dashboard — built free</li>
+                <li><b>First author.</b> The finding and its interpretation are yours</li>
+                <li>You <b>keep copyright</b> and can republish anywhere</li>
+                <li>A <b>DOI</b> on request — archived independently, citable, versioned</li>
+                <li>Thresholds fixed before results, so the evaluation is defensible to a
+                  reviewer</li>
+              </ul>
+            </div>
+            <div class="side warn">
+              <h3>What you should know</h3>
+              <ul>
+                <li><b>Not peer reviewed.</b> Gates are checking, not refereeing</li>
+                <li>This site has <b>no audience yet.</b> You are betting it gets one</li>
+                <li>Publishing here before a journal makes it a <b>preprint</b> — check your
+                  journal's policy first</li>
+                <li><b>Failed gates are published.</b> If the measurement contradicts your
+                  finding, the page says so</li>
+                <li>Implementation is <b>AI-assisted</b>, disclosed on every instrument</li>
+                <li>One person, one server, no grant. <b>It could stop.</b></li>
+              </ul>
+            </div>
+          </div>
+          <p class="panel-next">
+            The specific gap on each instrument is written on its card below.
+            <a href="/contribute/">The longer version</a>.
+          </p>
+        </div>
+
+        <div class="panel panel-builder">
+          <p class="panel-intro">
+            You do not need a subject or a finding. The most useful thing here takes a day
+            and is the thing this site's credibility actually rests on.
+          </p>
+          <div class="tw">
+            <table>
+              <thead><tr><th>What you do</th><th>Effort</th><th>Credit</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><b>Break an evaluation.</b> Wrong metric for the problem? Did a
+                    baseline see the test set? Does the cross-validation actually prevent
+                    leakage? If you succeed, that gets published</td>
+                  <td>a day</td><td>Validation</td>
+                </tr>
+                <tr>
+                  <td><b>Beat a baseline.</b> Build a stronger rival than the one an
+                    instrument was scored against. Win or lose, the result is worth
+                    publishing</td>
+                  <td>a week</td><td>Formal analysis</td>
+                </tr>
+                <tr>
+                  <td><b>Build an instrument.</b> Pipeline, models, gates and dashboard for
+                    someone's finding, to the <a href="/standards/">published standard</a></td>
+                  <td>weeks</td><td>Software · Methodology · Visualization</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="sides">
+            <div class="side good">
+              <h3>What you get</h3>
+              <ul>
+                <li><b>Named credit</b> on a public artifact, by CRediT role rather than a
+                  thank-you line</li>
+                <li>A portfolio piece where <b>the validation is visible</b> — rarer than it
+                  should be</li>
+                <li>Your code stays yours, permissively licensed</li>
+                <li>An attack that succeeds is <b>published as a finding</b>, not quietly
+                  absorbed</li>
+              </ul>
+            </div>
+            <div class="side warn">
+              <h3>What you should know</h3>
+              <ul>
+                <li><b>Thresholds are pre-registered and do not move.</b> If your model
+                  loses to a naive baseline, that is what publishes</li>
+                <li><b>No payment</b> by default. Paid work is separate and offered
+                  case by case</li>
+                <li>Existing implementation is <b>AI-assisted</b> — you may be reviewing code
+                  a model wrote under direction</li>
+                <li>Capacity is one person's attention. Review is <b>slow</b></li>
+              </ul>
+            </div>
+          </div>
+          <p class="panel-next">
+            Three openings right now: <b>transit-equity</b> has two failing hard gates — are
+            they fatal or cosmetic? <b>rice-security</b>'s R² goes −11.09 to 0.82 through OLS
+            calibration — legitimate, or fitting the answer? <b>fire-haze</b> scores a 3.8%
+            event class with ROC-AUC — is precision-recall the honest metric?
+            <a href="/contribute/">The longer version</a>.
+          </p>
+        </div>
+      </fieldset>
     </div>
   </section>
 
@@ -142,9 +220,10 @@ import { INSTRUMENTS, OPEN_COUNT, BASE } from "../data/instruments.js";
     <div class="col wide">
       <h2>Ten instruments, each missing one thing</h2>
       <p>
-        Every one is complete as engineering: the pipeline runs, the gates are published
-        including the failures, the dashboard works. What none of them has is an
-        interpretation — because that is not the studio's to write.
+        Every one is complete as measurement: the pipeline runs, the gates are published
+        including the failures, the dashboard works. None has an explanation yet, and that
+        is a gap rather than an omission — it needs knowledge none of these instruments
+        contain.
       </p>
 
       <ul class="cards">
@@ -165,9 +244,10 @@ import { INSTRUMENTS, OPEN_COUNT, BASE } from "../data/instruments.js";
 
       <div class="callout">
         <p>
-          If one of these is your subject, the work is already done except for the part
-          only you can do. Write the interpretation and take <b>first author</b>; the studio
-          is <b>methods co-author</b> for the analysis it already built.
+          If one of these is your subject, the measurement is already done. Writing the
+          explanation earns <b>first author</b>; the measurement earns <b>methods
+          co-author</b>. If instead you can see something wrong with how one was measured,
+          that is a contribution too — see <a href="/contribute/">how to contribute</a>.
         </p>
         <p class="dim">Read <a href="/contribute/">how to contribute</a> first — including the parts that might put you off.</p>
       </div>
@@ -266,4 +346,37 @@ import { INSTRUMENTS, OPEN_COUNT, BASE } from "../data/instruments.js";
   .card-found b, .card-gap b { color: var(--ink); font-weight: 600; }
   .card-gap { color: var(--ink); }
   .card-gap b { color: var(--accent); }
+
+  /* Role chooser: radios plus sibling selectors, no script. A visitor with JavaScript
+     disabled still gets a working switch, and only the chosen panel is in the accessibility
+     tree because the other is display:none rather than merely hidden visually. */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  .roles { border: 0; padding: 0; margin: 1.6rem 0 0; }
+  .roles > input { position: absolute; opacity: 0; pointer-events: none; }
+  .roles > label {
+    display: inline-block; cursor: pointer;
+    font-family: var(--sans); font-size: 0.82rem; font-weight: 500;
+    padding: 0.55rem 1rem; margin: 0 0.5rem 0 0;
+    border: 1px solid var(--rule); color: var(--muted);
+    transition: color .15s ease, border-color .15s ease, box-shadow .15s ease;
+  }
+  .roles > label:hover { color: var(--ink); border-color: var(--accent); }
+  .roles > input:checked + label {
+    color: var(--ground); background: var(--accent); border-color: var(--accent);
+    box-shadow: 0 0 26px -10px var(--glow);
+  }
+  .roles > input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .panel { display: none; padding-top: 1.6rem; }
+  #role-researcher:checked ~ .panel-researcher,
+  #role-builder:checked ~ .panel-builder { display: block; }
+  .panel-intro { color: var(--muted); max-width: 62ch; }
+  .panel-next {
+    font-family: var(--sans); font-size: 0.86rem; line-height: 1.55;
+    color: var(--muted); border-top: 1px solid var(--rule);
+    padding-top: 1rem; margin-top: 1.4rem;
+  }
+  .panel-next b { color: var(--ink); }
 </style>

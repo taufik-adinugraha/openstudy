@@ -1,5 +1,5 @@
-/* openstudy.id — dark first, because the subject is instruments and an instrument
- * emits light.
+/* openstudy.id — dark, because the subject is instruments and an instrument emits
+ * light.
  *
  * The ground is near-black with a green-blue bias; the accent is a phosphor teal that
  * reads like a readout rather than a brand colour. The glow is deliberate and narrow:
@@ -10,15 +10,17 @@
  * Three text weights: --ink, --muted, and nothing dimmer. --faint measures 3.48:1 and is
  * therefore not a text colour at all — it marks list bullets and hairlines, where
  * contrast rules do not apply. Everything readable uses --ink or --muted, both of which
- * clear 4.5:1 on both surfaces in both themes.
+ * clear 4.5:1 against the ground and against a panel.
  *
- * --glow is a token rather than a rule inside a media query, so components apply it
- * unconditionally: in the light theme it resolves to transparent and the same shadow
- * declaration simply does nothing. A glow on paper looks like a printing fault.
+ * ONE THEME, ON PURPOSE. There is no light variant and no prefers-color-scheme
+ * override. A page that flips to paper on whichever machines happen to be set to light
+ * mode is not one design, it is two — and the glow, which is the point of this one, has
+ * no meaning on paper. `color-scheme: dark` is declared so the browser paints its own
+ * scrollbars and form controls to match instead of framing a dark page in light chrome.
  */
 
 :root {
-  /* dark is the default here, not the override */
+  /* the only palette — see the note above */
   --ground:  #0A0E0D;
   --panel:   #121918;
   --ink:     #E8EFEC;
@@ -38,38 +40,8 @@
 
   --measure: 66ch;
   --rail: 11rem;
-}
 
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    --ground:  #F5F7F6;
-    --panel:   #E9EEEC;
-    --ink:     #101614;
-    --muted:   #54625E;
-    --faint:   #A3AEAA;
-    --accent:  #116B60;
-    --flag:    #A8301F;
-    --rule:    #D2DAD7;
-
-    --glow:      transparent;
-    --glow-soft: transparent;
-    --glow-flag: transparent;
-  }
-}
-
-:root[data-theme="light"] {
-  --ground:  #F5F7F6;
-  --panel:   #E9EEEC;
-  --ink:     #101614;
-  --muted:   #54625E;
-  --faint:   #A3AEAA;
-  --accent:  #116B60;
-  --flag:    #A8301F;
-  --rule:    #D2DAD7;
-
-  --glow:      transparent;
-  --glow-soft: transparent;
-  --glow-flag: transparent;
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -95,8 +67,7 @@ body {
 
 /* One ambient wash behind the top of the page, so the ground is not flat black. Fixed
    rather than animated: a drifting gradient behind text is a distraction, and a static
-   one still reads as a lit panel. Inert in the light theme, where --glow-soft is
-   transparent. */
+   one still reads as a lit panel. */
 body::before {
   content: "";
   position: fixed;
