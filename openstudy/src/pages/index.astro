@@ -1,0 +1,252 @@
+---
+import Page from "../layouts/Page.astro";
+import { INSTRUMENTS, OPEN_COUNT, BASE } from "../data/instruments.js";
+---
+
+<Page
+  title="Analytical instruments for open research"
+  description="A studio that builds pipelines, models and interactive dashboards for researchers who already have a finding. The research stays theirs."
+  current="/"
+>
+  <section class="hero">
+    <p class="eyebrow">Open data · Indonesia · instruments, not dashboards</p>
+    <h1>The research is theirs.<br /><em>The instrument is mine.</em></h1>
+    <p class="lead">
+      A finding in a paper is a static figure and a table. This studio builds the thing
+      that makes it explorable — the acquisition pipeline, the model, the validation, the
+      interactive dashboard — and hands the research back untouched.
+    </p>
+    <div class="hero-actions">
+      <a class="cta" href="#instruments">{OPEN_COUNT} instruments seeking an author</a>
+      <a class="cta ghost" href="/contribute/">How this works</a>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Why<span>the gap this fills</span></div>
+    <div class="col">
+      <h2>Journals publish figures. Nobody publishes instruments.</h2>
+      <p>
+        A paper's analysis is usually its most reusable part and its least accessible.
+        The figures are flattened into a PDF, the pipeline lives on one laptop, and the
+        question a reader actually wants to ask — <em>what happens if I change this
+        assumption?</em> — cannot be asked at all.
+      </p>
+      <p>
+        Repositories archive the code. Notebook hosts run it. Neither builds the thing a
+        non-specialist can use, and no journal will host it for you. That is the gap.
+      </p>
+      <div class="callout">
+        <p><b>You have a finding. The studio builds the instrument. You keep the research.</b></p>
+        <p class="dim">
+          No co-authorship on your finding, no editorial control over your interpretation,
+          no veto on your conclusions.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">How<span>what each side brings</span></div>
+    <div class="col">
+      <h2>The trade, stated plainly</h2>
+      <div class="tw">
+        <table>
+          <thead><tr><th>The studio builds</th><th>You bring</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Acquisition pipeline — reproducible, re-runnable, versioned</td>
+              <td>The question, and why it matters</td>
+            </tr>
+            <tr>
+              <td>Models, with thresholds fixed before any result is seen</td>
+              <td>Domain knowledge: what a result means, what would be surprising</td>
+            </tr>
+            <tr>
+              <td>The interactive dashboard, and the article's figures</td>
+              <td>The interpretation, and the written discussion</td>
+            </tr>
+            <tr>
+              <td>Every validation gate published with its outcome</td>
+              <td>The finding, and accountability for it</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Credit is recorded with <a href="/contribute/#credit">CRediT roles</a>, so nobody
+        has to pretend. You are Conceptualization, Investigation and Writing. The studio is
+        Software, Visualization and Data curation. It costs you nothing.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Both sides<span>read this before deciding</span></div>
+    <div class="col">
+      <h2>What you get, and what you should know</h2>
+      <div class="sides">
+        <div class="side good">
+          <h4>What you get</h4>
+          <ul>
+            <li>A <b>working instrument</b> for your finding, built for you, free</li>
+            <li><b>Lead author credit.</b> The research is yours</li>
+            <li>You <b>keep copyright</b> and can republish anywhere</li>
+            <li>A <b>DOI</b> if you want one — archived, citable, versioned</li>
+            <li>Thresholds fixed before results, so the evaluation is defensible</li>
+          </ul>
+        </div>
+        <div class="side warn">
+          <h4>What you should know</h4>
+          <ul>
+            <li><b>Not peer reviewed.</b> Gates are checking, not refereeing</li>
+            <li>This site has <b>no audience yet</b>. You are betting it gets one</li>
+            <li>Publishing here first makes it a <b>preprint</b> — check your journal</li>
+            <li><b>Failed gates are published.</b> If the instrument does not support your
+              finding, the page says so</li>
+            <li>Pipelines are <b>built with AI assistance</b>, disclosed on every case</li>
+            <li>It runs on one person's time and money. <b>It could stop.</b></li>
+          </ul>
+        </div>
+      </div>
+      <div class="callout warn">
+        <p>
+          The fourth item on the right is the one to be sure about before starting.
+          Validation thresholds are set before any result is seen and never moved to fit
+          an outcome. If the instrument contradicts your finding, that is what gets
+          published — and it is the whole reason the rest of it is worth believing.
+        </p>
+      </div>
+      <p class="dim">
+        Longer versions: <a href="/contribute/">how to contribute</a> ·
+        <a href="/publishing/">publishing and DOIs</a> ·
+        <a href="/rights/">rights and licences</a> ·
+        <a href="/standards/">the standard every instrument meets</a>.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec" id="instruments">
+    <div class="rail">Instruments<span>{OPEN_COUNT} seeking an author</span></div>
+    <div class="col wide">
+      <h2>Ten instruments, each missing one thing</h2>
+      <p>
+        Every one is complete as engineering: the pipeline runs, the gates are published
+        including the failures, the dashboard works. What none of them has is an
+        interpretation — because that is not the studio's to write.
+      </p>
+
+      <ul class="cards">
+        {INSTRUMENTS.map((i) => (
+          <li class="card">
+            <div class="card-head">
+              <a class="card-title" href={`${BASE}/${i.slug}/`} target="_blank" rel="noopener">
+                {i.title} <span class="arrow">→</span>
+              </a>
+              <span class="chip">seeking author</span>
+            </div>
+            <p class="card-line">{i.line}</p>
+            <p class="card-found"><b>What it found.</b> {i.found}</p>
+            <p class="card-gap"><b>What is missing.</b> {i.gap}</p>
+          </li>
+        ))}
+      </ul>
+
+      <div class="callout">
+        <p>
+          If one of these is your subject, the work is already done except for the part
+          only you can do. Write the interpretation, take lead author credit, and the
+          studio takes Software and Visualization.
+        </p>
+        <p class="dim">Read <a href="/contribute/">how to contribute</a> first — including the parts that might put you off.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Engineers<span>a smaller ask</span></div>
+    <div class="col">
+      <h2>You do not have to build one to take part</h2>
+      <p>
+        The most useful contribution an engineer can make here takes a day, and it is the
+        one this site depends on most.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Contribution</th><th>Effort</th><th>Credit</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>Break it.</b> Attack the evaluation. If you succeed, that gets published</td>
+              <td>a day</td><td>Validation</td>
+            </tr>
+            <tr>
+              <td><b>Beat the baseline.</b> Build a stronger rival than the one it was scored against</td>
+              <td>a week</td><td>Formal analysis</td>
+            </tr>
+            <tr>
+              <td><b>Build one.</b> A whole instrument for a researcher's finding</td>
+              <td>weeks</td><td>Software, Visualization</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Three specific openings, today: <b>transit-equity</b> has two failing hard gates —
+        are they fatal or cosmetic? <b>rice-security</b>'s R² goes −11.09 to 0.82 through
+        OLS calibration — is that legitimate? <b>fire-haze</b> uses ROC-AUC on a 3.8% event
+        class — is that the right metric?
+      </p>
+    </div>
+  </section>
+</Page>
+
+<style>
+  .hero { padding-bottom: 0.5rem; }
+  .eyebrow {
+    font-family: var(--sans); font-size: 0.72rem; font-weight: 500;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 1.1rem;
+  }
+  .hero h1 { max-width: 26ch; }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1.8rem; }
+  .cta {
+    font-family: var(--sans); font-size: 0.82rem; font-weight: 500;
+    letter-spacing: 0.02em; text-decoration: none;
+    padding: 0.6rem 1.05rem; border: 1px solid var(--accent);
+    color: var(--ground); background: var(--accent);
+  }
+  .cta.ghost { background: transparent; color: var(--accent); }
+  .cta:hover { background: color-mix(in srgb, var(--accent) 85%, var(--ink)); color: var(--ground); }
+  .cta.ghost:hover { background: var(--panel); color: var(--accent); }
+
+  .sec .col.wide { max-width: none; }
+
+  .cards { list-style: none; margin: 1.5rem 0 0; padding: 0; display: grid; gap: 0; }
+  .card { border-top: 1px solid var(--rule); padding: 1.4rem 0; }
+  .card:first-child { border-top: 1px solid var(--ink); }
+  .card-head {
+    display: flex; align-items: baseline; gap: 0.9rem;
+    flex-wrap: wrap; margin-bottom: 0.35rem;
+  }
+  .card-title {
+    font-family: var(--serif); font-weight: 600; font-size: 1.18rem;
+    text-decoration: none; color: var(--ink);
+  }
+  .card-title:hover { color: var(--accent); }
+  .card-title .arrow { color: var(--faint); font-size: 0.9rem; }
+  .card-title:hover .arrow { color: var(--accent); }
+  .chip {
+    font-family: var(--sans); font-size: 0.64rem; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--flag); border: 1px solid currentColor;
+    padding: 0.15rem 0.45rem; white-space: nowrap;
+  }
+  .card-line { margin: 0 0 0.6rem; color: var(--muted); max-width: 62ch; }
+  .card-found, .card-gap {
+    font-family: var(--sans); font-size: 0.85rem; line-height: 1.55;
+    margin: 0 0 0.35rem; color: var(--muted); max-width: 74ch;
+  }
+  .card-found b, .card-gap b { color: var(--ink); font-weight: 600; }
+  .card-gap { color: var(--ink); }
+  .card-gap b { color: var(--accent); }
+</style>

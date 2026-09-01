@@ -1,0 +1,118 @@
+---
+import Page from "../layouts/Page.astro";
+---
+
+<Page
+  title="Rights and licences"
+  description="Who owns what: authors keep copyright, the site takes a non-exclusive licence to publish, code is permissive, and every data source states its terms."
+  current="/rights/"
+>
+  <h1>Rights and licences</h1>
+  <p class="lead">
+    This site does not own contributed work and does not ask to. It needs permission to
+    publish and archive, and nothing more.
+  </p>
+
+  <section class="sec">
+    <div class="rail">Ownership<span>element by element</span></div>
+    <div class="col">
+      <h2>Who holds what</h2>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Element</th><th>Held by</th><th>Licence</th></tr></thead>
+          <tbody>
+            <tr><td>The finding, the interpretation, the written discussion</td>
+              <td><b>the researcher</b></td><td>CC BY 4.0</td></tr>
+            <tr><td>Pipeline and dashboard code</td>
+              <td><b>the studio</b></td><td>MIT</td></tr>
+            <tr><td>Upstream data</td>
+              <td>the original provider</td><td>stated per source, on every case</td></tr>
+            <tr><td>This website</td>
+              <td>openstudy.id</td><td>site code and design only</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <p>
+          What the site takes is a <b>non-exclusive, perpetual licence to publish and
+          archive</b>. You can republish the same work anywhere, put it on your own site,
+          submit it to a journal, or fold it into a thesis — without asking.
+        </p>
+      </div>
+      <p class="dim">
+        Journals routinely require an exclusive copyright transfer. Asking for nothing
+        costs this site nothing, and it is one of the few concrete advantages it can offer
+        before it has any audience to trade on.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Data<span>fetched, not redistributed</span></div>
+    <div class="col">
+      <h2>Nothing here redistributes somebody else's dataset</h2>
+      <p>
+        Pipelines fetch from the origin every time, and each source's licence is named on
+        the case that uses it. What gets published is the derived result — counts, model
+        outputs, figures — not a copy of the input.
+      </p>
+      <p>
+        That is partly principle and partly self-protection: a site that redistributes data
+        takes on every upstream licence question, and a small operation cannot carry that.
+        It also means a source withdrawing its data breaks the pipeline honestly rather
+        than leaving a stale copy circulating.
+      </p>
+      <div class="aside">
+        Where a source's terms are unclear, it is not used. Where they permit use with
+        attribution, the attribution is on the page — not in a footnote on this one.
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Copyright<span>what actually binds</span></div>
+    <div class="col">
+      <h2>Copyright constrains you, not the venue</h2>
+      <p>
+        If you signed an exclusive transfer to a publisher, that binds you wherever you
+        publish next — a figure you cannot reuse here is one you cannot reuse on your own
+        site either. It is not a reason to publish elsewhere; it travels with you.
+      </p>
+      <p>
+        In practice it rarely bites here, because instruments are built from <b>the data
+        and the code</b>, never from a publisher's typeset PDF. Figures are re-rendered
+        from source. Nothing reproduces the article. Where a paper is open access under
+        CC BY, reuse is explicit anyway.
+      </p>
+      <h3>What you confirm</h3>
+      <div class="callout">
+        <p>
+          "I hold the rights to the data and code published here, and this artifact is
+          compatible with my publisher's or target journal's policy."
+        </p>
+      </div>
+      <p>
+        That is the whole declaration. This site does not interpret publisher contracts —
+        it cannot, and guessing wrong would be your problem rather than its. The judgement
+        stays with the only person who has read the agreement.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Personal data<span>none</span></div>
+    <div class="col">
+      <h2>No personal data, ever</h2>
+      <p>
+        Aggregate only. No names, identity numbers, addresses, contact details or anything
+        else that identifies a person — in any published file, not just in the visible page.
+        It is checked mechanically on every case before publication.
+      </p>
+      <p class="dim">
+        This is a scope limit rather than a capability claim. Handling personal data
+        properly means obligations a volunteer-run site should not be taking on, so the
+        answer is to not hold any.
+      </p>
+    </div>
+  </section>
+</Page>

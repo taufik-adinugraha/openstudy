@@ -136,7 +136,12 @@ def check_jargon(rep: CaseReport, case_dir: Path) -> None:
                 "UNCHECKED — no build output. Run `astro build` in web/ first.", "web/dist")
         return
     for page in sorted(dist.rglob("*.html")):
-        text = page.read_text(encoding="utf8", errors="replace")
+        raw = page.read_text(encoding="utf8", errors="replace")
+        # Reader-visible text only. Scripts, styles and attributes are stripped: a gate
+        # id living in data-gate="G-J1" is a DOM hook, not something anyone reads, and
+        # flagging it reported one case as leaking jargon when nothing was visible.
+        text = re.sub(r"<script.*?</script>|<style.*?</style>", " ", raw, flags=re.S)
+        text = re.sub(r"<[^>]+>", " ", text)
         for pattern, what in JARGON:
             for m in sorted(set(pattern.findall(text))):
                 rep.add("R1 jargon", WARN, f"{what}: {m!r}",

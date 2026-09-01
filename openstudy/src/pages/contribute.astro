@@ -1,0 +1,161 @@
+---
+import Page from "../layouts/Page.astro";
+---
+
+<Page
+  title="How to contribute"
+  description="What a researcher brings, what the studio builds, how credit is recorded, and the parts that might put you off."
+  current="/contribute/"
+>
+  <h1>How to contribute</h1>
+  <p class="lead">
+    Two ways in: bring a finding and get an instrument built for it, or attack an
+    instrument that already exists. Both are described here, including the parts that
+    might put you off.
+  </p>
+
+  <section class="sec">
+    <div class="rail">Researchers<span>bring a finding</span></div>
+    <div class="col">
+      <h2>You already did the hard part</h2>
+      <p>
+        The work this site asks for is work you have already done. A published paper, a
+        working manuscript, a dataset you understand better than anyone — that is the
+        contribution. What gets added is the instrument: the pipeline, the model, the
+        validation, and a dashboard someone can actually use.
+      </p>
+
+      <h3>What happens, in order</h3>
+      <ol class="steps">
+        <li><b>You say what the question is</b> and point at the data. A conversation, not a form.</li>
+        <li><b>The studio scopes it</b> — what can be built from open data, what cannot, and where the honest limits are. If it cannot be built well, you are told then, not later.</li>
+        <li><b>Thresholds are agreed before anything runs.</b> What would count as the model working, and what would count as it failing. Written down first.</li>
+        <li><b>The instrument gets built.</b> You see it while it is being built, not at the end.</li>
+        <li><b>You write the interpretation.</b> What the result means, what surprised you, what it does not settle.</li>
+        <li><b>It publishes</b> with your name as lead author, and a DOI if you want one.</li>
+      </ol>
+
+      <div class="callout warn">
+        <p>
+          <b>Step 3 is the one that matters.</b> Thresholds are never moved to fit an
+          outcome. If the instrument does not support your finding, the page says so, with
+          the numbers. That is not a threat — it is the reason a reader should believe the
+          cases where it does.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="credit">
+    <div class="rail">Credit<span>CRediT, not authorship</span></div>
+    <div class="col">
+      <h2>Naming what each person did</h2>
+      <p>
+        The Contributor Roles Taxonomy replaces "author or not" with fourteen named roles.
+        It is a published standard, used by many journals, and it is the honest way to
+        describe this arrangement.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Role</th><th>You</th><th>Studio</th></tr></thead>
+          <tbody>
+            <tr><td>Conceptualization</td><td class="yes">yes</td><td class="dim">—</td></tr>
+            <tr><td>Investigation</td><td class="yes">yes</td><td class="dim">—</td></tr>
+            <tr><td>Writing – original draft</td><td class="yes">yes</td><td class="dim">—</td></tr>
+            <tr><td>Software</td><td class="dim">—</td><td class="yes">yes</td></tr>
+            <tr><td>Visualization</td><td class="dim">—</td><td class="yes">yes</td></tr>
+            <tr><td>Data curation</td><td class="dim">—</td><td class="yes">yes</td></tr>
+            <tr><td>Formal analysis</td><td>shared</td><td class="yes">yes</td></tr>
+            <tr><td>Validation</td><td>shared</td><td class="yes">yes</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        The studio takes no credit for the finding, and claims none. Where the site is run
+        rather than contributed to, that is an <b>editor</b> credit, not authorship — the
+        same rule applied to the person who runs it.
+      </p>
+
+      <h3>AI assistance, disclosed</h3>
+      <p>
+        Pipeline and model implementation are produced with AI assistance, under the
+        studio's direction. It is stated on every instrument, in the methods, in a
+        sentence — because a reader who works it out for themselves is entitled to feel
+        misled, and a reader who is told is not.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Engineers<span>a smaller ask</span></div>
+    <div class="col">
+      <h2>Three tiers, lowest effort first</h2>
+
+      <h3>1 · Break it — a day</h3>
+      <p>
+        Take an instrument and try to break its evaluation. Is the metric right for the
+        problem? Did a baseline see the test set? Does the cross-validation actually
+        prevent leakage? <b>If you succeed, that gets published</b> — and you get
+        Validation credit for it.
+      </p>
+      <p class="dim">
+        This is the most valuable thing anyone can do here per hour spent, and the one the
+        site's credibility rests on. An instrument that a named engineer attacked and
+        failed to break is worth more than three that nobody checked.
+      </p>
+
+      <h3>2 · Beat the baseline — a week</h3>
+      <p>
+        Every model here is scored against a naive rival that already contains the easy
+        knowledge. Build a better rival. If yours wins, the case is weakened and that is
+        published; if it loses, the case is stronger. Either outcome is worth having.
+      </p>
+
+      <h3>3 · Build one — weeks</h3>
+      <p>
+        A whole instrument for a researcher's finding: pipeline, model, gates, dashboard,
+        to the standard on the <a href="/standards/">standards page</a>. The largest ask,
+        and the one to talk about before starting rather than after.
+      </p>
+
+      <div class="callout">
+        <p><b>Open right now, in tier one:</b></p>
+        <ul>
+          <li><b>transit-equity</b> has two failing hard gates — timetable sanity and
+            network integrity. Are they fatal or cosmetic?</li>
+          <li><b>rice-security</b>'s R² goes from −11.09 to 0.82 through an OLS
+            calibration. Is that legitimate, or is it fitting the answer?</li>
+          <li><b>fire-haze</b> scores a 3.8% event class with ROC-AUC. Is precision-recall
+            the honest metric instead?</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Limits<span>what is not accepted</span></div>
+    <div class="col">
+      <h2>What this site will not publish</h2>
+      <ul>
+        <li><b>Personal data.</b> Aggregate only, no exceptions.</li>
+        <li><b>Redistributed source data.</b> Pipelines fetch from the origin and cite the
+          licence; the instrument publishes derived results, not somebody else's dataset.</li>
+        <li><b>Accusations against named companies or projects.</b> Methods and aggregate
+          distributions, yes. Naming an actor as culpable, no.</li>
+        <li><b>A finding without a way to check it.</b> If the gates cannot be stated, the
+          instrument cannot be built.</li>
+      </ul>
+      <p class="dim">
+        These are limits on the site, not judgements about your work. Some of them exist
+        because a small operation cannot carry the risk; the rest are on the
+        <a href="/standards/">standards page</a> with the reasoning.
+      </p>
+    </div>
+  </section>
+</Page>
+
+<style>
+  .steps { padding-left: 1.3rem; margin: 0 0 1rem; }
+  .steps li { margin-bottom: 0.6rem; }
+  .steps li::marker { color: var(--accent); font-family: var(--sans); font-size: 0.85rem; }
+</style>

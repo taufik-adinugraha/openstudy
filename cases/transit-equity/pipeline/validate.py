@@ -415,6 +415,24 @@ def main() -> None:
     hard = [stats[g].get("pass") for g in ("G-G1", "G-G3", "G-G4")]
     stats["gates_passed"] = sum(1 for h in hard if h)
     stats["gates_hard"] = len(hard)
+
+    # A tally says three of four passed; it does not say which failed or why, and the
+    # house rule is that a failure is published as plainly as a pass. So each gate is
+    # published with its own outcome, taken from what validate actually decided rather
+    # than re-derived here.
+    NAMES = {"G-G1": "Timetable sanity", "G-G2": "External routing comparison",
+             "G-G3": "Network integrity", "G-G4": "Plausibility"}
+    stats["gates"] = [{
+        "id": g,
+        "name": NAMES[g],
+        "hard": bool(stats[g].get("hard")),
+        "pass": stats[g].get("pass"),
+        "status": stats[g].get("status")
+                  or ("pass" if stats[g].get("pass") is True
+                      else "fail" if stats[g].get("pass") is False
+                      else "not evaluated"),
+        "reason": stats[g].get("reason"),
+    } for g in ("G-G1", "G-G2", "G-G3", "G-G4")]
     config.STATS_JSON.write_text(json.dumps(stats, indent=2, allow_nan=False, default=str))
     log("stats →", config.STATS_JSON)
     for g in ("G-G1", "G-G2", "G-G3", "G-G4"):

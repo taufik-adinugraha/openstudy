@@ -308,12 +308,28 @@ cmd_rollback() {
 
 cmd_verify() {
   need_manifest
-  local host="${1:-127.0.0.1}" port_override="${2:-}" bad=0
+  # Default to the configured domain, not to loopback. The https redirect is built from
+  # $host, so a request to 127.0.0.1 redirects to https://127.0.0.1 — a name no
+  # certificate covers — and every app then reports as broken while the site is fine.
+  # Testing the public name is also the honest check: it is what a visitor receives.
+  local dom; dom=$(cat "$STATE/DOMAIN" 2>/dev/null)
+  local host="${1:-${dom:-127.0.0.1}}" port_override="${2:-}" bad=0
+  if [[ -n "$dom" && "$host" == "$dom" && -z "$port_override" ]]; then
+    port_override="__scheme_https__"
+  fi
   while IFS=$'\t' read -r unit port base wd; do
-    [[ -n "$port_override" ]] && port="$port_override"
-    local url="http://$host:$port${base%/}/"
+    local url
+    if [[ "$port_override" == "__scheme_https__" ]]; then
+      url="https://$host${base%/}/"
+    else
+      [[ -n "$port_override" ]] && port="$port_override"
+      url="http://$host:$port${base%/}/"
+    fi
     local body code title
-    code=$(curl -s -o /tmp/v.html -w '%{http_code}' --max-time 25 "$url")
+    # -L follows the redirect. Once a certificate exists every http request is a 301
+    # to https, and counting that as a failure reported all twelve apps as broken while
+    # the site was serving perfectly.
+    code=$(curl -sL -o /tmp/v.html -w '%{http_code}' --max-time 25 "$url")
     title=$(python3 - <<PY
 import re
 try: h = open("/tmp/v.html", encoding="utf8", errors="replace").read()

@@ -1,0 +1,195 @@
+---
+import Page from "../layouts/Page.astro";
+---
+
+<Page
+  title="Publishing, DOIs and versions"
+  description="Three publication states with what each one costs, when a DOI is offered, how editing works, and what happens when the data changes."
+  current="/publishing/"
+>
+  <h1>Publishing, DOIs<br /><em>and what changes later</em></h1>
+  <p class="lead">
+    Three states, one direction, and a rule about editing. Everything here is written so
+    that nobody discovers a constraint after they have committed to it.
+  </p>
+
+  <section class="sec">
+    <div class="rail">States<span>you choose</span></div>
+    <div class="col">
+      <h2>Three states, and what each one costs</h2>
+
+      <div class="flow">
+        <b>draft</b><i>→</i><b>published</b><i>→</i><b class="doi">published + DOI</b>
+        <em>never backwards</em>
+      </div>
+      <p>
+        Transitions run one direction only. A page people have linked cannot be
+        unpublished, and a DOI cannot be un-minted.
+      </p>
+
+      <div class="tw">
+        <table>
+          <thead><tr><th>State</th><th>What you gain</th><th>What you accept</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>Draft</b><br /><span class="dim">unlisted, noindex, random URL</span></td>
+              <td>Share for review without committing. Change anything, including the
+                conclusion.</td>
+              <td><b>It is still a public URL.</b> Anyone with the link can read and forward
+                it. <code>noindex</code> is a request, not enforcement. A cautious journal
+                may count it as disclosure. Nothing is archived.</td>
+            </tr>
+            <tr>
+              <td><b>Published</b><br /><span class="dim">no DOI</span></td>
+              <td>Finished, indexed, findable. Still correctable — edits overwrite.</td>
+              <td><b>Not citable</b> in a reference list, and not archived independently. An
+                edit destroys the previous state, so a reader who quoted a number cannot
+                discover that it changed.</td>
+            </tr>
+            <tr>
+              <td><b>Published + DOI</b></td>
+              <td>Citable. Archived independently. Versioned — edits <em>accumulate</em>
+                instead of overwriting. Belongs on a CV.</td>
+              <td><b>Permanent.</b> The archived record cannot be withdrawn, so mistakes are
+                on it too. A correction means a new version with a visible supersession
+                trail. Posting before a journal makes it a preprint.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warn">
+        <p>
+          <b>Drafts are unlisted, not private.</b> There is no login here and there will not
+          be one: authentication means accounts, password resets and a class of security
+          bug, for a site whose whole value is being simple and public.
+        </p>
+        <p>
+          So the rule is: <b>if it needs to be genuinely private, it is not on this site
+          yet.</b> Share a file or a screen instead.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">DOIs<span>on request</span></div>
+    <div class="col">
+      <h2>No DOI by default</h2>
+      <p>
+        A DOI is a promise of permanence, and most instruments do not need one. An
+        instrument with no domain author is a demonstration and an invitation — a URL is
+        enough. When someone puts their name and their interpretation on it, permanence
+        starts to matter, and then it is offered.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Situation</th><th>DOI</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr><td>Instrument published, no domain author yet</td><td class="dim">no</td>
+              <td>A demonstration. Nothing depends on it being permanent.</td></tr>
+            <tr><td>You write the interpretation and take lead credit</td>
+              <td class="yes">offered</td>
+              <td>You may want to cite it later, and now you have something at stake</td></tr>
+            <tr><td>The instrument <em>is</em> the record — no paper behind it</td>
+              <td class="yes">yes</td><td>Nothing else holds its identity</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Where a DOI is minted, the record is archived independently of this site — so if
+        the site stops, your work does not. That is the main reason to take one.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Editing<span>after publication</span></div>
+    <div class="col">
+      <h2>Allowed — and the ceremony scales with the change</h2>
+      <div class="tw">
+        <table>
+          <thead><tr><th>What changed</th><th>What it needs</th></tr></thead>
+          <tbody>
+            <tr><td>Typo, broken link, clearer wording</td>
+              <td>Nothing. Edit freely — no reader's understanding changes.</td></tr>
+            <tr><td><b>A number moves</b></td>
+              <td>A visible "updated" date and one line saying what changed. Someone may
+                have quoted the old figure.</td></tr>
+            <tr><td><b>The conclusion changes</b></td>
+              <td>Not a silent edit. A new version — and usually the moment to mint a DOI,
+                because the work has just become worth citing.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        The middle row is the one that gets skipped, and it is the one that matters. A
+        number that changes without a date is how a reader ends up citing something that
+        is no longer on the page.
+      </p>
+
+      <h3>When new data changes the answer</h3>
+      <p>
+        Instruments are re-runnable, so they get re-run — and sometimes the finding does
+        not survive newer data. That is not a maintenance problem, it is a result: <em>this
+        held in 2024 data and does not hold in 2026 data</em> is worth publishing, and
+        almost nobody tests it systematically.
+      </p>
+      <p>
+        The earlier version stays reachable, stamped <b>superseded</b>. It is a state that
+        happens to an article rather than one anybody selects.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Journals<span>publishing elsewhere</span></div>
+    <div class="col">
+      <h2>You can still publish in a journal</h2>
+      <p>
+        If the instrument goes up before your paper, it is functionally a <b>preprint</b>,
+        and what governs is your target journal's preprint policy. Most journals accept
+        preprints; policies vary by publisher and by field, and this site cannot track
+        them. Check <span class="dim">Sherpa Romeo</span> and your journal's own author
+        guidelines before posting.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Order</th><th>Risk</th></tr></thead>
+          <tbody>
+            <tr><td><b>Journal first</b>, instrument afterwards</td>
+              <td class="yes">None. The paper is the record; this is the companion.</td></tr>
+            <tr><td>Instrument first, journal later</td>
+              <td class="no">Real, and field-dependent. Check first.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Two framing choices reduce the risk to almost nothing, and both are permanent
+        policy here: <b>this site never claims peer review of record</b>, and each case is
+        presented as a research artifact rather than as a paper.
+      </p>
+      <div class="aside">
+        Copyright is worth being clear about: it constrains <em>you</em>, wherever you
+        publish. A figure you cannot reuse here is one you cannot reuse on your own site
+        either. In practice this rarely bites, because instruments are built from the data
+        and the code — not from a publisher's typeset PDF. See <a href="/rights/">rights</a>.
+      </div>
+    </div>
+  </section>
+</Page>
+
+<style>
+  .flow {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.55rem;
+    font-family: var(--sans); font-size: 0.82rem; font-weight: 500;
+    margin: 1.3rem 0 0.6rem;
+  }
+  .flow b {
+    border: 1px solid var(--rule); padding: 0.35rem 0.7rem;
+    background: var(--panel); font-weight: 600;
+  }
+  .flow b.doi { border-color: var(--accent); color: var(--accent); }
+  .flow i { font-style: normal; color: var(--faint); }
+  .flow em { font-style: italic; color: var(--flag); font-size: 0.78rem; margin-left: 0.4rem; }
+</style>

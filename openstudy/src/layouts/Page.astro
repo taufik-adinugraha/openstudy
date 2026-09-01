@@ -1,0 +1,60 @@
+---
+// The shell every page shares: a sticky nav, a measured column, one footer.
+//
+// `current` marks the nav item so a reader always knows where they are, which matters
+// more here than usual — the site is six pages that each answer a different question,
+// and a visitor arriving from a link needs to see the shape of the whole thing.
+import "../styles/tokens.css";
+
+const { title, description, current } = Astro.props;
+
+const NAV = [
+  ["/", "Instruments"],
+  ["/contribute/", "Contribute"],
+  ["/publishing/", "Publishing"],
+  ["/rights/", "Rights"],
+  ["/standards/", "Standards"],
+  ["/about/", "About"],
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title} · openstudy.id</title>
+    <meta name="description" content={description} />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+    />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="wrap">
+        <a class="brand" href="/">openstudy<span>.id</span></a>
+        <nav class="nav" aria-label="Sections">
+          {NAV.map(([href, label]) => (
+            <a href={href} aria-current={current === href ? "page" : undefined}>{label}</a>
+          ))}
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <div class="wrap">
+        <slot />
+      </div>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap">
+        <span>openstudy.id — analytical instruments for open research</span>
+        <span>Instruments: <a href="/standards/">CC BY 4.0</a> · code MIT</span>
+        <span><a href="/about/">Who runs this, and why</a></span>
+      </div>
+    </footer>
+  </body>
+</html>

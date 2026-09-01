@@ -1,5 +1,5 @@
 {
-  "case": "G \u00b7 Transit Access & Urban Equity",
+  "case": "G · Transit Access & Urban Equity",
   "generated": "2026-08-30T09:40:07",
   "window": {
     "date": "2026-09-02",
@@ -193,7 +193,7 @@
     }
   },
   "rail_handencoded": {
-    "note": "Hand-encoded frequency GTFS: no operator publishes a feed for KRL/MRT/LRT. Headways and end-to-end times are read from the operators' published pages; inter-station run times are distributed by distance at the line's average commercial speed. Rail travel times carry a \u00b115 % caveat.",
+    "note": "Hand-encoded frequency GTFS: no operator publishes a feed for KRL/MRT/LRT. Headways and end-to-end times are read from the operators' published pages; inter-station run times are distributed by distance at the line's average commercial speed. Rail travel times carry a ±15 % caveat.",
     "lines": {
       "mrt_north_south": {
         "operator": "MRT Jakarta",
@@ -203,27 +203,27 @@
         "headway_source": "https://jakartamrt.co.id/id/jadwal-keberangkatan",
         "stations": 13,
         "osm_relation": 9677669,
-        "osm_relation_name": "MRT North-South Line (Lebak Bulus \u2192 Bundaran HI)"
+        "osm_relation_name": "MRT North-South Line (Lebak Bulus → Bundaran HI)"
       },
       "lrt_jabodebek": {
-        "operator": "KAI \u00b7 LRT Jabodebek",
+        "operator": "KAI · LRT Jabodebek",
         "headway_peak_min": 4.5,
         "headway_off_min": 6.5,
         "avg_commercial_kmh": 32.0,
         "headway_source": "https://lrtjabodebek.kai.id/jadwal-keberangkatan",
         "stations": 12,
         "osm_relation": 16036440,
-        "osm_relation_name": "Cibubur Line (Dukuh Atas \u2192 Harjamukti)"
+        "osm_relation_name": "Cibubur Line (Dukuh Atas → Harjamukti)"
       },
       "lrt_jabodebek_bekasi": {
-        "operator": "KAI \u00b7 LRT Jabodebek",
+        "operator": "KAI · LRT Jabodebek",
         "headway_peak_min": 4.5,
         "headway_off_min": 6.5,
         "avg_commercial_kmh": 32.0,
         "headway_source": "https://lrtjabodebek.kai.id/jadwal-keberangkatan",
         "stations": 14,
         "osm_relation": 16079478,
-        "osm_relation_name": "Bekasi Line (Jatimulya \u2192 Dukuh Atas)"
+        "osm_relation_name": "Bekasi Line (Jatimulya → Dukuh Atas)"
       },
       "lrt_jakarta": {
         "operator": "LRT Jakarta",
@@ -233,7 +233,7 @@
         "headway_source": "https://www.lrtjakarta.co.id/ (403 to fetchers; read in browser)",
         "stations": 6,
         "osm_relation": 10693119,
-        "osm_relation_name": "Lin Selatan: Velodrome \u2192 Kelapa Gading"
+        "osm_relation_name": "Lin Selatan: Velodrome → Kelapa Gading"
       },
       "krl_bogor": {
         "operator": "KAI Commuter",
@@ -243,7 +243,7 @@
         "headway_source": "https://kci.id/perjalanan-krl/jadwal-kereta (GAPEKA 2025 lookup)",
         "stations": 24,
         "osm_relation": 16877210,
-        "osm_relation_name": "Lin Bogor: Jakarta Kota \u2192 Bogor"
+        "osm_relation_name": "Lin Bogor: Jakarta Kota → Bogor"
       },
       "krl_cikarang": {
         "operator": "KAI Commuter",
@@ -253,7 +253,7 @@
         "headway_source": "kci.id",
         "stations": 27,
         "osm_relation": 2922163,
-        "osm_relation_name": "Lin Lingkar Cikarang full racket: Cikarang \u2192 Kampung Bandan via Pasar Senen \u2192 Cikarang"
+        "osm_relation_name": "Lin Lingkar Cikarang full racket: Cikarang → Kampung Bandan via Pasar Senen → Cikarang"
       },
       "krl_rangkasbitung": {
         "operator": "KAI Commuter",
@@ -263,7 +263,7 @@
         "headway_source": "kci.id",
         "stations": 19,
         "osm_relation": 2922215,
-        "osm_relation_name": "Lin Rangkasbitung: Rangkasbitung \u2192 Tanah Abang"
+        "osm_relation_name": "Lin Rangkasbitung: Rangkasbitung → Tanah Abang"
       },
       "krl_tangerang": {
         "operator": "KAI Commuter",
@@ -273,7 +273,7 @@
         "headway_source": "kci.id",
         "stations": 11,
         "osm_relation": 2922235,
-        "osm_relation_name": "Lin Tangerang: Tangerang \u2192 Duri"
+        "osm_relation_name": "Lin Tangerang: Tangerang → Duri"
       },
       "krl_tanjung_priok": {
         "operator": "KAI Commuter",
@@ -283,7 +283,7 @@
         "headway_source": "kci.id",
         "stations": 5,
         "osm_relation": 2922237,
-        "osm_relation_name": "Lin Tanjung Priuk: Tanjung Priuk \u2192 Jakarta Kota"
+        "osm_relation_name": "Lin Tanjung Priuk: Tanjung Priuk → Jakarta Kota"
       }
     },
     "geometry_licence": "OSM contributors, ODbL 1.0",
@@ -320,7 +320,7 @@
         "Jakarta": 0.44,
         "Greater Jakarta": 0.16
       },
-      "method": "population (GHS-POP 2025) within 1 km of any stop whose scheduled peak headway is 15 min or better, as a share of the unit's population. This is a straight-line buffer replication, not ITDP's exact street-network methodology, and it counts Mikrotrans stops \u2014 so it should read high against the 2016 anchors, and does.",
+      "method": "population (GHS-POP 2025) within 1 km of any stop whose scheduled peak headway is 15 min or better, as a share of the unit's population. This is a straight-line buffer replication, not ITDP's exact street-network methodology, and it counts Mikrotrans stops — so it should read high against the 2016 anchors, and does.",
       "Greater Jakarta": {
         "pop": 36940508.674653985,
         "pop_near_frequent_transit": 15623442.172368813,
@@ -341,7 +341,7 @@
     "hard": true,
     "ods": [
       {
-        "name": "TJ Corridor 1 Blok M \u2192 Kota",
+        "name": "TJ Corridor 1 Blok M → Kota",
         "mode": "bus",
         "published_min": 49,
         "source": "brtdata.org: Jakarta BRT average commercial speed 19 km/h; corridor 1 is 15.48 km",
@@ -358,7 +358,7 @@
         "pass": false
       },
       {
-        "name": "MRT Lebak Bulus \u2192 Bundaran HI",
+        "name": "MRT Lebak Bulus → Bundaran HI",
         "mode": "subway",
         "published_min": 30,
         "source": "jakartamrt.co.id (official < 30 min end-to-end)",
@@ -376,10 +376,10 @@
         "pass": true
       },
       {
-        "name": "KRL Bogor \u2192 Jakarta Kota",
+        "name": "KRL Bogor → Jakarta Kota",
         "mode": "train",
         "published_min": 95,
-        "source": "kci.id GAPEKA 2025 lookup \u2014 hand-read, ~1 h 35 for 54.8 km",
+        "source": "kci.id GAPEKA 2025 lookup — hand-read, ~1 h 35 for 54.8 km",
         "feed": "rail_handencoded.zip",
         "route": "rail_krl_bogor",
         "from_stop": "Bogor",
@@ -394,10 +394,10 @@
         "pass": true
       },
       {
-        "name": "LRT Jabodebek Harjamukti \u2192 Dukuh Atas",
+        "name": "LRT Jabodebek Harjamukti → Dukuh Atas",
         "mode": "light_rail",
         "published_min": 45,
-        "source": "lrtjabodebek.kai.id \u2014 hand-read, ~45 min end-to-end",
+        "source": "lrtjabodebek.kai.id — hand-read, ~45 min end-to-end",
         "feed": "rail_handencoded.zip",
         "route": "rail_lrt_jabodebek",
         "from_stop": "Harjamukti",
@@ -497,7 +497,7 @@
     ],
     "origins_reaching_no_job_floorspace": 430,
     "origins": 1511,
-    "note": "Unreachable = the router found no destination at all. Distinct from the 430 origins that route fine but reach only cells carrying no measured non-residential floorspace \u2014 that is a finding, not a defect.",
+    "note": "Unreachable = the router found no destination at all. Distinct from the 430 origins that route fine but reach only cells carrying no measured non-residential floorspace — that is a finding, not a defect.",
     "pass": false
   },
   "G-G2": {
@@ -508,5 +508,39 @@
     "reason": "requires live Google Routes API calls; the user has not authorised them, so no external routing comparison was made."
   },
   "gates_passed": 1,
-  "gates_hard": 3
+  "gates_hard": 3,
+  "gates": [
+    {
+      "id": "G-G1",
+      "name": "Timetable sanity",
+      "hard": true,
+      "pass": false,
+      "status": "fail",
+      "reason": null
+    },
+    {
+      "id": "G-G2",
+      "name": "External routing comparison",
+      "hard": false,
+      "pass": null,
+      "status": "NOT EVALUATED",
+      "reason": "requires live Google Routes API calls; the user has not authorised them, so no external routing comparison was made."
+    },
+    {
+      "id": "G-G3",
+      "name": "Network integrity",
+      "hard": true,
+      "pass": false,
+      "status": "fail",
+      "reason": null
+    },
+    {
+      "id": "G-G4",
+      "name": "Plausibility",
+      "hard": true,
+      "pass": true,
+      "status": "pass",
+      "reason": null
+    }
+  ]
 }
