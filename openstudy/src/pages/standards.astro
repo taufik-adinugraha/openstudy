@@ -21,8 +21,10 @@ import Page from "../layouts/Page.astro";
       <p>
         Every instrument declares, in advance, what would count as its model working and
         what would count as it failing. Those thresholds live in version control, and the
-        commit that set them is dated before the run that tested them. That is checkable
-        in principle and <a href="#unverifiable">not yet checkable by you</a>,
+        commit that set them is dated before the run that tested them. <b>That is checkable
+        by you</b> — the repository is at <a href="https://github.com/taufik-adinugraha/openstudy">github.com/taufik-adinugraha/openstudy</a>,
+        and <code>git log --reverse -- cases/fire-haze/pipeline/validate.py</code> dates the
+        thresholds against the gate record they produced,
         and it is the single reason anything else here is worth believing.
       </p>
       <ul>
@@ -116,35 +118,53 @@ import Page from "../layouts/Page.astro";
       <h2>The part of this page you have to take on trust</h2>
       <p>
         Everything above argues that the work should be believed because it can be checked.
-        A reader pointed out that the objects required to check it are not published, and
-        they were right. Stated plainly, because the alternative is a standard that cannot
-        be held to:
+        A reader pointed out that the objects required to check it were not published, and
+        they were right. Three of the five things listed here have since been fixed; the
+        list stays, with what changed, because a standard nobody can hold you to is not one.
       </p>
+      <div class="callout">
+        <p>
+          <b>Fixed — the code is public.</b>
+          <a href="https://github.com/taufik-adinugraha/openstudy">github.com/taufik-adinugraha/openstudy</a>, 226 commits, MIT.
+          The commits that date the thresholds can now be inspected by anyone, the footer's
+          licence points at something obtainable, and the gate records are in the tree
+          rather than only behind a dashboard. A separate commercial product built by the
+          same person is not in it, and is not part of this site.
+        </p>
+      </div>
+      <p><b>What is still true, and what a reader still cannot check:</b></p>
       <ul>
-        <li><b>There is no public repository.</b> The commits that date the thresholds
-          before the runs cannot be inspected by anyone outside. Until they can, the
-          pre-registration claim is testimony rather than evidence — however carefully it is
-          written.</li>
-        <li><b>The footer licences code MIT that is not yet published.</b> A licence over
-          nothing you can obtain grants nothing.</li>
-        <li><b>The gate records are reachable but undiscoverable.</b> They are served as
-          JSON behind each dashboard rather than deposited anywhere citable, so finding them
-          means reading a bundle.</li>
+        <li><b>The gate records are in the repository but not deposited anywhere citable.</b>
+          There is no DOI on them, so they can be read but not cited as a fixed object.</li>
         <li><b>The provenance manifests carry fetch timestamps but no content hashes</b>,
           no commit reference and no software versions. A timestamp establishes that a clock
           was read, not which bytes arrived.</li>
+        <li><b>There is no pinned environment and no workflow engine.</b> A Makefile is not
+          a lockfile: "re-runnable from raw source" is a claim about one machine until there
+          is a container digest and a DAG behind it.</li>
         <li><b>No external reviewer has checked any of it.</b> The adversarial review on
           each case is done by the person who built it. That is careful self-editing, and it
-          is not the same epistemic object.</li>
+          is not the same epistemic object. The repository does not fix this — it only makes
+          it possible for someone else to.</li>
       </ul>
       <div class="callout warn">
         <p>
-          <b>What would fix it, in order:</b> a public repository with history; a pinned
-          environment and a workflow engine rather than a Makefile; content hashes in every
-          manifest; the gate record deposited with a DOI and linked from the instrument; and
-          one external reader who is not the author. The first four are work. The fifth is
-          an invitation — <a href="/contribute/#attack">breaking a gate</a> is the one
-          contribution that would be worth more than the next five instruments.
+          <b>One anomaly, disclosed before anyone finds it.</b> In the rice case the
+          published record carries a timestamp about two hours <em>earlier</em> than the
+          commit that set its thresholds. That is almost certainly a re-run ordering
+          artefact rather than tuning after the fact — but it is exactly what an audit of
+          the pre-registration claim should catch, and pointing at it is cheaper than being
+          caught by it. The repository lets you judge that yourself, which is the point.
+        </p>
+      </div>
+      <div class="callout">
+        <p>
+          <b>What is left, in order:</b> content hashes in every manifest; a pinned
+          environment and a workflow engine; the gate record deposited with a DOI; and one
+          external reader who is not the author. The first three are work. The fourth is an
+          invitation, and now an actionable one — the code is there, so
+          <a href="/contribute/#attack">breaking a gate</a> no longer requires asking
+          anybody's permission.
         </p>
       </div>
     </div>
@@ -211,6 +231,64 @@ import Page from "../layouts/Page.astro";
       <p class="dim">
         Accessibility counts as part of it: keyboard reachable, contrast that holds, motion
         that respects <code>prefers-reduced-motion</code>, and a page that works on a phone.
+      </p>
+
+      <h3>These six are a floor, not a boast</h3>
+      <p>
+        A computational scientist reading this page pointed out that every criterion above
+        is an affordance a charting library hands you — linked views are one selection plus
+        a filter transform, a time scrubber is a slider bound to that filter, drill-down is
+        a click handler on a choropleth. She was right, and the word "advanced" does not
+        belong on a list of library features. What follows is what would actually be hard,
+        stated so the standard can be held to something rather than flattered by it.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>What would be genuinely hard</th><th>Where this site stands</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>Live recomputation.</b> Refitting the estimator in the browser under a
+                threshold the reader chose — a compiled model, or a server round-trip with a
+                job queue</td>
+              <td class="no">Not done. The scenarios are <b>precomputed</b>, so a reader
+                indexes choices the author made in advance. That is weaker, and the pages
+                now say so</td>
+            </tr>
+            <tr>
+              <td><b>Out-of-core interactive rendering.</b> Millions of rows at sixty frames
+                a second needs GPU aggregation or a tile pyramid</td>
+              <td class="no">Not done, and deliberately opted out of — three instruments
+                render on 2-D canvas with no WebGL, because the reader's own machine may
+                have none</td>
+            </tr>
+            <tr>
+              <td><b>Multi-resolution streaming</b> of a multi-gigabyte volume or trajectory:
+                chunked storage, range requests, a level-of-detail pyramid</td>
+              <td class="no">Not done. Existing tools do this far better</td>
+            </tr>
+            <tr>
+              <td><b>Uncertainty encoded honestly</b> — ensemble spread, hypothetical outcome
+                plots, reliability diagrams that do not flatter calibration</td>
+              <td>Partly. Intervals are published and one case ships a reliability curve;
+                the standard above does not require it, and should</td>
+            </tr>
+            <tr>
+              <td><b>Projection and areal correctness</b> — equal-area for area statistics,
+                incidence-angle normalisation for radar</td>
+              <td>Done in the pipelines, absent from this standard</td>
+            </tr>
+            <tr>
+              <td><b>Perceptual colour</b> — colour-vision-safe, luminance-ordered, never a
+                rainbow ramp for a quantity</td>
+              <td>Done in practice, absent from this standard</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="dim">
+        Two of those six belong in the standard and are missing from it. Three are not
+        claimed anywhere on this site. One is a real gap between what the criteria say and
+        what the artifact does. Naming them is cheaper than being told.
       </p>
     </div>
   </section>

@@ -41,3 +41,7 @@ ops/backups/
 # rebuilt at startup from corpus/, and it accumulates a spend ledger and
 # upload records that have no business in version control
 platform/knowledge/api/knowledge.db
+
+# FMV product material — a separate private repo, never in the public one
+docs/spec-pustaka.html
+docs/build-plan.html
