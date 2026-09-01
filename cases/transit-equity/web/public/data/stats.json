@@ -1,0 +1,512 @@
+{
+  "case": "G \u00b7 Transit Access & Urban Equity",
+  "generated": "2026-08-30T09:40:07",
+  "window": {
+    "date": "2026-09-02",
+    "from": "07:00",
+    "to": "09:00",
+    "percentile": 50,
+    "note": "scheduled times over a weekday morning-peak departure window; not congestion-adjusted"
+  },
+  "inputs": {
+    "codab_adm4": {
+      "layer": "idn_admin4",
+      "licence": "CC BY-IGO (HDX COD-AB / BPS)",
+      "units": 1511,
+      "url": "https://data.humdata.org/dataset/84a1d98a-790b-4d66-9d14-bbfa48500802/resource/c740a308-0a63-46d6-ab15-b041e62eff58/download/idn_admin_boundaries.gdb.zip"
+    },
+    "destinations": {
+      "cell_m": 1000,
+      "cells": 5766,
+      "facility_source": "HDX healthsites (ODbL)",
+      "jobs_proxy_covered": 0.9183204190468637,
+      "pop_covered": 0.9269499490234047
+    },
+    "ghs_nres_e2020_r10_c29": {
+      "bytes": 1319747,
+      "licence": "CC BY 4.0",
+      "source": "JRC GHSL R2023A"
+    },
+    "ghs_pop_e2025_r10_c29": {
+      "bytes": 24963907,
+      "licence": "CC BY 4.0",
+      "source": "JRC GHSL R2023A"
+    },
+    "gtfs_bogor": {
+      "bytes": 840914,
+      "fetched": "2026-08-30",
+      "last_modified": null,
+      "path": "data/gtfs/bogor_angkot.zip",
+      "sha256": "b57abd15694f8b1d5004ab075e30f26073d370d0030fa66ba843043a8bfc9adf",
+      "url": "http://michielbdejong.com/angkots-gtfs.zip"
+    },
+    "gtfs_transjakarta": {
+      "bytes": 2497332,
+      "fetched": "2026-08-30",
+      "last_modified": "Mon, 27 Jul 2026 06:49:42 GMT",
+      "path": "data/gtfs/transjakarta.zip",
+      "sha256": "63b4fb14d9afa7fd21737fee57991366b3f61746af12479725cc17d0cf64fb22",
+      "url": "https://gtfs.transjakarta.co.id/files/file_gtfs.zip"
+    },
+    "healthsites": {
+      "bytes": 18297368,
+      "last_modified": "2026-08-28T17:18:18.556433",
+      "licence": "ODbL",
+      "resource": "indonesia-healthsites-hxl-geojson",
+      "source": "https://data.humdata.org/dataset/indonesia-healthsites"
+    },
+    "osm_clip": {
+      "bbox": [
+        106.3,
+        -6.95,
+        107.3,
+        -5.85
+      ],
+      "bytes": 185719392,
+      "licence": "ODbL 1.0",
+      "path": "data/raw/osm/jabodetabek.osm.pbf",
+      "url": "https://download.geofabrik.de/asia/indonesia/java-latest.osm.pbf"
+    },
+    "osm_java_pbf": {
+      "bytes": 896177289,
+      "fetched": "2026-08-30",
+      "path": "data/raw/osm/java-latest.osm.pbf",
+      "sha256": "0c68fe2fee397b065c663c2484d96e92f7ab652c36dd5bea34347e1dad89a55c",
+      "url": "https://download.geofabrik.de/asia/indonesia/java-latest.osm.pbf"
+    },
+    "osm_rail_overpass": {
+      "bytes": 361602,
+      "licence": "ODbL 1.0",
+      "source": "https://overpass-api.de/api/interpreter"
+    }
+  },
+  "gtfs": {
+    "bogor_angkot.zip": {
+      "routes": 24,
+      "stops": 346,
+      "trips": 24,
+      "frequencies_rows": 24,
+      "route_types": {
+        "3": 24
+      },
+      "headways_min": [
+        1.0
+      ]
+    },
+    "rail_handencoded.zip": {
+      "routes": 9,
+      "stops": 131,
+      "trips": 18,
+      "frequencies_rows": 72,
+      "route_types": {
+        "2": 5,
+        "0": 3,
+        "1": 1
+      },
+      "headways_min": [
+        4.5,
+        5.0,
+        6.5,
+        8.0,
+        10.0,
+        12.0,
+        15.0,
+        20.0,
+        30.0,
+        60.0
+      ]
+    },
+    "transjakarta.zip": {
+      "routes": 240,
+      "stops": 8091,
+      "trips": 700,
+      "frequencies_rows": 753,
+      "route_types": {
+        "3": 240
+      },
+      "headways_min": [
+        3.0,
+        3.1,
+        3.3,
+        3.8,
+        4.0,
+        4.3,
+        4.6,
+        5.0,
+        5.5,
+        6.0,
+        6.7,
+        7.0,
+        7.5,
+        8.3,
+        8.6,
+        9.0,
+        10.0,
+        11.0,
+        11.3,
+        11.7,
+        11.8,
+        12.0,
+        13.0,
+        13.3,
+        13.6,
+        14.0,
+        15.0,
+        16.0,
+        16.7,
+        17.0,
+        18.0,
+        18.3,
+        19.0,
+        20.0,
+        21.3,
+        21.7,
+        23.0,
+        23.3,
+        24.8,
+        25.0,
+        26.7,
+        28.3,
+        30.0,
+        31.0,
+        34.3,
+        35.0,
+        36.3,
+        38.3,
+        40.0,
+        45.0,
+        46.0,
+        46.7,
+        50.0,
+        55.0,
+        56.7,
+        60.0,
+        65.0,
+        70.0,
+        75.0,
+        85.0,
+        100.0,
+        115.0,
+        140.0,
+        878.3
+      ]
+    }
+  },
+  "rail_handencoded": {
+    "note": "Hand-encoded frequency GTFS: no operator publishes a feed for KRL/MRT/LRT. Headways and end-to-end times are read from the operators' published pages; inter-station run times are distributed by distance at the line's average commercial speed. Rail travel times carry a \u00b115 % caveat.",
+    "lines": {
+      "mrt_north_south": {
+        "operator": "MRT Jakarta",
+        "headway_peak_min": 5,
+        "headway_off_min": 10,
+        "avg_commercial_kmh": 31.0,
+        "headway_source": "https://jakartamrt.co.id/id/jadwal-keberangkatan",
+        "stations": 13,
+        "osm_relation": 9677669,
+        "osm_relation_name": "MRT North-South Line (Lebak Bulus \u2192 Bundaran HI)"
+      },
+      "lrt_jabodebek": {
+        "operator": "KAI \u00b7 LRT Jabodebek",
+        "headway_peak_min": 4.5,
+        "headway_off_min": 6.5,
+        "avg_commercial_kmh": 32.0,
+        "headway_source": "https://lrtjabodebek.kai.id/jadwal-keberangkatan",
+        "stations": 12,
+        "osm_relation": 16036440,
+        "osm_relation_name": "Cibubur Line (Dukuh Atas \u2192 Harjamukti)"
+      },
+      "lrt_jabodebek_bekasi": {
+        "operator": "KAI \u00b7 LRT Jabodebek",
+        "headway_peak_min": 4.5,
+        "headway_off_min": 6.5,
+        "avg_commercial_kmh": 32.0,
+        "headway_source": "https://lrtjabodebek.kai.id/jadwal-keberangkatan",
+        "stations": 14,
+        "osm_relation": 16079478,
+        "osm_relation_name": "Bekasi Line (Jatimulya \u2192 Dukuh Atas)"
+      },
+      "lrt_jakarta": {
+        "operator": "LRT Jakarta",
+        "headway_peak_min": 10,
+        "headway_off_min": 10,
+        "avg_commercial_kmh": 27.0,
+        "headway_source": "https://www.lrtjakarta.co.id/ (403 to fetchers; read in browser)",
+        "stations": 6,
+        "osm_relation": 10693119,
+        "osm_relation_name": "Lin Selatan: Velodrome \u2192 Kelapa Gading"
+      },
+      "krl_bogor": {
+        "operator": "KAI Commuter",
+        "headway_peak_min": 5,
+        "headway_off_min": 10,
+        "avg_commercial_kmh": 36.0,
+        "headway_source": "https://kci.id/perjalanan-krl/jadwal-kereta (GAPEKA 2025 lookup)",
+        "stations": 24,
+        "osm_relation": 16877210,
+        "osm_relation_name": "Lin Bogor: Jakarta Kota \u2192 Bogor"
+      },
+      "krl_cikarang": {
+        "operator": "KAI Commuter",
+        "headway_peak_min": 8,
+        "headway_off_min": 15,
+        "avg_commercial_kmh": 36.0,
+        "headway_source": "kci.id",
+        "stations": 27,
+        "osm_relation": 2922163,
+        "osm_relation_name": "Lin Lingkar Cikarang full racket: Cikarang \u2192 Kampung Bandan via Pasar Senen \u2192 Cikarang"
+      },
+      "krl_rangkasbitung": {
+        "operator": "KAI Commuter",
+        "headway_peak_min": 12,
+        "headway_off_min": 20,
+        "avg_commercial_kmh": 40.0,
+        "headway_source": "kci.id",
+        "stations": 19,
+        "osm_relation": 2922215,
+        "osm_relation_name": "Lin Rangkasbitung: Rangkasbitung \u2192 Tanah Abang"
+      },
+      "krl_tangerang": {
+        "operator": "KAI Commuter",
+        "headway_peak_min": 20,
+        "headway_off_min": 30,
+        "avg_commercial_kmh": 32.0,
+        "headway_source": "kci.id",
+        "stations": 11,
+        "osm_relation": 2922235,
+        "osm_relation_name": "Lin Tangerang: Tangerang \u2192 Duri"
+      },
+      "krl_tanjung_priok": {
+        "operator": "KAI Commuter",
+        "headway_peak_min": 30,
+        "headway_off_min": 60,
+        "avg_commercial_kmh": 32.0,
+        "headway_source": "kci.id",
+        "stations": 5,
+        "osm_relation": 2922237,
+        "osm_relation_name": "Lin Tanjung Priuk: Tanjung Priuk \u2192 Jakarta Kota"
+      }
+    },
+    "geometry_licence": "OSM contributors, ODbL 1.0",
+    "caveat_pct": 15
+  },
+  "origins": 1511,
+  "destinations": 5766,
+  "scenarios_computed": [
+    "all",
+    "no_rail",
+    "walk"
+  ],
+  "G-G4": {
+    "gate": "G-G4",
+    "hard": true,
+    "monotonicity": {
+      "origins": 1511,
+      "violations_exact": 21,
+      "violations_material": 0,
+      "tolerance_share": 0.005,
+      "worst_violation": -0.002451130961164394,
+      "note": "differences below the tolerance are R5 frequency-sampling noise",
+      "pass": true
+    },
+    "core_periphery": {
+      "dki_median": 0.0429,
+      "bodetabek_median": 0.0005,
+      "pass": true
+    },
+    "people_near_transit": {
+      "frequent_stops": 7517,
+      "headway_max_min": 15,
+      "anchors_2016": {
+        "Jakarta": 0.44,
+        "Greater Jakarta": 0.16
+      },
+      "method": "population (GHS-POP 2025) within 1 km of any stop whose scheduled peak headway is 15 min or better, as a share of the unit's population. This is a straight-line buffer replication, not ITDP's exact street-network methodology, and it counts Mikrotrans stops \u2014 so it should read high against the 2016 anchors, and does.",
+      "Greater Jakarta": {
+        "pop": 36940508.674653985,
+        "pop_near_frequent_transit": 15623442.172368813,
+        "share": 0.4229,
+        "above_2016_anchor": true
+      },
+      "Jakarta": {
+        "pop": 11148632.208874978,
+        "pop_near_frequent_transit": 10934246.234387122,
+        "share": 0.9808,
+        "above_2016_anchor": true
+      }
+    },
+    "pass": true
+  },
+  "G-G1": {
+    "gate": "G-G1",
+    "hard": true,
+    "ods": [
+      {
+        "name": "TJ Corridor 1 Blok M \u2192 Kota",
+        "mode": "bus",
+        "published_min": 49,
+        "source": "brtdata.org: Jakarta BRT average commercial speed 19 km/h; corridor 1 is 15.48 km",
+        "feed": "transjakarta.zip",
+        "route": "1",
+        "note": "no end-to-end trip exists in the official feed, so the corridor is tested on its scheduled commercial speed. Distance is summed straight-line between consecutive stops, so this figure is a lower bound by roughly 10-15 %. Even so the operator's own schedule is well below brtdata.org's 19 km/h corridor average, which means the bus times routed here are conservative, not optimistic.",
+        "trips_matched": 18,
+        "median_trip_km": 13.83,
+        "scheduled_kmh": 11.2,
+        "tolerance_min": 8,
+        "router_door_to_door_min": 59.0,
+        "published_kmh": 19,
+        "deviation_kmh": -7.8,
+        "pass": false
+      },
+      {
+        "name": "MRT Lebak Bulus \u2192 Bundaran HI",
+        "mode": "subway",
+        "published_min": 30,
+        "source": "jakartamrt.co.id (official < 30 min end-to-end)",
+        "feed": "rail_handencoded.zip",
+        "route": "rail_mrt_north_south",
+        "from_stop": "Lebak Bulus Bank Syariah Indonesia",
+        "to_stop": "Bundaran HI Bank Jakarta",
+        "from_stop_m": 53,
+        "to_stop_m": 350,
+        "trips_matched": 1,
+        "scheduled_in_vehicle_min": 27.6,
+        "tolerance_min": 8,
+        "router_door_to_door_min": 49.0,
+        "deviation_min": -2.4,
+        "pass": true
+      },
+      {
+        "name": "KRL Bogor \u2192 Jakarta Kota",
+        "mode": "train",
+        "published_min": 95,
+        "source": "kci.id GAPEKA 2025 lookup \u2014 hand-read, ~1 h 35 for 54.8 km",
+        "feed": "rail_handencoded.zip",
+        "route": "rail_krl_bogor",
+        "from_stop": "Bogor",
+        "to_stop": "Jakarta Kota",
+        "from_stop_m": 120,
+        "to_stop_m": 312,
+        "trips_matched": 1,
+        "scheduled_in_vehicle_min": 88.8,
+        "tolerance_min": 14.2,
+        "router_door_to_door_min": 106.0,
+        "deviation_min": -6.2,
+        "pass": true
+      },
+      {
+        "name": "LRT Jabodebek Harjamukti \u2192 Dukuh Atas",
+        "mode": "light_rail",
+        "published_min": 45,
+        "source": "lrtjabodebek.kai.id \u2014 hand-read, ~45 min end-to-end",
+        "feed": "rail_handencoded.zip",
+        "route": "rail_lrt_jabodebek",
+        "from_stop": "Harjamukti",
+        "to_stop": "Dukuh Atas Bank Syariah Indonesia",
+        "from_stop_m": 1006,
+        "to_stop_m": 422,
+        "trips_matched": 1,
+        "scheduled_in_vehicle_min": 42.4,
+        "tolerance_min": 8,
+        "router_door_to_door_min": 76.0,
+        "deviation_min": -2.6,
+        "pass": true
+      }
+    ],
+    "method": "scheduled in-vehicle time read from the GTFS the router uses, compared with the operator's published journey time; the router's door-to-door p50 (which includes access, waiting and egress) is shown for context",
+    "passed": 3,
+    "of": 4,
+    "pass": false
+  },
+  "G-G3": {
+    "gate": "G-G3",
+    "hard": true,
+    "stops": 8568,
+    "by_feed": {
+      "transjakarta.zip": 8091,
+      "bogor_angkot.zip": 346,
+      "rail_handencoded.zip": 131
+    },
+    "snapped_within_200m": 8520,
+    "snap_share": 0.9944,
+    "snap_pass": true,
+    "unreachable_origins": 15,
+    "unreachable_pop": 141625.6,
+    "unreachable_kepulauan_seribu": 5,
+    "unreachable_mainland": 10,
+    "unreachable_mainland_list": [
+      {
+        "id": "ID3603030006",
+        "adm4_name": "Bitung Jaya",
+        "adm2_name": "Tangerang",
+        "pop": 40692.7
+      },
+      {
+        "id": "ID3271020004",
+        "adm4_name": "Katulampa",
+        "adm2_name": "Kota Bogor",
+        "pop": 35562.8
+      },
+      {
+        "id": "ID3201140009",
+        "adm4_name": "Sentul",
+        "adm2_name": "Bogor",
+        "pop": 27440.0
+      },
+      {
+        "id": "ID3216082006",
+        "adm4_name": "Srimukti",
+        "adm2_name": "Bekasi",
+        "pop": 8192.3
+      },
+      {
+        "id": "ID3201150002",
+        "adm4_name": "Sukaharja",
+        "adm2_name": "Bogor",
+        "pop": 4194.1
+      },
+      {
+        "id": "ID3201150009",
+        "adm4_name": "Sukadamai",
+        "adm2_name": "Bogor",
+        "pop": 4129.4
+      },
+      {
+        "id": "ID3201260001",
+        "adm4_name": "Leuwibatu",
+        "adm2_name": "Bogor",
+        "pop": 3393.4
+      },
+      {
+        "id": "ID3603200013",
+        "adm4_name": "Muara",
+        "adm2_name": "Tangerang",
+        "pop": 2630.4
+      },
+      {
+        "id": "ID3201010001",
+        "adm4_name": "Malasari",
+        "adm2_name": "Bogor",
+        "pop": 2529.4
+      },
+      {
+        "id": "ID3201051002",
+        "adm4_name": "Gunung Malang",
+        "adm2_name": "Bogor",
+        "pop": 0.0
+      }
+    ],
+    "origins_reaching_no_job_floorspace": 430,
+    "origins": 1511,
+    "note": "Unreachable = the router found no destination at all. Distinct from the 430 origins that route fine but reach only cells carrying no measured non-residential floorspace \u2014 that is a finding, not a defect.",
+    "pass": false
+  },
+  "G-G2": {
+    "gate": "G-G2",
+    "hard": false,
+    "pass": null,
+    "status": "NOT EVALUATED",
+    "reason": "requires live Google Routes API calls; the user has not authorised them, so no external routing comparison was made."
+  },
+  "gates_passed": 1,
+  "gates_hard": 3
+}

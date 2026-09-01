@@ -14,7 +14,7 @@
    "status": "pass",
    "value": 0.1768,
    "threshold": 0.15,
-   "detail": "MAE 16.04 vs persistence 19.49 \u00b5g/m\u00b3 on the held-out future (+17.7%). On RMSE the same comparison is +20.8%."
+   "detail": "MAE 16.04 vs persistence 19.49 µg/m³ on the held-out future (+17.7%). On RMSE the same comparison is +20.8%."
   },
   {
    "id": "G-E2",
@@ -26,7 +26,7 @@
   },
   {
    "id": "G-E3",
-   "name": "Episode recall at 24 h (PM2.5 \u2265 55.5 \u00b5g/m\u00b3)",
+   "name": "Episode recall at 24 h (PM2.5 ≥ 55.5 µg/m³)",
    "status": "fail",
    "value": {
     "recall": 0.489,
@@ -8538,7 +8538,7 @@
    "ref": "wangdu",
    "city": "Beijing",
    "n_stations": 12,
-   "years": "2013\u20132017",
+   "years": "2013–2017",
    "obs_mean": 79.79,
    "source": "Table 3, primary test set",
    "rows": [
@@ -8576,13 +8576,13 @@
      "skill_rmse": 0.17648317388513624
     }
    ],
-   "extreme_note": "Table 4: on rows above 242 \u00b5g/m\u00b3 persistence beats every machine-learning model at h=6 and h=24.",
+   "extreme_note": "Table 4: on rows above 242 µg/m³ persistence beats every machine-learning model at h=6 and h=24.",
    "persistence_r2_24h": -0.117
   },
   "trondheim": {
    "ref": "murad",
    "city": "Trondheim",
-   "source": "\u00a73.3 and Figures 4\u20135",
+   "source": "§3.3 and Figures 4–5",
    "baseline": "the value observed 24 hours earlier",
    "persist_rmse": 7.52,
    "model_rmse": 4.63,
@@ -8601,14 +8601,14 @@
    "rolling_h1": -0.192,
    "folds_nonpositive": 34,
    "folds": 47,
-   "source": "\u00a73.1.2\u20133.1.4"
+   "source": "§3.1.2–3.1.4"
   },
   "fmqo": {
    "ref": "vitali",
    "indicator": "RMSE(forecast) / RMSE(persistence)",
    "threshold": 1.0,
    "station_share": 0.9,
-   "source": "Eq. 1\u20132 and \u00a72.1"
+   "source": "Eq. 1–2 and §2.1"
   },
   "accra": {
    "ref": "raheja",
@@ -8621,14 +8621,14 @@
    "clarity_mae_corrected": 2.27,
    "rh_lo": 48.0,
    "rh_hi": 89.9,
-   "source": "Tables 2\u20133"
+   "source": "Tables 2–3"
   },
   "lubbock": {
    "ref": "lubbock",
    "city": "Lubbock",
    "clarity_mae_raw": 3.4,
    "clarity_r2_raw": 0.66,
-   "source": "\u00a73"
+   "source": "§3"
   },
   "smoke": {
    "ref": "berlinghieri",
@@ -8647,7 +8647,7 @@
    "us_very_unhealthy": 125.5,
    "us_hazardous": 225.5,
    "eu_points_per_million": 1.0,
-   "eu_ref": "2008/50/EC, Annex V \u00a7B",
+   "eu_ref": "2008/50/EC, Annex V §B",
    "epa_min_large_msa": 3,
    "epa_ref": "40 CFR 58, Appendix D, Table D-5",
    "jabodetabek_millions": 32.0
