@@ -10,6 +10,10 @@ import "../styles/tokens.css";
 // Set to true to bring them back; the footer's #contact anchor stays either way.
 const SHOW_PILOT_CTA = false;
 
+// public/ is served under the app's base ("/lab"), so a root-absolute "/tile.jpg" resolves
+// to the domain root and 404s. Build every asset URL through this instead.
+const asset = (f) => `${import.meta.env.BASE_URL.replace(/\/$/, "")}/${f}`;
+
 const DEMOS = {
   nightlights: "/nightlights",
   knowledge: "/lab/knowledge",
@@ -49,7 +53,7 @@ const DEMOS = {
     <section class="cases">
 
       <a class="case live" data-case="nightlights" href={DEMOS.nightlights} target="_blank" rel="noopener">
-        <img src="/tile-nightlights.jpg" alt="Java and Sumatra at night from orbit, amber city lights" loading="lazy" />
+        <img src={asset("tile-nightlights.jpg")} alt="Java and Sumatra at night from orbit, amber city lights" loading="lazy" />
         <div class="case-body">
           <span class="badge">LIVE DEMO</span>
           <h2>Nighttime-Lights Economic Pulse</h2>
@@ -2419,7 +2423,7 @@ const DEMOS = {
       </a>
 
       <a class="case live" data-case="poverty" href={DEMOS.poverty} target="_blank" rel="noopener">
-        <img src="/tile-poverty.jpg" loading="lazy"
+        <img src={asset("tile-poverty.jpg")} loading="lazy"
              alt="Indonesia by inferred poverty rate — every regency shaded from soil-dark (least poor) to pale sand (poorest); Papua pale, Java dark" />
         <div class="case-body">
           <span class="badge">LIVE DEMO</span>
