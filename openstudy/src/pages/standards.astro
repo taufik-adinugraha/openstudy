@@ -21,7 +21,8 @@ import Page from "../layouts/Page.astro";
       <p>
         Every instrument declares, in advance, what would count as its model working and
         what would count as it failing. Those thresholds live in version control, and the
-        commit that set them is dated before the run that tested them. That is checkable,
+        commit that set them is dated before the run that tested them. That is checkable
+        in principle and <a href="#unverifiable">not yet checkable by you</a>,
         and it is the single reason anything else here is worth believing.
       </p>
       <ul>
@@ -98,8 +99,118 @@ import Page from "../layouts/Page.astro";
       </div>
       <p>
         Those six are run as a checker over every case. It is the acceptance test: produce
-        output that passes, and the instrument can be published — no code review required,
-        because what is checked is the output, not the implementation.
+        output that passes, and the instrument can be published. This page used to add
+        "no code review required, because what is checked is the output, not the
+        implementation." <b>That was wrong, and this site disproved it.</b> A queue bug in
+        the fire-haze pipeline scored one headline comparison on 133,386 cell-days while the
+        figure beside it used 2,142,680 — and that output passed all six rules, because
+        wrong answers are not malformed. What caught it was reading the job ledger row by
+        row, which is code review. The six rules are a floor, not an acceptance test.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec" id="unverifiable">
+    <div class="rail">Unverifiable<span>what you cannot check yet</span></div>
+    <div class="col measure">
+      <h2>The part of this page you have to take on trust</h2>
+      <p>
+        Everything above argues that the work should be believed because it can be checked.
+        A reader pointed out that the objects required to check it are not published, and
+        they were right. Stated plainly, because the alternative is a standard that cannot
+        be held to:
+      </p>
+      <ul>
+        <li><b>There is no public repository.</b> The commits that date the thresholds
+          before the runs cannot be inspected by anyone outside. Until they can, the
+          pre-registration claim is testimony rather than evidence — however carefully it is
+          written.</li>
+        <li><b>The footer licences code MIT that is not yet published.</b> A licence over
+          nothing you can obtain grants nothing.</li>
+        <li><b>The gate records are reachable but undiscoverable.</b> They are served as
+          JSON behind each dashboard rather than deposited anywhere citable, so finding them
+          means reading a bundle.</li>
+        <li><b>The provenance manifests carry fetch timestamps but no content hashes</b>,
+          no commit reference and no software versions. A timestamp establishes that a clock
+          was read, not which bytes arrived.</li>
+        <li><b>No external reviewer has checked any of it.</b> The adversarial review on
+          each case is done by the person who built it. That is careful self-editing, and it
+          is not the same epistemic object.</li>
+      </ul>
+      <div class="callout warn">
+        <p>
+          <b>What would fix it, in order:</b> a public repository with history; a pinned
+          environment and a workflow engine rather than a Makefile; content hashes in every
+          manifest; the gate record deposited with a DOI and linked from the instrument; and
+          one external reader who is not the author. The first four are work. The fifth is
+          an invitation — <a href="/contribute/#attack">breaking a gate</a> is the one
+          contribution that would be worth more than the next five instruments.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="visualization">
+    <div class="rail">Visualization<span>the criterion most often skipped</span></div>
+    <div class="col">
+      <h2>A static figure is not an instrument</h2>
+      <p>
+        This is a standard on the artifact, not a bar on the person: it says what the
+        visualization has to do, and anyone whose work does it has cleared it. Most
+        published analysis stops at a chart, which is why the last stage is written down
+        as carefully as the gates.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Required</th><th>What it rules out</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>Linked views.</b> Selecting in one view filters the others, so a
+                reader can follow a single unit through every panel</td>
+              <td>A grid of unrelated charts that happen to share a page</td>
+            </tr>
+            <tr>
+              <td><b>Time is navigable</b> where the data has time — play it, scrub it, or
+                step it, at the resolution the pipeline actually produces</td>
+              <td>One year chosen by the author and presented as the picture</td>
+            </tr>
+            <tr>
+              <td><b>Drill-down to the unit of analysis.</b> If the model estimates at
+                kecamatan level, a reader can reach one kecamatan</td>
+              <td>A national aggregate that cannot be questioned locally</td>
+            </tr>
+            <tr>
+              <td><b>At least one assumption is a control.</b> The reader changes it and
+                watches the answer move — the threshold, the baseline, the window.
+                <b>Where the scenarios are precomputed rather than refitted live, the page
+                must say so</b>: indexing a set of author-chosen scenarios is weaker than
+                recomputation and should not be described as if it were the same thing</td>
+              <td>A conclusion the reader can only accept or reject whole</td>
+            </tr>
+            <tr>
+              <td><b>Failures are visible in the interface</b>, not only in the appendix.
+                A failed gate appears where the result appears</td>
+              <td>A dashboard that looks equally confident whatever the gates said</td>
+            </tr>
+            <tr>
+              <td><b>Legible without its author.</b> Units, dates, sources and the meaning
+                of every encoding are on screen</td>
+              <td>A figure that needs a caption the reader does not have</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <p>
+          <b>Why this is a standard and not a preference.</b> Every item above exists so a
+          reader can disagree with the result in a specific way. A visualization that cannot
+          be interrogated asks for trust instead of offering evidence — which undoes the
+          gates and the baselines that come before it.
+        </p>
+      </div>
+      <p class="dim">
+        Accessibility counts as part of it: keyboard reachable, contrast that holds, motion
+        that respects <code>prefers-reduced-motion</code>, and a page that works on a phone.
       </p>
     </div>
   </section>
@@ -145,7 +256,7 @@ import Page from "../layouts/Page.astro";
         meaning, and no amount of validation makes a signal exist where there is none.
       </p>
       <p>
-        Which is why the interpretation is not the studio's to write, and why an instrument
+        Which is why the interpretation is not the measurement side's to write, and why an instrument
         published without one says so on its face rather than filling the gap with
         confident prose.
       </p>

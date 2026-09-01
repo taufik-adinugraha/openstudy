@@ -1,39 +1,191 @@
 ---
 import Page from "../layouts/Page.astro";
+import { SEEKING } from "../data/instruments.js";
+import { PATHS, DOOR_WORD } from "../data/paths.js";
+
+// Contribution is routed by what someone already has, not by what they call themselves.
+// A quantitative economist is a researcher and a data scientist both; asking them to pick
+// an identity sorts people into boxes none of them fit, and it contradicts CRediT, which
+// exists precisely to credit contributions rather than titles.
+//
+// Each path carries its real capacity. One person cannot service five doors, and a door
+// advertised as open that answers in three weeks costs more trust than one marked honestly.
+// PATHS lives in src/data/paths.js so this page and the homepage cannot disagree.
 ---
 
 <Page
   title="How to contribute"
-  description="What a researcher brings, what the studio builds, how credit is recorded, and the parts that might put you off."
+  description="Six ways in, routed by what you already have rather than by job title: a published paper, a subject you know, a question and data, skills and time, an instrument of your own, or simulation output nobody can open. Four are open now; each carries its real capacity."
   current="/contribute/"
 >
   <h1>How to contribute</h1>
   <p class="lead">
-    Two ways in: bring a finding and get an instrument built for it, or attack an
-    instrument that already exists. Both are described here, including the parts that
-    might put you off.
+    Routed by what you already have, not by what you do for a living — a quantitative
+    economist is a researcher and a data scientist both, and picking one would be a
+    fiction. Each path below carries its honest capacity, because one person cannot
+    service {DOOR_WORD[PATHS.length] ?? PATHS.length} doors at once.
   </p>
 
-  <section class="sec">
-    <div class="rail">Researchers<span>bring a finding</span></div>
+  <section class="sec" id="ways">
+    <div class="rail">Ways in<span>find your row</span></div>
+    <div class="col wide">
+      <div class="tw">
+        <table>
+          <thead><tr><th>What you already have</th><th>The path</th><th>Status</th></tr></thead>
+          <tbody>
+            {PATHS.map((p) => (
+              <tr>
+                <td>{p.have}</td>
+                <td><a href={`#${p.anchor}`}>{p.path}</a></td>
+                <td>
+                  <span class={p.status === "open" ? "chip open" : "chip later"}>{p.status}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="dim">
+        <b>Case by case</b> is not a soft no — it is real and it has happened. It means
+        capacity is the constraint, so ask before investing time rather than after.
+      </p>
+
+      <div class="callout warn">
+        <p>
+          <b>There is no row here for fieldwork-based research, and that is a closed door
+          rather than an oversight.</b> Interviews, transcripts, household rosters,
+          participatory maps and life histories cannot be accepted: this site publishes
+          aggregate data only, has no confidentiality infrastructure and no ethics route,
+          and its visualization standard requires drill-down to the unit of analysis — which
+          for that work would itself be a disclosure harm.
+        </p>
+        <p class="dim">
+          A qualitative researcher pointed out that six doors were advertised as "routed by
+          what you already have" while all six were shut to an entire class of research, and
+          that the exclusion was left to be inferred from the limits page. Stated here
+          instead. What remains open to that work is
+          <a href="#attack">breaking an evaluation</a> — which needs no data at all, and is
+          where a framing critique would land hardest.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="published">
+    <div class="rail">Path one<span>a published paper</span></div>
     <div class="col">
-      <h2>You already did the hard part</h2>
+      <h2>The research is already refereed. Now make it usable.</h2>
       <p>
-        The work this site asks for is work you have already done. A published paper, a
-        working manuscript, a dataset you understand better than anyone — that is the
-        contribution. What gets added is everything quantitative: the pipeline, the models,
-        their evaluation, and an instrument someone can actually use.
+        A paper's analysis is its most reusable part and its least accessible: the figures
+        are flattened into a PDF, and the question a reader wants to ask — <em>what happens
+        if I change this assumption?</em> — cannot be asked. That is what gets built here,
+        on top of work that has already passed review.
       </p>
       <p>
-        The studio has statistics, machine learning and software engineering. What it does
-        not have, for your subject, is <b>domain knowledge</b> — and that is precisely why
-        the collaboration is worth having rather than a favour in either direction.
+        This is the cleanest path on the site, because the objections that apply to the
+        others do not apply to it:
+      </p>
+      <div class="sides">
+        <div class="side good">
+          <h3>Why it is clean</h3>
+          <ul>
+            <li><b>No preprint problem.</b> Your paper is published. Nothing here affects a
+              submission you have already made</li>
+            <li><b>No peer-review caveat.</b> The research is refereed; the instrument is
+              an addition to it, not a substitute</li>
+            <li><b>Authorship is settled.</b> No negotiation — the instrument is a separate
+              artifact that cites your paper</li>
+            <li><b>It is fast.</b> The hard interpretive work is done, so there is no
+              waiting on anybody</li>
+            <li><b>You get something to present.</b> A conference question from the floor
+              — <em>what if you change that assumption?</em> — becomes something you answer
+              live rather than defer</li>
+          </ul>
+        </div>
+      <div class="callout warn">
+        <p>
+          <b>The order matters, and it changed after a reader found the trap.</b> The
+          replication is done <b>from the paper alone, before any data is asked for</b> —
+          it needs neither your data nor your code, and a worked case proved it. Your data
+          is only needed for the dashboard. That way, if the rebuild contradicts your
+          published result, you have not handed over the material that produced the
+          contradiction: the finding rests on your published text, as any replication does,
+          and the conversation about data happens afterwards with that already known.
+        </p>
+        <p class="dim">
+          Previously this path asked for data first. A postdoc reading it pointed out that
+          "authorship is settled, no negotiation" held only while the rebuild agreed, and
+          that handing data over first meant commissioning an adversarial re-analysis of
+          your own best work. He was right, so the sequence is reversed.
+        </p>
+      </div>
+
+      <div class="sides">
+        <div class="side warn">
+          <h3>Two things that stop it dead</h3>
+          <ul>
+            <li><b>The data.</b> If you cannot share the data behind the paper, there is no
+              instrument. This is the first question asked, and it ends more of these
+              conversations than anything else</li>
+            <li><b>Publisher copyright.</b> Findings and data are yours to re-express, but
+              the journal usually holds the typeset figures and text. Everything is rebuilt
+              from the data; the published figures are never reproduced</li>
+          </ul>
+        </div>
+      </div>
+      </div>
+      <p>
+        The most immediate use is usually the least academic one: <a href="/#present">having
+        something to stand in front of</a> at a conference, a defence or a grant panel.
+        Nothing about your record changes; what changes is what you can show.
+      </p>
+
+      <div class="callout">
+        <p>
+          <b>It is not a figure service.</b> What gets added is not a prettier chart: the
+          pipeline is re-runnable from source, the models are scored against whatever
+          baselines the paper reports and against a naive rival if it does not name one, and
+          the gates are published including any that fail. If re-running your analysis honestly weakens a result, the instrument says
+          so — which is the same deal everyone else here gets.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="interpret">
+    <div class="rail">Path two<span>a subject you know</span></div>
+    <div class="col">
+      <h2>{SEEKING.length} instruments are built and waiting for a conclusion</h2>
+      <p>
+        No data to find, no code to write, nothing to build. The measurement is finished on
+        all of them; what is missing is what the result <em>means</em> in its own field, and
+        each instrument states its own specific gap rather than a generic invitation.
+      </p>
+      <p>
+        Write that interpretation and you are <b>first author</b>. You are also accountable
+        for it, which is the whole point — the reason the pages currently stop short of a
+        conclusion is that nobody involved is qualified to draw one.
+      </p>
+      <p>
+        <a href="/#instruments">See the {SEEKING.length} openings</a>, each with what it
+        found and what it is missing.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec" id="new">
+    <div class="rail">Path three<span>a question and data</span></div>
+    <div class="col">
+      <h2>Starting from a question, with gates before anything is built</h2>
+      <p>
+        The most valuable path and the easiest to abandon halfway, so it is deliberately
+        gated. Nothing gets built until the first three steps are done in writing.
       </p>
 
       <h3>What happens, in order</h3>
       <ol class="steps">
         <li><b>You say what the question is</b> and point at the data. A conversation, not a form.</li>
-        <li><b>The studio scopes it</b> — what can be built from open data, what cannot, and where the honest limits are. If it cannot be built well, you are told then, not later.</li>
+        <li><b>I scope it</b> — what can be built from open data, what cannot, and where the honest limits are. If it cannot be built well, you are told then, not later.</li>
         <li><b>Thresholds are agreed before anything runs.</b> What would count as the model working, and what would count as it failing. Written down first.</li>
         <li><b>The instrument gets built.</b> You see it while it is being built, not at the end.</li>
         <li><b>You write the interpretation.</b> What the result means, what surprised you, what it does not settle.</li>
@@ -48,6 +200,156 @@ import Page from "../layouts/Page.astro";
           cases where it does.
         </p>
       </div>
+      <p class="dim">
+        Open data only, aggregate only, no human subjects. Not a judgement about your work —
+        a small operation cannot carry ethics review or personal data, and the
+        <a href="#limits">limits</a> below say so plainly.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec" id="attack">
+    <div class="rail">Path four<span>skills, no subject</span></div>
+    <div class="col">
+      <h2>Replicate or break something that already exists</h2>
+      <p>
+        Per hour spent this is the most valuable contribution anyone can make here, and it
+        is the only path that produces <b>evidence rather than inventory</b>. Every other
+        route adds an instrument; this one establishes whether the existing ones survive
+        scrutiny. An instrument that a named engineer attacked and failed to break is worth
+        more than three nobody checked.
+      </p>
+      <p>
+        It needs no subject, no data and no permission. Pick an instrument, read its gates,
+        and try to make them fail.
+      </p>
+
+      <h3>Break the evaluation — a day</h3>
+      <p>
+        Is the metric right for the problem? Did a baseline see the test set? Does the
+        cross-validation actually prevent leakage? <b>If you succeed, that gets published</b>
+        — with Validation credit.
+      </p>
+
+      <h3>Beat the baseline — a week</h3>
+      <p>
+        Every model here is scored against a naive rival that already contains the easy
+        knowledge. Build a better rival. If yours wins, the case is weakened and that is
+        published; if it loses, the case is stronger. Either outcome is worth having.
+      </p>
+
+      <div class="callout">
+        <p>
+          <b>Students: this is your path.</b> It needs no data, no subject and nobody's
+          permission, and the work is judged exactly as everyone else's is — which is what
+          makes the credit worth having. Breaking an evaluation that a published instrument
+          rests on is a stronger portfolio piece than another tutorial project.
+        </p>
+        <p class="dim">
+          What this site cannot do at the moment is <b>supervise a thesis</b>. One person
+          reviews everything here, and carrying a project through to a defence is a
+          different job from the one being offered. <a href="#new">Path three</a> stays open
+          to anyone — student or not — who has a question and data they are genuinely able
+          to share.
+        </p>
+      </div>
+
+      <div class="callout">
+        <p><b>Three specific openings right now:</b></p>
+        <ul>
+          <li><b>transit-equity</b> has two failing hard gates — timetable sanity and
+            network integrity. Are they fatal or cosmetic?</li>
+          <li><b>rice-security</b>'s R² goes from −11.09 to 0.82 through an OLS
+            calibration. Is that legitimate, or is it fitting the answer?</li>
+          <li><b>fire-haze</b> scores a 3.8% event class with ROC-AUC. Is precision-recall
+            the honest metric instead?</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="bring">
+    <div class="rail">Case by case<span>your own instrument</span></div>
+    <div class="col">
+      <h2>Bringing an instrument you built yourself</h2>
+      <p>
+        This works — every instrument here was built before it had a domain author. But the
+        constraint is worth stating plainly: there are already
+        <b>{SEEKING.length} instruments without one</b>. The shortage is domain authors, not
+        instruments, and another unpartnered build makes that worse rather than better.
+      </p>
+      <p>
+        So it is welcome with <b>a named target</b> — a person or an institution you have
+        already approached about interpreting it. Bring that and the conversation is short.
+        Without it, the honest answer is that it would join a queue that is not moving.
+      </p>
+      <p class="dim">
+        It also has to meet the <a href="/standards/">published standard</a>, which includes
+        the visualization criteria — the part most often skipped.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec" id="simulation">
+    <div class="rail">Case by case<span>simulation output</span></div>
+    <div class="col">
+      <h2>Output nobody outside your group can open</h2>
+      <p>
+        A molecular-dynamics trajectory, a CFD field, a finite-element run, a model
+        ensemble. The science is finished — the simulation <em>is</em> the analysis — but the
+        result lives in a file format that a referee, a co-author abroad or a funder cannot
+        open, and the desktop tools that can open it were never built for sharing.
+      </p>
+      <p>
+        What gets built is a <b>browser-native, interrogable version</b>: scrub the
+        trajectory at the frame rate it was written, pick a residue or a cell and watch every
+        other panel filter to it, change the cutoff or the smoothing window and see the
+        answer move.
+      </p>
+
+      <div class="callout warn">
+        <p>
+          <b>This one has no gates, and the page will say so.</b> Every instrument here is
+          scored against a naive rival that already contains the easy knowledge. A
+          visualization of your simulation has nothing to beat and nothing to fail — there is
+          no estimate being made. So it is delivered as the <a href="/standards/#visualization">
+          visualization stage alone</a>, judged against those six criteria, and it makes
+          <b>no validation claim whatsoever</b>. Calling it an instrument would empty the word.
+        </p>
+      </div>
+
+      <div class="callout warn">
+        <p>
+          <b>Check the existing tools first — they are probably better.</b> MDAnalysis and
+          MDTraj read XTC, DCD, TRR, NetCDF and PDB. Mol*, NGL and MDsrv already stream
+          trajectories in a browser; ParaView Glance, VTK.js and Trame do CFD and FEM;
+          neuroglancer streams volumes far larger than yours. If one of those solves it, use
+          it — a computational scientist reviewing this page called a bespoke rebuild "a
+          queue for something I can pip install", and she was right.
+        </p>
+        <p class="dim">
+          What is left after that is narrower and real: a viewer built around <em>your
+          specific finding</em> rather than the general format — the two quantities that
+          matter next to each other, the frame where the argument happens, and a page a
+          ministry counterpart can open without installing anything.
+        </p>
+      </div>
+
+      <h3>Three things that decide whether it is feasible</h3>
+      <ul>
+        <li><b>Size.</b> A modest trajectory is gigabytes. The web version is a derived
+          representation — subsampled frames, precomputed contact maps, quantised
+          coordinates — and agreeing what may be thrown away is the first conversation.</li>
+        <li><b>Format.</b> XTC, DCD, TRR, NetCDF, PDB and whatever your analysis scripts
+          emit. Ask before assuming; this is the part that most often makes it a no.</li>
+        <li><b>What to show is your knowledge, not mine.</b> A rotating molecule is
+          worthless. Which quantity answers the question — RMSF, occupancy, a contact map,
+          a pocket volume — is a domain judgement, and it has to come from you.</li>
+      </ul>
+      <p class="dim">
+        <b>Case by case</b> because these are deep formats and capacity is the constraint.
+        A short description of the output and the question it answers is enough to find out.
+      </p>
     </div>
   </section>
 
@@ -58,11 +360,77 @@ import Page from "../layouts/Page.astro";
       <p>
         The Contributor Roles Taxonomy replaces "author or not" with fourteen named roles.
         It is a published standard, used by many journals, and it is the honest way to
-        describe this arrangement.
+        describe this arrangement — and the reason paths are routed by contribution rather
+        than by job title.
+      </p>
+      <h3>The deal is not the same on every path</h3>
+      <p>
+        Credit follows what was actually done, so a path that adds an instrument to
+        finished research cannot carry the same credit as one where the analysis is
+        designed here. Stated per path so nobody has to infer it:
       </p>
       <div class="tw">
         <table>
-          <thead><tr><th>Role</th><th>You</th><th>Studio</th></tr></thead>
+          <thead><tr><th>Path</th><th>First author</th><th>What the build takes</th><th>Joint publication?</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><a href="#published">Published paper → instrument</a></td>
+              <td>Already settled — your paper</td>
+              <td>Software, Visualization, Data curation <b>on the instrument</b>; your paper
+                is cited, not co-authored</td>
+              <td class="no">No</td>
+            </tr>
+            <tr>
+              <td><b>…and the rebuild produces a finding</b></td>
+              <td>Whoever wrote the finding</td>
+              <td>+ Formal analysis, Validation — a re-analysis that recovers or contradicts
+                something is new work, not rendering</td>
+              <td class="yes">Yes, a short separate output</td>
+            </tr>
+            <tr>
+              <td><a href="#interpret">Interpret one of the ten</a></td>
+              <td class="yes">You</td>
+              <td>Six roles → <b>methods co-author</b></td>
+              <td class="yes">Yes</td>
+            </tr>
+            <tr>
+              <td><a href="#new">New study, gated</a></td>
+              <td class="yes">You</td>
+              <td>Six roles → <b>methods co-author</b></td>
+              <td class="yes">Yes</td>
+            </tr>
+            <tr>
+              <td><a href="#attack">Replicate or break</a></td>
+              <td>You, on your own finding</td>
+              <td>Nothing — it is your result</td>
+              <td>Published as its own note</td>
+            </tr>
+            <tr>
+              <td><a href="#bring">Your instrument</a> · <a href="#simulation">simulation</a></td>
+              <td>Agreed before anything starts</td>
+              <td>Agreed before anything starts</td>
+              <td>Case by case</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn">
+        <p>
+          <b>The second row is the one to read twice.</b> A rebuild that fails to reproduce
+          something, or recovers a parameter the original no longer has, is a finding — and
+          then it publishes as a finding, with you offered co-authorship and a right of
+          reply. It does not become joint work automatically, because you may disagree with
+          it, and a replication nobody can dissent from is worth nothing.
+        </p>
+      </div>
+
+      <h3>The six roles, where they apply</h3>
+      <p class="dim">
+        Rows two and three above — the paths where the analysis is designed here.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Role</th><th>Domain author</th><th>Measurement</th></tr></thead>
           <tbody>
             <tr><td>Conceptualization</td><td class="yes">yes</td><td class="dim">—</td></tr>
             <tr><td>Investigation</td><td class="yes">yes</td><td class="dim">—</td></tr>
@@ -80,13 +448,16 @@ import Page from "../layouts/Page.astro";
       </div>
       <p>
         Six roles including Methodology and Formal analysis is, under the criteria most
-        journals apply, a <b>methods co-authorship</b> — the studio designs the analysis and
-        evaluates the models, which is not a technical service. What it does not claim is
+        journals apply, a <b>methods co-authorship</b> — designing the analysis and
+        evaluating the models is not a technical service. What it does not claim is
         the finding: you lead, you own the interpretation, and you are accountable for what
         the result means.
       </p>
       <div class="callout">
-        <p><b>Author order.</b> You first. The studio second, as methods co-author.</p>
+        <p><b>Author order, where there is a joint publication at all.</b> Whoever writes
+        the interpretation is first author. Whoever built the measurement is second, as
+        methods co-author. On a published-paper build there is no joint publication and
+        nothing to order — the paper is cited.</p>
         <p class="dim">
           Stated here so it is never a negotiation later. If a case has several
           contributors, order follows contribution and is agreed before publication — never
@@ -100,61 +471,15 @@ import Page from "../layouts/Page.astro";
 
       <h3>AI assistance, disclosed</h3>
       <p>
-        Pipeline and model implementation are produced with AI assistance, under the
-        studio's direction. It is stated on every instrument, in the methods, in a
+        Pipeline and model implementation are produced with AI assistance, under my
+        direction. It is stated on every instrument, in the methods, in a
         sentence — because a reader who works it out for themselves is entitled to feel
         misled, and a reader who is told is not.
       </p>
     </div>
   </section>
 
-  <section class="sec">
-    <div class="rail">Engineers<span>a smaller ask</span></div>
-    <div class="col">
-      <h2>Three tiers, lowest effort first</h2>
-
-      <h3>1 · Break it — a day</h3>
-      <p>
-        Take an instrument and try to break its evaluation. Is the metric right for the
-        problem? Did a baseline see the test set? Does the cross-validation actually
-        prevent leakage? <b>If you succeed, that gets published</b> — and you get
-        Validation credit for it.
-      </p>
-      <p class="dim">
-        This is the most valuable thing anyone can do here per hour spent, and the one the
-        site's credibility rests on. An instrument that a named engineer attacked and
-        failed to break is worth more than three that nobody checked.
-      </p>
-
-      <h3>2 · Beat the baseline — a week</h3>
-      <p>
-        Every model here is scored against a naive rival that already contains the easy
-        knowledge. Build a better rival. If yours wins, the case is weakened and that is
-        published; if it loses, the case is stronger. Either outcome is worth having.
-      </p>
-
-      <h3>3 · Build one — weeks</h3>
-      <p>
-        A whole instrument for a researcher's finding: pipeline, model, gates, dashboard,
-        to the standard on the <a href="/standards/">standards page</a>. The largest ask,
-        and the one to talk about before starting rather than after.
-      </p>
-
-      <div class="callout">
-        <p><b>Open right now, in tier one:</b></p>
-        <ul>
-          <li><b>transit-equity</b> has two failing hard gates — timetable sanity and
-            network integrity. Are they fatal or cosmetic?</li>
-          <li><b>rice-security</b>'s R² goes from −11.09 to 0.82 through an OLS
-            calibration. Is that legitimate, or is it fitting the answer?</li>
-          <li><b>fire-haze</b> scores a 3.8% event class with ROC-AUC. Is precision-recall
-            the honest metric instead?</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <section class="sec">
+  <section class="sec" id="limits">
     <div class="rail">Limits<span>what is not accepted</span></div>
     <div class="col">
       <h2>What this site will not publish</h2>
@@ -163,7 +488,12 @@ import Page from "../layouts/Page.astro";
         <li><b>Redistributed source data.</b> Pipelines fetch from the origin and cite the
           licence; the instrument publishes derived results, not somebody else's dataset.</li>
         <li><b>Accusations against named companies or projects.</b> Methods and aggregate
-          distributions, yes. Naming an actor as culpable, no.</li>
+          distributions, yes. Naming an actor as culpable, no. <b>This is a liability limit,
+          not an ethical position</b>, and a reader was right to say it should not sit here
+          unlabelled beside personal data. One person with no institution behind them cannot
+          carry a defamation risk in Indonesia. It is a limit on what this site can host, and
+          it is a real cost: a case can compute a concession overlap and then be forbidden
+          the sentence the overlap exists to support.</li>
         <li><b>A finding without a way to check it.</b> If the gates cannot be stated, the
           instrument cannot be built.</li>
       </ul>
@@ -180,4 +510,21 @@ import Page from "../layouts/Page.astro";
   .steps { padding-left: 1.3rem; margin: 0 0 1rem; }
   .steps li { margin-bottom: 0.6rem; }
   .steps li::marker { color: var(--accent); font-family: var(--sans); font-size: 0.85rem; }
+
+  .sec .col.wide { max-width: none; }
+
+  /* Two states only: a path that is open, and one that needs asking first. Coral for open
+     because it is the invitation; muted for the rest, which are real but rationed. */
+  .chip {
+    font-family: var(--sans); font-size: 0.64rem; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    border: 1px solid currentColor; padding: 0.15rem 0.45rem;
+    white-space: nowrap;
+  }
+  .chip.open {
+    color: var(--flag);
+    text-shadow: 0 0 14px var(--glow-flag);
+    box-shadow: 0 0 18px -12px var(--glow-flag);
+  }
+  .chip.later { color: var(--muted); }
 </style>
