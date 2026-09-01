@@ -46,12 +46,19 @@ WEB="/srv/demo/web"
 API_PORT="${API_PORT:-4330}"
 # The domain, once there is one. Kept in a file rather than in this script so that
 # `ops/tls` can set it and this generator can stay the single writer of the config.
-DOMAIN="$(cat "$STATE/DOMAIN" 2>/dev/null || echo _)"
+DOMAIN_LIST="$(cat "$STATE/DOMAIN" 2>/dev/null || echo _)"
+DOMAIN="${DOMAIN_LIST%% *}"          # the primary name: certificate and redirects use it
 CERTDIR="/etc/letsencrypt/live/$DOMAIN"
 CONF="/etc/nginx/sites-available/demo-lab"
 
 mkdir -p "$STATE"
 die() { printf '%s\n' "$*" >&2; exit 1; }
+
+# Apps with no systemd unit to derive from: name, port (informational), base, directory.
+# openstudy is the site itself rather than a case, so it never had a dev server.
+EXTRA_APPS=(
+  "openstudy|4340|/|$ROOT/openstudy"
+)
 
 # ── manifest ────────────────────────────────────────────────────────────────────
 #
@@ -61,7 +68,12 @@ die() { printf '%s\n' "$*" >&2; exit 1; }
 
 cmd_manifest() {
   : > "$MANIFEST.tmp"
-  for u in $(systemctl list-units 'demo-*' --all --no-legend --plain | awk '{print $1}'); do
+  # list-unit-files, not list-units. After cutover the dev-server units are disabled,
+  # and systemd drops unloaded units from `list-units` even with --all — so deriving from
+  # it returned one row and regenerating the manifest destroyed the very answer this
+  # function exists to preserve. Unit *files* persist, and `systemctl show` still reads
+  # WorkingDirectory and ExecStart from a disabled unit.
+  for u in $(systemctl list-unit-files 'demo-*' --no-legend | awk '{print $1}'); do
     local wd port base
     wd=$(systemctl show -p WorkingDirectory --value "$u" 2>/dev/null)
     port=$(systemctl show -p ExecStart --value "$u" 2>/dev/null | grep -oE 'port [0-9]+' | awk '{print $2}')
@@ -70,6 +82,10 @@ cmd_manifest() {
     base=$(grep -oE 'base: *"[^"]+"' "$wd/astro.config.mjs" 2>/dev/null | head -1 | sed 's/.*"\(.*\)"/\1/')
     base="${base:-/}"
     printf '%s\t%s\t%s\t%s\n' "${u%.service}" "$port" "$base" "$wd" >> "$MANIFEST.tmp"
+  done
+  for row in "${EXTRA_APPS[@]}"; do
+    IFS='|' read -r nm pt bs dir <<< "$row"
+    [[ -d "$dir" ]] && printf '%s\t%s\t%s\t%s\n' "$nm" "$pt" "$bs" "$dir" >> "$MANIFEST.tmp"
   done
   sort -k2,2n "$MANIFEST.tmp" > "$MANIFEST" && rm -f "$MANIFEST.tmp"
   awk -F'\t' '{printf "  %-22s :%s  %-14s %s\n", $1, $2, $3, $4}' "$MANIFEST"
@@ -146,7 +162,7 @@ cmd_install() {
         echo "    listen $pt;"
         echo "    listen [::]:$pt;"
       done
-      echo "    server_name $DOMAIN;"
+      echo "    server_name $DOMAIN_LIST;"
       echo "    location /.well-known/acme-challenge/ { root $WEB; }"
       echo "    location / { return 301 https://\$host\$request_uri; }"
       echo "}"
@@ -154,7 +170,7 @@ cmd_install() {
       echo "    listen 443 ssl;"
       echo "    listen [::]:443 ssl;"
       echo "    http2 on;"
-      echo "    server_name $DOMAIN;"
+      echo "    server_name $DOMAIN_LIST;"
       echo "    ssl_certificate     $CERTDIR/fullchain.pem;"
       echo "    ssl_certificate_key $CERTDIR/privkey.pem;"
       echo "    ssl_protocols TLSv1.2 TLSv1.3;"
@@ -170,7 +186,7 @@ cmd_install() {
         echo "    listen $pt;"
         echo "    listen [::]:$pt;"
       done
-      echo "    server_name $DOMAIN;"
+      echo "    server_name $DOMAIN_LIST;"
       echo "    location /.well-known/acme-challenge/ { root $WEB; }"
     fi
     echo "    root $WEB;"
@@ -181,9 +197,15 @@ cmd_install() {
     echo "    # the API's explanation rather than nginx's bare 413"
     echo "    client_max_body_size 12m;"
     echo ""
-    echo "    # Pustaka's API, same origin, so the page works over https without"
+    # Derived, not hardcoded: the assistant's base moved from /knowledge to
+    # /lab/knowledge and a fixed proxy path would have kept answering at the old
+    # address while the page asked at the new one.
+    local kbase
+    kbase=$(awk -F'\t' '$4 ~ /platform\/knowledge\/web$/ {print $3}' "$MANIFEST")
+    kbase="${kbase:-/knowledge}"
+    echo "    # The assistant's API, same origin, so the page works over https without"
     echo "    # reaching for another port."
-    echo "    location /knowledge/api/ {"
+    echo "    location ${kbase%/}/api/ {"
     echo "        proxy_pass http://127.0.0.1:$API_PORT/api/;"
     echo "        proxy_http_version 1.1;"
     echo "        proxy_set_header Host \$host;"
@@ -312,7 +334,11 @@ cmd_verify() {
   # $host, so a request to 127.0.0.1 redirects to https://127.0.0.1 — a name no
   # certificate covers — and every app then reports as broken while the site is fine.
   # Testing the public name is also the honest check: it is what a visitor receives.
-  local dom; dom=$(cat "$STATE/DOMAIN" 2>/dev/null)
+  # $DOMAIN, not the file: DOMAIN now holds a list of names and reading it raw made
+  # curl treat "openstudy.id www.openstudy.id demolab-id.duckdns.org" as one host,
+  # which reported every app broken while the site was serving perfectly.
+  local dom="$DOMAIN"
+  [[ "$dom" == "_" ]] && dom=""
   local host="${1:-${dom:-127.0.0.1}}" port_override="${2:-}" bad=0
   if [[ -n "$dom" && "$host" == "$dom" && -z "$port_override" ]]; then
     port_override="__scheme_https__"

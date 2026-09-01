@@ -26,6 +26,10 @@ const NAV = [
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title} · openstudy.id</title>
     <meta name="description" content={description} />
+    <!-- The site answers on three names — the real domain, www, and a dynamic-DNS name
+         kept as failover. This tells a crawler which one is authoritative, rather than
+         redirecting the failover and defeating its purpose. -->
+    <link rel="canonical" href={new URL(Astro.url.pathname, "https://openstudy.id").href} />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"

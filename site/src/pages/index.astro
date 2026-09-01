@@ -12,7 +12,7 @@ const SHOW_PILOT_CTA = false;
 
 const DEMOS = {
   nightlights: "/nightlights",
-  knowledge: "/knowledge",
+  knowledge: "/lab/knowledge",
   trade: "/trade",
   jakarta: "/jakarta",
   narrative: "/narrative",
@@ -3822,7 +3822,7 @@ const DEMOS = {
          care what the server's address is this week. A bare `astro dev` has no proxy
          in front of it, so there the API is addressed directly. */
       const LOCAL = location.hostname === "localhost" || location.hostname === "127.0.0.1";
-      const API = LOCAL ? `http://${location.hostname}:4330/api` : "/knowledge/api";
+      const API = LOCAL ? `http://${location.hostname}:4330/api` : "/lab/knowledge/api";
       const chips = document.getElementById("try-chips");
       const answerEl = document.getElementById("try-answer");
       const sourcesEl = document.getElementById("try-sources");

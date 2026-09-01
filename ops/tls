@@ -47,10 +47,17 @@ public_ip() {
 # ── the name ────────────────────────────────────────────────────────────────────
 
 cmd_domain() {
-  local d="${1:-}"
-  [[ -n "$d" ]] || die "usage: ops/tls domain <name>   e.g. fmv-demo.duckdns.org"
-  [[ "$d" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$ ]] \
-    || die "that does not look like a hostname: $d"
+  # Several names, primary first. The site answers on its real domain, on www, and on
+  # the dynamic-DNS name that survives an address change — and all three have to be on
+  # one certificate, or two of them present a certificate for the wrong host and the
+  # browser refuses before it ever reaches nginx.
+  local all=("$@")
+  (( ${#all[@]} )) || die "usage: ops/tls domain <name> [more names...]"
+  local d="${all[0]}"
+  for x in "${all[@]}"; do
+    [[ "$x" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$ ]] \
+      || die "that does not look like a hostname: $x"
+  done
 
   # Resolve before committing. A config naming a domain that points somewhere else
   # produces a certificate request that fails for reasons nobody enjoys debugging.
@@ -68,8 +75,8 @@ cmd_domain() {
     echo "           it points here — ops/tls ddns can keep it correct automatically."
   fi
 
-  printf '%s\n' "$d" > "$DOMAIN_FILE"
-  echo "  saved to ops/state/DOMAIN"
+  printf '%s\n' "${all[*]}" > "$DOMAIN_FILE"
+  echo "  saved to ops/state/DOMAIN: ${all[*]}"
   "$ROOT/ops/serve-static" install >/dev/null 2>&1 \
     && sudo systemctl reload nginx 2>/dev/null \
     && echo "  nginx now answers for $d"
@@ -144,7 +151,9 @@ UNIT
 # ── the certificate ─────────────────────────────────────────────────────────────
 
 cmd_cert() {
-  local staging=() d; d=$(domain)
+  local staging=() names d
+  read -r -a names <<< "$(domain)"
+  d="${names[0]}"
   [[ -n "$d" && "$d" != "_" ]] || die "no domain yet — ops/tls domain <name>"
   for a in "$@"; do [[ "$a" == "--staging" ]] && staging=(--staging); done
 
@@ -176,7 +185,8 @@ Check that the DNS record points here and that port 80 is open to the internet."
     echo "  replacing the staging certificate with a real one"
     sudo certbot delete --cert-name "$d" --non-interactive >/dev/null 2>&1
   fi
-  sudo certbot certonly --webroot -w "$WEB" -d "$d" \
+  local dargs=(); for x in "${names[@]}"; do dargs+=(-d "$x"); done
+  sudo certbot certonly --webroot -w "$WEB" "${dargs[@]}" --cert-name "$d" \
     --non-interactive --agree-tos --register-unsafely-without-email \
     --keep-until-expiring "${staging[@]+"${staging[@]}"}" || die "certbot failed"
 
@@ -209,8 +219,14 @@ Check that the DNS record points here and that port 80 is open to the internet."
 # ── status ──────────────────────────────────────────────────────────────────────
 
 cmd_status() {
-  local d; d=$(domain)
-  printf '  %-14s %s\n' "domain" "${d:-none set}"
+  # DOMAIN now holds a list. Everything below wants the primary name, and reading the
+  # whole line made status report "resolves to nothing / certificate none" while both
+  # were in fact fine.
+  local names d
+  read -r -a names <<< "$(domain)"
+  d="${names[0]}"
+  printf '  %-14s %s\n' "domain" "${names[*]:-none set}"
+  printf '  %-14s %s\n' "primary" "${d:-none}"
   printf '  %-14s %s\n' "this machine" "$(public_ip)"
   [[ -n "$d" && "$d" != "_" ]] && \
     printf '  %-14s %s\n' "resolves to" "$(getent hosts "$d" 2>/dev/null | awk 'NR==1{print $1}' || echo 'nothing')"

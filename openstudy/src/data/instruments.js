@@ -4,7 +4,9 @@
 // a generic "get in touch" gets no replies, and a reader can tell the difference.
 // `status` is "open" until a domain author writes the interpretation.
 
-export const BASE = "https://demolab-id.duckdns.org";
+// Same origin: the instruments live at /forest, /rice and so on beneath this site.
+// Set this to an absolute origin only when developing the site away from them.
+export const BASE = "";
 
 export const INSTRUMENTS = [
   {
