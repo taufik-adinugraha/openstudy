@@ -7,7 +7,7 @@ key), spatially cross-validated, then carried down to kecamatan by small-area
 estimation benchmarked so the official number is never contradicted.
 
 Status: **BUILT — full DAG implemented (ingest → features → train → downscale → validate
-→ export) and the dashboard is live at <http://52.77.253.154:4332/poverty>.** Spec
+→ export) and the dashboard is live at <http://18.141.229.57:4332/poverty>.** Spec
 (governing document): `docs/spec-poverty-map.html`.
 
 ## Results (2026-08-30, full national run)

@@ -4,18 +4,24 @@
 // TODO D8: replace "Demo Lab" with the final brand; CTA wording pending.
 import "../styles/tokens.css";
 
+// Both pilot calls to action are off for now. One flag rather than two edits, and a
+// conditional rather than a comment, so nothing ships in the HTML while it is off —
+// a commented-out button still sends the wording to every visitor who reads source.
+// Set to true to bring them back; the footer's #contact anchor stays either way.
+const SHOW_PILOT_CTA = false;
+
 const DEMOS = {
-  nightlights: "http://localhost:4322/nightlights", // TODO prod: /nightlights
-  knowledge: "http://localhost:4324/knowledge",     // TODO prod: /knowledge
-  trade: "http://localhost:4325/trade",             // TODO prod: /trade
-  jakarta: "http://localhost:4327/jakarta",         // TODO prod: /jakarta
-  narrative: "http://localhost:4326/narrative",     // TODO prod: /narrative
-  transit: "http://localhost:4329/transit",         // TODO prod: /transit
-  forest: "http://localhost:4331/forest",           // TODO prod: /forest
-  poverty: "http://localhost:4332/poverty",         // TODO prod: /poverty
-  airquality: "http://localhost:4328/airquality",   // TODO prod: /airquality
-  rice: "http://localhost:4333/rice",               // TODO prod: /rice
-  haze: "http://localhost:4334/haze",               // TODO prod: /haze
+  nightlights: "/nightlights",
+  knowledge: "/knowledge",
+  trade: "/trade",
+  jakarta: "/jakarta",
+  narrative: "/narrative",
+  transit: "/transit",
+  forest: "/forest",
+  poverty: "/poverty",
+  airquality: "/airquality",
+  rice: "/rice",
+  haze: "/haze",
 };
 ---
 <html lang="en" data-theme="dark">
@@ -29,7 +35,7 @@ const DEMOS = {
 
     <header class="top">
       <span class="wordmark">DEMO&nbsp;LAB</span>
-      <a class="cta" href="#contact">Discuss a pilot</a>
+      {SHOW_PILOT_CTA && <a class="cta" href="#contact">Discuss a pilot</a>}
     </header>
 
     <section class="hero">
@@ -3774,7 +3780,7 @@ const DEMOS = {
       <h2>Every case above reads public data. This one reads yours.</h2>
 
       <div class="case live" data-case="knowledge">
-        <div class="case-visual pustaka-live">
+        <div class="case-visual provenance-live">
           <div class="try-chips" id="try-chips"></div>
           <div class="try-answer" id="try-answer" hidden></div>
           <div class="try-sources stamp dim" id="try-sources"></div>
@@ -3787,13 +3793,13 @@ const DEMOS = {
         </div>
         <div class="case-body">
           <span class="badge">PLATFORM · LIVE — TRY IT HERE</span>
-          <h2>Pustaka — Knowledge Assistant</h2>
+          <h2>Provenance — Knowledge Assistant</h2>
           <p>Upload your organization’s documents; ask in Bahasa Indonesia or
           English; every answer cites the exact pasal, page, and verbatim quote —
           verified against the source, never invented. Runs on your
           infrastructure; only the final question leaves it.</p>
           <a class="cta" href={DEMOS.knowledge} target="_blank" rel="noopener">Open the full demo →</a>
-          <span class="meta">RAG · VERIFIED CITATIONS · LOCAL EMBEDDINGS · UU PDP–AWARE</span>
+          <span class="meta">RAG · VERIFIED CITATIONS · MULTILINGUAL RETRIEVAL · UU PDP–AWARE</span>
         </div>
       </div>
     </section>
@@ -3803,17 +3809,20 @@ const DEMOS = {
       <p>Acquisition → pipelines → models → validation → dashboards. If your
       organization has a question that data like this can answer, we’ll scope a
       pilot around it.</p>
-      <a class="cta big" href="mailto:hello@example.com">Discuss a pilot</a><!-- TODO D8: real address -->
+      {SHOW_PILOT_CTA && (
+        <a class="cta big" href="mailto:hello@example.com">Discuss a pilot</a>
+      )}{/* TODO D8: real address before this comes back on */}
       <span class="stamp dim">DEMO LAB · JAKARTA · SOURCES CREDITED ON EVERY CASE</span>
     </footer>
 
     <script>
-      // Homepage taste of Pustaka — real answers from the real API.
+      // Homepage taste of Provenance — real answers from the real API.
       // Host-aware: works on localhost and when served from the dev server IP.
-      const API = `http://${location.hostname}:4330/api`; // TODO prod: /knowledge/api
-      document.querySelectorAll('a[href^="http://localhost:"]').forEach((a) => {
-        a.href = a.href.replace("//localhost:", `//${location.hostname}:`);
-      });
+      /* Same origin, so the page works over https without mixed content and does not
+         care what the server's address is this week. A bare `astro dev` has no proxy
+         in front of it, so there the API is addressed directly. */
+      const LOCAL = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+      const API = LOCAL ? `http://${location.hostname}:4330/api` : "/knowledge/api";
       const chips = document.getElementById("try-chips");
       const answerEl = document.getElementById("try-answer");
       const sourcesEl = document.getElementById("try-sources");
@@ -3898,7 +3907,7 @@ const DEMOS = {
 
       .cases { max-width: 62rem; margin: 0 auto; padding: 0 24px 10vh; display: flex; flex-direction: column; gap: 28px; }
 
-      /* Pustaka is a platform product, not a public-data case study, so it sits below
+      /* Provenance is a platform product, not a public-data case study, so it sits below
          the gallery behind a rule rather than competing inside it. */
       .platform { max-width: 62rem; margin: 0 auto; padding: 0 24px 10vh;
         display: flex; flex-direction: column; gap: 10px; }
@@ -3962,8 +3971,8 @@ const DEMOS = {
       .platform { padding-top: 4vh; }
       .section-head { display: flex; flex-direction: column; gap: 8px; }
       .section-sub { margin: 0; color: var(--ink-muted); max-width: 34rem; }
-      .pustaka-live { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 26px; }
-      .pustaka-live > * { width: min(420px, 100%); }
+      .provenance-live { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 26px; }
+      .provenance-live > * { width: min(420px, 100%); }
       .try-chips { display: flex; flex-wrap: wrap; gap: 6px; }
       .try-chips button { background: none; border: 1px solid var(--hairline); color: var(--ink-muted); border-radius: 16px; padding: 5px 11px; font-size: 0.75rem; cursor: pointer; font-family: var(--font-body); }
       .try-chips button:hover { border-color: var(--accent); color: var(--accent); }

@@ -8,7 +8,7 @@ Spec (governing document): `docs/spec-rice-security.html`.
 Dashboard: port **4333**, base **`/rice`** (`demo-rice.service`, not yet deployed).
 
 Status: **BUILT AND SHIPPED (2026-08-30).** Full pipeline run end to end on the server;
-dashboard live at `http://52.77.253.154:4333/rice`. `make rebuild` is the entry point.
+dashboard live at `http://18.141.229.57:4333/rice`. `make rebuild` is the entry point.
 
 > **The one thing to read first.** The spec's primary data path — ASF OPERA L2 RTC-S1 on the
 > repo's existing `EARTHDATA_TOKEN` — **is credential-blocked and cannot be unblocked by a

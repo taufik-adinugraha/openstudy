@@ -6,7 +6,7 @@ surface and observed floods into a kelurahan-level exposure map — and a clock.
 Static reproducible snapshot per decision D3; rebuilt when new interferograms
 warrant it. Spec: `docs/spec-jakarta-sinking.html`.
 
-Status: **LIVE** — http://52.77.253.154:4327/jakarta (service `demo-jakarta`,
+Status: **LIVE** — http://18.141.229.57:4327/jakarta (service `demo-jakarta`,
 Astro dev on port 4327, base `/jakarta`). Gate G-C3 (own LiCSBAS run) pending.
 
 ## Pipeline (runs on the server, `~/demo-lab/cases/jakarta-sinking`)

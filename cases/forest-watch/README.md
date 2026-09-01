@@ -7,7 +7,7 @@ CC BY 4.0 with **no country carve-out** (each licence read live from the API's o
 metadata on 2026-08-30, not assumed).
 
 Spec (governing document): `docs/spec-forest-watch.html`.
-Dashboard: **http://52.77.253.154:4331/forest** (`demo-forest.service`, port 4331, base `/forest`).
+Dashboard: **http://18.141.229.57:4331/forest** (`demo-forest.service`, port 4331, base `/forest`).
 
 ## Run
 
@@ -210,4 +210,4 @@ against the 3 GB unit cap.
 - Ingest unit: `fw-ingest` — `journalctl -u fw-ingest`; resume with
   `sudo systemctl reset-failed fw-ingest; sudo systemd-run --unit fw-ingest ... pipeline/ingest.py`
 - Clustering unit: `fw-alerts` — same pattern, `pipeline/alerts.py` (skips finished tiles)
-- Web: `demo-forest.service` → http://52.77.253.154:4331/forest
+- Web: `demo-forest.service` → http://18.141.229.57:4331/forest

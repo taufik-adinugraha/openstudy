@@ -9,7 +9,7 @@ ground sensors.
 Identity: `data-case="airquality"` — washed sky cyan `#6FC7D6` on a dark
 ground. The AQI colour ramp is **data-only** and never doubles as the accent.
 
-Dashboard: <http://52.77.253.154:4328/airquality> (port 4328, base `/airquality`).
+Dashboard: <http://18.141.229.57:4328/airquality> (port 4328, base `/airquality`).
 
 ---
 

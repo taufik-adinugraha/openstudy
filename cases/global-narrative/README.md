@@ -41,7 +41,7 @@ The Indonesian-publisher list §6 depends on is a literal constant in
 ## Running (dev server only — never on the laptop)
 
 ```
-ssh ubuntu@52.77.253.154   # repo copy at ~/demo-lab (rsync target)
+ssh ubuntu@18.141.229.57   # repo copy at ~/demo-lab (rsync target)
 cd ~/demo-lab/cases/global-narrative && export PATH=$HOME/.local/bin:$PATH
 make curves | events | ledger | validate | export      # or: make backfill / make refresh
 ```

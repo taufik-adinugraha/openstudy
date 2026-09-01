@@ -7,7 +7,7 @@ equity read — Lorenz, Gini, Palma, and what each mode layer buys.
 
 Status: **BUILT.** Ingest → rail GTFS → network → matrix (3 scenarios) → access → equity →
 validate → export all run on the dev server; the dashboard is served at
-`http://52.77.253.154:4329/transit`. Spec (governing document): `docs/spec-transit-equity.html`.
+`http://18.141.229.57:4329/transit`. Spec (governing document): `docs/spec-transit-equity.html`.
 
 ## What the build found (2026-08-30 run, `data/stats.json` + `data/equity.json`)
 
