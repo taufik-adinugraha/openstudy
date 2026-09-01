@@ -1,0 +1,6 @@
+[project]
+name = "cascade-cold"
+version = "0.1.0"
+description = "Replication of a published thermoeconomic optimisation of a CO2/hydrocarbon cascade refrigeration system"
+requires-python = ">=3.11"
+dependencies = ["CoolProp>=6.6", "numpy>=1.26"]
