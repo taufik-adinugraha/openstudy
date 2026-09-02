@@ -9,24 +9,17 @@ import "../styles/tokens.css";
 const { title, description, current } = Astro.props;
 
 const NAV = [
-  // Work comes first: three cases in depth is what a reader is here to judge. The
-  // homepage keeps its own instruments grid for now; collapsing the rest of this nav
-  // (Publishing, Rights and Contributors are journal furniture on a portfolio) is a
-  // separate change with its own link decisions.
+  // Four items, for one reader. This was ten, of which Publishing, Rights and
+  // Contributors were journal furniture on what is now a portfolio, and Instruments
+  // pointed at a homepage that /work/ replaced as the index of the work.
+  //
+  // Nothing is deleted — every one of those pages is still live and still linked from
+  // the page that needs it (/standards/ absorbs the licence and publishing detail in
+  // its own sections, /about/ links the contributor list). A nav is a claim about what
+  // matters, and eight of ten items were claiming wrongly.
   ["/work/", "Work"],
-  ["/", "Instruments"],
-  // Notes are the site's other kind of output — a replication publishes as a note, not
-  // as an instrument. Without this the only finished interactive work was five screens
-  // down the homepage and nowhere in the nav.
-  ["/notes/", "Notes"],
-  // For a reader deciding whether the person who built this can do the work. It is the
-  // page they will look for and, until now, the one the site did not have.
   ["/stack/", "Stack"],
-  ["/contribute/", "Contribute"],
-  ["/publishing/", "Publishing"],
-  ["/rights/", "Rights"],
-  ["/standards/", "Standards"],
-  ["/people/", "Contributors"],
+  ["/standards/", "Method"],
   ["/about/", "About"],
 ];
 ---

@@ -1,17 +1,30 @@
 ---
-import Page from "../layouts/Page.astro";
+// The front door.
+//
+// This page used to open "You did the research. It still lives in a PDF." — a pitch to
+// an academic with a finished paper who wanted it revived. That is not what this is for.
+// The direction is a portfolio: someone deciding whether the person who built this can
+// do the work, with domain specialists validating findings as a second audience.
+//
+// So the journal furniture is gone from here — the reusable-analysis argument, the
+// conference pitch, the four-stage service menu, the intake process, the authorship
+// tally whose headline column was a zero. What is left is what an evaluator needs:
+// what this is, three cases in depth, the findings the analysis caught, what it is
+// built with, and one short line on collaboration. /work/ carries the depth,
+// /stack/ the tools, /contribute/ the intake.
+//
+// First person, deliberately. The site used to speak as an institution ("this site will
+// not publish"), which is a strange voice for work whose point is that one person built
+// it.
 import { existsSync } from "node:fs";
-import { PATHS, waysPhrase, DOOR_WORD } from "../data/paths.js";
-import { INSTRUMENTS, SEEKING, AUTHORED, BASE, seekingPhrase } from "../data/instruments.js";
-const N = INSTRUMENTS.length;
+import Page from "../layouts/Page.astro";
+import S from "../data/stack.json";
+import W from "../data/work.json";
+import { INSTRUMENTS } from "../data/instruments.js";
 
-// Card art is the case's own tile: a purpose-drawn schematic animated with the phenomenon
-// the instrument measures — sensors reporting, ground settling, fire spreading, a story
-// travelling. Kept as separate .svg files rather than inlined, because they carry real
-// geographic path data (air-quality alone is 176 KB of kelurahan boundaries) and ten of
-// those in one document would be most of a megabyte. As files they animate under <img>,
-// cache on their own, stay crisp at any size and need no JavaScript. Two cases ship a
-// raster tile, so which ones animate is read off the filesystem rather than hand-listed.
+// Card art is each case's own tile — a purpose-drawn schematic animated with the
+// phenomenon it measures. Which ones animate is read off the filesystem rather than
+// hand-listed, because two of the ten are stills and a hand-kept list would drift.
 const tileFor = (slug) => {
   for (const ext of ["svg", "jpg"]) {
     if (existsSync(new URL(`../../public/tiles/${slug}.${ext}`, import.meta.url)))
@@ -19,63 +32,93 @@ const tileFor = (slug) => {
   }
   return null;
 };
-const tiles = Object.fromEntries(INSTRUMENTS.map((i) => [i.slug, tileFor(i.slug)]));
-const nAnimated = Object.values(tiles).filter((t) => t?.animated).length;
 
+const n = (x) => x.toLocaleString("en-US");
+const m = (x) => (x / 1e6).toFixed(1) + "M";
+const DEEP = ["poverty", "rice", "haze"];
+const deep = DEEP.map((d) => INSTRUMENTS.find((i) => i.slug === d));
+const rest = INSTRUMENTS.filter((i) => !DEEP.includes(i.slug));
 
+// what each of the three demonstrates — the only ordering an evaluator cares about
+const SHOWS = {
+  poverty: "Validation design",
+  rice: "Data engineering",
+  haze: "Operational modelling",
+};
+const HEADLINE = {
+  poverty: `The same model scores ${W.poverty.validation[0].r2.toFixed(2)} or `
+    + `${W.poverty.validation[2].r2.toFixed(2)} depending only on how the data is split`,
+  rice: `Precision ${W.rice.precision.toFixed(2)} against recall `
+    + `${W.rice.recall.toFixed(2)}, and a controlled experiment showing why`,
+  haze: `AUC ${W.haze.leads[0].auc.toFixed(3)} a day ahead, against the operational `
+    + `index's ${W.haze.vs_fwi.fwi.toFixed(3)}`,
+};
 ---
 
 <Page
-  title="Advanced analytics and dashboards for research that already exists"
-  description="Your research, rebuilt as a working instrument: a pipeline that re-runs from source, models scored against honest baselines, and an interrogable dashboard you can present. Advanced analytics, ML/AI, replication and interactive visualization on published or in-progress work. The findings stay yours."
+  title="Advanced analytics on Indonesian public data"
+  description="Ten instruments built end to end on satellite and official data: pipelines, models, evaluations designed to fail, and dashboards you can interrogate."
   current="/"
 >
   <section class="hero">
     <p class="eyebrow">
       <a href="/standards/#sources">Public data</a> · Indonesia —
       <a href="#caught">advanced analytics</a> ·
-      <a href="#built">ML/AI</a> ·
-      <a href="/notes/cascade-refrigeration/">replication</a> ·
+      <a href="/stack/#models">ML</a> ·
+      <a href="/stack/#pipelines">AI</a> ·
       <a href="/standards/#visualization">interactive dashboards</a>
     </p>
-    <h1>You did the research.<br /><em>It still lives in a PDF.</em></h1>
+    <h1>Satellite data, public statistics.<br /><em>Models, and the checks that break them.</em></h1>
     <p class="lead">
-      There is usually code behind a paper — a script, a solver, a model that works. What
-      there usually is not is a pipeline anyone else can re-run from source, an evaluation
-      against baselines that already contain the easy knowledge, and an <b>interactive
-      dashboard you can put on a screen in front of a room</b>.
-      <b>Advanced analytics and interrogable dashboards, applied to research that already
-      exists</b> — published or still in progress, <b>built at no cost</b>. The findings
-      stay yours.
-    </p>
-    <p class="lead">
-      And rebuilding an analysis properly tends to
-      <a href="#caught">turn something up</a>: a forecast that turns out to be no better
-      than doing nothing, most of a model's error tracing back to one thing nobody had
-      checked, a number the original authors no longer had — recovered from their own
-      published results. <b>That part is not packaging.</b> Every example is real, and the
-      working is shown.
+      I build instruments end to end on Indonesian public data: the satellite ingest, the
+      features, the model, an evaluation designed to fail, and a dashboard you can
+      interrogate rather than just look at. <b>Ten are live.</b> In every one of them the
+      figure that mattered came out of the evaluation, not the model — which is the part
+      of this work I would want to be judged on.
     </p>
     <dl class="tally">
-      <div><dt>Instruments live</dt><dd>{N}</dd></div>
-      <div><dt>Open to a domain author</dt><dd class="want">{SEEKING.length}</dd></div>
-      <div><dt>Approached so far</dt><dd>0</dd></div>
-      <div><dt>Open to challenge</dt><dd>{N}</dd></div>
+      <div><dt>Instruments live</dt><dd>{INSTRUMENTS.length}</dd></div>
+      <div><dt>Public data sources</dt><dd>{S.sources.length}</dd></div>
+      <div><dt>Rows modelled</dt><dd>{m(W.haze.fwi_rows)}</dd></div>
+      <div><dt>Lines of Python</dt><dd>{n(S.code.python.lines)}</dd></div>
     </dl>
-    <p class="tally-note">
-      <b>Nought conclusions is not nought refusals.</b> No domain author has been approached
-      yet — the invitations are written and unsent. Said plainly because the number reads,
-      otherwise, as ten people having already declined.
+    <p class="ctas">
+      <a class="cta" href="/work/">Three cases in depth</a>
+      <a class="cta ghost" href="/stack/">What it is built with</a>
+      <a class="cta ghost" href="#collaborate">Work with me</a>
     </p>
+  </section>
 
-    <div class="hero-actions">
-      <a class="cta" href="/contribute/#published">Start with a published paper</a>
-      <a class="cta ghost" href="#instruments">
-        {SEEKING.length > 0
-          ? `Or interpret one of ${SEEKING.length}`
-          : `Or challenge one of ${N}`}
-      </a>
-      <a class="cta ghost" href="/contribute/">How this works</a>
+  <section class="sec" id="three">
+    <div class="rail">In depth<span>three of ten</span></div>
+    <div class="col wide">
+      <h2>Each one demonstrates something different</h2>
+      <p>
+        Ten summaries say less than three worked examples, so three get the space. Every
+        figure on those pages is read from the record the pipeline wrote.
+      </p>
+      <ul class="three">
+        {deep.map((i) => (
+          <li>
+            {tileFor(i.slug) && (
+              <a class="card-shot" href={`/work/#${i.slug}`} aria-hidden="true" tabindex="-1">
+                <img src={tileFor(i.slug).src} alt="" loading="lazy" decoding="async" />
+              </a>
+            )}
+            <p class="shows">{SHOWS[i.slug]}</p>
+            <h3><a href={`/work/#${i.slug}`}>{i.title}</a></h3>
+            <p class="claim">{HEADLINE[i.slug]}</p>
+            <p class="links">
+              <a href={`/${i.slug}/`}>Dashboard<span aria-hidden="true"> →</span></a>
+              <a href={`/work/#${i.slug}`}>What it shows<span aria-hidden="true"> →</span></a>
+            </p>
+          </li>
+        ))}
+      </ul>
+      <p class="go">
+        <a class="strong" href="/work/">All three, with the numbers<span aria-hidden="true"> →</span></a>
+        <a href="/work/#more">And the other {rest.length}<span aria-hidden="true"> →</span></a>
+      </p>
     </div>
   </section>
 
@@ -143,537 +186,153 @@ const nAnimated = Object.values(tiles).filter((t) => t?.animated).length;
     </div>
   </section>
 
-  <section class="sec">
-    <div class="rail">Why<span>the gap this fills</span></div>
-    <div class="col">
-      <h2>The analysis is the reusable part, and it is the part that gets lost</h2>
-      <p>
-        A paper's analysis is usually its most reusable part and its least accessible.
-        The figures are flattened into a PDF, the pipeline lives on one laptop, and the
-        question a reader wants to ask — <em>what happens if I change this assumption?</em>
-        — often cannot be asked.
-      </p>
-      <div class="callout warn">
-        <p>
-          <b>This section used to say "Journals publish figures. Nobody publishes
-          instruments." That was false.</b> JOSS refereeing
-          software, ReScience publishing replications, eLife's executable articles, Code
-          Ocean capsules and ACM artifact badges all exist. So do OpenSees, OpenFOAM,
-          HEC-RAS and SWMM — whole fields have shipped runnable models for decades.
-        </p>
-      </div>
-      <p>
-        The honest version is narrower. Repositories archive code and workflow engines run
-        it — Snakemake, Nextflow, Binder, Quarto, Zenodo, and they are better at those jobs
-        than anything built here. What is still uncommon is a <b>single artifact</b> that
-        carries the pipeline, the evaluation and an interface a non-specialist can use, for
-        a specific finding, in a field where nobody has built one. That is a narrower gap
-        than the sentence it replaces, and it is the real one.
-      </p>
-      <div class="callout">
-        <p><b>So the work is split by what it takes, not by who owns it.</b> Measurement
-        needs statistics, models and software. Explanation needs the subject. Both get
-        named credit for what they did, and neither has a veto over the other.</p>
-      </div>
-    </div>
-  </section>
-
-  <section class="sec" id="replications">
-    <div class="rail">Replications<span>published work, rebuilt</span></div>
+  <section class="sec" id="how">
+    <div class="rail">Built with<span>and where to check</span></div>
     <div class="col wide">
-      <h2>One is finished, and you can take it apart</h2>
+      <h2>The visible part is the smallest part</h2>
       <p>
-        A replication is not an instrument: somebody already answered the question in
-        print, and what is open is whether the answer can be rebuilt from what they
-        published. That is a finding, so it publishes as its own note — with a dashboard,
-        where the numbers move.
+        {S.sources.length} external sources, none of them a tidy CSV: Sentinel-1 radar as
+        compressed scenes found by catalogue query, NASA Black Marble as authenticated
+        HDF5, ERA5 through a request queue that takes hours. Then gradient boosting and
+        regularised linear models on raster-derived features, scored against naive rivals
+        under spatially blocked validation. Then {S.code.astro.files} Astro files and
+        {" "}{S.javascript.length} front-end packages, with no high-level charting library —
+        charts are composed from d3's scales and shape generators, and where a chart has
+        tens of thousands of marks the dense layer goes on a canvas so the axis text stays
+        text.
       </p>
-      <article class="repl">
-        <p class="kicker">Cascade refrigeration · thermoeconomic optimisation, 2016</p>
-        <h3>
-          <a href="/notes/cascade-refrigeration/">Three of five checks reproduced. Two did
-            not.</a>
-        </h3>
-        <p>
-          A −80&nbsp;°C cascade system rebuilt from the paper's own equations, needing no
-          data, no code and no permission from the authors. A compressor efficiency the
-          paper never stated was recovered from its own reported performance. The whole
-          operating envelope — 62,370 operating points — recomputes in your browser, with
-          the economics as controls rather than constants.
-        </p>
-        <p class="go">
-          <a href="/notes/cascade-refrigeration/">Read the note<span aria-hidden="true"> →</span></a>
-          <a class="strong" href="/notes/cascade-explorer/">Open the dashboard<span aria-hidden="true"> →</span></a>
-          <a href="/notes/">All notes<span aria-hidden="true"> →</span></a>
-        </p>
-      </article>
-    </div>
-  </section>
-
-  <section class="sec" id="present">
-    <div class="rail">Present it<span>the immediate use</span></div>
-    <div class="col measure">
-      <h2>Something to stand in front of</h2>
       <p>
-        A conference slide can show a result. It cannot answer the question that follows it
-        from the third row — <em>what happens if you change that assumption?</em> An
-        instrument can, live, while you are still standing there.
+        <a href="/stack/">/stack/</a> lists all of it with versions and a link to the file
+        that uses each one. It is generated from the repository rather than typed, so it
+        cannot name a library the code does not install.
       </p>
-      <div class="tw">
-        <table>
-          <thead><tr><th>Where</th><th>What the instrument does that a slide cannot</th></tr></thead>
-          <tbody>
-            <tr><td><b>Conference talk</b></td>
-              <td>Take a question from the floor and answer it by moving a control, at the
-                resolution your data actually has</td></tr>
-            <tr><td><b>Thesis defence</b></td>
-              <td>Show the examiners the sensitivity they are about to ask about, including
-                where the result stops holding</td></tr>
-            <tr><td><b>Grant panel or review</b></td>
-              <td>Demonstrate that the pipeline re-runs from raw source — reproducibility as
-                a thing you show, not a paragraph you promise</td></tr>
-            <tr><td><b>Seminar or ministry briefing</b></td>
-              <td>Let a non-specialist reach their own province, kabupaten or unit and see
-                their own number</td></tr>
-            <tr><td><b>A link in the paper</b></td>
-              <td>Readers interrogate the analysis instead of squinting at a flattened
-                figure. Supplementary material that is actually used</td></tr>
-          </tbody>
-        </table>
-      </div>
-      <div class="callout">
-        <p>
-          <b>This is the lowest-risk way in.</b> Your paper is already published, the
-          findings and their interpretation stay yours, there is no authorship to negotiate,
-          and nothing about your record changes. What changes is what you can show.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <section class="sec" id="built">
-    <div class="rail">Built<span>what an instrument is</span></div>
-    <div class="col">
-      <h2>Four stages, and you can ask for any of them</h2>
-      <p>
-        "Instrument" means all four together, versioned and re-runnable from raw source —
-        that is the full build. But <b>they are separable</b>, and most requests will not be
-        for all four. <b>Visualization is one item on this list, not the list.</b>
-      </p>
-      <ol class="stages">
-        <li>
-          <h3>Pipeline</h3>
-          <p>Raw public data to analysis-ready tables, idempotent and re-runnable, with the
-          fetch, the transforms and the provenance all recorded.</p>
-        </li>
-        <li>
-          <h3>Models — statistical and ML/AI</h3>
-          <p>Whichever the problem actually needs, not whichever is fashionable: small-area
-          estimation, spatial cross-validation, gradient boosting, time-series nowcasts. A
-          model only earns its place by beating the naive rival at stage three.
-          <b>None of these methods is new</b> — Fay–Herriot is 1979, gradient boosting is
-          2001, blocked spatial validation is standard practice. Using the ordinary method
-          correctly, and proving it beat the obvious rival, is the whole job.</p>
-        </li>
-        <li>
-          <h3>Evaluation</h3>
-          <p>Scored against a naive rival that already contains the easy knowledge, with
-          thresholds fixed <em>before</em> results and every gate published, failures included.</p>
-        </li>
-        <li>
-          <h3>Interactive visualization</h3>
-          <p>An interactive dashboard, not a static figure: linked views, animated time,
-          drill-down to the unit of analysis, and controls that let a reader change an
-          assumption and watch the answer move. Built to be read by someone who did not
-          build it — and it is usually the only part a non-specialist will ever use.</p>
-        </li>
-      </ol>
-
-      <div class="tw">
-        <table>
-          <thead><tr><th>Ask for just this</th><th>What you get</th><th>Typical reason</th></tr></thead>
-          <tbody>
-            <tr><td><b>The pipeline</b></td>
-              <td>Your analysis re-runs from raw source on a machine that is not yours,
-                idempotent, provenance recorded</td>
-              <td>A reviewer asked for reproducibility, or the only working copy is on one
-                laptop</td></tr>
-            <tr><td><b>The model</b></td>
-              <td>Estimator chosen and defended, tuned and scored — statistical or ML/AI,
-                whichever the problem actually needs</td>
-              <td>The question outgrew the method available when you started</td></tr>
-            <tr><td><b>The evaluation</b></td>
-              <td>Baselines that already contain the easy knowledge, leakage checks, a fold
-                design that does not flatter the model, thresholds fixed before results</td>
-              <td>You suspect the result is better than it should be, and would rather know
-                before a referee does</td></tr>
-            <tr><td><b>A replication</b></td>
-              <td>Your published method rebuilt independently from the paper alone, and a
-                straight answer on what reproduces and what does not —
-                <a href="/notes/cascade-refrigeration/">here is one</a>: three checks
-                reproduced, two did not, and a compressor efficiency recovered from the
-                paper's own reported COP — with
-                <a href="/notes/cascade-explorer/">its whole operating envelope explorable</a></td>
-              <td>Someone questioned the result — or you want to know first. Needs no data
-                and no code from you</td></tr>
-            <tr><td><b>The visualization</b></td>
-              <td>An interactive dashboard to the <a href="/standards/#visualization">six
-                published criteria</a> — linked views, navigable time, drill-down, a control
-                on an assumption</td>
-              <td>You have something to present, and a static figure cannot answer a
-                question from the floor</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <p class="dim">
-        Each card is that case's own tile, and {nAnimated} of the {N} animate with the
-        phenomenon the instrument measures — sensors reporting, ground settling, fire
-        spreading, a story travelling. They are schematics, not screenshots: click one for
-        the dashboard itself.
+      <p class="go">
+        <a class="strong" href="/stack/">The stack, in full<span aria-hidden="true"> →</span></a>
+        <a href="/standards/">How a result gets to count<span aria-hidden="true"> →</span></a>
+        <a href={S.repo}>The repository<span aria-hidden="true"> →</span></a>
       </p>
     </div>
   </section>
 
-  <section class="sec">
-    <div class="rail">How<span>what each side brings</span></div>
-    <div class="col">
-      <h2>How a case comes together — when the analysis is designed here</h2>
-      <p class="dim">
-        This describes two of the six ways in: interpreting one of the instruments below,
-        and starting a new study. On a build over an <b>already-published paper</b> there is
-        no split to make — the analysis is yours, the instrument is the addition, and
-        <a href="/contribute/#credit">credit says so per path</a>.
-      </p>
-      <div class="tw">
-        <table>
-          <thead><tr><th>Measurement</th><th>Explanation</th></tr></thead>
-          <tbody>
-            <tr>
-              <td><b>Method.</b> Which estimator, which baseline, what would count as
-                working — decided and written down before anything runs</td>
-              <td><b>The question,</b> and why it matters where it is asked</td>
-            </tr>
-            <tr>
-              <td><b>Models.</b> Built, tuned and scored — statistical or ML/AI, whichever
-                the problem actually needs</td>
-              <td><b>Domain knowledge.</b> What a result means, what would be surprising,
-                what the literature already settled</td>
-            </tr>
-            <tr>
-              <td><b>Evaluation.</b> Against naive rivals that already contain the easy
-                knowledge, with every gate published including the failures</td>
-              <td><b>Plausible mechanism.</b> Why the relationship would exist, or why it
-                would not</td>
-            </tr>
-            <tr>
-              <td><b>The instrument.</b> Pipeline, models, gates and an interactive dashboard — all
-                re-runnable, all versioned together</td>
-              <td><b>The interpretation,</b> the written discussion, and accountability for
-                the finding</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p>
-        Credit follows the work with <a href="/contribute/#credit">CRediT roles</a>, so
-        nobody has to pretend: Methodology, Formal analysis, Validation, Software, Data
-        curation and Visualization on one side of that table; Conceptualization,
-        Investigation and Writing on the other. Whoever did a thing is credited for it.
-      </p>
-      <p>
-        An instrument is published as soon as the left column is finished, without waiting
-        for the right one. Both halves stay open to anyone who can fill them — a domain
-        researcher most obviously, but equally someone who can improve a model or break an
-        evaluation. A conclusion arriving does not close the left column.
-      </p>
-    </div>
-  </section>
-
-  <section class="sec" id="who">
-    <div class="rail">Ways in<span>find your row</span></div>
+  <section class="sec" id="collaborate">
+    <div class="rail">Collaboration<span>two kinds</span></div>
     <div class="col wide">
-      <h2>{waysPhrase()}</h2>
-      <p>
-        Routed by what you already have, not by job title — a quantitative economist is a
-        researcher and a data scientist both, and picking one would be a fiction. Capacity
-        is stated honestly next to each, because one person cannot service {DOOR_WORD[PATHS.length] ?? PATHS.length} doors.
-      </p>
-      <div class="tw">
-        <table>
-          <thead><tr><th>What you already have</th><th>The path</th><th>Status</th></tr></thead>
-          <tbody>
-            {PATHS.map((p) => (
-              <tr>
-                <td>{p.have}<span class="path-note">{p.note}</span></td>
-                <td><a href={`/contribute/#${p.anchor}`}>{p.path}</a></td>
-                <td><span class={p.status === "open" ? "chip open" : "chip later"}>{p.status}</span></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
+      <h2>What I need, and what I can build</h2>
       <div class="sides">
-        <div class="side good">
-          <h3>What you get</h3>
-          <ul>
-            <li>A <b>working instrument</b> for your subject — pipeline, models, evaluation
-              and an interactive dashboard — built free</li>
-            <li><b>First author</b> if you write the interpretation. The finding is yours</li>
-            <li>You <b>keep copyright</b> and can republish anywhere</li>
-            <li>A <b>DOI</b> on request — archived independently, citable, versioned</li>
-            <li><b>Named CRediT credit</b> for whatever you actually did, not a thank-you line</li>
-            <li>Thresholds fixed before results, so the evaluation is defensible to a reviewer</li>
-          </ul>
+        <div class="side">
+          <h3>If you know the subject</h3>
+          <p>
+            Measurement is finished on all ten; what none of them carries is what the
+            result <em>means</em> in its own field. That needs someone who knows the
+            subject, and it is a small ask: read the finding, tell me whether it is
+            plausible, and say so in your own words if you want the credit. If your
+            reading is that it should not be published, that ends it.
+          </p>
+          <p><a href="/contribute/#interpret">What that involves, exactly</a></p>
         </div>
-        <div class="side warn">
-          <h3>What you should know</h3>
-          <ul>
-            <li><b>Not peer reviewed.</b> Gates are checking, not refereeing</li>
-            <li>This site has <b>no audience yet.</b> You are betting it gets one</li>
-            <li>Publishing unpublished work here first makes it a <b>preprint</b> — check
-              your journal's policy. This does not apply to an already-published paper</li>
-            <li><b>Failed gates are published.</b> If the measurement contradicts the
-              finding, the page says so</li>
-            <li>Implementation is <b>AI-assisted</b>, disclosed on every instrument</li>
-            <li>One person, one server, no grant. <b>It could stop.</b></li>
-          </ul>
+        <div class="side">
+          <h3>If you have the research and not the tools</h3>
+          <p>
+            Most of the people this would help are strong in their own field and have
+            never had to open a NASA endpoint, fit a gradient booster or build something
+            interactive — the work sits in Excel or SPSS because that is what was
+            available. That gap is the thing I am useful for, and it costs nothing. The
+            findings stay yours.
+          </p>
+          <p><a href="/contribute/">How a case starts</a></p>
         </div>
       </div>
-      <p class="panel-next">
-        Each path in full, including the two that need asking first —
-        <a href="/contribute/">how to contribute</a>.
-      </p>
-    </div>
-  </section>
-
-  <section class="sec" id="instruments">
-    <div class="rail">Instruments<span>{seekingPhrase()}</span></div>
-    <div class="col wide">
-      <h2>{N} instruments, and what each is still open to</h2>
-      <p>
-        Every one is complete as measurement: the pipeline runs, the gates are published
-        including the failures, the interactive dashboard works. What is open differs by instrument —
-        and <b>nothing here ever closes.</b>
-      </p>
-      <div class="tw">
-        <table>
-          <thead><tr><th>State</th><th>Meaning</th><th>Open to</th></tr></thead>
-          <tbody>
-            <tr>
-              <td><span class="chip">seeking author</span></td>
-              <td>No conclusion written yet</td>
-              <td>A domain author, for first authorship — <b>and</b> anyone who can improve
-                a model or break the evaluation</td>
-            </tr>
-            <tr>
-              <td><span class="chip done">authored</span></td>
-              <td>A domain author has written the conclusion and holds first authorship</td>
-              <td>Challenge only: a stronger baseline, a flaw in the evaluation, newer data.
-                A successful challenge publishes as its own finding</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <ul class="cards">
-        {INSTRUMENTS.map((i) => (
-          <li class="card">
-            {/* aria-hidden and tabindex -1 because the title link beside it goes to the
-                same place, and a screen reader should not hear one target twice. */}
-            <a class="card-shot" href={`${BASE}/${i.slug}/`} aria-hidden="true" tabindex="-1">
-              <img src={tiles[i.slug]?.src ?? `/shots/${i.slug}.jpg`} alt=""
-                   width="400" height="240" loading="lazy" decoding="async" />
-            </a>
-            <div class="card-body">
-            <div class="card-head">
-              <a class="card-title" href={`${BASE}/${i.slug}/`}>
-                {i.title} <span class="arrow" aria-hidden="true">→</span>
-              </a>
-              {i.status === "authored"
-                ? <span class="chip done">authored · open to challenge</span>
-                : <span class="chip">seeking author</span>}
-            </div>
-            <p class="card-line">{i.line}</p>
-            <p class="card-found"><b>What it found.</b> {i.found}</p>
-            {i.status === "authored"
-              ? <p class="card-gap"><b>Interpretation.</b> {i.author} — and the measurement
-                  remains open to challenge.</p>
-              : <p class="card-gap"><b>What is missing.</b> {i.gap}</p>}
-            <p class="card-links">
-              <a href={`${BASE}/${i.slug}/`}>Open the instrument</a>
-              <a href={`${BASE}/${i.slug}/article/`}>Read the write-up</a>
-            </p>
-            </div>
-          </li>
-        ))}
-      </ul>
-
       <div class="callout">
         <p>
-          If one of these is your subject, the measurement is already done. Writing the
-          explanation earns <b>first author</b>; the measurement earns <b>methods
-          co-author</b>. If instead you can see something wrong with how one was measured,
-          that is a contribution too — see <a href="/contribute/">how to contribute</a>.
+          <b>Also one replication.</b> A published optimisation rebuilt from the paper
+          alone — three of five pre-registered checks reproduced, two did not, and a
+          compressor efficiency its own author no longer had recovered from the paper's
+          own reported performance. It is here as proof of method:
+          {" "}<a href="/notes/cascade-refrigeration/">the note</a>, and
+          {" "}<a href="/notes/cascade-explorer/">the dashboard</a> that recomputes 62,370
+          operating points in your browser.
         </p>
-        <p class="dim">Read <a href="/contribute/">how to contribute</a> first — including the parts that might put you off.</p>
       </div>
     </div>
   </section>
-
 </Page>
 
 <style>
   .hero { padding-bottom: 0.5rem; }
   .eyebrow {
-    font-family: var(--sans); font-size: 0.72rem; font-weight: 500;
-    letter-spacing: 0.14em; text-transform: uppercase;
-    color: var(--accent); margin: 0 0 1.1rem;
+    font-family: var(--sans); font-size: 0.72rem; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+    margin: 0 0 1.1rem;
   }
-  /* Every claim in the first line points at the page that backs it, which is the
-     shortest possible answer to "says who?". Underline only on hover, so it reads as
-     one line rather than a row of buttons. */
-  .eyebrow a {
-    color: inherit; text-decoration: none;
-    border-bottom: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
-  }
-  .eyebrow a:hover { border-bottom-color: var(--accent); text-shadow: 0 0 14px var(--glow); }
-  .hero h1 { max-width: 26ch; }
-  .hero-actions { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1.8rem; }
-  .cta {
-    font-family: var(--sans); font-size: 0.82rem; font-weight: 500;
-    letter-spacing: 0.02em; text-decoration: none;
-    padding: 0.6rem 1.05rem; border: 1px solid var(--accent);
-    color: var(--ground); background: var(--accent);
-  }
-  .cta.ghost { background: transparent; color: var(--accent); }
-  .cta { box-shadow: 0 0 28px -10px var(--glow); }
-  .cta:hover {
-    background: color-mix(in srgb, var(--accent) 88%, var(--ink)); color: var(--ground);
-    box-shadow: 0 0 34px -6px var(--glow);
-  }
-  .cta.ghost:hover { background: var(--panel); color: var(--accent); }
-
+  .eyebrow a { color: inherit; text-decoration: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
+  .eyebrow a:hover { border-bottom-color: var(--accent); }
+  .hero h1 { max-width: 28ch; }
   .sec .col.wide { max-width: none; }
 
-  /* A real sequence — each stage consumes the previous one's output — so the numbers
-     carry information rather than decorating. */
-  .stages { list-style: none; counter-reset: st; margin: 1.4rem 0 1.2rem; padding: 0; }
-  .stages > li {
-    counter-increment: st; position: relative;
-    padding: 0 0 0 3.1rem; margin-bottom: 1.3rem;
-  }
-  .stages > li::before {
-    content: counter(st, decimal-leading-zero);
-    position: absolute; left: 0; top: 0.05rem;
-    font-family: var(--mono); font-size: 0.82rem; letter-spacing: 0.02em;
-    color: var(--accent); text-shadow: 0 0 16px var(--glow);
-  }
-  .stages > li::after {
-    content: ""; position: absolute; left: 1.05rem; top: 1.6rem; bottom: -1.3rem;
-    width: 1px; background: var(--rule);
-  }
-  .stages > li:last-child::after { display: none; }
-  .stages h3 { margin: 0 0 0.25rem; font-size: 0.95rem; }
-  .stages > li:last-child h3 { color: var(--accent); text-shadow: 0 0 20px var(--glow); }
-  .stages p { margin: 0; color: var(--muted); font-size: 0.95rem; }
-
   .tally {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
-    gap: 1px; margin: 1.9rem 0 0; padding: 0;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+    gap: 1px; margin: 2rem 0 0; padding: 0;
     background: var(--rule); border: 1px solid var(--rule);
   }
   .tally > div { background: var(--ground); padding: 0.85rem 1rem; }
-  .tally dt {
-    font-family: var(--sans); font-size: 0.68rem; font-weight: 600;
-    letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
-  }
-  .tally dd {
-    margin: 0.3rem 0 0; font-family: var(--sans); font-size: 1.7rem;
-    font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums;
-    color: var(--ink);
-  }
-  .tally dd.want { color: var(--flag); text-shadow: 0 0 22px var(--glow-flag); }
-  .tally-note {
-    font-family: var(--sans); font-size: 0.8rem; line-height: 1.55;
-    color: var(--muted); margin: 0.9rem 0 0; max-width: 62ch;
-  }
-  .tally-note b { color: var(--ink); }
+  .tally dt { font-family: var(--sans); font-size: 0.66rem; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .tally dd { margin: 0.3rem 0 0; font-family: var(--sans); font-size: 1.6rem;
+    font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink); }
 
-  .cards { list-style: none; margin: 1.5rem 0 0; padding: 0; display: grid; gap: 0; }
-  .card {
-    border-top: 1px solid var(--rule); padding: 1.4rem 0;
-    display: grid; grid-template-columns: 19rem minmax(0, 1fr); gap: 0 1.6rem;
-    align-items: start;
-  }
-  .card:first-child { border-top: 1px solid var(--ink); }
-  @media (max-width: 760px) { .card { grid-template-columns: 1fr; gap: 0.9rem; } }
-  .card-shot {
-    display: block; border: 1px solid var(--rule); overflow: hidden;
-    background: var(--panel); line-height: 0;
-    transition: border-color .15s ease, box-shadow .15s ease;
-  }
-  .card-shot img {
-    width: 100%; height: auto; display: block;
-    aspect-ratio: 5 / 3; object-fit: cover;
-    background: var(--panel);
-  }
-  .card:hover .card-shot {
-    border-color: var(--accent); box-shadow: 0 0 30px -14px var(--glow);
-  }
-  .card-links {
-    display: flex; flex-wrap: wrap; gap: 0 1.3rem; margin: 0.7rem 0 0;
-    font-family: var(--sans); font-size: 0.8rem;
-  }
-  .card-head {
-    display: flex; align-items: baseline; gap: 0.9rem;
-    flex-wrap: wrap; margin-bottom: 0.35rem;
-  }
-  .card-title {
-    font-family: var(--serif); font-weight: 600; font-size: 1.18rem;
-    text-decoration: none; color: var(--ink);
-  }
-  .card-title:hover { color: var(--accent); text-shadow: 0 0 22px var(--glow); }
-  .card-title .arrow { color: var(--muted); font-size: 0.9rem; }
-  .card-title:hover .arrow { color: var(--accent); }
-  /* Two states, two colours. Coral is the open invitation, teal is a conclusion in
-     place — neither reads as "finished", because a challenge is welcome on both. */
-  .chip.done {
-    color: var(--accent);
-    text-shadow: 0 0 14px var(--glow);
-    box-shadow: 0 0 18px -12px var(--glow);
-  }
-  .chip {
-    font-family: var(--sans); font-size: 0.64rem; font-weight: 600;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--flag); border: 1px solid currentColor;
-    padding: 0.15rem 0.45rem; white-space: nowrap;
-    text-shadow: 0 0 14px var(--glow-flag);
-    box-shadow: 0 0 18px -12px var(--glow-flag);
-  }
-  .card-line { margin: 0 0 0.6rem; color: var(--muted); max-width: 62ch; }
-  .card-found, .card-gap {
-    font-family: var(--sans); font-size: 0.85rem; line-height: 1.55;
-    margin: 0 0 0.35rem; color: var(--muted); max-width: 74ch;
-  }
-  .card-found b, .card-gap b { color: var(--ink); font-weight: 600; }
-  .card-gap { color: var(--ink); }
-  .card-gap b { color: var(--accent); }
+  .ctas { display: flex; flex-wrap: wrap; gap: 0.7rem; margin: 1.8rem 0 0; }
+  .cta { font-family: var(--sans); font-size: 0.88rem; font-weight: 600;
+    text-decoration: none; padding: 0.62rem 1.1rem; border: 1px solid var(--accent);
+    background: var(--accent); color: var(--ground);
+    box-shadow: 0 0 26px -10px var(--glow); }
+  .cta.ghost { background: transparent; color: var(--accent); box-shadow: none; }
+  .cta:hover { filter: brightness(1.08); }
+  .cta.ghost:hover { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 
-  .path-note {
-    display: block; font-size: 0.8rem; color: var(--muted);
-    margin-top: 0.2rem; max-width: 44ch;
+  .three { list-style: none; padding: 0; margin: 1.5rem 0 0; display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px;
+    background: var(--rule); border: 1px solid var(--rule); }
+  @media (max-width: 900px) { .three { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 620px) { .three { grid-template-columns: 1fr; } }
+  .three > li { background: var(--ground); padding: 0 0 1.15rem; display: flex;
+    flex-direction: column; }
+  .three > li > :not(.card-shot) { padding-left: 1.2rem; padding-right: 1.2rem; }
+  .card-shot { display: block; margin: 0 0 1.05rem; overflow: hidden;
+    border-bottom: 1px solid var(--rule); background: var(--panel); }
+  .card-shot img { display: block; width: 100%; aspect-ratio: 16 / 9;
+    object-fit: cover; transition: transform .4s ease; }
+  .three > li:hover .card-shot img { transform: scale(1.03); }
+  @media (prefers-reduced-motion: reduce) {
+    .card-shot img { transition: none; }
+    .three > li:hover .card-shot img { transform: none; }
   }
-  .chip.open {
-    color: var(--flag);
-    text-shadow: 0 0 14px var(--glow-flag);
-    box-shadow: 0 0 18px -12px var(--glow-flag);
-  }
-  .chip.later { color: var(--muted); text-shadow: none; box-shadow: none; }
-  .panel-next {
-    font-family: var(--sans); font-size: 0.86rem; line-height: 1.55;
-    color: var(--muted); border-top: 1px solid var(--rule);
-    padding-top: 1rem; margin-top: 1.4rem;
-  }
+  .links { margin-top: auto; }
+  .shows { font-family: var(--sans); font-size: 0.64rem; font-weight: 600;
+    letter-spacing: 0.09em; text-transform: uppercase; color: var(--accent);
+    margin: 0 0 0.55rem; }
+  .three h3 { font-family: var(--serif); font-size: 1.12rem; font-weight: 600;
+    line-height: 1.25; margin: 0 0 0.5rem; }
+  .three h3 a { color: var(--ink); text-decoration: none; }
+  .three h3 a:hover { color: var(--accent); }
+  .claim { font-family: var(--sans); font-size: 0.84rem; line-height: 1.58;
+    color: var(--muted); margin: 0; }
+  .links { display: flex; flex-wrap: wrap; gap: 0.4rem 1.1rem; margin: 0.9rem 0 0;
+    font-family: var(--sans); font-size: 0.8rem; }
+  .links a { color: var(--muted); text-decoration: none;
+    border-bottom: 1px solid var(--rule); }
+  .links a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .go { display: flex; flex-wrap: wrap; gap: 0.6rem 1.7rem; margin: 1.5rem 0 0;
+    font-family: var(--sans); font-size: 0.88rem; }
+  .go a { color: var(--muted); text-decoration: none;
+    border-bottom: 1px solid var(--rule); padding-bottom: 2px; }
+  .go a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+  .go a.strong { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+  /* the evidence table, kept from the previous version of this page */
+  .tw { overflow-x: auto; margin: 1.4rem 0; }
+  .tw table { min-width: 34rem; }
+  td .chip, .chip { font-family: var(--sans); font-size: 0.66rem; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
 </style>
