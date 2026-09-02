@@ -78,9 +78,9 @@ const pySpec = S.python.filter((p) => p.n_cases === 1);
       install. Where a row links to a file, that is the file that uses it.
     </p>
     <dl class="tally">
-      <div><dt>Python</dt><dd>{n(S.code.python.lines)}</dd><span>lines across {S.code.python.files} files</span></div>
-      <div><dt>Front end</dt><dd>{n(S.code.astro.lines)}</dd><span>lines across {S.code.astro.files} Astro files</span></div>
       <div><dt>Data sources</dt><dd>{S.sources.length}</dd><span>external, all publicly obtainable</span></div>
+      <div><dt>Python packages</dt><dd>{S.python.length}</dd><span>pinned per case, each pipeline its own uv project</span></div>
+      <div><dt>Static apps</dt><dd>{S.apps}</dd><span>every route prerendered, no server rendering</span></div>
       <div><dt>Served from</dt><dd>1</dd><span>2-core, 1.9 GB virtual machine</span></div>
     </dl>
   </section>
@@ -124,7 +124,7 @@ const pySpec = S.python.filter((p) => p.n_cases === 1);
   </section>
 
   <section class="sec" id="pipelines">
-    <div class="rail">Pipelines<span>Python, {n(S.code.python.lines)} lines</span></div>
+    <div class="rail">Pipelines<span>{S.cases} uv projects</span></div>
     <div class="col wide">
       <h2>The geospatial and data layer</h2>
       <p class="note">
@@ -211,7 +211,7 @@ const pySpec = S.python.filter((p) => p.n_cases === 1);
   </section>
 
   <section class="sec" id="interfaces">
-    <div class="rail">Interfaces<span>{S.code.astro.files} Astro files</span></div>
+    <div class="rail">Interfaces<span>{S.apps} static apps</span></div>
     <div class="col wide">
       <h2>Eleven static apps, no server rendering</h2>
       <p class="note">

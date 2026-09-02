@@ -62,25 +62,27 @@ const HEADLINE = {
 >
   <section class="hero">
     <p class="eyebrow">
-      <a href="/standards/#sources">Public data</a> · Indonesia —
-      <a href="#caught">advanced analytics</a> ·
-      <a href="/stack/#models">ML</a> ·
-      <a href="/stack/#pipelines">AI</a> ·
-      <a href="/standards/#visualization">interactive dashboards</a>
+      <a href="/standards/#sources">{S.sources.length} public data sources</a> · Indonesia ·
+      <a href="/work/">{INSTRUMENTS.length} instruments live</a> ·
+      <a href={S.repo}>the code is public</a>
     </p>
-    <h1>Satellite data, public statistics.<br /><em>Models, and the checks that break them.</em></h1>
+    <h1>Advanced analytics, ML/AI,<br /><em>and dashboards you can interrogate.</em></h1>
     <p class="lead">
-      I build instruments end to end on Indonesian public data: the satellite ingest, the
-      features, the model, an evaluation designed to fail, and a dashboard you can
-      interrogate rather than just look at. <b>Ten are live.</b> In every one of them the
-      figure that mattered came out of the evaluation, not the model — which is the part
-      of this work I would want to be judged on.
+      If you have a question and the data to answer it, this is the part that usually
+      stops: getting the data out of whatever format an agency ships it in, building a
+      model that survives being tested properly, and turning the result into something a
+      room full of people can argue with. <b>I build all of it, end to end.</b>
+    </p>
+    <p class="lead">
+      Ten are live below, on Indonesian public data. In every one, the figure that
+      mattered came out of the <a href="#caught">evaluation</a> rather than the model —
+      which is the part I would want to be judged on.
     </p>
     <dl class="tally">
       <div><dt>Instruments live</dt><dd>{INSTRUMENTS.length}</dd></div>
       <div><dt>Public data sources</dt><dd>{S.sources.length}</dd></div>
+      <div><dt>Satellite scenes</dt><dd>{n(W.rice.scenes)}</dd></div>
       <div><dt>Rows modelled</dt><dd>{m(W.haze.fwi_rows)}</dd></div>
-      <div><dt>Lines of Python</dt><dd>{n(S.code.python.lines)}</dd></div>
     </dl>
     <p class="ctas">
       <a class="cta" href="/work/">Three cases in depth</a>
@@ -137,16 +139,6 @@ const HEADLINE = {
           <thead><tr><th>What the analysis caught</th><th>Where</th><th>Why it took analysis</th></tr></thead>
           <tbody>
             <tr>
-              <td><b>Recovered a compressor efficiency its own author no longer had.</b>
-                A 2016 paper reported a COP but not the isentropic efficiency behind it.
-                Inverting the cycle against three different refrigerant mixtures returned
-                0.642, 0.649 and 0.662 — a spread of 0.01</td>
-              <td><a href="/notes/cascade-refrigeration/">cascade replication</a> ·
-                <a href="/notes/cascade-explorer/">dashboard</a></td>
-              <td>Three independent fluids agreeing is the evidence. A wrong cycle would
-                have scattered</td>
-            </tr>
-            <tr>
               <td><b>57% of the squared error was a single constant per province.</b>
                 A satellite cannot see the poverty line the roofs are judged against —
                 and a random k-fold would have reported R² 0.65 instead of 0.395</td>
@@ -195,7 +187,7 @@ const HEADLINE = {
         compressed scenes found by catalogue query, NASA Black Marble as authenticated
         HDF5, ERA5 through a request queue that takes hours. Then gradient boosting and
         regularised linear models on raster-derived features, scored against naive rivals
-        under spatially blocked validation. Then {S.code.astro.files} Astro files and
+        under spatially blocked validation. Then {S.apps} static apps built from
         {" "}{S.javascript.length} front-end packages, with no high-level charting library —
         charts are composed from d3's scales and shape generators, and where a chart has
         tens of thousands of marks the dense layer goes on a canvas so the axis text stays
