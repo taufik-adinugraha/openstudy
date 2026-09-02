@@ -1,0 +1,234 @@
+#!/usr/bin/env python3
+"""Pull the figures /work/ quotes out of the pipelines that produced them.
+
+/work/ goes deep on three cases for a reader deciding whether the person who built
+this can do the work. Every number on it therefore has to be the number the pipeline
+actually wrote, not a number somebody remembered — the site has already had a tally,
+a door count and a gate count go stale, and on a page whose whole purpose is
+credibility a stale figure is worse than a missing one.
+
+The case data planes are gitignored (they are R2-synced, not source), so the page
+cannot import them directly or a fresh clone would fail to build. The established
+convention here is a small extract committed under openstudy/src/data/ — which is
+what cascade-cold.json already is. This writes work.json the same way.
+
+Selection is curated: this file decides WHICH figures matter. Extraction is not:
+every value is read from the record, and a missing key is a loud failure rather
+than a silent zero.
+
+    ops/work            write openstudy/src/data/work.json
+    ops/work check      fail if the committed JSON is out of date
+"""
+
+from __future__ import annotations
+
+import datetime as _dt
+import json
+import pathlib
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+DEST = ROOT / "openstudy/src/data/work.json"
+
+
+class Missing(Exception):
+    pass
+
+
+def load(case: str, name: str) -> dict:
+    p = ROOT / "cases" / case / "data" / name
+    if not p.exists():
+        raise Missing(f"{p.relative_to(ROOT)} — is the data plane synced? (ops/data pull)")
+    return json.loads(p.read_text())
+
+
+def dig(d: dict, *path, default=Missing):
+    """Reach into a record, and complain loudly rather than substituting a zero."""
+    cur = d
+    for k in path:
+        if not isinstance(cur, dict) or k not in cur:
+            if default is Missing:
+                raise Missing("missing key: " + " → ".join(map(str, path)))
+            return default
+        cur = cur[k]
+    return cur
+
+
+def poverty() -> dict:
+    r = load("poverty-map", "review.json")
+    m = load("poverty-map", "model_stats.json")
+    sk = dig(m, "skill")
+    return {
+        "slug": "poverty",
+        "units": dig(m, "n_regencies"),
+        "panel_rows": dig(m, "n_rows"),
+        "features": dig(m, "n_features"),
+        "families": dig(r, "families"),
+        # the same model, scored three ways. This is the whole point of the case.
+        "validation": [
+            {"design": "Random 10-fold",
+             "folds": dig(m, "folds", "random"),
+             "r2": dig(sk, "random", "r2"),
+             "what": "what a default cross_val_score reports"},
+            {"design": "200 km spatial blocks",
+             "folds": dig(m, "folds", "block_200km"),
+             "r2": dig(sk, "block", "r2"),
+             "what": "neighbours can no longer be in both halves"},
+            {"design": "Leave-one-province-out",
+             "folds": dig(m, "folds", "lopo"),
+             "r2": dig(sk, "lopo", "r2"),
+             "what": "predicting a province the model has never seen — the honest number"},
+        ],
+        "ridge_lopo_r2": dig(sk, "lopo_ridge", "r2"),
+        "temporal": {"naive": dig(sk, "temporal_2025", "r2"),
+                     "strict": dig(sk, "temporal_strict_2025", "r2")},
+        "kota_r2": dig(sk, "lopo_kota", "r2"),
+        "kabupaten_r2": dig(sk, "lopo_kabupaten", "r2"),
+        "within_province_r2": dig(r, "within_province", "r2"),
+        "offset_share_of_sse": dig(m, "decomposition", "offset_share_of_sse"),
+        "between_province_share": dig(r, "variance", "between_share"),
+        "params": dig(m, "params"),
+    }
+
+
+def rice() -> dict:
+    a = load("rice-security", "audit.json")
+    bs = load("rice-security", "backscatter_meta.json")
+    man = load("rice-security", "manifest.json")
+    # the record carries a "pooled" row alongside the per-year ones, so the year
+    # field is sometimes a string. Take the latest real year.
+    prf = [r for r in dig(a, "I_prf", "rows") if isinstance(r["year"], int)]
+    latest = max(prf, key=lambda r: r["year"])
+    thin = dig(a, "E_thinning")
+    ladder = thin["ladder"]
+    base = ladder[0]
+    one = bs[sorted(bs)[0]]
+    return {
+        "slug": "rice",
+        "scenes": sum(1 for k in man if k.startswith("sar:")),
+        "regencies": len(bs),
+        "cells_one_regency": dig(one, "n_cells"),
+        "acquisitions_one_regency": dig(one, "n_acquisitions"),
+        "median_obs_per_cell": dig(one, "median_obs_per_cell"),
+        "first": dig(one, "first"),
+        "last": dig(one, "last"),
+        "precision": latest["precision"],
+        "recall": latest["recall"],
+        "f1": latest["f1"],
+        "prf_year": latest["year"],
+        "prior_rice_cells": dig(a, "I_prf", "prior_rice_cells"),
+        # The controlled experiment, and the reason it is the strongest thing in this
+        # case: same regency, same fields, same detector, same thresholds — only the
+        # number of looks changes. The whole ladder ships, because a dose-response is
+        # a much better argument than a single before-and-after pair.
+        "thinning": {
+            "kabupaten": thin["kabupaten"],
+            "cells": thin["prior_rice_cells"],
+            "seasons": thin["seasons"],
+            "ladder": [
+                {"gap_days": r["median_gap_days"], "acquisitions": r["n_acquisitions"],
+                 "cycles": r["cycles"], "cycles_vs_full": r["cycles_vs_full"],
+                 "extent_recall": r["extent_recall_vs_prior"]}
+                for r in ladder
+            ],
+            "base_gap_days": base["median_gap_days"],
+            "base_cycles": base["cycles"],
+        },
+        "revisit_corr": dig(a, "D_revisit", "corr_gap_vs_extent_recall"),
+        "timing": {
+            "lag_months": dig(a, "G_timing", "median_abs_xcorr_lag_months"),
+            "xcorr_at_lag": dig(a, "G_timing", "median_xcorr_at_lag"),
+            "xcorr_at_zero": dig(a, "G_timing", "median_xcorr_at_zero"),
+        },
+        "calibration": {
+            "uncalibrated_r2": dig(a, "F_calibration", "r2_monthly_uncalibrated"),
+            "in_sample_r2": dig(a, "F_calibration", "r2_in_sample_monthly"),
+            "holdout_r2": dig(a, "F_calibration", "r2_monthly_holdout"),
+        },
+        "benchmark_break_pct": dig(a, "H_benchmark", "break_pct"),
+        "benchmark_break_year": dig(a, "H_benchmark", "break_year"),
+        "record_opens": dig(a, "H_benchmark", "record_opens"),
+    }
+
+
+def haze() -> dict:
+    rm = load("fire-haze", "risk_meta.json")
+    rv = load("fire-haze", "review.json")
+    leads = dig(rm, "leads")
+    return {
+        "slug": "haze",
+        "fwi_rows": dig(rv, "fwi", "total_rows"),
+        "fwi_years": len(dig(rv, "fwi", "years_on_disk")),
+        "cells": dig(rv, "spatial", "n_cells"),
+        "base_rate": dig(rm, "leads", "1", "forecast", "base_rate"),
+        "rounds": dig(rm, "n_rounds"),
+        "neg_sample_rate": dig(rm, "neg_sample_rate"),
+        "leads": [{"days": int(k), "auc": dig(v, "forecast", "auc"),
+                   "n": dig(v, "forecast", "n")}
+                  for k, v in sorted(leads.items(), key=lambda kv: int(kv[0]))],
+        # the naive rival is an operational index, not nothing
+        "vs_fwi": {"model": dig(rm, "fwi", "per_lead", "1", "auc_model"),
+                   "fwi": dig(rm, "fwi", "per_lead", "1", "auc_fwi"),
+                   "n": dig(rm, "fwi", "per_lead", "1", "n")},
+        "anchors": [{"year": int(y), "auc": dig(s, "auc"), "positives": dig(s, "positives")}
+                    for y, s in sorted(dig(rm, "anchor_scores").items())],
+        "spatial": {"block_deg": dig(rv, "spatial", "block_deg"),
+                    "folds": dig(rv, "spatial", "n_spatial_folds"),
+                    "blocks": dig(rv, "spatial", "n_blocks")},
+        "shap_share": dig(rm, "shap_families", "share"),
+        "trajectory": {
+            "parcels": dig(rv, "trajectory", "parcel_rows"),
+            "receptor_days": dig(rv, "trajectory", "receptor_days"),
+            "unattributable": dig(rv, "trajectory", "attribution",
+                                  "no_attributable_source_share"),
+            "stable_at_48h": dig(rv, "trajectory", "truncation", "top_province_same_at_48h"),
+            "bearing_within_30": dig(rv, "trajectory", "bearing", "within_30"),
+        },
+    }
+
+
+def main() -> int:
+    try:
+        doc = {
+            "generated": _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d"),
+            "note": ("Figures for /work/, extracted by ops/work from the records the "
+                     "pipelines wrote. Which figures appear is a decision in ops/work; "
+                     "what they are is not."),
+            "poverty": poverty(),
+            "rice": rice(),
+            "haze": haze(),
+        }
+    except Missing as e:
+        print(f"  cannot build: {e}")
+        return 1
+
+    if len(sys.argv) > 1 and sys.argv[1] == "check":
+        if not DEST.exists():
+            print("  work.json missing — run ops/work")
+            return 1
+        a, b = json.loads(DEST.read_text()), dict(doc)
+        a.pop("generated", None)
+        b.pop("generated", None)
+        if a != b:
+            print("  work.json is out of date — run ops/work")
+            return 1
+        print("  work.json matches the pipelines")
+        return 0
+
+    DEST.write_text(json.dumps(doc, indent=1))
+    p, r, h = doc["poverty"], doc["rice"], doc["haze"]
+    print(f"  poverty  {p['units']} units · {p['features']} features · R² "
+          + " → ".join(f"{v['r2']:.3f}" for v in p["validation"]))
+    print(f"  rice     {r['scenes']:,} scenes · precision {r['precision']:.3f} / "
+          f"recall {r['recall']:.3f} · thinning "
+          + " → ".join(f"{l['gap_days']:.0f}d:{100 * l['cycles_vs_full']:.0f}%"
+                       for l in r["thinning"]["ladder"]))
+    print(f"  haze     {h['fwi_rows']:,} rows · AUC "
+          + "/".join(f"{l['auc']:.3f}" for l in h["leads"])
+          + f" vs FWI {h['vs_fwi']['fwi']:.3f}")
+    print(f"  wrote {DEST.relative_to(ROOT)}  {len(json.dumps(doc)) // 1024} KB")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

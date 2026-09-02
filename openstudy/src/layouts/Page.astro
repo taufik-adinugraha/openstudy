@@ -9,6 +9,11 @@ import "../styles/tokens.css";
 const { title, description, current } = Astro.props;
 
 const NAV = [
+  // Work comes first: three cases in depth is what a reader is here to judge. The
+  // homepage keeps its own instruments grid for now; collapsing the rest of this nav
+  // (Publishing, Rights and Contributors are journal furniture on a portfolio) is a
+  // separate change with its own link decisions.
+  ["/work/", "Work"],
   ["/", "Instruments"],
   // Notes are the site's other kind of output — a replication publishes as a note, not
   // as an instrument. Without this the only finished interactive work was five screens

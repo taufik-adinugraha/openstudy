@@ -1,0 +1,186 @@
+{
+ "generated": "2026-09-02",
+ "note": "Figures for /work/, extracted by ops/work from the records the pipelines wrote. Which figures appear is a decision in ops/work; what they are is not.",
+ "poverty": {
+  "slug": "poverty",
+  "units": 514,
+  "panel_rows": 5140,
+  "features": 31,
+  "families": {
+   "population": 3,
+   "lights": 6,
+   "buildings": 11,
+   "landcover": 9,
+   "geography": 2
+  },
+  "validation": [
+   {
+    "design": "Random 10-fold",
+    "folds": 10,
+    "r2": 0.6526,
+    "what": "what a default cross_val_score reports"
+   },
+   {
+    "design": "200 km spatial blocks",
+    "folds": 108,
+    "r2": 0.5766,
+    "what": "neighbours can no longer be in both halves"
+   },
+   {
+    "design": "Leave-one-province-out",
+    "folds": 38,
+    "r2": 0.3952,
+    "what": "predicting a province the model has never seen \u2014 the honest number"
+   }
+  ],
+  "ridge_lopo_r2": 0.1852,
+  "temporal": {
+   "naive": 0.9461,
+   "strict": 0.3324
+  },
+  "kota_r2": -0.5993,
+  "kabupaten_r2": 0.3651,
+  "within_province_r2": 0.0767,
+  "offset_share_of_sse": 0.5657,
+  "between_province_share": 0.7155,
+  "params": {
+   "n_estimators": 600,
+   "learning_rate": 0.03,
+   "num_leaves": 15,
+   "min_child_samples": 10,
+   "subsample": 0.8,
+   "colsample_bytree": 0.8,
+   "seed": 7
+  }
+ },
+ "rice": {
+  "slug": "rice",
+  "scenes": 1247,
+  "regencies": 6,
+  "cells_one_regency": 231278,
+  "acquisitions_one_regency": 189,
+  "median_obs_per_cell": 252,
+  "first": "2022-07-07",
+  "last": "2026-08-25",
+  "precision": 0.9,
+  "recall": 0.3918,
+  "f1": 0.546,
+  "prf_year": 2025,
+  "prior_rice_cells": 515615,
+  "thinning": {
+   "kabupaten": "Karawang",
+   "cells": 96603,
+   "seasons": 4,
+   "ladder": [
+    {
+     "gap_days": 6.0,
+     "acquisitions": 225,
+     "cycles": 284388,
+     "cycles_vs_full": 1.0,
+     "extent_recall": 0.7161
+    },
+    {
+     "gap_days": 12.0,
+     "acquisitions": 113,
+     "cycles": 22635,
+     "cycles_vs_full": 0.0796,
+     "extent_recall": 0.202
+    },
+    {
+     "gap_days": 18.0,
+     "acquisitions": 75,
+     "cycles": 1511,
+     "cycles_vs_full": 0.0053,
+     "extent_recall": 0.0153
+    },
+    {
+     "gap_days": 24.0,
+     "acquisitions": 57,
+     "cycles": 233,
+     "cycles_vs_full": 0.0008,
+     "extent_recall": 0.0024
+    }
+   ],
+   "base_gap_days": 6.0,
+   "base_cycles": 284388
+  },
+  "revisit_corr": -0.4852,
+  "timing": {
+   "lag_months": 1.0,
+   "xcorr_at_lag": 0.7658,
+   "xcorr_at_zero": 0.1057
+  },
+  "calibration": {
+   "uncalibrated_r2": -0.8024,
+   "in_sample_r2": 0.0655,
+   "holdout_r2": 0.2207
+  },
+  "benchmark_break_pct": -19.4,
+  "benchmark_break_year": 2018,
+  "record_opens": "2022-07-01"
+ },
+ "haze": {
+  "slug": "haze",
+  "fwi_rows": 31330515,
+  "fwi_years": 15,
+  "cells": 1955,
+  "base_rate": 0.037811992458043196,
+  "rounds": 400,
+  "neg_sample_rate": 0.06,
+  "leads": [
+   {
+    "days": 1,
+    "auc": 0.8753839318865186,
+    "n": 2142680
+   },
+   {
+    "days": 3,
+    "auc": 0.8482933133063303,
+    "n": 2142680
+   },
+   {
+    "days": 7,
+    "auc": 0.8221258529679868,
+    "n": 2142680
+   }
+  ],
+  "vs_fwi": {
+   "model": 0.881441539149214,
+   "fwi": 0.7908672144368368,
+   "n": 266658
+  },
+  "anchors": [
+   {
+    "year": 2015,
+    "auc": 0.9086717571818879,
+    "positives": 73063
+   },
+   {
+    "year": 2019,
+    "auc": 0.9039957287169881,
+    "positives": 49010
+   }
+  ],
+  "spatial": {
+   "block_deg": 2.0,
+   "folds": 4,
+   "blocks": 73
+  },
+  "shap_share": {
+   "dryness": 0.02944140419509279,
+   "atmosphere": 0.1765836924986965,
+   "soil": 0.10665415668724276,
+   "fuel": 0.10850591631436181,
+   "fire_history": 0.4372615533078391,
+   "season": 0.049732435921946115,
+   "ocean": 0.09182084107482084
+  },
+  "trajectory": {
+   "parcels": 287820,
+   "receptor_days": 9594,
+   "unattributable": 0.08057119032728789,
+   "stable_at_48h": 0.8876712328767123,
+   "bearing_within_30": 0.6134443639874487
+  }
+ }
+}

@@ -1,0 +1,9 @@
+# <path a reader would guess>   <where it should land>
+#
+# Every case is served at a top-level slug — /rice/, /haze/, /poverty/. The cascade
+# refrigeration work is a replication rather than a case, so it lives under /notes/,
+# and someone looking for it types /cascade/ and gets a 404. These fix that.
+/cascade          /notes/cascade-refrigeration/
+/refrigeration    /notes/cascade-refrigeration/
+/cascade-cold     /notes/cascade-refrigeration/
+/cascade-explorer /notes/cascade-explorer/

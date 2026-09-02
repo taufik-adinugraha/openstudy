@@ -34,8 +34,14 @@ cases/*/tools/
 # agent worktrees (managed by the harness)
 .claude/worktrees/
 
-# operational state — runtime, not source
-ops/state/
+# operational state — runtime, not source. ALIASES and RETIRED_BASES are the
+# exception: ops/serve-static reads them to generate the nginx config, so they are
+# inputs to a build rather than state a run produced, and a clone that lacks them
+# cannot reproduce the redirects. Negation needs the glob — git will not descend
+# into a directory excluded by name.
+ops/state/*
+!ops/state/ALIASES
+!ops/state/RETIRED_BASES
 ops/backups/
 
 # rebuilt at startup from corpus/, and it accumulates a spend ledger and
@@ -45,8 +51,3 @@ platform/knowledge/api/knowledge.db
 # FMV product material — a separate private repo, never in the public one
 docs/spec-pustaka.html
 docs/build-plan.html
-
-# The knowledge assistant is a separate commercial product with its own private
-# repository. It was removed from this repository's entire history with
-# git-filter-repo, and this line is what stops a bulk copy putting it back.
-/platform/

@@ -1,0 +1,360 @@
+---
+// Three cases in depth, for a reader deciding whether the person who built this can do
+// the work. Ten shallow entries read as nothing finished; three deep ones read as
+// focused. The other seven are a strip at the bottom, which is the right weight for them.
+//
+// Every figure comes from openstudy/src/data/work.json, which ops/work extracts from the
+// records the pipelines wrote. Nothing here is typed by hand, and `ops/work check` fails
+// if the extract drifts from the pipelines.
+//
+// The three are not a sequence, so they are not numbered. They are labelled by what each
+// one demonstrates, because that is the only ordering a reader of this page cares about.
+import Page from "../layouts/Page.astro";
+import W from "../data/work.json";
+import S from "../data/stack.json";
+import { INSTRUMENTS } from "../data/instruments.js";
+
+const P = W.poverty, R = W.rice, H = W.haze;
+const n = (x) => x.toLocaleString("en-US");
+const pc = (x) => `${(x * 100).toFixed(0)}%`;
+const f2 = (x) => x.toFixed(2);
+const f3 = (x) => x.toFixed(3);
+const blob = (f) => `${S.blob}/${f}`;
+
+const DEEP = ["poverty", "rice", "haze"];
+const rest = INSTRUMENTS.filter((i) => !DEEP.includes(i.slug));
+---
+
+<Page
+  title="Work"
+  description="Three cases in depth — spatial validation on a poverty model, a controlled experiment on a radar harvest detector, and day-ahead haze risk scored against an operational index — plus seven more."
+  current="/work/"
+>
+  <section class="hero">
+    <p class="eyebrow">Three in depth · {rest.length} more built</p>
+    <h1>Public data, Indonesia,<br /><em>and what the analysis caught.</em></h1>
+    <p class="lead">
+      Each of these three is a live dashboard, a pipeline that runs from raw satellite
+      products, and a result that contradicted what the work was expected to show. They are
+      here rather than the other seven because each one demonstrates something different,
+      and because the figure that matters in all three came out of the evaluation rather
+      than the model.
+    </p>
+  </section>
+
+  <!-- ─────────────────────────────  POVERTY  ───────────────────────────── -->
+  <section class="sec case" id="poverty">
+    <div class="rail">Validation design<span>{P.units} regencies</span></div>
+    <div class="col wide">
+      <p class="topic">Poverty mapping from space</p>
+      <h2>The same model scores {f2(P.validation[0].r2)}, {f2(P.validation[1].r2)} or
+        {f2(P.validation[2].r2)} — depending only on how the data is split</h2>
+      <p>
+        A LightGBM model predicting regency poverty rate from {P.features} features across
+        five families — {Object.entries(P.families).map(([k, v]) => `${k} (${v})`).join(", ")} —
+        built from night-time lights, building footprints, land cover and population.
+        Nothing about the model changes between these three rows. Only the fold design
+        does.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Validation design</th><th class="num">Folds</th><th class="num">R²</th><th>What it answers</th></tr></thead>
+          <tbody>
+            {P.validation.map((v, i) => (
+              <tr class={i === P.validation.length - 1 ? "keep" : ""}>
+                <td><b>{v.design}</b></td>
+                <td class="num dim">{v.folds}</td>
+                <td class="num big">{f3(v.r2)}</td>
+                <td class="dim">{v.what}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Choosing the first row would have been defensible, conventional, and wrong by
+        <b>0.26 of R²</b>. Neighbouring regencies are similar, so a random fold leaves the
+        answer next door; blocking at 200 km removes some of that, and holding out a whole
+        province removes it properly. <b>{f3(P.validation[2].r2)} is the number a reader
+        gets.</b>
+      </p>
+
+      <h3>Where the remaining skill actually comes from</h3>
+      <p>
+        Reporting the honest R² is not the same as understanding it, so the case
+        decomposes it — and the answer is uncomfortable.
+      </p>
+      <ul class="findings">
+        <li><b>{pc(P.offset_share_of_sse)} of the squared error is a single constant per
+          province.</b> The model is substantially recovering each province's own offset
+          rather than seeing poverty.</li>
+        <li><b>Within a province, R² is {f3(P.within_province_r2)}.</b> Rank a province's
+          own regencies against each other and the model is close to blind — which is
+          exactly the comparison a targeting decision would need.</li>
+        <li><b>On cities, R² is {f3(P.kota_r2)}</b> against {f3(P.kabupaten_r2)} on rural
+          regencies. Worse than predicting the mean. A single national figure hides that
+          completely.</li>
+        <li><b>A naive temporal split reports {f3(P.temporal.naive)}.</b> Removing the
+          leakage takes the same model to {f3(P.temporal.strict)}. Both numbers are
+          published, because the first one is the one most write-ups would print.</li>
+        <li><b>Ridge on the same features and the same folds: {f3(P.ridge_lopo_r2)}.</b>
+          The gradient boosting is earning its complexity — which is worth checking rather
+          than assuming.</li>
+      </ul>
+      <p class="demo">
+        <b>What this demonstrates.</b> Knowing that a validation design is a modelling
+        decision, that a spatial target leaks through geography, and that a headline metric
+        can be almost entirely composed of structure the model was handed rather than
+        signal it found.
+      </p>
+      <p class="go">
+        <a class="strong" href="/poverty/">Open the dashboard<span aria-hidden="true"> →</span></a>
+        <a href="/poverty/article/">Method and validation<span aria-hidden="true"> →</span></a>
+        <a href={blob("cases/poverty-map/pipeline/model.py")}>model.py<span aria-hidden="true"> →</span></a>
+        <a href={blob("cases/poverty-map/pipeline/review.py")}>review.py<span aria-hidden="true"> →</span></a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ──────────────────────────────  RICE  ─────────────────────────────── -->
+  <section class="sec case" id="rice">
+    <div class="rail">Data engineering<span>{n(R.scenes)} radar scenes</span></div>
+    <div class="col wide">
+      <p class="topic">Java's rice harvest, from radar</p>
+      <h2>Precision {f2(R.precision)}, recall {f2(R.recall)} — and a controlled experiment
+        showing why</h2>
+      <p>
+        {n(R.scenes)} Sentinel-1 scenes over {R.regencies} of Java's largest rice
+        regencies, {R.first} to {R.last}, reduced to per-cell backscatter time series —
+        {n(R.cells_one_regency)} cells × {R.acquisitions_one_regency} acquisitions in one
+        regency alone, a median of {R.median_obs_per_cell} observations per cell. C-band
+        radar because it sees through monsoon cloud, which optical cannot.
+      </p>
+      <p>
+        The detector agrees with an independent rice map {pc(R.precision)} of the time on
+        the cells it flags, and finds {pc(R.recall)} of the cells that map calls rice.
+        <b>Precision is the one statistic a detector can always buy by finding fewer
+        fields</b>, so the interesting question is what limits recall. The published
+        explanation was cell size. It is not.
+      </p>
+
+      <h3>The experiment: same fields, same detector, fewer looks</h3>
+      <p>
+        {R.thinning.kabupaten}, {n(R.thinning.cells)} known rice cells,
+        {" "}{R.thinning.seasons} seasons. Acquisitions are removed from the record and the
+        unchanged detector re-runs. Soil, variety, weather, thresholds and code are all
+        held constant — only the revisit interval moves.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th class="num">Median gap</th><th class="num">Acquisitions</th><th class="num">Crop cycles found</th><th class="num">vs full record</th><th class="num">Extent recall</th></tr></thead>
+          <tbody>
+            {R.thinning.ladder.map((l, i) => (
+              <tr class={i === 0 ? "keep" : ""}>
+                <td class="num"><b>{l.gap_days} days</b></td>
+                <td class="num dim">{l.acquisitions}</td>
+                <td class="num">{n(l.cycles)}</td>
+                <td class="num big">{pc(l.cycles_vs_full)}</td>
+                <td class="num dim">{pc(l.extent_recall)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Doubling the revisit interval from {R.thinning.ladder[0].gap_days} to
+        {" "}{R.thinning.ladder[1].gap_days} days costs
+        {" "}<b>{pc(1 - R.thinning.ladder[1].cycles_vs_full)} of the crop cycles</b>. The
+        binding constraint is how often the satellite looks, not how finely it resolves —
+        and across regencies the correlation between revisit gap and extent recall is
+        {" "}<b>{f2(R.revisit_corr)}</b>.
+      </p>
+
+      <h3>What it is actually good for</h3>
+      <ul class="findings">
+        <li><b>The date, not the hectares.</b> Monthly area correlates with the official
+          series at {f2(R.timing.xcorr_at_zero)} — near nothing. Allow a
+          {" "}{R.timing.lag_months}-month systematic lag and the same series correlates at
+          {" "}<b>{f2(R.timing.xcorr_at_lag)}</b>. The instrument recovers <em>when</em> the
+          harvest lands, which is the more useful product, and not the quantity it was
+          built to estimate.</li>
+        <li><b>Calibration, scored on a hold-out rather than in-sample.</b> Uncalibrated
+          monthly R² {f2(R.calibration.uncalibrated_r2)} → in-sample
+          {" "}{f2(R.calibration.in_sample_r2)} → <b>hold-out
+          {" "}{f2(R.calibration.holdout_r2)}</b>. Reporting only the middle number is the
+          usual way this gets published.</li>
+        <li><b>The benchmark was checked before it was trusted.</b> The official survey
+          changed method in {R.benchmark_break_year}, a {R.benchmark_break_pct}% step —
+          {" "}four years before this record opens on {R.record_opens}, so it cannot explain
+          the shortfall. Ruling that out mattered more than any model change.</li>
+      </ul>
+      <p class="demo">
+        <b>What this demonstrates.</b> Satellite ingest and reduction at volume; designing
+        a controlled experiment on a pipeline you already built; and being willing to
+        conclude that the product is a different quantity than the one you set out to
+        measure.
+      </p>
+      <p class="go">
+        <a class="strong" href="/rice/">Open the dashboard<span aria-hidden="true"> →</span></a>
+        <a href="/rice/article/">Method and validation<span aria-hidden="true"> →</span></a>
+        <a href={blob("cases/rice-security/pipeline/ingest_sar.py")}>ingest_sar.py<span aria-hidden="true"> →</span></a>
+        <a href={blob("cases/rice-security/pipeline/audit.py")}>audit.py<span aria-hidden="true"> →</span></a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ──────────────────────────────  HAZE  ─────────────────────────────── -->
+  <section class="sec case" id="haze">
+    <div class="rail">Operational modelling<span>{n(H.fwi_rows)} rows</span></div>
+    <div class="col wide">
+      <p class="topic">Fire and haze early warning</p>
+      <h2>AUC {f3(H.leads[0].auc)} a day ahead, against the operational index's
+        {" "}{f3(H.vs_fwi.fwi)}</h2>
+      <p>
+        Day-ahead fire risk over {n(H.cells)} cells, trained on {n(H.fwi_rows)} rows of
+        weather and fire history across {H.fwi_years} years. The positive class is
+        {" "}<b>{(H.base_rate * 100).toFixed(1)}%</b> of rows, so the model is scored on
+        ranking rather than accuracy, and negatives are subsampled at
+        {" "}{H.neg_sample_rate} with {H.rounds} boosting rounds.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Horizon</th><th class="num">Rows scored</th><th class="num">AUC</th></tr></thead>
+          <tbody>
+            {H.leads.map((l) => (
+              <tr>
+                <td><b>{l.days} day{l.days > 1 ? "s" : ""} ahead</b></td>
+                <td class="num dim">{n(l.n)}</td>
+                <td class="num big">{f3(l.auc)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <ul class="findings">
+        <li><b>The rival is an operational index, not nothing.</b> On the same
+          {" "}{n(H.vs_fwi.n)} rows, the Fire Weather Index scores
+          {" "}{f3(H.vs_fwi.fwi)} and this model {f3(H.vs_fwi.model)}. Beating a real
+          incumbent is the only comparison that means anything; beating a constant is not
+          a result.</li>
+        <li><b>Held out on the years that matter.</b> {H.anchors.map((a) => a.year).join(" and ")}
+          {" "}— the two catastrophic haze seasons — are excluded from training entirely
+          and scored as anchors: AUC {H.anchors.map((a) => f3(a.auc)).join(" and ")}. A
+          model that only works in ordinary years is useless for the purpose.</li>
+        <li><b>Blocked in space and in season.</b> {H.spatial.folds} spatial folds over
+          {" "}{H.spatial.blocks} blocks of {H.spatial.block_deg}°, plus season-held-out
+          folds, because fire is autocorrelated in both dimensions and a random split
+          would flatter it in both.</li>
+        <li><b>Attribution that admits when it cannot attribute.</b> A back-trajectory
+          ensemble over {n(H.trajectory.parcels)} parcels and
+          {" "}{n(H.trajectory.receptor_days)} receptor-days names a likely source province
+          for smoke — and reports that <b>{pc(H.trajectory.unattributable)} of receptor-days
+          have no attributable source at all.</b> The naming is stable for
+          {" "}{pc(H.trajectory.stable_at_48h)} of episodes when the trajectory is truncated
+          at 48 hours, and agrees with observed bearing within 30° for
+          {" "}{pc(H.trajectory.bearing_within_30)} of them.</li>
+      </ul>
+      <p class="demo">
+        <b>What this demonstrates.</b> Imbalanced ranking problems scored the way they
+        should be, a baseline that is a real operational system, hold-out chosen for
+        consequence rather than convenience, and a downstream attribution step that
+        publishes its own failure rate.
+      </p>
+      <p class="go">
+        <a class="strong" href="/haze/">Open the dashboard<span aria-hidden="true"> →</span></a>
+        <a href="/haze/article/">Method and validation<span aria-hidden="true"> →</span></a>
+        <a href={blob("cases/fire-haze/pipeline/risk.py")}>risk.py<span aria-hidden="true"> →</span></a>
+        <a href={blob("cases/fire-haze/pipeline/transport.py")}>transport.py<span aria-hidden="true"> →</span></a>
+      </p>
+    </div>
+  </section>
+
+  <!-- ────────────────────────────  THE REST  ───────────────────────────── -->
+  <section class="sec" id="more">
+    <div class="rail">Also built<span>{rest.length} instruments</span></div>
+    <div class="col wide">
+      <h2>Same pipeline discipline, less depth on this page</h2>
+      <p>
+        Each has a live dashboard, a method article and a published set of checks. They get
+        a line here rather than a section because three worked examples say more than ten
+        summaries.
+      </p>
+      <ul class="strip">
+        {rest.map((i) => (
+          <li>
+            <a href={`/${i.slug}/`}>{i.title}</a>
+            <span>{i.line}</span>
+            <em>{i.found}</em>
+          </li>
+        ))}
+      </ul>
+      <div class="callout">
+        <p>
+          <b>And one replication.</b> A published thermoeconomic optimisation rebuilt from
+          the paper alone — three of five pre-registered checks reproduced, two did not,
+          and a compressor efficiency its own author no longer had was recovered from the
+          paper's own reported performance. It is here as proof of method rather than as a
+          subject: <a href="/notes/cascade-refrigeration/">the note</a>, and
+          {" "}<a href="/notes/cascade-explorer/">the dashboard</a> that recomputes 62,370
+          operating points in the browser.
+        </p>
+      </div>
+      <p class="go">
+        <a href="/stack/">What all of it is built with<span aria-hidden="true"> →</span></a>
+        <a href="/standards/">How a result gets to count<span aria-hidden="true"> →</span></a>
+      </p>
+    </div>
+  </section>
+</Page>
+
+<style>
+  .hero { padding-bottom: 0.5rem; }
+  .eyebrow {
+    font-family: var(--sans); font-size: 0.72rem; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+    margin: 0 0 1.1rem;
+  }
+  .hero h1 { max-width: 26ch; }
+  .sec .col.wide { max-width: none; }
+  .case .col > p { max-width: 74ch; }
+
+  .topic { font-family: var(--sans); font-size: 0.7rem; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+    margin: 0 0 0.5rem; }
+  .case h2 { max-width: 30ch; }
+  .case h3 { margin-top: 2rem; }
+
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.dim { color: var(--muted); }
+  td.big { font-weight: 600; color: var(--ink); font-size: 1.02rem; }
+  tr.keep td.big { color: var(--accent); }
+
+  .findings { list-style: none; padding: 0; margin: 0.8rem 0 0;
+    font-family: var(--sans); font-size: 0.88rem; line-height: 1.62; color: var(--muted); }
+  .findings li { padding: 0.9rem 0; border-top: 1px solid var(--rule); max-width: 74ch; }
+  .findings b { color: var(--ink); font-weight: 600; }
+
+  .demo { font-family: var(--sans); font-size: 0.88rem; line-height: 1.6;
+    color: var(--muted); border-left: 3px solid var(--accent); padding: 0.2rem 0 0.2rem 1rem;
+    margin: 1.8rem 0 0; max-width: 72ch; }
+  .demo b { color: var(--ink); }
+
+  .go { display: flex; flex-wrap: wrap; gap: 0.6rem 1.7rem; margin: 1.5rem 0 0;
+    font-family: var(--sans); font-size: 0.88rem; }
+  .go a { color: var(--muted); text-decoration: none;
+    border-bottom: 1px solid var(--rule); padding-bottom: 2px; }
+  .go a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+  .go a.strong { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+  .strip { list-style: none; padding: 0; margin: 1.4rem 0 0;
+    border-top: 1px solid var(--rule); }
+  .strip li { padding: 0.95rem 0; border-bottom: 1px solid var(--rule); }
+  .strip a { font-family: var(--sans); font-size: 0.98rem; font-weight: 600;
+    color: var(--ink); text-decoration: none; }
+  .strip a:hover { color: var(--accent); }
+  .strip span { display: block; margin-top: 0.2rem; font-family: var(--sans);
+    font-size: 0.84rem; color: var(--muted); max-width: 74ch; }
+  .strip em { display: block; margin-top: 0.35rem; font-family: var(--sans);
+    font-size: 0.82rem; font-style: normal; color: var(--muted); opacity: 0.85;
+    max-width: 74ch; }
+</style>
