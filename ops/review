@@ -185,6 +185,11 @@ def check_licences(rep: CaseReport, case_dir: Path) -> None:
 
 def check_vintage(rep: CaseReport, case_dir: Path) -> None:
     """R4 — the data's vintage is stated, so a reader knows what they are looking at."""
+    if (case_dir / "NOTE").exists():
+        rep.add("R4 vintage", NOTE,
+                "replication note — no web app to publish data from", "case")
+        return
+
     seen = None
     for f in web_json(case_dir):
         try:
@@ -207,6 +212,11 @@ def check_vintage(rep: CaseReport, case_dir: Path) -> None:
 
 def check_gates(rep: CaseReport, case_dir: Path) -> None:
     """R5 — gates are published with an explicit outcome, including the failures."""
+    if (case_dir / "NOTE").exists():
+        rep.add("R5 gates", NOTE,
+                "replication note — no web app to publish data from", "case")
+        return
+
     found = False
     for f in web_json(case_dir):
         try:
@@ -250,8 +260,73 @@ def check_raw_data_shipped(rep: CaseReport, case_dir: Path) -> None:
                         f"or a copy of the source?", sub)
 
 
+def _glossary_terms() -> tuple[set[str], list[str]]:
+    """Defined terms and the watchlist, read straight out of shared/glossary.js."""
+    src = (Path(__file__).resolve().parent.parent / "shared/glossary.js").read_text()
+    body = src[: src.find("export function")]
+    defined = {m.group(1).strip('"').lower()
+               for m in re.finditer(r'^\s{2}"?([A-Za-z0-9²\- ]+)"?:\s*\{', body, re.M)}
+    wl = re.search(r"export const WATCHLIST = \[(.*?)\];", src, re.S)
+    watch = re.findall(r'"([^"]+)"', wl.group(1)) if wl else []
+    return defined, watch
+
+
+def check_glossary(rep: CaseReport, case_dir: Path) -> None:
+    """R8 — a term a reader meets is either plain or defined.
+
+    Checked against the RENDERED article, not the source: source scanning flags variable
+    names, which is how "F1" looked like undefined jargon in nine cases while appearing
+    in none of them as a word.
+    """
+    art = case_dir / "web/src/pages/article.astro"
+    if not art.exists():
+        return
+    if 'id="glossary"' not in art.read_text():
+        rep.add("R8 glossary", BLOCK, "article has no glossary section — run ops/glossary sync",
+                "web/src/pages")
+        return
+
+    copy = case_dir / "web/src/data/glossary.js"
+    shared = Path(__file__).resolve().parent.parent / "shared/glossary.js"
+    if not copy.exists():
+        rep.add("R8 glossary", BLOCK, "no definitions copy — run ops/glossary sync", "web/src/data")
+        return
+    if copy.read_text() != shared.read_text():
+        rep.add("R8 glossary", BLOCK,
+                "definitions have drifted from shared/glossary.js — run ops/glossary sync",
+                "web/src/data")
+        return
+
+    built = case_dir / "web/dist/article/index.html"
+    if not built.exists():
+        rep.add("R8 glossary", NOTE, "not built, so rendered prose could not be checked", "web/dist")
+        return
+    prose = re.sub(r"<[^>]+>", " ", built.read_text())
+    prose = re.sub(r"\s+", " ", prose)
+    defined, watch = _glossary_terms()
+    missing = [t for t in watch
+               if t.lower() not in defined
+               and re.search(rf"(?<![A-Za-z]){re.escape(t)}(?![A-Za-z])", prose, re.I)]
+    if missing:
+        rep.add("R8 glossary", WARN,
+                "used in the published prose with no definition: " + ", ".join(sorted(missing)),
+                "web/dist")
+    else:
+        rep.add("R8 glossary", NOTE, "every watched term a reader meets is defined", "case")
+
+
 def check_article(rep: CaseReport, case_dir: Path) -> None:
-    """R7 — an article exists and is separable from the live dashboard."""
+    """R7 — an article exists and is separable from the live dashboard.
+
+    A case carrying a NOTE marker is a replication published as a finding rather than an
+    instrument, and has no dashboard by design. An instrument is four stages; a
+    replication is a result. Blocking one for lacking an interface would be enforcing a
+    rule against work the rule was never written for.
+    """
+    if (case_dir / "NOTE").exists():
+        rep.add("R7 article", NOTE,
+                "replication note — no dashboard by design", "case")
+        return
     art = case_dir / "web/src/pages/article.astro"
     idx = case_dir / "web/src/pages/index.astro"
     if not idx.exists():
@@ -287,6 +362,7 @@ def review_case(case_dir: Path) -> CaseReport:
     check_gates(rep, case_dir)
     check_raw_data_shipped(rep, case_dir)
     check_article(rep, case_dir)
+    check_glossary(rep, case_dir)
     rep.pending = [f"{rid}: {q}" for rid, q in JUDGEMENT]
     return rep
 

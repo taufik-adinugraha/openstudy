@@ -44,6 +44,39 @@ MANIFEST="$STATE/apps.tsv"
 SRV="/srv/demo"
 WEB="/srv/demo/web"
 API_PORT="${API_PORT:-4330}"
+
+# The knowledge assistant is a separate commercial product. When this file holds a
+# hostname it gets its own server block and its own root, and leaves the research
+# site's tree entirely rather than sitting under it at /lab/knowledge.
+PROV_HOST_FILE="$STATE/PROVENANCE_HOST"
+PROV_ROOT="/srv/provenance"
+prov_host() { tr -d '[:space:]' < "$PROV_HOST_FILE" 2>/dev/null; }
+is_prov_app() { [[ "$1" == *"platform/knowledge/web" ]]; }
+
+# Bases this server no longer publishes. They are not deleted from the repo — they stop
+# being served and every request 301s to the site root, so any link handed out earlier
+# still lands somewhere rather than on a 404.
+RETIRED_FILE="$STATE/RETIRED_BASES"
+retired_bases() { tr -s '[:space:]' ' ' < "$RETIRED_FILE" 2>/dev/null; }
+
+# Guessable paths that should land somewhere real. Every case is served at a top-level
+# slug, so a reader looking for the refrigeration work types /cascade/ and gets a 404 —
+# the page lives under /notes/. One line per alias: "<alias> <target>", # for comments.
+ALIAS_FILE="$STATE/ALIASES"
+aliases() { sed -e 's/#.*//' -e '/^[[:space:]]*$/d' "$ALIAS_FILE" 2>/dev/null; }
+is_retired() {
+  local b="$1" r
+  for r in $(retired_bases); do [[ "${b%/}" == "${r%/}" ]] && return 0; done
+  return 1
+}
+
+# Names the research site answers for: every certificate name except the assistant's.
+main_names() {
+  local ph out=() n
+  ph="$(prov_host)"
+  for n in $DOMAIN_LIST; do [[ -n "$ph" && "$n" == "$ph" ]] || out+=("$n"); done
+  printf '%s' "${out[*]}"
+}
 # The domain, once there is one. Kept in a file rather than in this script so that
 # `ops/tls` can set it and this generator can stay the single writer of the config.
 DOMAIN_LIST="$(cat "$STATE/DOMAIN" 2>/dev/null || echo _)"
@@ -162,7 +195,7 @@ cmd_install() {
         echo "    listen $pt;"
         echo "    listen [::]:$pt;"
       done
-      echo "    server_name $DOMAIN_LIST;"
+      echo "    server_name $(main_names);"
       echo "    location /.well-known/acme-challenge/ { root $WEB; }"
       echo "    location / { return 301 https://\$host\$request_uri; }"
       echo "}"
@@ -170,7 +203,7 @@ cmd_install() {
       echo "    listen 443 ssl;"
       echo "    listen [::]:443 ssl;"
       echo "    http2 on;"
-      echo "    server_name $DOMAIN_LIST;"
+      echo "    server_name $(main_names);"
       echo "    ssl_certificate     $CERTDIR/fullchain.pem;"
       echo "    ssl_certificate_key $CERTDIR/privkey.pem;"
       echo "    ssl_protocols TLSv1.2 TLSv1.3;"
@@ -186,7 +219,7 @@ cmd_install() {
         echo "    listen $pt;"
         echo "    listen [::]:$pt;"
       done
-      echo "    server_name $DOMAIN_LIST;"
+      echo "    server_name $(main_names);"
       echo "    location /.well-known/acme-challenge/ { root $WEB; }"
     fi
     echo "    root $WEB;"
@@ -203,6 +236,8 @@ cmd_install() {
     local kbase
     kbase=$(awk -F'\t' '$4 ~ /platform\/knowledge\/web$/ {print $3}' "$MANIFEST")
     kbase="${kbase:-/knowledge}"
+    # With its own host, the research site does not proxy the assistant at all.
+    if [[ -z "$(prov_host)" ]]; then
     echo "    # The assistant's API, same origin, so the page works over https without"
     echo "    # reaching for another port."
     echo "    location ${kbase%/}/api/ {"
@@ -214,6 +249,20 @@ cmd_install() {
     echo "        proxy_read_timeout 180s;   # a model call is not a static file"
     echo "    }"
     echo ""
+    fi
+    local rb
+    for rb in $(retired_bases); do
+      echo "    # retired: kept as a redirect so old links still resolve"
+      echo "    location = ${rb%/} { return 301 /; }"
+      echo "    location ${rb%/}/ { return 301 /; }"
+    done
+    local al at
+    while read -r al at; do
+      [[ -n "$al" && -n "$at" ]] || continue
+      echo "    # alias: a path a reader would guess, pointed at the page that answers it"
+      echo "    location = ${al%/} { return 301 $at; }"
+      echo "    location = ${al%/}/ { return 301 $at; }"
+    done < <(aliases)
     echo "    location / { try_files \$uri \$uri/ \$uri/index.html =404; }"
     echo "    # hashed filenames, so they can be cached hard"
     echo "    location ~* /_astro/ { expires 1y; add_header Cache-Control \"public, immutable\"; }"
@@ -222,6 +271,48 @@ cmd_install() {
     echo "    gzip_types text/css application/javascript application/json image/svg+xml;"
     echo "    gzip_min_length 1024;"
     echo "}"
+
+    local ph; ph="$(prov_host)"
+    if [[ -n "$ph" ]]; then
+      local ptls=0
+      if sudo test -s "$CERTDIR/fullchain.pem" && \
+         sudo openssl x509 -in "$CERTDIR/fullchain.pem" -noout -text 2>/dev/null \
+           | grep -q "DNS:$ph"; then ptls=1; fi
+      echo ""
+      echo "# $ph — a separate product on the same box: own server block, own root,"
+      echo "# and no path under the research site."
+      echo "server {"
+      echo "    listen 80;"
+      echo "    listen [::]:80;"
+      echo "    server_name $ph;"
+      echo "    location /.well-known/acme-challenge/ { root $WEB; }"
+      if (( ptls )); then
+        echo "    location / { return 301 https://\$host\$request_uri; }"
+        echo "}"
+        echo "server {"
+        echo "    listen 443 ssl;"
+        echo "    listen [::]:443 ssl;"
+        echo "    server_name $ph;"
+        echo "    ssl_certificate     $CERTDIR/fullchain.pem;"
+        echo "    ssl_certificate_key $CERTDIR/privkey.pem;"
+      fi
+      echo "    root $PROV_ROOT;"
+      echo "    index index.html;"
+      echo "    client_max_body_size 12m;"
+      echo "    location /api/ {"
+      echo "        proxy_pass http://127.0.0.1:$API_PORT/api/;"
+      echo "        proxy_http_version 1.1;"
+      echo "        proxy_set_header Host \$host;"
+      echo "        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;"
+      echo "        proxy_set_header X-Forwarded-Proto \$scheme;"
+      echo "        proxy_read_timeout 180s;"
+      echo "    }"
+      echo "    location / { try_files \$uri \$uri/ \$uri/index.html =404; }"
+      echo "    location ~* /_astro/ { expires 1y; add_header Cache-Control \"public, immutable\"; }"
+      echo "    gzip on;"
+      echo "    gzip_types text/css application/javascript application/json image/svg+xml;"
+      echo "}"
+    fi
   } | sudo tee "$CONF" >/dev/null
   if (( tls )); then
     echo "  https enabled for $DOMAIN"
@@ -263,7 +354,21 @@ cmd_publish() {
       (( hit )) || continue
     fi
     [[ -d "$wd/dist" ]] || { echo "  skip $unit — no dist, run build first"; continue; }
+    if is_retired "$base"; then
+      echo "  $unit — retired, $base now redirects to /"
+      sudo rm -rf "$WEB/${base#/}"
+      continue
+    fi
     local target="$WEB"
+    if [[ -n "$(prov_host)" ]] && is_prov_app "$wd"; then
+      target="$PROV_ROOT"
+      sudo mkdir -p "$target"
+      sudo rsync -a --delete "$wd/dist/" "$target/" || { echo "  FAILED $unit"; continue; }
+      sudo chmod -R a+rX "$target"
+      echo "  $unit -> $target  (separate host: $(prov_host))"
+      done_n=$((done_n+1))
+      continue
+    fi
     [[ "$base" == "/" ]] || target="$WEB/${base#/}"
     sudo mkdir -p "$target"
     # --delete removes whatever the source no longer has, which is what keeps a

@@ -112,15 +112,79 @@ import Page from "../layouts/Page.astro";
     </div>
   </section>
 
+  <section class="sec" id="sources">
+    <div class="rail">Sources<span>public, not open</span></div>
+    <div class="col measure">
+      <h2>Why this site says "public data" and not "open data"</h2>
+      <p>
+        It used to say open. It is not, in the strict sense. Everything is <b>publicly obtainable</b>, and much
+        of it needs a free account and an API key. Those are different claims, and the
+        difference matters to the one person who tries to re-run something.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>What it takes to obtain</th><th>Which sources</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><b>A free account and a key</b></td>
+              <td>NASA Earthdata and LAADS (night lights, fire detections), Copernicus
+                (Sentinel-1, ERA5, CEMS, GLO-30), BPS (the official statistics every case
+                is calibrated against), UN Comtrade</td>
+            </tr>
+            <tr>
+              <td><b>Nothing at all</b></td>
+              <td>GDELT's open feeds, Zenodo deposits, geoBoundaries, HDX, Google Open
+                Buildings, OpenStreetMap</td>
+            </tr>
+            <tr>
+              <td class="no"><b>A paid subscription, since 2026</b></td>
+              <td>EOG's VIIRS night-lights product, which moved behind a subscriber wall in
+                June 2026. The pipeline switched to NASA Black Marble; EOG is now a manual
+                annual cross-check only</td>
+            </tr>
+            <tr>
+              <td class="no"><b>No stated licence</b></td>
+              <td>TransJakarta's own GTFS feed, used with attribution and written
+                confirmation requested — the named exception to the rule above. Jakarta's
+                BPBD flood-history polygons carry no licence text either</td>
+            </tr>
+            <tr>
+              <td><b>Excluded on licence</b></td>
+              <td>Meta's Relative Wealth Index and the SMERU poverty map (CC BY-NC), GADM
+                (non-commercial), and several GFW layers licensed "CC BY 4.0 excluding
+                Indonesia" — which is exactly the jurisdiction this site works in</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn">
+        <p>
+          <b>The exclusions cost something, and one of them cost a result.</b> Dropping
+          Meta's wealth index and the SMERU map removed the poverty case's planned
+          independent cross-check against a <em>different</em> construct. A temporal
+          hold-out replaced it, which tests whether the same construct is stable over time —
+          not the same thing. A reader was right to say that substitution was announced
+          rather than argued.
+        </p>
+      </div>
+      <p class="dim">
+        The requirement for a contributor is therefore not "open data". It is
+        <b>data you can lawfully share, from a source whose terms are stated</b> — which is
+        what <a href="/contribute/#new">the path that asks for data</a> now says.
+      </p>
+    </div>
+  </section>
+
   <section class="sec" id="unverifiable">
     <div class="rail">Unverifiable<span>what you cannot check yet</span></div>
     <div class="col measure">
       <h2>The part of this page you have to take on trust</h2>
       <p>
         Everything above argues that the work should be believed because it can be checked.
-        A reader pointed out that the objects required to check it were not published, and
-        they were right. Three of the five things listed here have since been fixed; the
-        list stays, with what changed, because a standard nobody can hold you to is not one.
+        For a long time the objects required to check it were not published, which made the
+        argument unfalsifiable. Three of the five things listed here have since been fixed;
+        the list stays, with what changed, because a standard nobody can hold you to is not
+        one.
       </p>
       <div class="callout">
         <p>
@@ -235,12 +299,11 @@ import Page from "../layouts/Page.astro";
 
       <h3>These six are a floor, not a boast</h3>
       <p>
-        A computational scientist reading this page pointed out that every criterion above
-        is an affordance a charting library hands you — linked views are one selection plus
-        a filter transform, a time scrubber is a slider bound to that filter, drill-down is
-        a click handler on a choropleth. She was right, and the word "advanced" does not
-        belong on a list of library features. What follows is what would actually be hard,
-        stated so the standard can be held to something rather than flattered by it.
+        Every criterion above is an affordance a charting library hands you — linked views
+        are one selection plus a filter transform, a time scrubber is a slider bound to that
+        filter, drill-down is a click handler on a choropleth. So the word "advanced" does
+        not belong on a list of library features. What follows is what would actually be
+        hard, stated so the standard can be held to something rather than flattered by it.
       </p>
       <div class="tw">
         <table>

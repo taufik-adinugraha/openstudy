@@ -45,3 +45,8 @@ platform/knowledge/api/knowledge.db
 # FMV product material — a separate private repo, never in the public one
 docs/spec-pustaka.html
 docs/build-plan.html
+
+# The knowledge assistant is a separate commercial product with its own private
+# repository. It was removed from this repository's entire history with
+# git-filter-repo, and this line is what stops a bulk copy putting it back.
+/platform/

@@ -1,0 +1,360 @@
+---
+// A replication note. /contribute/ says a replication "publishes as its own note",
+// and this is what that looks like: the finding is the product, and the explorer at
+// /notes/cascade-explorer/ is the same model made interrogable rather than a separate
+// instrument.
+//
+// Every number is read from the records the pipeline wrote — gates.json for the
+// pre-registered checks, findings.json for what surfaced afterwards — so the prose
+// cannot drift from the run.
+import Page from "../../layouts/Page.astro";
+import G from "../../data/cascade-cold.json";
+import F from "../../data/cascade-findings.json";
+
+const gates = G.gates;
+const g = (id) => gates.find((x) => x.id === id);
+const f3 = (n) => (n == null ? "—" : Number(n).toFixed(3));
+const usd = (n) => "$" + Number(n).toLocaleString("en-US");
+const failed = gates.filter((x) => x.status === "fail");
+const passed = gates.filter((x) => x.status === "pass");
+const implied = g("G-3").implied;
+const costs = g("G-4").per_mixture;
+const common = g("G-5").per_mixture;
+const winner = Object.keys(common).reduce((a, b) => (common[a].best_cop > common[b].best_cop ? a : b));
+
+// findings that surfaced only when the envelope was made recomputable
+const vac = F.sub_atmospheric_low_side.per_mixture;
+const vacMix = Object.keys(vac).filter((m) => vac[m].sub_atmospheric > 0);
+const dtI = F.cost_minimising_cascade_approach.inferred_coefficient;
+const dtP = F.cost_minimising_cascade_approach.printed_coefficient;
+const pr = F.pressure_ratio_range;
+const spur = Object.entries(F.property_solver.per_mixture)
+  .filter(([, r]) => r.beat_carnot > 0);
+const pct = (x) => Math.round(x * 100) + "%";
+---
+
+<Page
+  title="Replication note — a cascade refrigeration optimisation"
+  description="Rebuilding a published thermoeconomic optimisation from the paper alone: what reproduced, what did not, and a compressor efficiency recovered from the paper's own reported COP."
+>
+  <section class="hero">
+    <p class="eyebrow">Replication note · no data or code from the authors</p>
+    <h1>Three of five checks reproduced.<br /><em>Two did not.</em></h1>
+    <p class="lead">
+      A published optimisation of a −80 °C cascade refrigeration system, rebuilt from the
+      paper's own equations and re-scored against the numbers it reports. It needed nothing
+      from the authors — no dataset, no code, no permission. Two of the five pre-registered
+      checks failed, and one of the failures is about the paper's method rather than ours.
+    </p>
+    <dl class="tally">
+      <div><dt>Checks passed</dt><dd>{passed.length}</dd></div>
+      <div><dt>Checks failed</dt><dd class="want">{failed.length}</dd></div>
+      <div><dt>From the authors</dt><dd>0</dd></div>
+      <div><dt>Recovered</dt><dd>η<sub>is</sub></dd></div>
+    </dl>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Source<span>what was replicated</span></div>
+    <div class="col measure">
+      <p>
+        {G.replicates.citation}, doi:<a href={`https://doi.org/${G.replicates.doi}`}>{G.replicates.doi}</a>,
+        published open access under {G.replicates.licence}.
+      </p>
+      <p>
+        Propane in the high-temperature circuit, a CO₂/hydrocarbon mixture in the low
+        circuit, reaching −80 °C for biomedical cold storage. Two objectives: maximise
+        exergetic efficiency, minimise total annual cost, optimised with a genetic algorithm
+        over four operating temperatures.
+      </p>
+      <div class="callout">
+        <p>
+          <b>Nothing here is copied.</b> The cycle was rebuilt from the equations and
+          assumptions the paper states, with <a href="http://www.coolprop.org/">CoolProp</a>
+          in place of REFPROP. No figure is reproduced and no table is republished as data —
+          the licence forbids derivatives, and the paper's reported values appear only as
+          thresholds this implementation is scored against, which is ordinary scholarly
+          comparison. Generated {G.generated.slice(0, 10)} with CoolProp {G.coolprop_version}.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Recovered<span>a number its author no longer had</span></div>
+    <div class="col measure">
+      <h2>The compressor efficiency, back-solved from the paper's own COP</h2>
+      <p>
+        The paper says compression is "expressed as a function of pressure ratio" and never
+        gives the function. The author confirmed he no longer has it. Rather than assume
+        one, the cycle was inverted: what isentropic efficiency reproduces the COP the paper
+        reports, at the operating point it reports?
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Low-circuit mixture</th><th>Implied η<sub>is</sub></th></tr></thead>
+          <tbody>
+            {Object.entries(implied).map(([m, v]) => (
+              <tr><td>CO₂/{m}</td><td class="num">{f3(v)}</td></tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Three different working fluids agree to <b>±0.01</b>. That agreement is the evidence:
+        a cycle wrong in a fluid-dependent way would scatter. <b>The compressor was running
+        near η<sub>is</sub> ≈ 0.65</b>, and that is now a recoverable fact rather than a lost one.
+      </p>
+      <p class="dim">
+        The exergetic efficiency definition was missing too, and was resolved rather than
+        guessed: COP divided by the Carnot COP reproduces the paper's own 22–35% Pareto axis
+        from its own reported COP range of 0.40–0.65.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Checks<span>thresholds fixed before the runs</span></div>
+    <div class="col wide">
+      <div class="tw">
+        <table>
+          <thead><tr><th>Check</th><th>Hard</th><th>Outcome</th><th>What it means</th></tr></thead>
+          <tbody>
+            {gates.map((x) => (
+              <tr>
+                <td class="num">{x.id}</td>
+                <td class="dim">{x.hard ? "hard" : "soft"}</td>
+                <td class={x.status === "pass" ? "yes" : "no"}>{x.status}</td>
+                <td>{x.name}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Failure one<span>the composition rule</span></div>
+    <div class="col measure">
+      <h2>The optimum mixtures cannot be reproduced, because the rule is not published</h2>
+      <p>
+        The paper reports optimum compositions of 94%, 64% and 37% CO₂ by mass. Our
+        COP maximum sits at an endpoint of the composition range for all three mixtures.
+        The reason is in the paper's own methods: composition was chosen by
+        "maximizing COP, provided that the carbon dioxide did not undergo crystallization
+        and values capable of burning of hydrocarbons were reduced".
+      </p>
+      <p>
+        <b>Neither the crystallisation limit nor the flammability criterion is quantified
+        anywhere in the paper.</b> So the reported optima are constrained choices whose
+        constraints are not published. An ideal-solubility freeze-out limit does not
+        reproduce them either.
+      </p>
+      <p class="dim">
+        The dew-point convention used here does reproduce the qualitative shape of all three
+        published curves, including the mid-composition dip — which also explains why one
+        printed figure shows a negative COP. That region is where the evaporator enthalpy
+        rise collapses and the cycle stops closing; those points are recorded as infeasible
+        here rather than plotted as a negative number.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Failure two<span>the mixture ranking</span></div>
+    <div class="col measure">
+      <h2>The three mixtures were compared at three different temperatures</h2>
+      <p>
+        The paper's composition scans are captioned at <b>−80 °C</b>, <b>−85 °C</b> and
+        <b>−82 °C</b> respectively, and it then compares those curves to select CO₂/ethylene.
+        Re-scanned at a common −80 °C:
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Mixture</th><th>Best COP at −80 °C</th></tr></thead>
+          <tbody>
+            {Object.entries(common).map(([m, v]) => (
+              <tr>
+                <td>CO₂/{m}{m === winner ? " — best" : ""}</td>
+                <td class="num">{f3(v.best_cop)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p>
+        At a shared evaporation temperature the best mixture is <b>CO₂/{winner}</b>, not
+        ethylene. This was registered in advance as the check most likely to fail while
+        everything else passed, and it did.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Cost<span>the printed equation</span></div>
+    <div class="col measure">
+      <h2>As printed, the cost correlations give 2.4× the paper's own reported range</h2>
+      <p>
+        Implementing every correlation exactly as given, the paper's three reported optima
+        cost far more than the Pareto range the paper itself publishes. It localises to one
+        term — the cascade exchanger, whose small approach temperature implies a large area.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Mixture</th><th>As printed</th><th>Coefficient ÷ 10</th><th>Paper's own range</th></tr></thead>
+          <tbody>
+            {Object.entries(costs).map(([m, c]) => (
+              <tr>
+                <td>CO₂/{m}</td>
+                <td class="no num">{usd(c.as_printed_usd)}</td>
+                <td class="yes num">{usd(c.reconstructed_usd)}</td>
+                <td class="num dim">{usd(c.band[0])}–{usd(c.band[1])}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p>
+        Reducing that one coefficient tenfold puts all three inside the published bands,
+        which is consistent with a lost decimal point. <b>That is our inference, not the
+        paper's statement</b> — adopted with the author's agreement, and both numbers are
+        published so a reader can take either.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Afterwards<span>what the model already knew</span></div>
+    <div class="col measure">
+      <h2>Four things nobody had asked the model</h2>
+      <p>
+        The five checks above were fixed before the runs. These came later, when the
+        explorer was rewritten to recompute the envelope instead of interpolating a
+        sampled one. None of them is a verdict on the paper; all four were sitting
+        inside the model from the first run, unasked.
+      </p>
+
+      <h3>The low side runs under vacuum — but only for the mixture the paper did not pick</h3>
+      <p>
+        The paper reports no circuit pressures, so this is invisible in it. At a
+        {F.sub_atmospheric_low_side.at_condenser_c} °C condenser and a
+        {F.sub_atmospheric_low_side.at_dt_k} K approach, CO₂/{vacMix.join(" and CO₂/")}
+        sits below atmospheric on the low-circuit suction at
+        {pct(vac[vacMix[0]].share)} of its feasible operating points, down to
+        {vac[vacMix[0]].suction_bar_range[0]} bar absolute. A circuit under vacuum at
+        standstill draws air and moisture in through any leak, which is the ordinary way
+        a −80 °C plant dies. The other two mixtures never do it.
+      </p>
+      <p>
+        That matters because of check G-5. At a common evaporation temperature the best
+        COP belongs to CO₂/{winner} — and CO₂/{winner} is also the one that goes
+        sub-atmospheric. A comparison on COP alone would recommend the fluid with the
+        design problem.
+      </p>
+
+      <h3>The disputed cost coefficient does the opposite of what it looks like</h3>
+      <p>
+        A reader could reasonably suspect that dividing the cascade-exchanger cost
+        coefficient by ten lets the optimiser buy a huge exchanger and sit at the
+        smallest approach. It does not. Over all
+        {dtI.combinations.toLocaleString()} combinations of mixture and the other three
+        decisions, the cost-minimising approach is
+        {dtI.range_k[0]}–{dtI.range_k[1]} K with the coefficient we inferred — most often
+        {dtI.most_common_k} K, in {pct(dtI.most_common_share)} of cases — which is
+        squarely inside ordinary industrial practice. With the coefficient
+        <em>as printed</em> it is {dtP.range_k[0]} K in
+        {pct(dtP.most_common_share)} of cases: pinned to the top of the range.
+      </p>
+      <p>
+        So the paper's own reported optima at 1.5–1.8 K are not cost minima under either
+        coefficient. They are points chosen at the efficiency end of a two-objective
+        front, which is a legitimate choice — and now a visible one.
+      </p>
+
+      <h3>One compressor efficiency covers a ninefold spread of pressure ratio</h3>
+      <p>
+        Across {pr.points.toLocaleString()} operating points the low circuit's pressure
+        ratio runs {pr.low_circuit[0].toFixed(1)} to {pr.low_circuit[1].toFixed(1)} and
+        the high circuit's {pr.high_circuit[0].toFixed(1)} to
+        {pr.high_circuit[1].toFixed(1)}. A single flat η<sub>is</sub> of
+        0.65 is applied to all of them. Real isentropic efficiency falls as pressure
+        ratio rises, so the coldest part of the envelope is flattered by an amount this
+        implementation cannot quantify — the paper said it had that function and never
+        printed it. This is the weakest assumption in the model, and it is ours as much
+        as the paper's.
+      </p>
+
+      <h3>The property library returns a spurious root, and it was setting the front</h3>
+      <p>
+        {F.property_solver.library} fails to converge at isolated nodes for the two
+        mixtures whose partner sits nearest its own critical temperature. Worse, at
+        {spur.map(([m, r]) => `${r.beat_carnot} nodes for CO₂/${m}`).join(" and ")} it
+        returns a saturated-liquid enthalpy roughly 700 kJ/kg out of line with its
+        neighbour one kelvin away, which produced a COP of 1.73 at −80 °C — 94% of the
+        Carnot ceiling for a cascade with a 0.65 compressor. Those points sat at the top
+        of the explorer's Pareto front and set its axis. Any circuit that comes out
+        better than Carnot between its own two temperatures is now refused, and the
+        refusal is shown to the reader as a reason rather than a gap.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="rail">Standing<span>what this is and is not</span></div>
+    <div class="col measure">
+      <div class="callout warn">
+        <p>
+          <b>This is a replication, not a verdict.</b> Every statement above is about
+          <em>this</em> run against the numbers that paper reports, which is the only
+          claim a replication is entitled to. Where a check failed, the failure is a
+          statement about what can be reproduced from a published description — not
+          about whether the original result is true.
+        </p>
+      </div>
+      <div class="callout">
+        <p>
+          <b>The whole operating envelope is explorable.</b> Every finding above sits at
+          one point in a four-dimensional space of operating choices.
+          <a href="/notes/cascade-explorer/">Move the four controls</a> and watch
+          efficiency and annual cost trade against each other. Nothing there is
+          interpolated: the two circuits are separable, so the same model recomputes
+          every point in the browser, and the economic assumptions are controls too.
+        </p>
+      </div>
+      <p>
+        The code is public and MIT licensed:
+        <a href="https://github.com/taufik-adinugraha/openstudy">github.com/taufik-adinugraha/openstudy</a>,
+        under <code>cases/cascade-cold/</code>. Two commands reproduce every number on this
+        page. If a check here is wrong, that is
+        <a href="/contribute/#attack">the most useful thing you could tell us</a>.
+      </p>
+    </div>
+  </section>
+</Page>
+
+<style>
+  .hero { padding-bottom: 0.5rem; }
+  .eyebrow {
+    font-family: var(--sans); font-size: 0.72rem; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 1.1rem;
+  }
+  .hero h1 { max-width: 24ch; }
+  .sec .col.wide { max-width: none; }
+  .tally {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 1px; margin: 1.9rem 0 0; padding: 0;
+    background: var(--rule); border: 1px solid var(--rule);
+  }
+  .tally > div { background: var(--ground); padding: 0.85rem 1rem; }
+  .tally dt {
+    font-family: var(--sans); font-size: 0.66rem; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+  }
+  .tally dd {
+    margin: 0.3rem 0 0; font-family: var(--sans); font-size: 1.6rem;
+    font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink);
+  }
+  .tally dd.want { color: var(--flag); text-shadow: 0 0 22px var(--glow-flag); }
+</style>

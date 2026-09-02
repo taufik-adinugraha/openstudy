@@ -10,6 +10,13 @@ const { title, description, current } = Astro.props;
 
 const NAV = [
   ["/", "Instruments"],
+  // Notes are the site's other kind of output — a replication publishes as a note, not
+  // as an instrument. Without this the only finished interactive work was five screens
+  // down the homepage and nowhere in the nav.
+  ["/notes/", "Notes"],
+  // For a reader deciding whether the person who built this can do the work. It is the
+  // page they will look for and, until now, the one the site did not have.
+  ["/stack/", "Stack"],
   ["/contribute/", "Contribute"],
   ["/publishing/", "Publishing"],
   ["/rights/", "Rights"],
@@ -29,6 +36,7 @@ const NAV = [
     <!-- The site answers on three names — the real domain, www, and a dynamic-DNS name
          kept as failover. This tells a crawler which one is authoritative, rather than
          redirecting the failover and defeating its purpose. -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="canonical" href={new URL(Astro.url.pathname, "https://openstudy.id").href} />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -57,7 +65,7 @@ const NAV = [
     <footer class="foot">
       <div class="wrap">
         <span>openstudy.id — analytical instruments for open research</span>
-        <span>Instruments: <a href="/standards/">CC BY 4.0</a> · code MIT <a href="/standards/#unverifiable">once published</a></span>
+        <span>Instruments: <a href="/standards/">CC BY 4.0</a> · <a href="https://github.com/taufik-adinugraha/openstudy">code on GitHub</a>, MIT</span>
         <span><a href="/about/">Who runs this, and why</a></span>
       </div>
     </footer>

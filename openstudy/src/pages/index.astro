@@ -27,20 +27,34 @@ const nAnimated = Object.values(tiles).filter((t) => t?.animated).length;
 
 <Page
   title="Advanced analytics and dashboards for research that already exists"
-  description="Your research, rebuilt as a working instrument: a pipeline that re-runs from source, models scored against honest baselines, and an interactive dashboard you can present. Advanced analytics, ML/AI and advanced visualization on published or in-progress work. The findings stay yours."
+  description="Your research, rebuilt as a working instrument: a pipeline that re-runs from source, models scored against honest baselines, and an interrogable dashboard you can present. Advanced analytics, ML/AI, replication and interactive visualization on published or in-progress work. The findings stay yours."
   current="/"
 >
   <section class="hero">
-    <p class="eyebrow">Open data · Indonesia — advanced analytics · ML/AI · interactive dashboards</p>
+    <p class="eyebrow">
+      <a href="/standards/#sources">Public data</a> · Indonesia —
+      <a href="#caught">advanced analytics</a> ·
+      <a href="#built">ML/AI</a> ·
+      <a href="/notes/cascade-refrigeration/">replication</a> ·
+      <a href="/standards/#visualization">interactive dashboards</a>
+    </p>
     <h1>You did the research.<br /><em>It still lives in a PDF.</em></h1>
     <p class="lead">
       There is usually code behind a paper — a script, a solver, a model that works. What
       there usually is not is a pipeline anyone else can re-run from source, an evaluation
       against baselines that already contain the easy knowledge, and an <b>interactive
-      dashboard you can put on a screen in front of a room</b>. That is what gets built
-      here, on work you have already published or are still working on.
-      <b>Advanced analytics and advanced visualization are the missing parts — not your
-      expertise.</b> The findings stay yours.
+      dashboard you can put on a screen in front of a room</b>.
+      <b>Advanced analytics and interrogable dashboards, applied to research that already
+      exists</b> — published or still in progress, <b>built at no cost</b>. The findings
+      stay yours.
+    </p>
+    <p class="lead">
+      And rebuilding an analysis properly tends to
+      <a href="#caught">turn something up</a>: a forecast that turns out to be no better
+      than doing nothing, most of a model's error tracing back to one thing nobody had
+      checked, a number the original authors no longer had — recovered from their own
+      published results. <b>That part is not packaging.</b> Every example is real, and the
+      working is shown.
     </p>
     <dl class="tally">
       <div><dt>Instruments live</dt><dd>{N}</dd></div>
@@ -49,17 +63,17 @@ const nAnimated = Object.values(tiles).filter((t) => t?.animated).length;
       <div><dt>Open to challenge</dt><dd>{N}</dd></div>
     </dl>
     <p class="tally-note">
-      <b>Nought conclusions is not nought refusals.</b> No domain author has been
-      approached yet — the invitations are written and unsent. Four readers told us the old
-      wording read as ten people having already said no, so it is stated here instead of
-      left to be guessed.
+      <b>Nought conclusions is not nought refusals.</b> No domain author has been approached
+      yet — the invitations are written and unsent. Said plainly because the number reads,
+      otherwise, as ten people having already declined.
     </p>
 
     <div class="hero-actions">
-      <a class="cta" href="#instruments">
+      <a class="cta" href="/contribute/#published">Start with a published paper</a>
+      <a class="cta ghost" href="#instruments">
         {SEEKING.length > 0
-          ? `${SEEKING.length} instrument${SEEKING.length === 1 ? "" : "s"} seeking an author`
-          : `${N} instruments, all open to challenge`}
+          ? `Or interpret one of ${SEEKING.length}`
+          : `Or challenge one of ${N}`}
       </a>
       <a class="cta ghost" href="/contribute/">How this works</a>
     </div>
@@ -84,7 +98,8 @@ const nAnimated = Object.values(tiles).filter((t) => t?.animated).length;
                 A 2016 paper reported a COP but not the isentropic efficiency behind it.
                 Inverting the cycle against three different refrigerant mixtures returned
                 0.642, 0.649 and 0.662 — a spread of 0.01</td>
-              <td>cascade replication</td>
+              <td><a href="/notes/cascade-refrigeration/">cascade replication</a> ·
+                <a href="/notes/cascade-explorer/">dashboard</a></td>
               <td>Three independent fluids agreeing is the evidence. A wrong cycle would
                 have scattered</td>
             </tr>
@@ -92,7 +107,7 @@ const nAnimated = Object.values(tiles).filter((t) => t?.animated).length;
               <td><b>57% of the squared error was a single constant per province.</b>
                 A satellite cannot see the poverty line the roofs are judged against —
                 and a random k-fold would have reported R² 0.65 instead of 0.395</td>
-              <td>poverty map</td>
+              <td><a href="/poverty/">poverty map</a></td>
               <td>Only a spatially-blocked fold design exposes it. The inflation was the
                 finding</td>
             </tr>
@@ -100,20 +115,20 @@ const nAnimated = Object.values(tiles).filter((t) => t?.animated).length;
               <td><b>A nowcast 41% worse than doing nothing</b>, with 99.5% of it
                 intercept — a number that would print almost unchanged if the satellite
                 were switched off</td>
-              <td>nightlights</td>
+              <td><a href="/nightlights/">nightlights</a></td>
               <td>Requires scoring against a naive rival. Without one it looks like skill</td>
             </tr>
             <tr>
               <td><b>The archive shrank 4.4× in nine years.</b> Raw counts would have told
                 a confident and completely false story about attention</td>
-              <td>global narrative</td>
+              <td><a href="/narrative/">global narrative</a></td>
               <td>Found by checking the denominator, which nothing in the data announces</td>
             </tr>
             <tr>
               <td><b>Precision bought by detecting less.</b> A detector quoted 83%
                 agreement as evidence it found the rice; precision is the one statistic a
                 detector can always buy by finding fewer fields</td>
-              <td>rice security</td>
+              <td><a href="/rice/">rice security</a></td>
               <td>Caught in adversarial review of our own published claim, which was then
                 corrected on the page</td>
             </tr>
@@ -141,7 +156,7 @@ const nAnimated = Object.values(tiles).filter((t) => t?.animated).length;
       <div class="callout warn">
         <p>
           <b>This section used to say "Journals publish figures. Nobody publishes
-          instruments." That was false</b>, and three readers said so. JOSS refereeing
+          instruments." That was false.</b> JOSS refereeing
           software, ReScience publishing replications, eLife's executable articles, Code
           Ocean capsules and ACM artifact badges all exist. So do OpenSees, OpenFOAM,
           HEC-RAS and SWMM — whole fields have shipped runnable models for decades.
@@ -160,6 +175,38 @@ const nAnimated = Object.values(tiles).filter((t) => t?.animated).length;
         needs statistics, models and software. Explanation needs the subject. Both get
         named credit for what they did, and neither has a veto over the other.</p>
       </div>
+    </div>
+  </section>
+
+  <section class="sec" id="replications">
+    <div class="rail">Replications<span>published work, rebuilt</span></div>
+    <div class="col wide">
+      <h2>One is finished, and you can take it apart</h2>
+      <p>
+        A replication is not an instrument: somebody already answered the question in
+        print, and what is open is whether the answer can be rebuilt from what they
+        published. That is a finding, so it publishes as its own note — with a dashboard,
+        where the numbers move.
+      </p>
+      <article class="repl">
+        <p class="kicker">Cascade refrigeration · thermoeconomic optimisation, 2016</p>
+        <h3>
+          <a href="/notes/cascade-refrigeration/">Three of five checks reproduced. Two did
+            not.</a>
+        </h3>
+        <p>
+          A −80&nbsp;°C cascade system rebuilt from the paper's own equations, needing no
+          data, no code and no permission from the authors. A compressor efficiency the
+          paper never stated was recovered from its own reported performance. The whole
+          operating envelope — 62,370 operating points — recomputes in your browser, with
+          the economics as controls rather than constants.
+        </p>
+        <p class="go">
+          <a href="/notes/cascade-refrigeration/">Read the note<span aria-hidden="true"> →</span></a>
+          <a class="strong" href="/notes/cascade-explorer/">Open the dashboard<span aria-hidden="true"> →</span></a>
+          <a href="/notes/">All notes<span aria-hidden="true"> →</span></a>
+        </p>
+      </article>
     </div>
   </section>
 
@@ -216,7 +263,7 @@ const nAnimated = Object.values(tiles).filter((t) => t?.animated).length;
       <ol class="stages">
         <li>
           <h3>Pipeline</h3>
-          <p>Raw open data to analysis-ready tables, idempotent and re-runnable, with the
+          <p>Raw public data to analysis-ready tables, idempotent and re-runnable, with the
           fetch, the transforms and the provenance all recorded.</p>
         </li>
         <li>
@@ -234,7 +281,7 @@ const nAnimated = Object.values(tiles).filter((t) => t?.animated).length;
           thresholds fixed <em>before</em> results and every gate published, failures included.</p>
         </li>
         <li>
-          <h3>Advanced visualization</h3>
+          <h3>Interactive visualization</h3>
           <p>An interactive dashboard, not a static figure: linked views, animated time,
           drill-down to the unit of analysis, and controls that let a reader change an
           assumption and watch the answer move. Built to be read by someone who did not
@@ -262,7 +309,11 @@ const nAnimated = Object.values(tiles).filter((t) => t?.animated).length;
                 before a referee does</td></tr>
             <tr><td><b>A replication</b></td>
               <td>Your published method rebuilt independently from the paper alone, and a
-                straight answer on what reproduces and what does not</td>
+                straight answer on what reproduces and what does not —
+                <a href="/notes/cascade-refrigeration/">here is one</a>: three checks
+                reproduced, two did not, and a compressor efficiency recovered from the
+                paper's own reported COP — with
+                <a href="/notes/cascade-explorer/">its whole operating envelope explorable</a></td>
               <td>Someone questioned the result — or you want to know first. Needs no data
                 and no code from you</td></tr>
             <tr><td><b>The visualization</b></td>
@@ -480,6 +531,14 @@ const nAnimated = Object.values(tiles).filter((t) => t?.animated).length;
     letter-spacing: 0.14em; text-transform: uppercase;
     color: var(--accent); margin: 0 0 1.1rem;
   }
+  /* Every claim in the first line points at the page that backs it, which is the
+     shortest possible answer to "says who?". Underline only on hover, so it reads as
+     one line rather than a row of buttons. */
+  .eyebrow a {
+    color: inherit; text-decoration: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+  .eyebrow a:hover { border-bottom-color: var(--accent); text-shadow: 0 0 14px var(--glow); }
   .hero h1 { max-width: 26ch; }
   .hero-actions { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1.8rem; }
   .cta {

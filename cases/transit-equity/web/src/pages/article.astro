@@ -7,6 +7,8 @@
  * numbers. SVG only: no WebGL, no canvas anywhere on this page.
  */
 import "../styles/tokens.css";
+import { glossaryFor } from "../data/glossary.js";
+import __src from "./article.astro?raw";
 import A from "../data/article.json";
 import R from "../data/review.json";
 
@@ -451,6 +453,11 @@ const accBelow = [...byAcc].reverse().find((c) => c.a < cityMean)!;
 const accAbove = byAcc.find((c) => c.a > cityMean)!;
 const giniMoreUnequal = WB.cities.filter((c) => c.g > cityGini).length;
 const regionBelowAll = WB.cities.every((c) => c.a > S.all.mean_jobs_share);
+// Only the terms this article actually uses, scanned from its own source at build
+// time so no per-article list has to be kept in step by hand. The frontmatter is
+// excluded: variable names are not prose, and scanning them defined 'F1' and
+// 'median' on pages where no reader ever meets those words.
+const __glossary = glossaryFor(__src.slice(__src.indexOf('\n---', 3)));
 ---
 <html lang="en" data-case="transit" data-theme="dark">
   <head>
@@ -478,10 +485,30 @@ const regionBelowAll = WB.cities.every((c) => c.a > S.all.mean_jobs_share);
         study area, the footprint proxy or the reporting unit — and the one distributional claim
         the case could not make, we make here.</p>
         <div class="byline">
-          <span>Demo Lab · FMV</span><span>Routed {A.window.date} {A.window.from}–{A.window.to}</span>
+          <span>openstudy.id</span><span>Routed {A.window.date} {A.window.from}–{A.window.to}</span>
           <span>{nf(A.origins)} origins · {A.cutoffs.join("/")} min</span>
         </div>
       </div>
+
+      <details class="glossary" id="glossary">
+        <summary>
+          <span>Plain-language glossary</span>
+          <span class="gcount">{__glossary.length} terms this article uses</span>
+        </summary>
+        <p class="glossary-lede">
+          Written for someone who knows the subject and not this vocabulary. The instrument
+          and measurement terms come first, because those are the ones a specialist in the
+          subject has no reason to know; the statistics follow.
+        </p>
+        <dl>
+          {__glossary.map((g) => (
+            <div>
+              <dt>{g.term}</dt>
+              <dd>{g.plain}</dd>
+            </div>
+          ))}
+        </dl>
+      </details>
 
       <section class="abstract">
         <h2>Abstract</h2>
@@ -1018,7 +1045,7 @@ const regionBelowAll = WB.cities.every((c) => c.a > S.all.mean_jobs_share);
           <li><b>An equity screen for Bappenas.</b> §9's double-disadvantage list —
           {nf(PL.double_disadvantage_count)} kelurahan, {nf(PL.double_disadvantage_pop)} people, poor
           and disconnected together — is exactly the intersection a national planning agency needs
-          and rarely has, and it exists only because two Demo Lab cases were joined.</li>
+          and rarely has, and it exists only because two openstudy.id cases were joined.</li>
           <li class="no"><b>Not: a cardinal statement of the size of the gap.</b>
           "{cut60.ratio.toFixed(0)}×" is {cut30.ratio.toFixed(0)}× at a shorter budget,
           {TJ.volume.ratio.toFixed(0)}× on a better proxy, and unquotable without the reporting unit
@@ -1123,7 +1150,7 @@ const regionBelowAll = WB.cities.every((c) => c.a > S.all.mean_jobs_share);
       </section>
 
       <footer class="end">
-        <p>Part of the Demo Lab. Built end-to-end on public data — acquisition, routing, model,
+        <p>Built end-to-end on public data — acquisition, routing, model,
         validation, and this review.</p>
         <a class="cta" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/`}>← Back to the hour</a>
       </footer>
@@ -1216,7 +1243,31 @@ const regionBelowAll = WB.cities.every((c) => c.a > S.all.mean_jobs_share);
         figure { padding: 14px 8px 10px; }
       }
       @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
-    </style>
+    
+  .glossary { max-width: 46rem; margin: 2rem auto 2.5rem; padding: 0;
+    border: 1px solid var(--hairline, #2a2a2a); background: rgba(255,255,255,0.015); }
+  .glossary > summary { cursor: pointer; padding: 0.9rem 1.1rem; display: flex;
+    flex-wrap: wrap; gap: 0.2rem 0.8rem; align-items: baseline;
+    font-size: 0.95rem; font-weight: 600; color: var(--ink, #e8ede9); }
+  .glossary > summary:hover { color: var(--accent, #6fc7d6); }
+  /* display:flex on a <summary> removes the disclosure marker in every browser, so
+     the panel read as a static bar rather than a control. Put one back explicitly. */
+  .glossary > summary { list-style: none; }
+  .glossary > summary::-webkit-details-marker { display: none; }
+  .glossary > summary::before { content: "\25B8"; color: var(--accent, #6fc7d6);
+    font-size: 0.85em; line-height: 1.4; }
+  .glossary[open] > summary::before { content: "\25BE"; }
+  .glossary > summary:focus-visible { outline: 2px solid var(--accent, #6fc7d6);
+    outline-offset: 2px; }
+  .glossary .gcount { font-size: 0.78rem; font-weight: 400;
+    color: var(--ink-muted, #93a198); }
+  .glossary-lede { margin: 0 1.1rem 1.1rem; font-size: 0.88rem; line-height: 1.6;
+    color: var(--ink-muted, #93a198); }
+  .glossary dl { margin: 0; padding: 0 1.1rem 1.2rem; display: grid; gap: 1rem; }
+  .glossary dt { font-weight: 600; font-size: 0.93rem; color: var(--ink, #e8ede9); }
+  .glossary dd { margin: 0.25rem 0 0; font-size: 0.91rem; line-height: 1.6;
+    color: var(--ink-muted, #93a198); }
+</style>
 
     <script>
       /* Hover read-out for the scatter. Pure SVG, no GPU path. */

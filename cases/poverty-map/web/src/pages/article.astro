@@ -7,6 +7,8 @@
  * by hand, so the prose cannot drift from the numbers. SVG only: no WebGL, no canvas.
  */
 import "../styles/tokens.css";
+import { glossaryFor } from "../data/glossary.js";
+import __src from "./article.astro?raw";
 import A from "../data/article.json";
 
 const f1 = (x: number) => x.toFixed(1);
@@ -549,6 +551,11 @@ const cq = A.coverageQuintiles;
 /* the three provinces the model gets most wrong, named — from the same table as Figure 7 */
 const worstLow = provSorted[0], worstHigh = provSorted[provSorted.length - 1];
 const bali = A.provinces.find((p: any) => p.name === "Bali");
+// Only the terms this article actually uses, scanned from its own source at build
+// time so no per-article list has to be kept in step by hand. The frontmatter is
+// excluded: variable names are not prose, and scanning them defined 'F1' and
+// 'median' on pages where no reader ever meets those words.
+const __glossary = glossaryFor(__src.slice(__src.indexOf('\n---', 3)));
 ---
 <html lang="en" data-case="poverty" data-theme="dark">
   <head>
@@ -574,10 +581,30 @@ const bali = A.provinces.find((p: any) => p.name === "Bali");
         own data, four ways. It does not survive any of them — and the real explanation is better
         news than the one being offered.</p>
         <div class="byline">
-          <span>Demo Lab · FMV</span><span>Data through {A.vintage}</span>
+          <span>openstudy.id</span><span>Data through {A.vintage}</span>
           <span>{S.lopo.n} regencies · {A.folds.lopo} province folds · {A.nFeatures} features</span>
         </div>
       </div>
+
+      <details class="glossary" id="glossary">
+        <summary>
+          <span>Plain-language glossary</span>
+          <span class="gcount">{__glossary.length} terms this article uses</span>
+        </summary>
+        <p class="glossary-lede">
+          Written for someone who knows the subject and not this vocabulary. The instrument
+          and measurement terms come first, because those are the ones a specialist in the
+          subject has no reason to know; the statistics follow.
+        </p>
+        <dl>
+          {__glossary.map((g) => (
+            <div>
+              <dt>{g.term}</dt>
+              <dd>{g.plain}</dd>
+            </div>
+          ))}
+        </dl>
+      </details>
 
       <section class="abstract">
         <h2>Abstract</h2>
@@ -1140,14 +1167,6 @@ const bali = A.provinces.find((p: any) => p.name === "Bali");
           job and it is far more precise than this one. It also requires microdata this case does not
           have — which is the honest reason this case exists, and should be stated as such.</li>
         </ol>
-        <p>This also fixes the case's position on the axis FMV works along — <i>see clearly, connect
-        wisely, act with evidence</i>, with the stated priority of closing the gap between
-        accumulating data and acting on it. Presented as an <b>Insight</b> product, this case is a
-        poverty map that fails its own accuracy check. Presented as a <b>Systems &amp; Learning</b>
-        product it is something better: a standing instrument that says where the official statistic
-        is least informative, at a resolution the statistic does not reach, with its own error
-        published beside every number. The deliverable is not the map. It is the shortlist of places
-        where the map and the survey disagree, handed to the institution that can go and look.</p>
       </section>
 
       <section id="s14">
@@ -1246,7 +1265,7 @@ const bali = A.provinces.find((p: any) => p.name === "Bali");
       </section>
 
       <footer class="end">
-        <p>Part of the Demo Lab. Built end-to-end on public data — acquisition, pipeline, model,
+        <p>Built end-to-end on public data — acquisition, pipeline, model,
         validation, and this review.</p>
         <a class="cta" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/`}>← Back to the instrument</a>
       </footer>
@@ -1349,7 +1368,31 @@ const bali = A.provinces.find((p: any) => p.name === "Bali");
           color: var(--ink-muted); opacity: 0.7; margin: 2px 0 10px; }
       }
       @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
-    </style>
+    
+  .glossary { max-width: 46rem; margin: 2rem auto 2.5rem; padding: 0;
+    border: 1px solid var(--hairline, #2a2a2a); background: rgba(255,255,255,0.015); }
+  .glossary > summary { cursor: pointer; padding: 0.9rem 1.1rem; display: flex;
+    flex-wrap: wrap; gap: 0.2rem 0.8rem; align-items: baseline;
+    font-size: 0.95rem; font-weight: 600; color: var(--ink, #e8ede9); }
+  .glossary > summary:hover { color: var(--accent, #6fc7d6); }
+  /* display:flex on a <summary> removes the disclosure marker in every browser, so
+     the panel read as a static bar rather than a control. Put one back explicitly. */
+  .glossary > summary { list-style: none; }
+  .glossary > summary::-webkit-details-marker { display: none; }
+  .glossary > summary::before { content: "\25B8"; color: var(--accent, #6fc7d6);
+    font-size: 0.85em; line-height: 1.4; }
+  .glossary[open] > summary::before { content: "\25BE"; }
+  .glossary > summary:focus-visible { outline: 2px solid var(--accent, #6fc7d6);
+    outline-offset: 2px; }
+  .glossary .gcount { font-size: 0.78rem; font-weight: 400;
+    color: var(--ink-muted, #93a198); }
+  .glossary-lede { margin: 0 1.1rem 1.1rem; font-size: 0.88rem; line-height: 1.6;
+    color: var(--ink-muted, #93a198); }
+  .glossary dl { margin: 0; padding: 0 1.1rem 1.2rem; display: grid; gap: 1rem; }
+  .glossary dt { font-weight: 600; font-size: 0.93rem; color: var(--ink, #e8ede9); }
+  .glossary dd { margin: 0.25rem 0 0; font-size: 0.91rem; line-height: 1.6;
+    color: var(--ink-muted, #93a198); }
+</style>
 
     <script>
       /* Hover read-outs. Pure SVG, no GPU path. */

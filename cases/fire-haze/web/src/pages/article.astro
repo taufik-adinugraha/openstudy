@@ -7,6 +7,8 @@
  * numbers. SVG only: no WebGL, no canvas, anywhere on this page.
  */
 import "../styles/tokens.css";
+import { glossaryFor } from "../data/glossary.js";
+import __src from "./article.astro?raw";
 import A from "../data/article.json";
 
 /* The case's validated chart palette, unchanged: model / climatology / persistence / CEMS FWI.
@@ -508,6 +510,11 @@ const sgMys = SG.provinces.filter((p: any) => !sgIdn.includes(p));
 const sgMysShare = sgMys.reduce((s: number, p: any) => s + p.share, 0);
 const southSumatra = SG.provinces.find((p: any) => p.p === "South Sumatra");
 const bestComp = FW1.like_for_like.best_component;
+// Only the terms this article actually uses, scanned from its own source at build
+// time so no per-article list has to be kept in step by hand. The frontmatter is
+// excluded: variable names are not prose, and scanning them defined 'F1' and
+// 'median' on pages where no reader ever meets those words.
+const __glossary = glossaryFor(__src.slice(__src.indexOf('\n---', 3)));
 ---
 <html lang="en" data-case="haze" data-theme="dark">
   <head>
@@ -534,11 +541,31 @@ const bestComp = FW1.like_for_like.best_component;
         that stranded the rest, and the attribution, replayed over every episode instead of one,
         points somewhere the page did not.</p>
         <div class="byline">
-          <span>Demo Lab · FMV</span><span>Data through {A.vintage}</span>
+          <span>openstudy.id</span><span>Data through {A.vintage}</span>
           <span>{nf(A.published.panel_rows)} cell-days · {nf(A.rescore.n_cells)} land cells</span>
           <span>{nf(TR.receptor_days)} receptor-days</span>
         </div>
       </div>
+
+      <details class="glossary" id="glossary">
+        <summary>
+          <span>Plain-language glossary</span>
+          <span class="gcount">{__glossary.length} terms this article uses</span>
+        </summary>
+        <p class="glossary-lede">
+          Written for someone who knows the subject and not this vocabulary. The instrument
+          and measurement terms come first, because those are the ones a specialist in the
+          subject has no reason to know; the statistics follow.
+        </p>
+        <dl>
+          {__glossary.map((g) => (
+            <div>
+              <dt>{g.term}</dt>
+              <dd>{g.plain}</dd>
+            </div>
+          ))}
+        </dl>
+      </details>
 
       <section class="abstract">
         <h2>Abstract</h2>
@@ -1420,7 +1447,7 @@ const bestComp = FW1.like_for_like.best_component;
       </section>
 
       <footer class="end">
-        <p>Part of the Demo Lab. Built end-to-end on public data — acquisition, pipeline, model,
+        <p>Built end-to-end on public data — acquisition, pipeline, model,
         validation, and this review.</p>
         <a class="cta" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/`}>← Back to the instrument</a>
       </footer>
@@ -1521,7 +1548,31 @@ const bestComp = FW1.like_for_like.best_component;
         .abstract { padding: 20px 18px; }
       }
       @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
-    </style>
+    
+  .glossary { max-width: 46rem; margin: 2rem auto 2.5rem; padding: 0;
+    border: 1px solid var(--hairline, #2a2a2a); background: rgba(255,255,255,0.015); }
+  .glossary > summary { cursor: pointer; padding: 0.9rem 1.1rem; display: flex;
+    flex-wrap: wrap; gap: 0.2rem 0.8rem; align-items: baseline;
+    font-size: 0.95rem; font-weight: 600; color: var(--ink, #e8ede9); }
+  .glossary > summary:hover { color: var(--accent, #6fc7d6); }
+  /* display:flex on a <summary> removes the disclosure marker in every browser, so
+     the panel read as a static bar rather than a control. Put one back explicitly. */
+  .glossary > summary { list-style: none; }
+  .glossary > summary::-webkit-details-marker { display: none; }
+  .glossary > summary::before { content: "\25B8"; color: var(--accent, #6fc7d6);
+    font-size: 0.85em; line-height: 1.4; }
+  .glossary[open] > summary::before { content: "\25BE"; }
+  .glossary > summary:focus-visible { outline: 2px solid var(--accent, #6fc7d6);
+    outline-offset: 2px; }
+  .glossary .gcount { font-size: 0.78rem; font-weight: 400;
+    color: var(--ink-muted, #93a198); }
+  .glossary-lede { margin: 0 1.1rem 1.1rem; font-size: 0.88rem; line-height: 1.6;
+    color: var(--ink-muted, #93a198); }
+  .glossary dl { margin: 0; padding: 0 1.1rem 1.2rem; display: grid; gap: 1rem; }
+  .glossary dt { font-weight: 600; font-size: 0.93rem; color: var(--ink, #e8ede9); }
+  .glossary dd { margin: 0.25rem 0 0; font-size: 0.91rem; line-height: 1.6;
+    color: var(--ink-muted, #93a198); }
+</style>
 
     <script>
       /* Hover read-outs. Pure SVG, no GPU path anywhere on this page. */

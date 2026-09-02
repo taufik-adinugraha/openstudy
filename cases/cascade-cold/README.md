@@ -1,7 +1,8 @@
 # cascade-cold — replication of a published thermoeconomic optimisation
 
-**Status: not publishable yet.** No dashboard exists, so `ops/review` blocks it on R7.
-The pipeline, the model and the gates run.
+**Status: published.** The replication note is at `/notes/cascade-refrigeration/` and the
+explorer at `/notes/cascade-explorer/`. The pipeline, the model, the gates, the circuit
+tabulation, its equivalence test and the findings record all run.
 
 ## What this replicates
 
@@ -112,16 +113,73 @@ on the original work (house rule J1).
 2. The printed T_EVAP decision-variable range reads "80 °C to 90 °C"; Table 1 makes clear it
    is −80 to −90.
 
+## The envelope is separable, so the browser recomputes it
+
+The dashboard first sampled all 9,504 nodes of the four-dimensional envelope and
+interpolated. That was unnecessary. In `solve()`, the low circuit depends on **two** of
+the four decision variables and nothing else, and the high circuit's duty enters only as
+a linear scale on mass flow:
+
+```
+w_H      = q_cond_L * k_w(T_CAS,E, T_COND)      k_w = (h2-h1)/((h1-h3)*eta_elmech)
+q_cond_H = q_cond_L * r_q(T_CAS,E, T_COND)      r_q = (h2-h3)/(h1-h3)
+```
+
+So a 6×21 table per mixture plus one 55×11 propane table — 2,949 nodes at three
+compressor efficiencies — reconstruct all **62,370** operating points in closed form,
+with no interpolation. `verify.py` checks that reconstruction against `solve()` at random
+points and agrees to **5×10⁻¹³**.
+
+Two consequences worth having:
+
+- **The economics become controls.** Electricity price, running hours, lifetime, interest
+  rate and the disputed cascade-exchanger coefficient all enter after the thermodynamics,
+  so a reader can move them.
+- **The engineering units are recoverable.** Circuit pressures, both pressure ratios,
+  mass flow and exchanger area were always computed and always discarded.
+
+## Findings after the gates — `data/findings.json`
+
+Not pre-registered; these surfaced when the envelope became recomputable.
+
+| finding | number |
+|---|---|
+| Low-circuit suction below atmospheric | **33% of CO₂/propane's feasible points**, to 0.792 bar abs. The other two mixtures never. |
+| Cost-minimising cascade approach, coefficient ÷10 | **6–9 K**, most often 7 K (45% of 3,630 combinations) |
+| Cost-minimising cascade approach, as printed | **15 K in 100%** of them |
+| Low-circuit pressure ratio across the envelope | **4.6 – 42.4**, all under one flat η_is = 0.65 |
+| CoolProp 8.0.0 spurious saturated-liquid root | 6 CO₂/ethane nodes at T_CAS,C = −4 °C, h₃ = −465 kJ/kg against +243 one kelvin away |
+
+The last of those had teeth: unfiltered it gave COP 1.73 at −80 °C — 94% of Carnot — and
+those points sat at the top of the dashboard's published Pareto front, setting its axis.
+Any circuit that comes out better than Carnot between its own two temperatures is now
+refused, with the reason shown to the reader.
+
+Note also that check G-5 says CO₂/propane wins on COP at a common evaporation
+temperature — and CO₂/propane is the one that runs sub-atmospheric. A comparison on COP
+alone would recommend the fluid with the design problem.
+
 ## Running it
 
 ```sh
 uv venv && VIRTUAL_ENV=.venv uv pip install CoolProp numpy
 .venv/bin/python pipeline/sweep.py      # composition scans -> data/composition_sweep.json
 .venv/bin/python pipeline/validate.py   # gates             -> data/gates.json
+.venv/bin/python pipeline/circuits.py   # circuit tables    -> data/circuits.json   (~100 s)
+.venv/bin/python pipeline/verify.py     # closed form == solve(), to 1e-9
+.venv/bin/python pipeline/findings.py   # findings          -> data/findings.json
 ```
 
-## Not built yet
+`pipeline/grid.py` and `data/envelope.json` are the superseded sampled envelope. They are
+kept because the interpolation claim on the first version of the page was made against
+them, and deleting the evidence for a claim you have withdrawn is not a correction.
 
-- The genetic algorithm producing the Pareto fronts (both objectives already compute).
-- The dashboard: four sliders — T_EVAP, T_CAS,C, T_COND, DT — plus a mixture selector,
-  with the Pareto front and the p–h diagram redrawing live. This is why R7 blocks.
+## Still not built
+
+- The genetic algorithm producing the Pareto fronts. Both objectives compute, and the
+  explorer draws the non-dominated set of the whole enumerated envelope instead, which
+  for a four-variable problem on this grid is stronger than a GA anyway.
+- η_is as a function of pressure ratio. This is the model's weakest assumption and the
+  paper's function is unrecoverable; supplying a credible published correlation and
+  republishing how the front moves would be a real contribution.
+- Any comparison against a measured machine. There is no hardware validation here.

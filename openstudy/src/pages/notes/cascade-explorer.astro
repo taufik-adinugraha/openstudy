@@ -1,0 +1,1039 @@
+---
+// The cascade replication, made interrogable.
+//
+// The first version of this page sampled the whole four-dimensional envelope — 9,504
+// points at ~115 ms each — and interpolated between them. It said so, which was honest,
+// but it was also unnecessary: the two circuits are separable, so two small tables
+// reconstruct every operating point in closed form. See cases/cascade-cold/pipeline/
+// circuits.py for the algebra and verify.py for the check that it reproduces the
+// pipeline's own solve() to 5e-13.
+//
+// What that buys, and why it was worth rewriting:
+//   · nothing on this page is interpolated. Every number is recomputed on the spot.
+//   · the economics stop being baked in. Electricity price, running hours, lifetime,
+//     interest rate and the disputed cascade-exchanger cost coefficient all enter after
+//     the thermodynamics, so a reader can move them and watch the optimum move.
+//   · the engineering units the paper computes and throws away — circuit pressures,
+//     pressure ratios, mass flow, exchanger area — come free, and one of them is a
+//     design constraint the paper never mentions: the low side goes sub-atmospheric.
+//   · the compressor efficiency the paper never stated has a real spread (0.642-0.662,
+//     inverted from its own three reported optima), so all three are tabulated and
+//     every headline number carries the band rather than three false decimals.
+import Page from "../../layouts/Page.astro";
+import C from "../../data/cascade-circuits.json";
+
+const AX = C.axes;
+const MIX = Object.keys(C.lt);
+const EMID = String(C.eta_is);
+const NC = AX.t_cas_c_c.length;
+const NODES = Object.values(C.lt).reduce(
+  (a, m) => a + Object.values(m.eta).reduce((b, r) => b + r.length, 0),
+  Object.values(C.ht.eta).reduce((b, r) => b + r.length, 0),
+);
+
+// Feasibility per mixture, from the tables rather than from memory. The low circuit is
+// the one that fails, and it fails at isolated nodes rather than across a region.
+const feas = Object.fromEntries(MIX.map((m) => {
+  const rows = C.lt[m].eta[EMID];
+  return [m, { ok: rows.filter((r) => !r.why).length, n: rows.length }];
+}));
+// Load on the mixture that works everywhere, not the one that fails most. The page
+// used to open on ethylene, where a reader's first fumble was likeliest to hit a dead
+// end with no hint that the mixture choice had caused it.
+const DEFAULT_MIX = MIX.reduce((a, b) => (feas[b].ok > feas[a].ok ? b : a), MIX[0]);
+---
+
+<Page
+  title="Cascade explorer — the operating envelope"
+  description="Four decision variables, three refrigerant mixtures, 62,370 operating points recomputed exactly in the browser. Move a control and watch efficiency and annual cost trade off against each other."
+>
+  <section class="hero">
+    <p class="eyebrow">Interrogable · {C.envelope_points.toLocaleString()} operating points, recomputed not interpolated</p>
+    <h1>Move a control.<br /><em>Watch the trade-off move.</em></h1>
+    <p class="lead">
+      A cascade refrigeration system reaching −80&nbsp;°C has two goals that fight each
+      other: get more useful cooling out of the electricity, or spend less money a year.
+      There is no single best answer — there is a curve of least-bad compromises, and
+      where you sit on it is a choice. This is that curve, the four decisions that move
+      you along it, and the engineering numbers the original paper computed and never
+      printed.
+    </p>
+    <p class="sub">
+      From the <a href="/notes/cascade-refrigeration/">replication note</a>: a published
+      optimisation rebuilt from the paper alone. Three of five checks reproduced;
+      <a href="#gates">two did not</a>, and both bear on what you see here.
+    </p>
+  </section>
+
+  <section class="sec widesec" id="fixed">
+    <div class="rail">Fixed<span>what the sliders cannot change</span></div>
+    <div class="col wide">
+      <p class="note">
+        Every number below is for <b>one machine</b>, and none of the controls resize it.
+        A reviewing engineer pointed out that the earlier version of this page never said
+        what the machine was supposed to cool — and that without a duty and a reference
+        temperature, neither the efficiency nor the cost figure can be read at all. He
+        was right, so they are here, at the top, before the controls.
+      </p>
+      <dl class="fixedgrid">
+        <div><dt>Cooling duty</dt><dd>500 W</dd>
+          <span>0.5 kW, the paper's stated capacity. Every cost and every exchanger area
+          on this page scales with it.</span></div>
+        <div><dt>Cold space</dt><dd id="f-room">—</dd>
+          <span>5 K above the evaporation temperature, so it follows that slider.
+          "−80 °C" throughout is the refrigerant, not the room.</span></div>
+        <div><dt>Dead state T₀</dt><dd>25 °C</dd>
+          <span>The reference for exergetic efficiency — <b>not</b> the condenser
+          temperature. At T<sub>E</sub> −80 °C this makes the Carnot ceiling 1.839, so a
+          COP of 0.65 is 35.4%.</span></div>
+        <div><dt>Compressor efficiency</dt><dd>0.642 – 0.662</dd>
+          <span>The paper never states one. These three values are inverted from its own
+          three reported optima; the band on every readout is that spread.</span></div>
+        <div><dt>Motor and mechanical</dt><dd>0.93</dd>
+          <span>Combined electrical and mechanical efficiency, as the paper states it.</span></div>
+        <div><dt>Currency</dt><dd>2016 USD</dd>
+          <span>The paper's own cost correlations, unescalated. Ten years of index
+          movement is not in these numbers.</span></div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="sec widesec" id="explore">
+    <div class="rail">Explore<span>the four decisions</span></div>
+    <div class="col wide">
+
+      <div class="mixrow" role="radiogroup" aria-label="Low-circuit refrigerant mixture">
+        {MIX.map((m) => (
+          <button
+            class={`mixbtn${m === DEFAULT_MIX ? " on" : ""}`}
+            data-mix={m}
+            type="button"
+            role="radio"
+            aria-checked={m === DEFAULT_MIX ? "true" : "false"}
+          >
+            CO₂/{m}
+            <span>{Math.round(C.lt[m].co2_mass_frac * 100)}% CO₂ ·
+              {" "}{Math.round((100 * feas[m].ok) / feas[m].n)}% feasible</span>
+          </button>
+        ))}
+      </div>
+
+      <div class="panelgrid">
+        <div class="controls">
+          <label class="ctl">
+            <span class="ctl-h">Evaporation temperature <b id="v-te">—</b></span>
+            <input id="s-te" type="range" min="0" max={AX.t_evap_c.length - 1} step="1"
+                   value="0" list="t-te" />
+            <datalist id="t-te">{AX.t_evap_c.map((_, i) => <option value={i}></option>)}</datalist>
+            <span class="ctl-n">How cold the refrigerant gets. Colder is harder work.</span>
+          </label>
+          <label class="ctl">
+            <span class="ctl-h">Cascade condensing temperature <b id="v-tc">—</b></span>
+            <input id="s-tc" type="range" min="0" max={AX.t_cas_c_c.length - 1} step="1"
+                   value="6" list="t-tc" />
+            <datalist id="t-tc">{AX.t_cas_c_c.map((_, i) => <option value={i}></option>)}</datalist>
+            <span class="ctl-n">Where the two circuits hand heat over. It has an interior
+              optimum — too warm and the low circuit struggles, too cold and the high
+              one does.</span>
+          </label>
+          <label class="ctl">
+            <span class="ctl-h">Condenser temperature <b id="v-tk">—</b></span>
+            <input id="s-tk" type="range" min="0" max={AX.t_cond_c.length - 1} step="1"
+                   value="2" list="t-tk" />
+            <datalist id="t-tk">{AX.t_cond_c.map((_, i) => <option value={i}></option>)}</datalist>
+            <span class="ctl-n">How hot the outdoor unit runs. One fixed value, not a
+              weather file — see the limits below.</span>
+          </label>
+          <label class="ctl">
+            <span class="ctl-h">Cascade approach <b id="v-dt">—</b></span>
+            <input id="s-dt" type="range" min="0" max={AX.dt_cascade_k.length - 1} step="1"
+                   value="4" list="t-dt" />
+            <datalist id="t-dt">{AX.dt_cascade_k.map((_, i) => <option value={i}></option>)}</datalist>
+            <span class="ctl-n">The temperature gap across the exchanger between the
+              circuits. Smaller wastes less energy and needs more steel.</span>
+          </label>
+          <p class="hintline" id="hint" role="status" aria-live="polite"></p>
+        </div>
+
+        <dl class="readout">
+          <div>
+            <dt>Coefficient of performance</dt>
+            <dd id="o-cop">—</dd>
+            <dd class="gloss">cooling delivered per unit of electricity, at 500 W of
+              cooling. Range is the compressor-efficiency spread.</dd>
+          </div>
+          <div>
+            <dt>Exergetic efficiency</dt>
+            <dd id="o-ex">—</dd>
+            <dd class="gloss">COP as a share of the Carnot ceiling between the
+              evaporation temperature and T₀ = 25 °C.</dd>
+          </div>
+          <div>
+            <dt>Total annual cost</dt>
+            <dd id="o-cost">—</dd>
+            <dd class="gloss" id="o-costgloss">equipment repaid over ten years, plus
+              electricity</dd>
+          </div>
+        </dl>
+      </div>
+
+      <h3 class="subh" id="units">The numbers the paper computed and never printed</h3>
+      <p class="note">
+        All of these were inside the original model — it cannot produce a cost without
+        them — and none appear in the published paper or in the first version of this
+        page. They are what a practitioner asks for first.
+      </p>
+      <dl class="engrid" id="engrid">
+        <div><dt>Low circuit, suction</dt><dd id="e-lpe">—</dd>
+          <dd class="gloss">bar absolute, at the evaporator outlet</dd></div>
+        <div><dt>Low circuit, discharge</dt><dd id="e-lpc">—</dd>
+          <dd class="gloss">bar absolute</dd></div>
+        <div><dt>Low circuit, pressure ratio</dt><dd id="e-lpr">—</dd>
+          <dd class="gloss">the number that decides whether one stage is enough</dd></div>
+        <div><dt>High circuit, suction</dt><dd id="e-hpe">—</dd>
+          <dd class="gloss">bar absolute, propane</dd></div>
+        <div><dt>High circuit, discharge</dt><dd id="e-hpc">—</dd>
+          <dd class="gloss">bar absolute</dd></div>
+        <div><dt>High circuit, pressure ratio</dt><dd id="e-hpr">—</dd>
+          <dd class="gloss">the compressor efficiency is held flat across all of these,
+            which is the model's weakest assumption</dd></div>
+        <div><dt>Cascade exchanger area</dt><dd id="e-acas">—</dd>
+          <dd class="gloss">m², from duty over U·ΔT. This is the term the cost dispute
+            is about.</dd></div>
+        <div><dt>Cascade duty</dt><dd id="e-qcas">—</dd>
+          <dd class="gloss">W handed from the low circuit to the high one</dd></div>
+        <div><dt>Low-circuit mass flow</dt><dd id="e-md">—</dd>
+          <dd class="gloss">g/s</dd></div>
+        <div><dt>Total electrical power</dt><dd id="e-w">—</dd>
+          <dd class="gloss">W, both compressors plus two 50 W fans</dd></div>
+        <div><dt>Capital cost</dt><dd id="e-cap">—</dd>
+          <dd class="gloss">2016 USD, all five components. Most of the annual figure is
+            this, repaid — not electricity.</dd></div>
+        <div><dt>— of which the cascade exchanger</dt><dd id="e-ccas">—</dd>
+          <dd class="gloss">the one term whose coefficient the replication had to
+            infer. Switch the coefficient above and watch this move.</dd></div>
+      </dl>
+      <p class="hintline warnline" id="standstill" role="status" aria-live="polite"></p>
+
+      <h3 class="subh" id="econ">The economics, which you can change</h3>
+      <p class="note">
+        In the paper these are constants, so "total annual cost" arrives with no tariff,
+        no discount rate and no hours in view. Here they enter after the thermodynamics,
+        so moving them costs nothing and shows how much of the answer they were carrying.
+      </p>
+      <div class="econgrid">
+        <label class="ctl">
+          <span class="ctl-h">Electricity <b id="v-el">—</b></span>
+          <input id="s-el" type="range" min="4" max="20" step="1" value="12" />
+          <span class="ctl-n">US cents/kWh. The paper uses 12.</span>
+        </label>
+        <label class="ctl">
+          <span class="ctl-h">Running hours <b id="v-hr">—</b></span>
+          <input id="s-hr" type="range" min="2000" max="8760" step="260" value="7000" />
+          <span class="ctl-n">per year. The paper uses 7,000 — not continuous.</span>
+        </label>
+        <label class="ctl">
+          <span class="ctl-h">Lifetime <b id="v-lf">—</b></span>
+          <input id="s-lf" type="range" min="5" max="25" step="1" value="10" />
+          <span class="ctl-n">years, over which the capital is repaid.</span>
+        </label>
+        <label class="ctl">
+          <span class="ctl-h">Interest <b id="v-ir">—</b></span>
+          <input id="s-ir" type="range" min="0" max="20" step="1" value="8" />
+          <span class="ctl-n">% a year, into the capital recovery factor.</span>
+        </label>
+      </div>
+      <div class="coefrow" role="radiogroup" aria-label="Cascade exchanger cost coefficient">
+        <span class="coeflabel">Cascade exchanger cost coefficient</span>
+        <button class="coefbtn on" data-coef="2382.9" type="button" role="radio" aria-checked="true">
+          2382.9 <span>our inference</span>
+        </button>
+        <button class="coefbtn" data-coef="23829" type="button" role="radio" aria-checked="false">
+          23829 <span>as printed</span>
+        </button>
+      </div>
+      <p class="note dim" id="coefnote"></p>
+
+      <figure class="fig">
+        <figcaption>
+          <b>The trade-off curve.</b> Every feasible operating point for this mixture,
+          with the least-bad compromises picked out. Efficiency increases to the
+          <b>right</b>; annual cost increases <b>upward</b> — so better is
+          <b>down and to the right</b>, and the curve is where you can no longer have
+          both. Hover any point to read its settings; click a point on the curve to move
+          the controls there.
+        </figcaption>
+        <div id="chart-pareto" class="chartbox" tabindex="0"></div>
+        <p class="legend">
+          <span class="k cloud"></span>every feasible point
+          <span class="k front"></span>the non-dominated front
+          <span class="k locus"></span>where your controls are
+          <span class="k ghost"></span>last feasible position
+        </p>
+        <p class="hintline" id="probe" role="status" aria-live="polite"></p>
+      </figure>
+
+      <figure class="fig">
+        <figcaption>
+          <b>What each decision does to the coefficient of performance.</b> One control
+          varied at a time, everything else held where you left it. All four panels share
+          one vertical scale, so a flat line really is a decision that does not matter
+          here — the earlier version scaled each panel to its own range, which made every
+          decision look equally important.
+        </figcaption>
+        <div id="chart-resp" class="chartbox tall" tabindex="0"></div>
+        <p class="hintline" id="respspan"></p>
+      </figure>
+
+      <div class="callout" id="gates">
+        <p><b>The two checks that failed, stated here because they bear on this page.</b></p>
+        <p>
+          <b>G-1, optimum composition.</b> The three mixture buttons are fixed at the
+          paper's own reported compositions — 94%, 64% and 37% CO₂ — and those are the
+          numbers the replication could <em>not</em> reproduce. The paper selects them by
+          maximising COP "provided that the carbon dioxide did not undergo
+          crystallization and values capable of burning of hydrocarbons were reduced",
+          and quantifies neither limit. So this page inherits a failed check as an input:
+          you can move four decisions, but not the one whose selection rule is missing.
+        </p>
+        <p>
+          <b>G-5, mixture ranking.</b> The paper's three composition scans are captioned
+          at −80, −85 and −82 °C, and it then compares those curves to select
+          CO₂/ethylene. At a common −80 °C, propane wins. Anyone citing this paper for a
+          fluid choice is citing a comparison taken at three different temperatures.
+        </p>
+      </div>
+
+      <div class="callout warn" id="limits">
+        <p><b>What this cannot tell you.</b> It answers questions about one published
+          optimisation. It is not a design tool, and the gap is not small.</p>
+        <ul class="lim">
+          <li><b>The duty is fixed at 500 W.</b> Nothing here sizes a component for any
+            other load, and there is no part-load behaviour.</li>
+          <li><b>The compressor efficiency is flat.</b> Real isentropic efficiency falls
+            with pressure ratio. The paper said it had that function and never printed
+            it. Holding it flat systematically flatters the cold end of the envelope, so
+            the shape of the trade-off curve near −90 °C is the least trustworthy part
+            of this page.</li>
+          <li><b>No pressure drops, no superheat, no subcooling.</b> At −80 °C the
+            suction vapour is thin and line pressure drop is a first-order loss, not a
+            correction.</li>
+          <li><b>Fixed composition.</b> These are zeotropic mixtures. Real plants leak
+            and get topped up, and the composition drifts. A four-variable optimum on a
+            fixed composition is a photograph of day one.</li>
+          <li><b>No CO₂ freeze-out margin, no flammability limit, no charge mass.</b>
+            The paper's own composition-selection rule depends on both and quantifies neither;
+            we cannot supply what it did not publish.</li>
+          <li><b>No oil.</b> Miscibility and oil return from a −80 °C evaporator decide
+            whether these machines survive, and no cycle model sees them.</li>
+          <li><b>One ambient, one tariff structure, no redundancy.</b> No weather bins,
+            no peak/off-peak, and single-string — which nobody buys for the biomedical
+            storage the paper names as the application.</li>
+          <li><b>No hardware.</b> Nothing here has been checked against a measured
+            machine. If you have commissioning data from a cascade plant, that is the
+            most useful thing anyone could send us.</li>
+        </ul>
+      </div>
+
+      <div class="callout warn" id="baseline">
+        <p>
+          <b>The comparison this page is missing.</b> Our own
+          <a href="/standards/">house rules</a> say a model has to be scored against a
+          naive rival that already contains the easy knowledge, because choosing a weak
+          one is the most common way to publish a result that is not there. For a 500 W
+          −80 °C box the naive rival is obvious and absent from both the paper and this
+          page: <b>a catalogue ultra-low-temperature freezer</b>, bought rather than
+          designed.
+        </p>
+        <p class="dim">
+          We are not going to invent a price for one, because a real comparison needs a
+          real quotation — model, capacity, measured power at a stated ambient, delivered
+          cost in Indonesia, and a service contract. If you can supply that, it settles
+          whether the whole optimisation is worth doing, and it is the single most useful
+          thing anyone could send us about this case.
+          <a href="/contribute/#attack">How to send it.</a>
+        </p>
+      </div>
+
+      <div class="callout" id="approach">
+        <p><b>On very small cascade approaches, and what the cost coefficient does.</b></p>
+        <p>
+          Good practice on a cascade exchanger is 3–5 K, and most plants run 5–10 K. A
+          1 K design approach is close to unverifiable in the field: a class-A Pt100 at
+          −30 °C is around ±0.2 K before installation error, so the instrument
+          uncertainty is a large fraction of the design gap. The slider still opens at
+          1 K, because the paper's own reported optima sit at 1.53–1.8 K and hiding that
+          would hide the finding.
+        </p>
+        <p id="dtfinding" class="dim"></p>
+      </div>
+
+      <div class="callout warn">
+        <p>
+          <b>Nothing on this page is interpolated.</b> The two circuits are separable —
+          the low one depends only on the evaporation and cascade condensing
+          temperatures, and the high one's duty enters linearly — so
+          {NODES.toLocaleString()} tabulated property lookups reconstruct all
+          {C.envelope_points.toLocaleString()} operating points in closed form, in your
+          browser, exactly. The pipeline's own <code>verify.py</code> checks that
+          reconstruction against the model at random points and agrees to 5×10⁻¹³. The
+          earlier version of this page sampled the envelope and interpolated between
+          nodes; it said so, but it was also unnecessary.
+        </p>
+        <p class="dim">
+          The refrigerant property library (CoolProp 8.0.0) fails to converge at isolated
+          nodes for the two mixtures whose partner sits nearest its own critical
+          temperature, and at six nodes for CO₂/ethane it returns a saturated-liquid
+          enthalpy 700 kJ/kg out of line with its neighbour one kelvin away. Unfiltered,
+          those six produced a COP of 1.73 at −80 °C — 94% of Carnot — and they sat at
+          the top of the front on the previous version of this page, setting its axis. A
+          circuit that comes out better than Carnot between its own two temperatures is
+          now refused and told to you as a reason.
+          <a href="https://github.com/taufik-adinugraha/openstudy">The code is public</a>.
+        </p>
+      </div>
+
+      <noscript>
+        <div class="callout warn">
+          <p><b>This page computes in your browser, so with JavaScript off there is
+            nothing to see.</b> The <a href="/notes/cascade-refrigeration/">replication
+            note</a> carries the same findings as prose and static numbers, including
+            both failed checks and the three reconstructions.</p>
+        </div>
+      </noscript>
+    </div>
+  </section>
+
+  <script is:inline define:vars={{ C, DEFAULT_MIX }}>
+    (function () {
+      const AX = C.axes;
+      const NC = AX.t_cas_c_c.length, NK = AX.t_cond_c.length;
+      const ETAS = C.eta_set.map(String);
+      const EMID = String(C.eta_is);
+      const HTI = new Map(AX.t_cas_e_c.map((v, i) => [v, i]));
+
+      /* ── constants, mirroring cases/cascade-cold/pipeline/model.py ───────── */
+      const Q = C.q_evap_w, T0 = C.t0_c, T_DROP = 5.0;
+      const U_EVAP = 18.03, U_COND = 6.85, U_CASCADE = 64.87, FAN_KW = 0.05;
+      const A_EVAP = Q / (U_EVAP * T_DROP);
+      const FANCOST = 629.05 * Math.pow(FAN_KW, 0.76);
+
+      const econ = { cents: 12, hours: 7000, life: 10, rate: 8, coef: 2382.9 };
+      const crf = () => {
+        const i = econ.rate / 100;
+        return i === 0 ? 1 / econ.life
+          : (i * Math.pow(1 + i, econ.life)) / (Math.pow(1 + i, econ.life) - 1);
+      };
+
+      let mix = DEFAULT_MIX;
+      const pos = { te: 0, tc: 6, tk: 2, dt: 4 };
+      let lastGood = null;                        // for the ghost marker
+      const el = (id) => document.getElementById(id);
+
+      /* ── one operating point, in closed form ─────────────────────────────── */
+      function point(m, p, eta) {
+        const lt = C.lt[m].eta[eta][p.te * NC + p.tc];
+        if (lt.why) return { why: lt.why, where: "the low circuit",
+                             fix: "raise the cascade condensing temperature" };
+        const ie = HTI.get(AX.t_cas_c_c[p.tc] - AX.dt_cascade_k[p.dt]);
+        if (ie === undefined) return { why: "outside the tabulated range", where: "the high circuit" };
+        const ht = C.ht.eta[eta][ie * NK + p.tk];
+        if (ht.why) return { why: ht.why, where: "the high circuit",
+                             fix: "reduce the cascade approach" };
+
+        const wl = lt.wl, qcas = lt.qc;
+        const wh = qcas * ht.kw, qch = qcas * ht.rq;
+        const wtot = wl + wh;
+        const cop = Q / wtot;
+
+        const teK = AX.t_evap_c[p.te] + 273.15;
+        const etaEx = cop / (teK / (T0 + 273.15 - teK));
+        if (!(etaEx > 0 && etaEx < 1))
+          return { why: "the cycle comes out better than Carnot, which means the property "
+                        + "solver returned a spurious root here", where: "the cycle" };
+
+        const tk = AX.t_cond_c[p.tk], dt = AX.dt_cascade_k[p.dt];
+        const whkw = wh / 1000, wlkw = wl / 1000;
+        const aCond = qch / (U_COND * (tk - T0));
+        const aCas = qcas / (U_CASCADE * dt);
+        const capital = 9624.2 * Math.pow(whkw, 0.46)
+                      + 10167.5 * Math.pow(wlkw, 0.46)
+                      + 1397 * Math.pow(aCond, 0.89) + FANCOST
+                      + 1397 * Math.pow(A_EVAP, 0.89) + FANCOST
+                      + econ.coef * Math.pow(aCas, 0.68);
+        const runkw = whkw + wlkw + 2 * FAN_KW;
+        const annual = capital * crf() + (econ.cents / 100) * econ.hours * runkw;
+
+        return { cop, etaEx, annual, capital, wtot,
+                 cCas: econ.coef * Math.pow(aCas, 0.68),
+                 lpe: lt.pe / 1e5, lpc: lt.pc / 1e5, lpr: lt.pc / lt.pe,
+                 hpe: ht.pe / 1e5, hpc: ht.pc / 1e5, hpr: ht.pc / ht.pe,
+                 md: lt.md * 1000, aCas, qcas };
+      }
+
+      /* the compressor efficiency the paper never stated has a real spread, so every
+         headline number is a band rather than three false decimals */
+      function band(m, p, field) {
+        const vs = ETAS.map((e) => point(m, p, e)).filter((r) => !r.why).map((r) => r[field]);
+        return vs.length ? { lo: Math.min(...vs), hi: Math.max(...vs) } : null;
+      }
+
+      /* ── the cloud, with each point's identity kept ──────────────────────── */
+      function cloud(m) {
+        const out = [];
+        for (let a = 0; a < AX.t_evap_c.length; a++)
+          for (let b = 0; b < NC; b++)
+            for (let c = 0; c < NK; c++)
+              for (let d = 0; d < AX.dt_cascade_k.length; d++) {
+                const r = point(m, { te: a, tc: b, tk: c, dt: d }, EMID);
+                if (!r.why) out.push({ ex: r.etaEx, cost: r.annual, te: a, tc: b, tk: c, dt: d });
+              }
+        return out;
+      }
+      function front(pts) {
+        const s = [...pts].sort((p, q) => q.ex - p.ex);
+        const keep = [];
+        let best = Infinity;
+        for (const p of s) if (p.cost < best) { keep.push(p); best = p.cost; }
+        return keep.reverse();
+      }
+
+      /* one domain for all three mixtures, so switching them is a comparison rather
+         than three curves autoscaled into the same frame */
+      let clouds = {}, domain = null;
+      function rebuild() {
+        clouds = {};
+        let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+        for (const m of Object.keys(C.lt)) {
+          clouds[m] = cloud(m);
+          for (const p of clouds[m]) {
+            if (p.ex < x0) x0 = p.ex; if (p.ex > x1) x1 = p.ex;
+            if (p.cost < y0) y0 = p.cost; if (p.cost > y1) y1 = p.cost;
+          }
+        }
+        domain = { x0: x0 * 100, x1: x1 * 100, y0, y1 };
+      }
+
+      /* ── svg helpers ─────────────────────────────────────────────────────── */
+      const NS = "http://www.w3.org/2000/svg";
+      // Astro scopes every rule in this file's <style> block to a data-astro-cid
+      // attribute it stamps on markup at build time. Elements built here at runtime
+      // never carry it, so no chart rule in that block reaches them — the layout has
+      // to be set inline. This is exactly what left the canvas and its axes stacked
+      // instead of overlaid.
+      function svg(w, h) {
+        const s = document.createElementNS(NS, "svg");
+        s.setAttribute("viewBox", `0 0 ${w} ${h}`);
+        s.setAttribute("role", "img");
+        Object.assign(s.style, { width: "100%", height: "auto", display: "block",
+                                 fontFamily: "var(--sans)",
+                                 fontVariantNumeric: "tabular-nums" });
+        return s;
+      }
+      function add(p, tag, attrs, text) {
+        const e = document.createElementNS(NS, tag);
+        for (const k in attrs) e.setAttribute(k, attrs[k]);
+        if (text != null) e.textContent = text;
+        p.appendChild(e);
+        return e;
+      }
+      /* A fixed viewBox in a narrow container renders 11px text at 5px on a phone.
+         Scale the type by how much the SVG is actually being shrunk. */
+      function typeScale(box, W) {
+        const w = box.clientWidth || W;
+        return Math.max(1, Math.min(2.4, W / Math.max(w - 24, 120)));
+      }
+      function niceTicks(lo, hi, n) {
+        const raw = (hi - lo) / n;
+        const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+        const step = [1, 1.5, 2, 2.5, 3, 4, 5, 10].map((s) => s * mag)
+          .find((s) => s >= raw) || 10 * mag;
+        const out = [];
+        for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(v);
+        return out;
+      }
+      const fmtT = (t) => `${t < 0 ? "−" : ""}${Math.abs(t)} °C`;
+      const usd = (v) => "$" + Math.round(v).toLocaleString("en-US");
+      const usdk = (v) => v >= 1000 ? "$" + (v / 1000).toFixed(v % 1000 ? 1 : 0) + "k" : usd(v);
+      const settings = (p) =>
+        `${fmtT(AX.t_evap_c[p.te])} evap · ${fmtT(AX.t_cas_c_c[p.tc])} cascade · `
+        + `${fmtT(AX.t_cond_c[p.tk])} condenser · ${AX.dt_cascade_k[p.dt]} K approach`;
+
+      /* ── the trade-off chart ─────────────────────────────────────────────── */
+      let paretoHit = [];
+      function drawPareto() {
+        const box = el("chart-pareto");
+        box.textContent = "";
+        const W = 760, H = 380, L = 84, R = 22, T = 20, B = 54;
+        const k = typeScale(box, W), fs = (n) => (n * k).toFixed(1);
+        const pts = clouds[mix] || [];
+        if (!pts.length) { box.textContent = "no feasible points for this mixture"; return; }
+        const f = front(pts);
+        const { x0, x1, y0, y1 } = domain;
+        const X = (v) => L + ((v - x0) / (x1 - x0 || 1)) * (W - L - R);
+        const Y = (v) => H - B - ((v - y0) / (y1 - y0 || 1)) * (H - T - B);
+        const wrap = document.createElement("div");
+        wrap.className = "cwrap";
+        Object.assign(wrap.style, { position: "relative", width: "100%",
+                                    aspectRatio: `${W} / ${H}` });
+        box.appendChild(wrap);
+        const s = svg(W, H);
+        s.classList.add("overlay");
+        Object.assign(s.style, { position: "absolute", inset: "0", width: "100%",
+                                 height: "100%" });
+        s.setAttribute("aria-label",
+          `Total annual cost against exergetic efficiency for all ${pts.length} feasible `
+          + `operating points of CO2/${mix}, with the non-dominated front marked. Better `
+          + `is down and to the right.`);
+
+        for (const yv of niceTicks(y0, y1, 5)) {
+          add(s, "line", { x1: L, y1: Y(yv), x2: W - R, y2: Y(yv), stroke: "var(--grid)" });
+          add(s, "text", { x: L - 10, y: Y(yv) + 4 * k, fill: "var(--muted)",
+                           "font-size": fs(11), "text-anchor": "end" }, usdk(yv));
+        }
+        for (const xv of niceTicks(x0, x1, 5))
+          add(s, "text", { x: X(xv), y: H - 22, fill: "var(--muted)", "font-size": fs(11),
+                           "text-anchor": "middle" }, xv.toFixed(0) + "%");
+        add(s, "text", { x: (L + W - R) / 2, y: H - 4, fill: "var(--ink)",
+                         "font-size": fs(11), "text-anchor": "middle" },
+            "exergetic efficiency  →  more efficient");
+        add(s, "text", { x: 14, y: (T + H - B) / 2, fill: "var(--ink)", "font-size": fs(11),
+                         "text-anchor": "middle",
+                         transform: `rotate(-90 14 ${(T + H - B) / 2})` },
+            "total annual cost  ↓  cheaper");
+
+        // The cloud is 20,790 points per mixture. As SVG circles that is 20,790 DOM
+        // nodes rebuilt on every slider event; on a canvas it is one node and a loop.
+        // Axes, front, locus and every label stay in SVG, so the text is still text.
+        paretoHit = [];
+        for (const p of pts) paretoHit.push({ cx: X(p.ex * 100), cy: Y(p.cost), p,
+                                              onFront: false });
+        const cv = document.createElement("canvas");
+        cv.setAttribute("aria-hidden", "true");
+        wrap.appendChild(cv);
+        const cw = wrap.clientWidth || W, ch = (cw * H) / W;
+        const dpr = Math.min(2, window.devicePixelRatio || 1);
+        cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
+        Object.assign(cv.style, { position: "absolute", inset: "0", width: "100%",
+                                  height: "100%", display: "block" });
+        const g = cv.getContext("2d");
+        g.scale((cw * dpr) / W, (cw * dpr) / W);
+        // 0.4 alpha at 1.4 px: at the previous 0.16 a single isolated point resolved to
+        // 1.2:1 against the ground, so the sparse boundary of the feasible set — the
+        // part that says what is achievable — was the part that disappeared.
+        g.fillStyle = "rgba(155, 170, 165, 0.4)";
+        for (const h of paretoHit) {
+          g.beginPath();
+          g.arc(h.cx, h.cy, 1.4, 0, 6.2832);
+          g.fill();
+        }
+        add(s, "path", {
+          d: f.map((p, i) => `${i ? "L" : "M"}${X(p.ex * 100).toFixed(1)},${Y(p.cost).toFixed(1)}`).join(""),
+          fill: "none", stroke: "var(--accent)", "stroke-width": 2,
+        });
+        for (const p of f) {
+          const cx = X(p.ex * 100), cy = Y(p.cost);
+          add(s, "circle", { cx, cy, r: 2.8, fill: "var(--accent)" });
+          paretoHit.push({ cx, cy, p, onFront: true });
+        }
+
+        const cur = point(mix, pos, EMID);
+        if (!cur.why) {
+          const cx = X(cur.etaEx * 100), cy = Y(cur.annual);
+          add(s, "circle", { cx, cy, r: 9, fill: "none", stroke: "var(--locus)", "stroke-width": 2 });
+          add(s, "circle", { cx, cy, r: 3, fill: "var(--locus)" });
+          const flipY = cy < T + 30, flipX = cx > W - R - 110;
+          add(s, "text", { x: flipX ? cx - 14 : cx + 14, y: flipY ? cy + 20 : cy - 12,
+                           fill: "var(--locus)", "font-size": fs(11),
+                           "text-anchor": flipX ? "end" : "start" }, "you are here");
+        } else if (lastGood) {
+          const cx = X(lastGood.ex * 100), cy = Y(lastGood.cost);
+          add(s, "circle", { cx, cy, r: 9, fill: "none", stroke: "var(--locus)",
+                             "stroke-width": 1.5, "stroke-dasharray": "3 3", opacity: 0.7 });
+          add(s, "text", { x: cx + 14, y: cy - 12, fill: "var(--locus)", "font-size": fs(11),
+                           opacity: 0.7 }, "last feasible");
+        }
+        wrap.appendChild(s);
+        s.addEventListener("mousemove", (ev) => probe(ev, s, W, H));
+        s.addEventListener("mouseleave", () => { el("probe").textContent = ""; });
+        s.addEventListener("click", (ev) => {
+          const hit = nearest(ev, s, W, H, 14);
+          if (!hit) return;
+          pos.te = hit.p.te; pos.tc = hit.p.tc; pos.tk = hit.p.tk; pos.dt = hit.p.dt;
+          syncSliders();
+          render();
+        });
+      }
+      function nearest(ev, s, W, H, within) {
+        const r = s.getBoundingClientRect();
+        const mx = ((ev.clientX - r.left) / r.width) * W;
+        const my = ((ev.clientY - r.top) / r.height) * H;
+        let best = null, bd = within * within;
+        for (const h of paretoHit) {
+          const d = (h.cx - mx) ** 2 + (h.cy - my) ** 2;
+          if (d < bd || (d === bd && h.onFront)) { bd = d; best = h; }
+        }
+        return best;
+      }
+      function probe(ev, s, W, H) {
+        const hit = nearest(ev, s, W, H, 10);
+        el("probe").textContent = hit
+          ? `${hit.onFront ? "On the front — " : ""}${settings(hit.p)} → `
+            + `${(hit.p.ex * 100).toFixed(1)}% at ${usd(hit.p.cost)}/yr`
+            + `${hit.onFront ? ". Click to go there." : ""}`
+          : "";
+      }
+
+      /* ── the four response panels, on one shared scale ────────────────────── */
+      function drawResponse() {
+        const box = el("chart-resp");
+        box.textContent = "";
+        const specs = [
+          ["te", "Evaporation temperature", AX.t_evap_c, "°C"],
+          ["tc", "Cascade condensing", AX.t_cas_c_c, "°C"],
+          ["tk", "Condenser", AX.t_cond_c, "°C"],
+          ["dt", "Cascade approach", AX.dt_cascade_k, "K"],
+        ];
+        // every series first, so all four panels can share one vertical scale
+        const series = {};
+        let lo = Infinity, hi = -Infinity;
+        for (const [key, , axis] of specs) {
+          series[key] = axis.map((_, i) => {
+            const r = point(mix, { ...pos, [key]: i }, EMID);
+            return r.why ? null : r.cop;
+          });
+          for (const v of series[key]) if (v != null) { if (v < lo) lo = v; if (v > hi) hi = v; }
+        }
+        if (!(lo < Infinity)) { box.textContent = "no feasible point here"; return; }
+        const pad = (hi - lo) * 0.12 || 0.02;
+        lo -= pad; hi += pad;
+        el("respspan").textContent =
+          `Shared vertical scale: coefficient of performance from ${lo.toFixed(2)} to `
+          + `${hi.toFixed(2)}. The widest of the four spans ${
+            Math.max(...specs.map(([k]) => {
+              const v = series[k].filter((x) => x != null);
+              return v.length ? Math.max(...v) - Math.min(...v) : 0;
+            })).toFixed(3)} of COP; the narrowest ${
+            Math.min(...specs.map(([k]) => {
+              const v = series[k].filter((x) => x != null);
+              return v.length ? Math.max(...v) - Math.min(...v) : 0;
+            })).toFixed(3)}.`;
+
+        const W = 372, H = 158, L = 52, R = 14, T = 26, B = 36;
+        const k = typeScale(box, W * 2), fs = (n) => (n * k).toFixed(1);
+        for (const [key, label, axis, unit] of specs) {
+          // every axis ascends left to right. Evaporation temperature is stored
+          // -80 -> -90, which drew one panel in four with a flipped slope.
+          const asc = axis[0] <= axis[axis.length - 1];
+          const ord = asc ? axis.map((_, i) => i) : axis.map((_, i) => axis.length - 1 - i);
+          const s = svg(W, H);
+          s.setAttribute("aria-label", `${label}: coefficient of performance across its range`);
+          add(s, "text", { x: L, y: 13, fill: "var(--ink)", "font-size": fs(11) }, label);
+          const Y = (v) => H - B - ((v - lo) / (hi - lo)) * (H - T - B);
+          const X = (j) => L + (j / (axis.length - 1 || 1)) * (W - L - R);
+          add(s, "line", { x1: L, y1: H - B, x2: W - R, y2: H - B, stroke: "var(--grid)" });
+          for (const v of niceTicks(lo, hi, 3)) {
+            add(s, "line", { x1: L, y1: Y(v), x2: W - R, y2: Y(v), stroke: "var(--grid)",
+                             opacity: 0.6 });
+            add(s, "text", { x: L - 8, y: Y(v) + 3.5 * k, fill: "var(--muted)",
+                             "font-size": fs(10), "text-anchor": "end" }, v.toFixed(2));
+          }
+          add(s, "text", { x: L, y: H - 8, fill: "var(--muted)", "font-size": fs(10) },
+              `${axis[ord[0]]}${unit}`);
+          add(s, "text", { x: W - R, y: H - 8, fill: "var(--muted)", "font-size": fs(10),
+                           "text-anchor": "end" }, `${axis[ord[axis.length - 1]]}${unit}`);
+          let d = "", started = false;
+          ord.forEach((i, j) => {
+            const v = series[key][i];
+            if (v == null) { started = false; return; }
+            d += `${started ? "L" : "M"}${X(j).toFixed(1)},${Y(v).toFixed(1)}`;
+            started = true;
+          });
+          add(s, "path", { d, fill: "none", stroke: "var(--accent)", "stroke-width": 2 });
+          const j = ord.indexOf(pos[key]), cv = series[key][pos[key]];
+          if (cv != null) {
+            add(s, "line", { x1: X(j), y1: T - 8, x2: X(j), y2: H - B,
+                             stroke: "var(--locus)", "stroke-width": 1, opacity: 0.55 });
+            add(s, "circle", { cx: X(j), cy: Y(cv), r: 4, fill: "var(--locus)" });
+          }
+          s.style.border = "1px solid var(--rule)";
+          box.appendChild(s);
+        }
+      }
+
+      /* ── the cost-minimising approach, computed rather than asserted ──────── */
+      function dtFinding() {
+        const tally = new Map();
+        let n = 0;
+        for (const m of Object.keys(C.lt))
+          for (let a = 0; a < AX.t_evap_c.length; a++)
+            for (let b = 0; b < NC; b++)
+              for (let c = 0; c < NK; c++) {
+                let bd = null;
+                for (let d = 0; d < AX.dt_cascade_k.length; d++) {
+                  const r = point(m, { te: a, tc: b, tk: c, dt: d }, EMID);
+                  if (r.why) continue;
+                  if (!bd || r.annual < bd[1]) bd = [AX.dt_cascade_k[d], r.annual];
+                }
+                if (bd) { tally.set(bd[0], (tally.get(bd[0]) || 0) + 1); n++; }
+              }
+        const ks = [...tally.keys()].sort((x, y) => x - y);
+        const top = [...tally.entries()].sort((x, y) => y[1] - x[1])[0];
+        el("dtfinding").textContent = n
+          ? `At the coefficient now selected, the cost-minimising approach is `
+            + `${ks[0]}–${ks[ks.length - 1]} K across all ${n.toLocaleString()} `
+            + `combinations of mixture and the other three decisions, most often `
+            + `${top[0]} K (${Math.round((100 * top[1]) / n)}%). So the very small `
+            + `approaches are not where the cost optimum sits; they are a choice made `
+            + `at the efficiency end of the front, and this is what it costs.`
+          : "";
+      }
+      function coefNote() {
+        el("coefnote").textContent = econ.coef === 2382.9
+          ? "The paper prints eq. 8 as C = 23829·A^0.68. Implemented as printed, its own "
+            + "three reported optima cost 2.3–2.5× its own reported Pareto range, which "
+            + "is consistent with a lost decimal point — but the tenfold reduction is our "
+            + "inference, not the author's record. Switch it and watch what changes."
+          : "This is the printed coefficient. Notice what it does: the cascade exchanger "
+            + "dominates the capital, every cost leaves the paper's own reported range, "
+            + "and the cost-minimising approach is driven to the top of the slider.";
+      }
+
+      /* ── readouts ─────────────────────────────────────────────────────────── */
+      const fmtBand = (b, f) => b && Math.abs(b.hi - b.lo) > 1e-9
+        ? `${f(b.lo)}–${f(b.hi)}` : b ? f(b.lo) : "—";
+
+      function render() {
+        el("v-te").textContent = fmtT(AX.t_evap_c[pos.te]);
+        el("f-room").textContent = fmtT(AX.t_evap_c[pos.te] + T_DROP);
+        el("v-tc").textContent = fmtT(AX.t_cas_c_c[pos.tc]);
+        el("v-tk").textContent = fmtT(AX.t_cond_c[pos.tk]);
+        el("v-dt").textContent = AX.dt_cascade_k[pos.dt] + " K";
+        el("v-el").textContent = econ.cents + "¢/kWh";
+        el("v-hr").textContent = econ.hours.toLocaleString() + " h";
+        el("v-lf").textContent = econ.life + " yr";
+        el("v-ir").textContent = econ.rate + "%";
+        el("s-te").setAttribute("aria-valuetext", fmtT(AX.t_evap_c[pos.te]));
+        el("s-tc").setAttribute("aria-valuetext", fmtT(AX.t_cas_c_c[pos.tc]));
+        el("s-tk").setAttribute("aria-valuetext", fmtT(AX.t_cond_c[pos.tk]));
+        el("s-dt").setAttribute("aria-valuetext", AX.dt_cascade_k[pos.dt] + " kelvin");
+        el("o-costgloss").textContent =
+          `equipment repaid over ${econ.life} years at ${econ.rate}%, plus `
+          + `${econ.hours.toLocaleString()} hours at ${econ.cents}¢/kWh`;
+
+        const cur = point(mix, pos, EMID);
+        const eng = ["e-lpe", "e-lpc", "e-lpr", "e-hpe", "e-hpc", "e-hpr", "e-acas",
+                     "e-qcas", "e-md", "e-w", "e-cap", "e-ccas"];
+        if (!cur.why) {
+          lastGood = { ex: cur.etaEx, cost: cur.annual };
+          el("o-cop").textContent = fmtBand(band(mix, pos, "cop"), (v) => v.toFixed(2));
+          el("o-ex").textContent =
+            fmtBand(band(mix, pos, "etaEx"), (v) => (v * 100).toFixed(1)) + "%";
+          el("o-cost").textContent = fmtBand(band(mix, pos, "annual"), usd);
+          el("hint").textContent = "";
+          el("hint").classList.remove("bad");
+          el("e-lpe").textContent = cur.lpe.toFixed(2) + " bar";
+          el("e-lpc").textContent = cur.lpc.toFixed(1) + " bar";
+          el("e-lpr").textContent = cur.lpr.toFixed(1) + " : 1";
+          el("e-hpe").textContent = cur.hpe.toFixed(2) + " bar";
+          el("e-hpc").textContent = cur.hpc.toFixed(1) + " bar";
+          el("e-hpr").textContent = cur.hpr.toFixed(1) + " : 1";
+          el("e-acas").textContent = cur.aCas.toFixed(2) + " m²";
+          el("e-qcas").textContent = Math.round(cur.qcas) + " W";
+          el("e-md").textContent = cur.md.toFixed(2) + " g/s";
+          el("e-w").textContent = Math.round(cur.wtot) + " W";
+          el("e-cap").textContent = usd(cur.capital);
+          el("e-ccas").textContent = usd(cur.cCas)
+            + ` (${Math.round((100 * cur.cCas) / cur.capital)}%)`;
+          el("standstill").textContent = cur.lpe < 1.01325
+            ? `The low circuit's suction is ${cur.lpe.toFixed(2)} bar absolute — below `
+              + `atmospheric. At standstill this side of the plant sits under vacuum, so `
+              + `any leak draws air and moisture into a −80 °C circuit. The paper reports `
+              + `no circuit pressures, so this constraint is invisible in it — and it is `
+              + `the CO₂-rich mixture that does it, which is also the one that wins the `
+              + `COP comparison in check G-5.`
+            : "";
+          el("standstill").classList.toggle("on", cur.lpe < 1.01325);
+        } else {
+          el("o-cop").textContent = el("o-ex").textContent = el("o-cost").textContent = "—";
+          for (const id of eng) el(id).textContent = "—";
+          el("standstill").textContent = "";
+          el("standstill").classList.remove("on");
+          el("hint").textContent = `No answer here: ${cur.why}, in ${cur.where}.`
+            + (cur.fix ? ` Try to ${cur.fix}.` : "")
+            + " That is a limit, not a missing number — and the marker on the chart shows"
+            + " your last feasible position.";
+          el("hint").classList.add("bad");
+        }
+        drawPareto();
+        drawResponse();
+      }
+
+      function syncSliders() {
+        el("s-te").value = pos.te; el("s-tc").value = pos.tc;
+        el("s-tk").value = pos.tk; el("s-dt").value = pos.dt;
+      }
+
+      /* ── wiring ───────────────────────────────────────────────────────────── */
+      for (const [id, key] of [["s-te", "te"], ["s-tc", "tc"], ["s-tk", "tk"], ["s-dt", "dt"]])
+        el(id).addEventListener("input", (e) => { pos[key] = +e.target.value; render(); });
+
+      let et;
+      for (const [id, key] of [["s-el", "cents"], ["s-hr", "hours"], ["s-lf", "life"],
+                               ["s-ir", "rate"]])
+        el(id).addEventListener("input", (e) => {
+          econ[key] = +e.target.value;
+          // rebuild() and dtFinding() together cost ~125,000 closed-form evaluations,
+          // which is fine once and not fine on every event of a drag.
+          render();
+          clearTimeout(et);
+          et = setTimeout(() => { rebuild(); dtFinding(); render(); }, 140);
+        });
+
+      document.querySelectorAll(".mixbtn").forEach((b) => {
+        b.addEventListener("click", () => {
+          document.querySelectorAll(".mixbtn").forEach((o) => {
+            o.classList.remove("on"); o.setAttribute("aria-checked", "false");
+          });
+          b.classList.add("on"); b.setAttribute("aria-checked", "true");
+          mix = b.dataset.mix;
+          render();
+        });
+      });
+      document.querySelectorAll(".coefbtn").forEach((b) => {
+        b.addEventListener("click", () => {
+          document.querySelectorAll(".coefbtn").forEach((o) => {
+            o.classList.remove("on"); o.setAttribute("aria-checked", "false");
+          });
+          b.classList.add("on"); b.setAttribute("aria-checked", "true");
+          econ.coef = +b.dataset.coef;
+          rebuild(); coefNote(); dtFinding(); render();
+        });
+      });
+
+      // charts carry a fixed viewBox, so type has to be rescaled when the box resizes
+      let rt;
+      addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(render, 150); });
+
+      rebuild(); coefNote(); dtFinding(); render();
+    })();
+  </script>
+</Page>
+
+<style>
+  .hero { padding-bottom: 0.5rem; }
+  .eyebrow {
+    font-family: var(--sans); font-size: 0.72rem; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+    margin: 0 0 1.1rem;
+  }
+  .hero h1 { max-width: 24ch; }
+  .sub { font-family: var(--sans); font-size: 0.86rem; color: var(--muted); margin: 1rem 0 0; }
+  /* The section's own grid track is capped at --measure in tokens.css, so widening the
+     column alone does nothing — the track has to change too. */
+  .widesec { grid-template-columns: var(--rail) minmax(0, 1fr); }
+  @media (max-width: 860px) { .widesec { grid-template-columns: 1fr; } }
+  .sec .col.wide { max-width: none; }
+
+  .subh { font-family: var(--sans); font-size: 1rem; font-weight: 600; color: var(--ink);
+    margin: 2.6rem 0 0.5rem; }
+  .note { font-family: var(--sans); font-size: 0.85rem; line-height: 1.6;
+    color: var(--muted); max-width: 72ch; margin: 0 0 1.1rem; }
+  .note.dim { color: var(--muted); font-size: 0.8rem; }
+
+  .fixedgrid, .engrid { display: grid; gap: 1px; margin: 0; padding: 0;
+    background: var(--rule); border: 1px solid var(--rule);
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
+  .fixedgrid > div, .engrid > div { background: var(--ground); padding: 0.8rem 0.9rem; }
+  .fixedgrid dt, .engrid dt, .readout dt {
+    font-family: var(--sans); font-size: 0.64rem; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .fixedgrid dd, .engrid dd { margin: 0.25rem 0 0; font-family: var(--sans);
+    font-size: 1.05rem; font-weight: 600; line-height: 1.15;
+    font-variant-numeric: tabular-nums; color: var(--ink); }
+  .fixedgrid span, .engrid .gloss, .readout .gloss {
+    display: block; margin-top: 0.3rem; font-family: var(--sans); font-size: 0.74rem;
+    font-weight: 400; line-height: 1.5; color: var(--muted); }
+
+  .mixrow { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 0 0 1.8rem; }
+  .mixbtn, .coefbtn {
+    font-family: var(--sans); font-size: 0.84rem; font-weight: 500; cursor: pointer;
+    background: transparent; color: var(--muted); border: 1px solid var(--muted);
+    padding: 0.5rem 0.9rem; display: flex; flex-direction: column; gap: 0.15rem;
+    transition: color .15s ease, border-color .15s ease;
+  }
+  .mixbtn span, .coefbtn span { font-size: 0.66rem; letter-spacing: 0.06em;
+    text-transform: uppercase; }
+  .mixbtn:hover, .coefbtn:hover { color: var(--ink); border-color: var(--accent); }
+  .mixbtn:focus-visible, .coefbtn:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 3px; }
+  .mixbtn.on, .coefbtn.on {
+    color: var(--ground); background: var(--accent); border-color: var(--accent);
+    box-shadow: 0 0 26px -10px var(--glow);
+  }
+  .mixbtn.on span, .coefbtn.on span { color: var(--ground); opacity: 0.8; }
+
+  .panelgrid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 1.6rem; align-items: start; }
+  @media (max-width: 860px) { .panelgrid { grid-template-columns: 1fr; } }
+
+  .controls, .econgrid { display: grid; gap: 1.1rem; }
+  .econgrid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+    margin-bottom: 1.4rem; }
+  .ctl { display: grid; gap: 0.35rem; }
+  .ctl-h { font-family: var(--sans); font-size: 0.82rem; color: var(--muted); }
+  .ctl-h b { color: var(--ink); font-variant-numeric: tabular-nums; }
+  .ctl-n { font-family: var(--sans); font-size: 0.75rem; line-height: 1.5;
+    color: var(--muted); }
+  .ctl input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .ctl input:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .hintline { font-family: var(--sans); font-size: 0.78rem; line-height: 1.55;
+    color: var(--muted); margin: 0.4rem 0 0; min-height: 1.2rem; max-width: 72ch; }
+  .hintline.bad { color: var(--flag); }
+  .warnline { color: var(--muted); }
+  .warnline.on { color: var(--flag); }
+
+  .readout { display: grid; gap: 1px; margin: 0; padding: 0;
+    background: var(--rule); border: 1px solid var(--rule); }
+  .readout > div { background: var(--ground); padding: 0.85rem 1rem; }
+  .readout > div > dd:first-of-type { margin: 0.3rem 0 0.15rem; font-family: var(--sans);
+    font-size: 1.45rem; font-weight: 600; line-height: 1.1;
+    font-variant-numeric: tabular-nums; color: var(--ink); }
+
+  .coefrow { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center;
+    margin: 0 0 0.9rem; }
+  .coeflabel { font-family: var(--sans); font-size: 0.7rem; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+    margin-right: 0.3rem; }
+
+  .fig { margin: 2.2rem 0 0; }
+  .fig figcaption { font-family: var(--sans); font-size: 0.82rem; line-height: 1.55;
+    color: var(--muted); margin: 0 0 0.8rem; max-width: 72ch; }
+  .fig figcaption b { color: var(--ink); }
+  .chartbox { border: 1px solid var(--rule); background: var(--panel);
+    padding: 0.6rem; overflow-x: auto; }
+  .chartbox:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* Charts are built in JS, so they carry no data-astro-cid and no rule in this block
+     can reach them: their layout is set inline in svg() instead. Only the container is
+     styled here. */
+  .chartbox.tall { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem; }
+  @media (max-width: 760px) { .chartbox.tall { grid-template-columns: 1fr; } }
+
+
+  .legend { display: flex; flex-wrap: wrap; gap: 0.35rem 1.2rem; align-items: center;
+    font-family: var(--sans); font-size: 0.75rem; color: var(--muted);
+    margin: 0.6rem 0 0; }
+  .legend .k { width: 1.5rem; height: 0; border-top-width: 2px; border-top-style: solid;
+    display: inline-block; margin-right: 0.4rem; }
+  .legend .cloud { border-top-color: var(--muted); opacity: 0.5;
+    border-top-style: dotted; border-top-width: 3px; }
+  .legend .front { border-top-color: var(--accent); }
+  .legend .locus { border-top-color: var(--locus); }
+  .legend .ghost { border-top-color: var(--locus); border-top-style: dashed; opacity: 0.7; }
+
+  .lim { font-family: var(--sans); font-size: 0.82rem; line-height: 1.6;
+    color: var(--muted); margin: 0.6rem 0 0; padding-left: 1.1rem; }
+  .lim li { margin: 0 0 0.5rem; }
+  .lim b { color: var(--ink); font-weight: 600; }
+</style>

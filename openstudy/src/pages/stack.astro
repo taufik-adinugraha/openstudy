@@ -1,0 +1,324 @@
+---
+// What this is built with — for the reader who is going to open the code.
+//
+// Every number and every row comes from openstudy/src/data/stack.json, which ops/stack
+// generates by reading the repository: pyproject.toml and package.json for what is
+// declared, the pipeline source for which external data each case actually ingests, and
+// a grep for which estimators are actually fitted. Nothing on this page is typed by
+// hand, so nothing on it can claim a library the code does not install.
+//
+// The prose lives here rather than in the generator: BLURB describes what each package
+// is for in this repository, keyed by package name. A package with no entry still
+// renders — adding a dependency can leave a gap but can never break the page.
+//
+// One rule, and it is the reason the page is generated: no "coming soon" rows. Work
+// that is planned and not written does not appear.
+import Page from "../layouts/Page.astro";
+import S from "../data/stack.json";
+
+const blob = (f) => `${S.blob}/${f}`;
+const n = (x) => x.toLocaleString("en-US");
+
+// what each package is for, in this repository specifically
+const BLURB = {
+  pandas: "the tabular spine of every pipeline",
+  pyarrow: "Parquet on the way in and out; every intermediate is columnar",
+  requests: "HTTP against a dozen agency APIs, each with its own idea of an error",
+  numpy: "arrays, and the per-cell radar stacks",
+  duckdb: "SQL over Parquet without standing up a database",
+  geopandas: "vector geometry with a coordinate reference system attached",
+  rasterio: "reading and windowing satellite rasters without loading the scene",
+  scipy: "signal filtering, interpolation, distribution fitting",
+  exactextract: "area-weighted zonal statistics — the correct way to summarise a raster over a polygon, rather than counting pixels whose centre falls inside",
+  shapely: "geometry predicates and repair",
+  pillow: "frame composition for the animated tiles",
+  pyogrio: "the fast Arrow path into and out of vector formats",
+  "scikit-learn": "the estimators, the calibration, and permutation importance",
+  cdsapi: "queued requests to the Copernicus Climate Data Store",
+  netcdf4: "the format ERA5 arrives in",
+  "pystac-client": "STAC search, so asset discovery is a query rather than a scrape",
+  xarray: "labelled n-dimensional arrays for the climate stacks",
+  anthropic: "one low-temperature call that writes an insight brief, forbidden from using any number absent from the stats JSON, gated on a human merging the pull request",
+  boto3: "S3-hosted public buckets",
+  lightgbm: "gradient boosting, through the native booster API",
+  shap: "per-prediction attribution, exported so the dashboard can show why",
+  CoolProp: "refrigerant thermodynamic properties, for the replication",
+  ecomplexity: "economic complexity indices",
+  h5py: "HDF5, which is how NASA ships Black Marble",
+  hijridate: "the Hijri calendar — Ramadan moves through the solar year and it shows up in both night-time lights and the harvest calendar",
+  networkx: "the trade graph",
+  r5py: "the R5 routing engine — real multimodal travel times from a timetable, not straight-line buffers",
+  s2sphere: "S2 cells, for indexing points on a sphere",
+  statsmodels: "the statistical tests",
+  astro: "eleven static apps; every route prerendered, no server rendering anywhere",
+  d3: "scales, axes, shape generators and hit-testing. The low-level pieces — the charts are composed from them rather than configured",
+  "maplibre-gl": "vector tile maps, self-hosted",
+  three: "the 3D trade network view",
+};
+
+const kb = (x) => Math.round(x / 1024);
+const pyTop = S.python.filter((p) => p.n_cases >= 2);
+const pySpec = S.python.filter((p) => p.n_cases === 1);
+---
+
+<Page
+  title="Stack"
+  description="What this is built with, generated from the repository: 16 external data sources, the geospatial and modelling stack, and the one small server that runs it."
+  current="/stack/"
+>
+  <section class="hero">
+    <p class="eyebrow">Generated from the repository · {S.generated}</p>
+    <h1>What this is built with,<br /><em>and where to check.</em></h1>
+    <p class="lead">
+      Every row below is read out of the repository by
+      <a href={blob("ops/stack")}><code>ops/stack</code></a> — the dependency files for
+      what is declared, the pipeline source for which satellite products each case
+      actually ingests, a grep for which estimators are actually fitted. Nothing here is
+      typed by hand, which means nothing here can name a library the code does not
+      install. Where a row links to a file, that is the file that uses it.
+    </p>
+    <dl class="tally">
+      <div><dt>Python</dt><dd>{n(S.code.python.lines)}</dd><span>lines across {S.code.python.files} files</span></div>
+      <div><dt>Front end</dt><dd>{n(S.code.astro.lines)}</dd><span>lines across {S.code.astro.files} Astro files</span></div>
+      <div><dt>Data sources</dt><dd>{S.sources.length}</dd><span>external, all publicly obtainable</span></div>
+      <div><dt>Served from</dt><dd>1</dd><span>2-core, 1.9 GB virtual machine</span></div>
+    </dl>
+  </section>
+
+  <section class="sec" id="data">
+    <div class="rail">Data<span>where it comes from</span></div>
+    <div class="col wide">
+      <h2>Sixteen sources, none of them a tidy CSV</h2>
+      <p class="note">
+        This is most of the work and the least visible part of it. Black Marble arrives as
+        HDF5 on an authenticated NASA endpoint; ERA5 arrives through a request queue that
+        can take hours; Sentinel-1 arrives as compressed GRD scenes that have to be found
+        by STAC query, orbit-corrected and reduced to per-cell time series before a model
+        sees anything. The counts below are cases whose <em>pipeline code</em> reads the
+        source, not cases that cite it.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Source</th><th>What it gives</th><th class="num">Cases</th></tr></thead>
+          <tbody>
+            {S.sources.map((s) => (
+              <tr>
+                <td><b>{s.name}</b></td>
+                <td>{s.what}</td>
+                <td class="num dim">{s.n_cases}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <p>
+          <b>Publicly obtainable is not the same as open.</b> Most of these need a free
+          account and an API key, one moved behind a paid wall mid-project, and several
+          datasets were excluded on licence — including two whose exclusion cost a case
+          its planned independent cross-check. The full accounting is on
+          <a href="/standards/#sources">Standards</a>.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="pipelines">
+    <div class="rail">Pipelines<span>Python, {n(S.code.python.lines)} lines</span></div>
+    <div class="col wide">
+      <h2>The geospatial and data layer</h2>
+      <p class="note">
+        Used by two or more of the {S.cases} cases. Each pipeline is a separate
+        <code>uv</code> project with its own pinned dependencies, so one case cannot break
+        another and any single case can be re-run on its own.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Package</th><th>Version</th><th>What it does here</th><th class="num">Cases</th></tr></thead>
+          <tbody>
+            {pyTop.map((p) => (
+              <tr>
+                <td>{p.file ? <a href={blob(p.file)}><b>{p.name}</b></a> : <b>{p.name}</b>}</td>
+                <td class="mono dim">{p.spec}</td>
+                <td>{BLURB[p.name] ?? ""}</td>
+                <td class="num dim">{p.n_cases}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Specialist, one case each</h3>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Package</th><th>What it does here</th><th>Case</th></tr></thead>
+          <tbody>
+            {pySpec.map((p) => (
+              <tr>
+                <td>{p.file ? <a href={blob(p.file)}><b>{p.name}</b></a> : <b>{p.name}</b>}</td>
+                <td>{BLURB[p.name] ?? ""}</td>
+                <td class="dim">{p.cases.join(", ")}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="models">
+    <div class="rail">Models<span>and how they are judged</span></div>
+    <div class="col wide">
+      <h2>What is actually fitted</h2>
+      <p class="note">
+        Gradient boosting and regularised linear models on raster-derived features. Listed
+        with the file that fits them, because the interesting part of a model is rarely
+        the estimator — it is the loss, the calibration, the weights and the metric.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>What</th><th>Why it is that and not something else</th><th>Case</th></tr></thead>
+          <tbody>
+            {S.models.map((m) => (
+              <tr>
+                <td><a href={blob(m.file)}><b>{m.name}</b></a></td>
+                <td>{m.what}</td>
+                <td class="dim">{m.cases.join(", ")}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div class="callout warn">
+        <p>
+          <b>How they are scored matters more than what they are, and it is where the
+          results actually came from.</b> Every model is scored against a naive rival that
+          already contains the easy knowledge, and the validation is spatially blocked
+          rather than randomly folded. On the poverty case that single decision was the
+          finding: a random k-fold reported R² 0.65 where a spatially-blocked design
+          reported <b>0.395</b>, and 57% of the squared error turned out to be one
+          constant per province — the model was recovering the survey's own offsets, not
+          seeing poverty.
+        </p>
+        <p class="dim">
+          The night-lights case is the other half of the same discipline: the nowcast came
+          out <b>41% worse than doing nothing</b>, with 99.5% of it intercept — a number
+          that would print almost unchanged if the satellite were switched off. It is
+          published in that state. <a href="/standards/">How that gets decided</a>.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="interfaces">
+    <div class="rail">Interfaces<span>{S.code.astro.files} Astro files</span></div>
+    <div class="col wide">
+      <h2>Eleven static apps, no server rendering</h2>
+      <p class="note">
+        Each case is its own Astro app with its own base path, built to static files.
+        There is no backend behind any dashboard: the numbers are computed in the pipeline
+        and shipped as JSON, or recomputed in the browser from a small table. One
+        dashboard reconstructs 62,370 operating points client-side in closed form, with
+        the equivalence to the Python model
+        <a href={blob("cases/cascade-cold/pipeline/verify.py")}>tested to 5×10⁻¹³</a>.
+      </p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Package</th><th>Version</th><th>What it does here</th><th class="num">Apps</th></tr></thead>
+          <tbody>
+            {S.javascript.map((j) => (
+              <tr>
+                <td><b>{j.name}</b></td>
+                <td class="mono dim">{j.spec}</td>
+                <td>{BLURB[j.name] ?? ""}</td>
+                <td class="num dim">{j.n_apps}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="note">
+        No high-level charting library — no Plotly, no Chart.js, no Vega. Charts are
+        composed from d3's scales, axes and shape generators, which means the projection,
+        the domain and the hit-testing are decisions in the code rather than options in a
+        config object. Where a chart has tens of thousands of marks, the dense layer goes
+        on a canvas and the axes, legend and labels stay in SVG so the text is still text.
+      </p>
+    </div>
+  </section>
+
+  <section class="sec" id="serving">
+    <div class="rail">Serving<span>one small box</span></div>
+    <div class="col wide">
+      <h2>Eleven apps on two cores and 1.9 GB</h2>
+      <p class="note">
+        Eleven Astro dev servers cost about 4.5 GB between them, which would have needed a
+        four-times-larger machine to serve pages that are already fully static. So one
+        nginx serves the built output of all of them from a single origin, each case under
+        its own slug.
+      </p>
+      <ul class="plain">
+        <li><b><a href={blob("ops/serve-static")}><code>ops/serve-static</code></a></b> derives
+          port, base path and directory for every app from the repository, then generates
+          the entire nginx configuration — server blocks, redirects for retired paths,
+          aliases for paths a reader would guess, cache headers for hashed assets. The
+          config is not hand-edited, so it cannot disagree with the apps it serves.</li>
+        <li><b>HTTPS</b> via Let's Encrypt on a multi-name certificate, renewed
+          automatically.</li>
+        <li><b>Deploys</b> are an rsync and a build, one app at a time, because two
+          concurrent Astro builds will exhaust the memory on this box.</li>
+        <li><b><a href={blob("ops/review")}><code>ops/review</code></a></b> runs house rules
+          against the rendered output rather than the source, so a check cannot pass on a
+          template that fails in the page.</li>
+        <li><b><a href={blob("ops/glossary")}><code>ops/glossary</code></a></b> keeps one set of
+          plain-language definitions in step across ten separate Astro apps, and each
+          article scans its own source at build time to render only the terms it uses —
+          no per-article list to go stale.</li>
+      </ul>
+      <div class="callout">
+        <p>
+          <b>Why this is on the page.</b> Anyone can produce a notebook. The part that
+          takes judgement is the part that keeps working: pinned per-case environments,
+          generated configuration, checks that run against the rendered artifact, and a
+          deployment that fits on the hardware you actually have.
+          <a href={S.repo}>The whole repository is public</a>.
+        </p>
+      </div>
+    </div>
+  </section>
+</Page>
+
+<style>
+  .hero { padding-bottom: 0.5rem; }
+  .eyebrow {
+    font-family: var(--sans); font-size: 0.72rem; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+    margin: 0 0 1.1rem;
+  }
+  .hero h1 { max-width: 24ch; }
+  .sec .col.wide { max-width: none; }
+  .note { font-family: var(--sans); font-size: 0.87rem; line-height: 1.62;
+    color: var(--muted); max-width: 74ch; margin: 0 0 1.2rem; }
+
+  .tally {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+    gap: 1px; margin: 1.9rem 0 0; padding: 0;
+    background: var(--rule); border: 1px solid var(--rule);
+  }
+  .tally > div { background: var(--ground); padding: 0.85rem 1rem; }
+  .tally dt { font-family: var(--sans); font-size: 0.66rem; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .tally dd { margin: 0.3rem 0 0; font-family: var(--sans); font-size: 1.55rem;
+    font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .tally span { display: block; margin-top: 0.3rem; font-family: var(--sans);
+    font-size: 0.72rem; line-height: 1.45; color: var(--muted); }
+
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.mono { font-family: var(--mono); font-size: 0.8rem; }
+  td.dim { color: var(--muted); }
+
+  .plain { list-style: none; padding: 0; margin: 0 0 1.2rem;
+    font-family: var(--sans); font-size: 0.87rem; line-height: 1.62; color: var(--muted); }
+  .plain li { padding: 0.85rem 0; border-top: 1px solid var(--rule); max-width: 74ch; }
+  .plain li b { color: var(--ink); font-weight: 600; }
+</style>

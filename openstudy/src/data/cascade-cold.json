@@ -1,0 +1,144 @@
+{
+ "case": "cascade-cold",
+ "generated": "2026-09-01T11:10:45Z",
+ "coolprop_version": "8.0.0",
+ "replicates": {
+  "citation": "Nasruddin, Arnas, Faqih & Giannetti (2016), Makara J. Technol. 20(3) 132-138",
+  "doi": "10.7454/mst.v20i3.3068",
+  "licence": "CC BY-NC-ND 4.0",
+  "note": "Rebuilt from the equations and assumptions the paper states. No figure, table or dataset from the paper is reproduced; its reported values are used only to score this implementation."
+ },
+ "reconstructions": [
+  {
+   "what": "exergetic efficiency definition",
+   "resolution": "COP / COP_carnot",
+   "evidence": "reproduces the paper's 22-35% Pareto axis from its own reported COP range 0.40-0.65"
+  },
+  {
+   "what": "compressor isentropic efficiency as a function of pressure ratio",
+   "resolution": "not recoverable; eta_is treated as free and inverted",
+   "evidence": "implied 0.642-0.662 across three mixtures"
+  },
+  {
+   "what": "cascade exchanger cost coefficient, eq. 8",
+   "resolution": "2382.9 adopted, printed as 23829",
+   "evidence": "as printed, the paper's own reported optima cost 2.3-2.5x its own reported Pareto range"
+  }
+ ],
+ "gates": [
+  {
+   "id": "G-1",
+   "name": "Optimum mixture composition reproduced",
+   "hard": true,
+   "status": "fail",
+   "pass": false,
+   "reason": "our COP maximum sits at a composition-range endpoint for every mixture, worst gap 0.93 mass fraction. The paper selects composition by 'maximizing COP, provided that the carbon dioxide did not undergo crystallization and values capable of burning (flammability) of hydrocarbons were reduced' \u2014 it quantifies neither the crystallization limit nor the flammability criterion, so the selection rule cannot be reproduced from the paper. The reported optima are constrained choices whose constraints are not published.",
+   "per_mixture": {
+    "propane": {
+     "ours": 0.01,
+     "cop": 0.6748,
+     "reported": 0.94
+    },
+    "ethane": {
+     "ours": 0.01,
+     "cop": 0.6046,
+     "reported": 0.64
+    },
+    "ethylene": {
+     "ours": 0.99,
+     "cop": 0.6132,
+     "reported": 0.37
+    }
+   },
+   "threshold_mass_frac": 0.02
+  },
+  {
+   "id": "G-2",
+   "name": "COP at the reported thermoeconomic optimum, within 0.05",
+   "hard": true,
+   "status": "pass",
+   "pass": true,
+   "reason": "worst deviation 0.015 against the paper's 0.65 (ours: {'propane': 0.6605, 'ethane': 0.6517, 'ethylene': 0.6355})",
+   "per_mixture": {
+    "propane": 0.6605,
+    "ethane": 0.6517,
+    "ethylene": 0.6355
+   },
+   "threshold": 0.05
+  },
+  {
+   "id": "G-3",
+   "name": "Isentropic efficiency inverted from the reported COP agrees across all three mixtures, within 0.05",
+   "hard": false,
+   "status": "pass",
+   "pass": true,
+   "reason": "implied eta_is {'propane': 0.6415, 'ethane': 0.6486, 'ethylene': 0.6621}, spread 0.021. The paper states compression is 'expressed as a function of pressure ratio' but never gives the function, and the author no longer has it. Three independent mixtures agreeing this closely is evidence the cycle is right and that the compressor ran near eta_is 0.65.",
+   "implied": {
+    "propane": 0.6415,
+    "ethane": 0.6486,
+    "ethylene": 0.6621
+   },
+   "threshold": 0.05
+  },
+  {
+   "id": "G-4",
+   "name": "Annual cost falls inside the reported Pareto range",
+   "hard": true,
+   "status": "pass",
+   "pass": true,
+   "reason": "3 of 3 inside band with the cascade coefficient taken as 2382.9 (propane $9,100 against $5,400-$9,100; ethane $8,498 against $5,200-$9,000; ethylene $8,287 against $5,100-$8,800). With the coefficient AS PRINTED (23829) every mixture costs 2.3-2.5x the paper's own reported range, so the printed equation does not reproduce the paper's own figures. Both numbers are published; the tenfold reduction is our inference, adopted with the author's agreement but not recoverable from his records.",
+   "per_mixture": {
+    "propane": {
+     "reconstructed_usd": 9100,
+     "as_printed_usd": 21828,
+     "band": [
+      5400,
+      9100
+     ],
+     "in_band": true
+    },
+    "ethane": {
+     "reconstructed_usd": 8498,
+     "as_printed_usd": 21417,
+     "band": [
+      5200,
+      9000
+     ],
+     "in_band": true
+    },
+    "ethylene": {
+     "reconstructed_usd": 8287,
+     "as_printed_usd": 20005,
+     "band": [
+      5100,
+      8800
+     ],
+     "in_band": true
+    }
+   }
+  },
+  {
+   "id": "G-5",
+   "name": "Mixture ranking is unchanged when all three are scanned at the same evaporation temperature",
+   "hard": true,
+   "status": "fail",
+   "pass": false,
+   "reason": "at a common T_EVAP of -80 C the best mixture is propane (0.675); the paper selects ethylene from scans taken at -80, -85 and -82 C respectively. Captions: Fig 3 -80, Fig 4 -85, Fig 5 -82.",
+   "per_mixture": {
+    "propane": {
+     "best_cop": 0.6748,
+     "at_co2_mass_frac": 0.01
+    },
+    "ethane": {
+     "best_cop": 0.662,
+     "at_co2_mass_frac": 0.01
+    },
+    "ethylene": {
+     "best_cop": 0.6376,
+     "at_co2_mass_frac": 0.99
+    }
+   },
+   "paper_selection": "ethylene"
+  }
+ ]
+}

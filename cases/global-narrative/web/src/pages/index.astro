@@ -250,7 +250,7 @@ const flipped = rv
         const v = document.getElementById("vintage");
         v.textContent = `GDELT · API THROUGH ${status.api_last ?? "—"} · EVENTS ${status.events_complete ? "THROUGH" : "PARTIAL, THROUGH"} ${status.events_last ?? "PENDING"}`;
         document.getElementById("foot-stamp").textContent =
-          `A DEMO-LAB CASE · GENERATED ${status.generated ?? ""} · ${status.api_timelines ?? 0} API TIMELINES · ${status.streamed?.files?.toLocaleString() ?? 0} FEED FILES / ${status.streamed?.gb ?? 0} GB STREAMED · ${status.streamed?.rows_kept?.toLocaleString() ?? 0} INDONESIA EVENTS KEPT`;
+          `AN OPENSTUDY.ID INSTRUMENT · GENERATED ${status.generated ?? ""} · ${status.api_timelines ?? 0} API TIMELINES · ${status.streamed?.files?.toLocaleString() ?? 0} FEED FILES / ${status.streamed?.gb ?? 0} GB STREAMED · ${status.streamed?.rows_kept?.toLocaleString() ?? 0} INDONESIA EVENTS KEPT`;
       }
 
       /* shared helpers */

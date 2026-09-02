@@ -1,0 +1,245 @@
+#!/usr/bin/env python3
+"""Read the repository and write down what it is actually built with.
+
+/stack/ exists for one reader: someone deciding whether the person who built this
+can do the work. That reader will open the code. So every row on that page has to
+be true right now and has to link to a file that exists — which rules out typing
+the list by hand, because a hand-typed stack drifts the moment a dependency
+changes, and a portfolio claim that turns out to be stale is worse than no claim.
+
+So: this scans pyproject.toml and package.json for what is declared, greps the
+pipelines for which external data each case ingests, counts the code, and writes
+openstudy/src/data/stack.json. The page renders that.
+
+What this file does NOT decide is the prose. Descriptions of what each library is
+for live in stack.astro, keyed by package name, and a package with no description
+still renders — adding a dependency can never break the page, only leave a gap.
+
+    ops/stack           write openstudy/src/data/stack.json
+    ops/stack check     fail if the committed JSON is out of date
+"""
+
+from __future__ import annotations
+
+import collections
+import datetime as _dt
+import json
+import pathlib
+import re
+import sys
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+DEST = ROOT / "openstudy/src/data/stack.json"
+REPO = "https://github.com/taufik-adinugraha/openstudy"
+
+SKIP_DIRS = {".venv", "node_modules", ".git", ".astro", "dist", "raw"}
+
+# Every external source, and the pattern that proves a case ingests it. Matched
+# against pipeline source, not against prose — a source named only in an article is
+# a citation, not a dependency.
+SOURCES = {
+    "Sentinel-1 SAR": (r"sentinel-?1|S1[AB]_|_GRD|asf\.alaska",
+                       "C-band radar backscatter, sees through monsoon cloud"),
+    "Sentinel-2 optical": (r"sentinel-?2|S2[AB]_|MSIL",
+                           "10 m multispectral, for indices and land cover"),
+    "NASA Black Marble / VIIRS": (r"earthdata|ladsweb|laads|VNP46|black.?marble",
+                                  "calibrated night-time radiance"),
+    "NASA FIRMS active fire": (r"VNP14|FIRMS|firms",
+                               "thermal anomaly detections, per overpass"),
+    "ERA5 reanalysis": (r"cdsapi|reanalysis-era5|era5",
+                        "hourly weather back to 1940, via the Copernicus CDS API"),
+    "Copernicus EMS / EFFIS": (r"effis|cems|emergency\.copernicus",
+                               "atmospheric composition and fire emissions"),
+    "Copernicus GLO-30 DEM": (r"glo-?30|cop-?dem|copernicus.*dem",
+                              "30 m elevation"),
+    "STAC catalogue search": (r"pystac|earth-search|stac.*search",
+                              "asset discovery instead of scraping a directory listing"),
+    "BPS (Statistics Indonesia)": (r"bps\.go\.id|webapi\.bps",
+                                   "the official statistics every case is scored against"),
+    "UN Comtrade": (r"comtrade", "bilateral trade flows by product"),
+    "GDELT": (r"gdelt", "global news event and tone feeds"),
+    "Google Open Buildings": (r"open.?buildings|open_buildings",
+                              "building footprints across the global south"),
+    "OpenStreetMap": (r"overpass|openstreetmap|planet\.osm|\.osm\.pbf",
+                      "roads, land use, points of interest"),
+    "GTFS feeds": (r"gtfs", "published transit timetables"),
+    "geoBoundaries": (r"geoboundaries", "administrative boundaries, open licence"),
+    "HDX": (r"hdx|humdata", "humanitarian datasets"),
+}
+
+
+def walk(pattern: str):
+    for p in ROOT.glob(pattern):
+        if SKIP_DIRS & set(p.parts):
+            continue
+        yield p
+
+
+def count_code() -> dict:
+    out = {}
+    for label, pat in (("python", "**/*.py"), ("astro", "**/*.astro"),
+                       ("javascript", "**/*.mjs")):
+        files = list(walk(pat))
+        lines = sum(len(p.read_text(errors="ignore").splitlines()) for p in files)
+        out[label] = {"files": len(files), "lines": lines}
+    return out
+
+
+def python_deps() -> list[dict]:
+    """Declared, not imported. What a reader can install and re-run."""
+    vers: dict[str, set] = collections.defaultdict(set)
+    cases: dict[str, set] = collections.defaultdict(set)
+    for p in sorted(walk("cases/*/pyproject.toml")):
+        case = p.parts[len(ROOT.parts) + 1]
+        m = re.search(r"dependencies\s*=\s*\[(.*?)\]", p.read_text(), re.S)
+        if not m:
+            continue
+        for dep in re.findall(r'"([^"]+)"', m.group(1)):
+            name = re.split(r"[><=!~\[]", dep)[0].strip()
+            spec = dep[len(name):].strip()
+            vers[name].add(spec or "unpinned")
+            cases[name].add(case)
+
+    # one real file per package, so every row on the page is clickable
+    where: dict[str, str] = {}
+    py = sorted(walk("cases/*/pipeline/*.py")) + sorted(walk("shared/pipeline/*.py"))
+    texts = [(p, p.read_text(errors="ignore")) for p in py]
+    for name in vers:
+        mod = name.lower().replace("-", "_")
+        alt = {"scikit_learn": "sklearn", "pillow": "PIL", "netcdf4": "netCDF4",
+               "coolprop": "CoolProp"}.get(mod, mod)
+        for p, t in texts:
+            if re.search(rf"(?m)^\s*(?:import|from)\s+{re.escape(alt)}\b", t):
+                where[name] = str(p.relative_to(ROOT))
+                break
+    return [
+        {"name": n, "spec": ", ".join(sorted(vers[n])), "cases": sorted(cases[n]),
+         "n_cases": len(cases[n]), "file": where.get(n)}
+        for n in sorted(vers, key=lambda n: (-len(cases[n]), n))
+    ]
+
+
+def js_deps() -> list[dict]:
+    apps: dict[str, set] = collections.defaultdict(set)
+    spec: dict[str, set] = collections.defaultdict(set)
+    for p in sorted(walk("*/package.json")) + sorted(walk("cases/*/web/package.json")):
+        j = json.loads(p.read_text())
+        app = p.parent.name if p.parent.name != "web" else p.parent.parent.name
+        for k, v in {**j.get("dependencies", {}), **j.get("devDependencies", {})}.items():
+            apps[k].add(app)
+            spec[k].add(v)
+    return [{"name": k, "spec": ", ".join(sorted(spec[k])), "apps": sorted(apps[k]),
+             "n_apps": len(apps[k])}
+            for k in sorted(apps, key=lambda k: (-len(apps[k]), k))]
+
+
+def sources() -> list[dict]:
+    hits: dict[str, set] = collections.defaultdict(set)
+    for p in walk("cases/*/**/*.py"):
+        t = p.read_text(errors="ignore").lower()
+        case = p.parts[len(ROOT.parts) + 1]
+        for name, (rx, _) in SOURCES.items():
+            if re.search(rx, t, re.I):
+                hits[name].add(case)
+    return [{"name": n, "what": SOURCES[n][1], "cases": sorted(hits[n]),
+             "n_cases": len(hits[n])}
+            for n in sorted(hits, key=lambda n: (-len(hits[n]), n))]
+
+
+def models() -> list[dict]:
+    """What is actually fitted, and how it is fitted.
+
+    The first version of this looked for scikit-learn wrapper names — LGBMRegressor,
+    GradientBoostingRegressor — and found nothing, because the pipelines use the
+    native LightGBM booster API and the Hist* estimators instead. A detector that
+    misses the real code is worse than no detector: it would have understated the
+    work on a page whose whole job is not to.
+    """
+    known = {
+        # estimators
+        r"\blgb\.train\(": ("LightGBM, native booster API",
+                            "gradient boosting through lgb.train with explicit params, "
+                            "sample weights and a Dataset — not the sklearn wrapper"),
+        r"\bHistGradientBoostingRegressor\(": ("HistGradientBoostingRegressor",
+                            "histogram gradient boosting"),
+        r"\bRidgeCV\(": ("RidgeCV", "L2 linear regression with the penalty chosen by "
+                                    "cross-validation, inside a Pipeline"),
+        r"\bIsotonicRegression\(": ("IsotonicRegression",
+                            "monotone calibration of predicted probabilities"),
+        r"\bstats\.gamma\.fit\(": ("gamma distribution fit",
+                            "parametric fit for a strictly positive skewed quantity"),
+        # how they are judged
+        r'loss\s*=\s*["\']quantile["\']': ("quantile loss",
+                            "prediction intervals rather than a point estimate"),
+        r"\bpermutation_importance\(": ("permutation_importance",
+                            "importance measured by degrading the input, not by split gain"),
+        r"\baverage_precision_score\(": ("average_precision_score",
+                            "PR-AUC, which is the honest metric on an imbalanced target"),
+        r"\broc_auc_score\(": ("roc_auc_score", "ranking quality"),
+        r"\bshap\b": ("SHAP", "per-prediction attribution, exported to the dashboard"),
+    }
+    found: dict[str, set] = collections.defaultdict(set)
+    files: dict[str, str] = {}
+    for p in walk("cases/*/pipeline/*.py"):
+        t = p.read_text(errors="ignore")
+        case = p.parts[len(ROOT.parts) + 1]
+        for rx, (name, _) in known.items():
+            if re.search(rx, t):
+                found[name].add(case)
+                files.setdefault(name, str(p.relative_to(ROOT)))
+    what = {name: blurb for name, blurb in known.values()}
+    return [{"name": n, "what": what[n], "cases": sorted(found[n]), "file": files[n]}
+            for n in sorted(found, key=lambda n: (-len(found[n]), n))]
+
+
+def build() -> dict:
+    return {
+        "generated": _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%d"),
+        "repo": REPO,
+        "blob": f"{REPO}/blob/main",
+        "note": ("Generated by ops/stack from the repository itself. Nothing here is "
+                 "typed by hand, so nothing here can claim a library the code does "
+                 "not install or a data source no pipeline reads."),
+        "code": count_code(),
+        "python": python_deps(),
+        "javascript": js_deps(),
+        "sources": sources(),
+        "models": models(),
+        "apps": len(list(walk("cases/*/web/package.json"))) + 1,
+        "cases": len(list(walk("cases/*/pyproject.toml"))),
+    }
+
+
+def main() -> int:
+    doc = build()
+    if len(sys.argv) > 1 and sys.argv[1] == "check":
+        if not DEST.exists():
+            print("  stack.json missing — run ops/stack")
+            return 1
+        old = json.loads(DEST.read_text())
+        a, b = dict(old), dict(doc)
+        a.pop("generated", None)
+        b.pop("generated", None)
+        if a != b:
+            print("  stack.json is out of date — run ops/stack")
+            return 1
+        print("  stack.json matches the repository")
+        return 0
+
+    DEST.parent.mkdir(parents=True, exist_ok=True)
+    DEST.write_text(json.dumps(doc, indent=1))
+    c = doc["code"]
+    print(f"  {doc['cases']} cases · {doc['apps']} apps")
+    print(f"  python {c['python']['lines']:,} lines in {c['python']['files']} files")
+    print(f"  astro  {c['astro']['lines']:,} lines in {c['astro']['files']} files")
+    print(f"  {len(doc['python'])} python packages · {len(doc['javascript'])} js packages")
+    print(f"  {len(doc['sources'])} external data sources · {len(doc['models'])} estimators")
+    unlinked = [d["name"] for d in doc["python"] if not d["file"]]
+    if unlinked:
+        print(f"  no source file found for: {', '.join(unlinked)}")
+    print(f"  wrote {DEST.relative_to(ROOT)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

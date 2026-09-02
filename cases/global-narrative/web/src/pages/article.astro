@@ -8,6 +8,8 @@
  * SVG only — no WebGL, no canvas.
  */
 import "../styles/tokens.css";
+import { glossaryFor } from "../data/glossary.js";
+import __src from "./article.astro?raw";
 import A from "../data/article.json";
 
 const VIOLET = "#B26DF2", TEAL = "#4BB8A9", CORAL = "#F26D5B", AMBER = "#E0A63F", SLATE = "#6B7CA6";
@@ -510,6 +512,11 @@ function fig11() {
 const FL = figL();
 const F1 = fig1(), F2 = fig2(), F3 = fig3(), F4 = fig4(), F5 = fig5(), F6 = fig6();
 const F7 = fig7(), F8 = fig8(), F9 = fig9(), F10 = fig10(), F11 = fig11();
+// Only the terms this article actually uses, scanned from its own source at build
+// time so no per-article list has to be kept in step by hand. The frontmatter is
+// excluded: variable names are not prose, and scanning them defined 'F1' and
+// 'median' on pages where no reader ever meets those words.
+const __glossary = glossaryFor(__src.slice(__src.indexOf('\n---', 3)));
 ---
 <html lang="en" data-case="narrative" data-theme="dark">
   <head>
@@ -534,10 +541,30 @@ const F7 = fig7(), F8 = fig8(), F9 = fig9(), F10 = fig10(), F11 = fig11();
         most naturally read to mean do not. We then rebuild the headline test from the case's own
         archive and show that it changes {word(flipped.length)} of {word(af.length)} verdicts.</p>
         <div class="byline">
-          <span>Demo Lab · FMV</span><span>Data through {A.vintage}</span>
+          <span>openstudy.id</span><span>Data through {A.vintage}</span>
           <span>{nf(A.coverage.event_rows)} coded events · {A.api_timelines} timelines</span>
         </div>
       </div>
+
+      <details class="glossary" id="glossary">
+        <summary>
+          <span>Plain-language glossary</span>
+          <span class="gcount">{__glossary.length} terms this article uses</span>
+        </summary>
+        <p class="glossary-lede">
+          Written for someone who knows the subject and not this vocabulary. The instrument
+          and measurement terms come first, because those are the ones a specialist in the
+          subject has no reason to know; the statistics follow.
+        </p>
+        <dl>
+          {__glossary.map((g) => (
+            <div>
+              <dt>{g.term}</dt>
+              <dd>{g.plain}</dd>
+            </div>
+          ))}
+        </dl>
+      </details>
 
       <section class="abstract">
         <h2>Abstract</h2>
@@ -1098,14 +1125,6 @@ const F7 = fig7(), F8 = fig8(), F9 = fig9(), F10 = fig10(), F11 = fig11();
         <p class="pull">The case's most marketable claim — that this measures the world's attention —
         is the one its own archive refuses. The claim the archive does support, that it measures who
         speaks about Indonesia and in what proportions, is the more decision-relevant of the two.</p>
-        <p>That reframing is also where this case sits on FMV's own axis. <i>See clearly</i> is not a
-        volume chart; it is knowing that {pc(1 - fpLast.foreign_share, 0)} of what you are reading is
-        your own reflection. <i>Connect wisely</i> needs the publisher graph, not the pulse.
-        <i>Act with evidence</i> requires a series whose movements survive a change of denominator —
-        and the one built in §7 does, while the published one does not. A media-intelligence product
-        aimed at closing the gap between accumulated data and action should ship §6's publisher
-        concentration and §7's foreign-attention series as its primary screens, and keep the total-volume
-        pulse as a diagnostic behind them.</p>
       </section>
 
       <section id="s12">
@@ -1199,7 +1218,7 @@ const F7 = fig7(), F8 = fig8(), F9 = fig9(), F10 = fig10(), F11 = fig11();
       </section>
 
       <footer class="end">
-        <p>Part of the Demo Lab. Built end-to-end on public data — acquisition, pipeline, model,
+        <p>Built end-to-end on public data — acquisition, pipeline, model,
         validation, and this review.</p>
         <a class="cta" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/`}>← Back to the instrument</a>
       </footer>
@@ -1300,7 +1319,31 @@ const F7 = fig7(), F8 = fig8(), F9 = fig9(), F10 = fig10(), F11 = fig11();
         .abstract { padding: 20px 18px; }
       }
       @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
-    </style>
+    
+  .glossary { max-width: 46rem; margin: 2rem auto 2.5rem; padding: 0;
+    border: 1px solid var(--hairline, #2a2a2a); background: rgba(255,255,255,0.015); }
+  .glossary > summary { cursor: pointer; padding: 0.9rem 1.1rem; display: flex;
+    flex-wrap: wrap; gap: 0.2rem 0.8rem; align-items: baseline;
+    font-size: 0.95rem; font-weight: 600; color: var(--ink, #e8ede9); }
+  .glossary > summary:hover { color: var(--accent, #6fc7d6); }
+  /* display:flex on a <summary> removes the disclosure marker in every browser, so
+     the panel read as a static bar rather than a control. Put one back explicitly. */
+  .glossary > summary { list-style: none; }
+  .glossary > summary::-webkit-details-marker { display: none; }
+  .glossary > summary::before { content: "\25B8"; color: var(--accent, #6fc7d6);
+    font-size: 0.85em; line-height: 1.4; }
+  .glossary[open] > summary::before { content: "\25BE"; }
+  .glossary > summary:focus-visible { outline: 2px solid var(--accent, #6fc7d6);
+    outline-offset: 2px; }
+  .glossary .gcount { font-size: 0.78rem; font-weight: 400;
+    color: var(--ink-muted, #93a198); }
+  .glossary-lede { margin: 0 1.1rem 1.1rem; font-size: 0.88rem; line-height: 1.6;
+    color: var(--ink-muted, #93a198); }
+  .glossary dl { margin: 0; padding: 0 1.1rem 1.2rem; display: grid; gap: 1rem; }
+  .glossary dt { font-weight: 600; font-size: 0.93rem; color: var(--ink, #e8ede9); }
+  .glossary dd { margin: 0.25rem 0 0; font-size: 0.91rem; line-height: 1.6;
+    color: var(--ink-muted, #93a198); }
+</style>
 
     <script>
       /* Hover read-outs. Pure SVG + DOM, no GPU path anywhere. */

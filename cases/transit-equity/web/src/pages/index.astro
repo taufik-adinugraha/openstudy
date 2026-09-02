@@ -25,7 +25,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
         <div class="hero-scrim"></div>
       </div>
       <div class="hero-copy">
-        <span class="eyebrow">Demo Lab · Jabodetabek</span>
+        <span class="eyebrow">openstudy.id · Jabodetabek</span>
         <h1>The hour.</h1>
         <p class="lede">An hour on public transport buys a Menteng resident about a tenth of
         Greater Jakarta's job-dense floorspace. Sixty minutes from a desa in Kabupaten Bogor
@@ -228,7 +228,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
     </main>
 
     <footer class="foot">
-      <span class="stamp dim" id="foot-stamp">A DEMO-LAB CASE · STATIC SNAPSHOT</span>
+      <span class="stamp dim" id="foot-stamp">AN OPENSTUDY.ID INSTRUMENT · STATIC SNAPSHOT</span>
       <span class="stamp dim">TransJakarta GTFS (licence unstated — attributed, written confirmation pending) · OpenStreetMap contributors ODbL · GHSL R2023A CC BY 4.0 · HDX healthsites ODbL · HDX COD-AB (BPS) CC BY-IGO · routing by r5py / R5</span>
     </footer>
 
@@ -836,7 +836,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
           (ratio && isFinite(ratio) ? ` — a gap of ${ratio.toFixed(0)}× at this cutoff, ${c30 ? `and ${c30.ratio.toFixed(0)}× at thirty minutes. ` : ". "}` : ". ") +
           "Both are gaps in the scheduled network this models; the motorcycles most of the region actually travels on are not routed here.";
         document.getElementById("foot-stamp").textContent =
-          `A DEMO-LAB CASE · STATIC SNAPSHOT · ROUTED ${access.window.date} ${access.window.from}–${access.window.to} · GENERATED ${(stats?.generated ?? "").slice(0, 10)}`;
+          `AN OPENSTUDY.ID INSTRUMENT · STATIC SNAPSHOT · ROUTED ${access.window.date} ${access.window.from}–${access.window.to} · GENERATED ${(stats?.generated ?? "").slice(0, 10)}`;
       });
 
       /* ═════════ CH 3 — Lorenz ═════════ */

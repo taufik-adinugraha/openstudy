@@ -1,0 +1,159 @@
+---
+// An index for /notes/, which used to answer 403.
+//
+// A replication publishes as its own note rather than as an instrument — /contribute/
+// says so, and the distinction is deliberate: an instrument is a pipeline, models, an
+// evaluation and an interface, while a replication is a finding. But the consequence
+// was that the only finished interactive work on the site sat two levels down behind a
+// path with no index, reachable from one link inside one table cell. Somebody asked
+// "no dashboard?" and they were right to.
+//
+// The count and the list are derived from the files in this directory, so a new note
+// appears here without anyone remembering to add it — every hand-kept count on this
+// site went stale at least once. The cascade pair gets hand-written copy because a
+// meta description is not a summary; anything else falls through to the generic list,
+// which is what stops this page going out of date.
+import Page from "../../layouts/Page.astro";
+import G from "../../data/cascade-cold.json";
+
+const failed = G.gates.filter((x) => x.status === "fail").length;
+const passed = G.gates.filter((x) => x.status === "pass").length;
+
+const pages = Object.entries(
+  import.meta.glob("./*.astro", { eager: true, query: "?raw", import: "default" }),
+)
+  .filter(([path]) => !path.endsWith("/index.astro"))
+  .map(([path, src]) => {
+    const slug = path.replace(/^\.\//, "").replace(/\.astro$/, "");
+    const title = /title="([^"]+)"/.exec(src)?.[1] ?? slug;
+    const description = /description="([^"]+)"/.exec(src)?.[1] ?? "";
+    return { slug, title, description };
+  })
+  .sort((a, b) => a.slug.localeCompare(b.slug));
+
+const NOTE = pages.find((p) => p.slug === "cascade-refrigeration");
+const EXPL = pages.find((p) => p.slug === "cascade-explorer");
+// anything that is not the cascade note or its dashboard renders from its own frontmatter
+const others = pages.filter((p) => p !== NOTE && p !== EXPL);
+---
+
+<Page
+  title="Notes — replications and findings"
+  description="Replications published as notes rather than instruments: a published method rebuilt from the paper alone, and what reproduced."
+>
+  <section class="hero">
+    <p class="eyebrow">Notes · {pages.length} published</p>
+    <h1>Replications publish as notes,<br /><em>not as instruments.</em></h1>
+    <p class="lead">
+      An instrument is a pipeline, models, an evaluation and an interface, built to answer
+      a question nobody has answered. A replication is a different thing: somebody has
+      already answered it, in print, and the question is whether the answer can be
+      rebuilt from what they published. That is a finding, so it publishes as a note.
+    </p>
+    <p class="sub">
+      A note can still carry a dashboard. The one below does, and it recomputes the whole
+      operating envelope in your browser.
+    </p>
+  </section>
+
+  <section class="sec" id="published">
+    <div class="rail">Published<span>what each one found</span></div>
+    <div class="col wide">
+
+      <article class="card">
+        <p class="kicker">A cascade refrigeration optimisation · Makara J. Technol. 20(3), 2016</p>
+        <h2><a href={`/notes/${NOTE.slug}/`}>{passed} of {passed + failed} checks
+          reproduced. {failed === 1 ? "One did" : "Two did"} not.</a></h2>
+        <p>
+          A published two-objective optimisation of a −80&nbsp;°C cascade system, rebuilt
+          from the paper's own equations and re-scored against the numbers it reports. It
+          needed nothing from the authors — no dataset, no code, no permission. Three
+          things the paper never stated had to be reconstructed, and one of them, the
+          compressor efficiency, was recovered from the paper's own reported COP.
+        </p>
+        <dl class="tally">
+          <div><dt>Checks passed</dt><dd>{passed}</dd></div>
+          <div><dt>Checks failed</dt><dd class="want">{failed}</dd></div>
+          <div><dt>From the authors</dt><dd>0</dd></div>
+          <div><dt>Points in the dashboard</dt><dd>62,370</dd></div>
+        </dl>
+        <p class="go">
+          <a href={`/notes/${NOTE.slug}/`}>Read the note<span aria-hidden="true"> →</span></a>
+          <a class="strong" href={`/notes/${EXPL.slug}/`}>Open the dashboard<span aria-hidden="true"> →</span></a>
+        </p>
+      </article>
+
+      {others.length > 0 && (
+        <ul class="more">
+          {others.map((n) => (
+            <li>
+              <a href={`/notes/${n.slug}/`}>{n.title}</a>
+              {n.description && <span>{n.description}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div class="callout">
+        <p>
+          <b>Bring one.</b> A replication needs no data and no code from the original
+          authors — only a paper whose method is described well enough to rebuild. It is
+          the fastest way to contribute here, and the result is a finding either way:
+          reproducing a published result is as publishable as failing to.
+          <a href="/contribute/#attack">How that works.</a>
+        </p>
+      </div>
+    </div>
+  </section>
+</Page>
+
+<style>
+  .hero { padding-bottom: 0.5rem; }
+  .eyebrow {
+    font-family: var(--sans); font-size: 0.72rem; font-weight: 600;
+    letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent);
+    margin: 0 0 1.1rem;
+  }
+  .hero h1 { max-width: 26ch; }
+  .sub { font-family: var(--sans); font-size: 0.86rem; color: var(--muted); margin: 1rem 0 0; }
+  .sec .col.wide { max-width: none; }
+
+  .card { border: 1px solid var(--rule); background: var(--panel);
+    padding: 1.5rem 1.6rem; margin: 0 0 1.4rem; }
+  .kicker { font-family: var(--sans); font-size: 0.7rem; font-weight: 600;
+    letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted);
+    margin: 0 0 0.7rem; }
+  .card h2 { font-size: 1.45rem; margin: 0 0 0.7rem; }
+  .card h2 a { color: var(--ink); text-decoration: none; }
+  .card h2 a:hover { color: var(--accent); }
+  .card > p { max-width: 68ch; }
+
+  .tally {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+    gap: 1px; margin: 1.4rem 0 0; padding: 0;
+    background: var(--rule); border: 1px solid var(--rule);
+  }
+  .tally > div { background: var(--ground); padding: 0.8rem 0.95rem; }
+  .tally dt { font-family: var(--sans); font-size: 0.64rem; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  .tally dd { margin: 0.3rem 0 0; font-family: var(--sans); font-size: 1.5rem;
+    font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; color: var(--ink); }
+  .tally dd.want { color: var(--flag); text-shadow: 0 0 22px var(--glow-flag); }
+
+  .go { display: flex; flex-wrap: wrap; gap: 0.6rem 1.8rem; margin: 1.4rem 0 0;
+    font-family: var(--sans); font-size: 0.9rem; }
+  .go a { color: var(--muted); text-decoration: none;
+    border-bottom: 1px solid var(--rule); padding-bottom: 2px; }
+  .go a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+  .go a.strong { color: var(--accent); border-bottom-color: var(--accent);
+    font-weight: 600; }
+
+  .more { list-style: none; margin: 0 0 1.4rem; padding: 0;
+    border-top: 1px solid var(--rule); }
+  .more li { padding: 1rem 0; border-bottom: 1px solid var(--rule); }
+  .more a { font-family: var(--sans); font-size: 1rem; font-weight: 600;
+    color: var(--ink); text-decoration: none; }
+  .more a:hover { color: var(--accent); }
+  .more span { display: block; margin-top: 0.3rem; font-family: var(--sans);
+    font-size: 0.85rem; line-height: 1.55; color: var(--muted); max-width: 68ch; }
+</style>

@@ -29,6 +29,14 @@
   --accent:  #4FD8C0;
   --flag:    #FF7F6B;
   --rule:    #1E2926;
+  /* Charts need two more. --faint is decoration only, and an axis label is not
+     decoration: at 3.48:1 on --ground it fails WCAG AA, which a reviewer measured
+     across every tick on every chart. Axis text now uses --muted (8.0:1) and
+     gridlines use --grid, which is visible without competing with the data.
+     --locus is "you are here", kept separate from --flag: the same coral meaning
+     both "the reader" and "broken" was doing real damage on the explorer. */
+  --grid:    #2C3A36;
+  --locus:   #FFC857;
 
   --glow:      color-mix(in srgb, var(--accent) 42%, transparent);
   --glow-soft: color-mix(in srgb, var(--accent) 14%, transparent);

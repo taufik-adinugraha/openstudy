@@ -14,7 +14,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Poverty Mapping from Space — Demo Lab</title>
+    <title>Poverty Mapping from Space — openstudy.id</title>
     <meta name="description" content="Rooftops, night lights, land cover and population as welfare signals: a gradient-boosted small-area model trained on BPS's official regency poverty rates, spatially cross-validated, and carried down to the kecamatan." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -436,7 +436,7 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
     </main>
 
     <footer class="foot">
-      <span class="stamp dim" id="foot-stamp">A DEMO-LAB CASE · STATIC SNAPSHOT</span>
+      <span class="stamp dim" id="foot-stamp">AN OPENSTUDY.ID INSTRUMENT · STATIC SNAPSHOT</span>
       <span class="stamp dim">SOURCE DATA: BPS · GOOGLE OPEN BUILDINGS · NASA BLACK MARBLE · WORLDPOP · ESA WORLDCOVER · HDX COD-AB</span>
     </footer>
 
@@ -827,7 +827,7 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
       document.getElementById("top-stamp").textContent =
         `BPS ${YEARS[0]}–${LATEST} · GENERATED ${ledger.vintage ?? "—"}`;
       document.getElementById("foot-stamp").textContent =
-        `A DEMO-LAB CASE · STATIC SNAPSHOT · BPS RELEASE ${LATEST} · OPEN BUILDINGS v3 2023-06 · WORLDCOVER 2021 · BLACK MARBLE ANNUAL · GENERATED ${ledger.vintage ?? "—"}`;
+        `AN OPENSTUDY.ID INSTRUMENT · STATIC SNAPSHOT · BPS RELEASE ${LATEST} · OPEN BUILDINGS v3 2023-06 · WORLDCOVER 2021 · BLACK MARBLE ANNUAL · GENERATED ${ledger.vintage ?? "—"}`;
 
       /* ── entrance reveals ──────────────────────────────────────────────────────── */
       sect("reveals", () => {

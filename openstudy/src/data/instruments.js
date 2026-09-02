@@ -50,7 +50,7 @@ export const INSTRUMENTS = [
   },
   {
     slug: "rice",
-    title: "Rice & Food Security",
+    title: "Java's Rice Harvest, from Radar",
     line: "Reading Java's harvest from radar, and checking it against the official count.",
     found: "Detected harvested area has an R² of −11.09 against BPS KSA before calibration, and 0.82 after.",
     gap: "Someone in agricultural statistics or rice agronomy — whether that calibration is legitimate or is fitting the answer, what KSA's own method assumes, and whether harvest-timing prediction is actionable.",
