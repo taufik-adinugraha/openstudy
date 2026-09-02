@@ -8,6 +8,25 @@
 // on this page is invented in the browser — all of them come from the pipeline's JSON.
 import "../styles/tokens.css";
 import "maplibre-gl/dist/maplibre-gl.css";
+// The insight brief is model-written and does not render until a person has approved
+// it. Two gates stand before this file: ops/brief refuses any brief containing a
+// number that does not trace to the pipeline's own stats.json, and then a human runs
+// `ops/brief approve` to flip `reviewed`. An unreviewed brief renders nothing at all.
+import briefRaw from "../data/brief.md?raw";
+
+const briefMeta = Object.fromEntries(
+  (briefRaw.match(/^---\n([\s\S]*?)\n---/) ?? ["", ""])[1]
+    .split("\n")
+    .filter(Boolean)
+    .map((l) => [l.slice(0, l.indexOf(":")).trim(), l.slice(l.indexOf(":") + 1).trim()]),
+);
+const briefBody = briefRaw.replace(/^---\n[\s\S]*?\n---\n/, "").trim();
+const briefLive = briefMeta.reviewed === "true" && briefBody.length > 0;
+// paragraphs, and the bullet block the prompt asks for
+const briefBlocks = briefBody.split(/\n\s*\n/).map((b) => ({
+  bullets: b.trim().startsWith("*") || b.trim().startsWith("-"),
+  lines: b.trim().split("\n").map((l) => l.replace(/^[*-]\s*/, "").trim()),
+}));
 ---
 
 <html lang="en" data-case="poverty" data-theme="dark">
@@ -79,6 +98,33 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
         <div class="scroll-cue" aria-hidden="true"><span></span>SCROLL</div>
       </section>
+
+      {briefLive && (
+        <section id="brief" class="band reveal" aria-labelledby="brief-title">
+          <div class="brief">
+            <div class="brief-head">
+              <h2 id="brief-title">The short version</h2>
+              <p class="brief-stamp">
+                <span class="tag gen">generated</span>
+                <span class="tag rev">reviewed</span>
+                <span>{briefMeta.model}</span>
+                <span>{briefMeta.generated}</span>
+              </p>
+            </div>
+            {briefBlocks.map((b) => (
+              b.bullets
+                ? <ul>{b.lines.map((l) => <li set:html={l} />)}</ul>
+                : <p set:html={b.lines.join(" ")} />
+            ))}
+            <p class="brief-foot">
+              Written by a language model from this case's own <code>stats.json</code>,
+              then checked mechanically: every number above had to match a number the
+              pipeline computed, or the text was refused and never written. A person
+              approved it before it appeared here.
+            </p>
+          </div>
+        </section>
+      )}
 
       <!-- ═══════════════════════════ big stats ═══════════════════════════ -->
       <section id="stats" class="band reveal">
@@ -2438,6 +2484,26 @@ SCOPE=java make rebuild   # the ~11 GB fast path</pre>
   
     <section class="colophon">
       <style>
+      /* the model-written brief. Deliberately quiet: it is a convenience, and the
+         numbers it repeats are all available elsewhere on this page. */
+      .brief { max-width: 46rem; margin: 0 auto; }
+      .brief-head { display: flex; flex-wrap: wrap; align-items: baseline;
+        gap: 0.5rem 1rem; margin-bottom: 1rem; }
+      .brief-head h2 { margin: 0; }
+      .brief-stamp { display: flex; flex-wrap: wrap; align-items: center;
+        gap: 0.4rem 0.7rem; margin: 0; font-family: var(--mono, monospace);
+        font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase;
+        color: var(--muted, #9aa); }
+      .brief-stamp .tag { padding: 0.12rem 0.4rem; border: 1px solid currentColor; }
+      .brief-stamp .tag.gen { color: var(--muted, #9aa); }
+      .brief-stamp .tag.rev { color: var(--accent, #4FD8C0); }
+      .brief p, .brief li { font-size: 1rem; line-height: 1.65; }
+      .brief ul { margin: 0.8rem 0; padding-left: 1.15rem; }
+      .brief li { margin: 0 0 0.5rem; }
+      .brief-foot { margin-top: 1.4rem; padding-top: 1rem;
+        border-top: 1px solid var(--rule, #2a2a2a);
+        font-size: 0.82rem; line-height: 1.6; color: var(--muted, #9aa); }
+
         .colophon { max-width: var(--content-width, 72rem); margin: 0 auto;
           padding: 3rem 5vw 4rem; border-top: 1px solid var(--hairline, #2a2a2a);
           display: grid; gap: 1.6rem; grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr)); }

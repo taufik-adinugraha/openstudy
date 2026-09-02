@@ -57,6 +57,7 @@
   "slug": "rice",
   "scenes": 1247,
   "regencies": 6,
+  "one_regency": "Bojonegoro",
   "cells_one_regency": 231278,
   "acquisitions_one_regency": 189,
   "median_obs_per_cell": 252,

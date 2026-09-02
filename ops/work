@@ -102,11 +102,15 @@ def rice() -> dict:
     thin = dig(a, "E_thinning")
     ladder = thin["ladder"]
     base = ladder[0]
-    one = bs[sorted(bs)[0]]
+    # name the regency rather than saying "one regency": the figures below are one
+    # regency's, and which one is a fact the reader is entitled to
+    one_name = sorted(bs)[0]
+    one = bs[one_name]
     return {
         "slug": "rice",
         "scenes": sum(1 for k in man if k.startswith("sar:")),
         "regencies": len(bs),
+        "one_regency": one_name,
         "cells_one_regency": dig(one, "n_cells"),
         "acquisitions_one_regency": dig(one, "n_acquisitions"),
         "median_obs_per_cell": dig(one, "median_obs_per_cell"),

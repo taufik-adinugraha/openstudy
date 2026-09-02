@@ -1,0 +1,239 @@
+#!/usr/bin/env python3
+"""Generate a case's insight brief, and refuse to keep it if it invents a number.
+
+shared/pipeline/brief.py has always said the prompt "forbids any number not present
+in the stats JSON". A prompt that forbids something is a request, not a guarantee —
+so this checks. Every numeric token in the generated text has to be traceable to a
+number the pipeline computed, or the brief is rejected and nothing is written.
+
+That is the whole point of putting a language model anywhere near this site. The
+site's claim is that its numbers are checkable; model-written prose is only
+admissible if the same rule applies to it, mechanically, before anyone reads it.
+
+Three gates, in order:
+
+  1. GENERATION   one low-temperature call, stats JSON as the only input.
+  2. VERIFICATION every number in the output must match a number in the stats JSON,
+                  allowing for rounding and percent conversion. Any that does not is
+                  named, and the brief is refused.
+  3. HUMAN        the brief is written with `reviewed: false`, and the site does not
+                  render it until a person sets that to true. Generating is not
+                  publishing.
+
+    ops/brief generate <case>    generate, verify, write (as unreviewed)
+    ops/brief verify <case>      re-check an existing brief against the stats JSON
+    ops/brief approve <case>     mark reviewed — a person's decision, never automatic
+    ops/brief status             what exists, and what is waiting for review
+"""
+
+from __future__ import annotations
+
+import decimal
+import json
+import pathlib
+import re
+import sys
+from decimal import Decimal
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+# A number as it appears in prose: 1,226,885 · 0.395 · -11.09 · 35% · 4.4x · $8,122
+TOKEN = re.compile(r"(?<![\w.])(-|−)?\$?(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d+))?\s*(%)?")
+
+# Words a brief may use as quantities without them being findings.
+ALLOWED_BARE = {Decimal(0), Decimal(1), Decimal(2), Decimal(3), Decimal(4), Decimal(5)}
+
+
+def case_paths(case: str) -> tuple[pathlib.Path, pathlib.Path]:
+    stats = ROOT / "cases" / case / "data" / "stats.json"
+    # the brief is reviewed content that ships, so it lives in the app's source tree
+    # rather than in the gitignored data plane
+    out = ROOT / "cases" / case / "web" / "src" / "data" / "brief.md"
+    return stats, out
+
+
+def numbers_in_text(text: str) -> list[tuple[str, Decimal, int, bool]]:
+    """Every numeric token, with its literal form, value, decimals and percent flag."""
+    out = []
+    for m in TOKEN.finditer(text):
+        neg, whole, frac, pct = m.groups()
+        raw = (whole or "").replace(",", "")
+        if not raw:
+            continue
+        val = Decimal(raw + ("." + frac if frac else ""))
+        if neg:
+            val = -val
+        out.append((m.group(0).strip(), val, len(frac or ""), bool(pct)))
+    return out
+
+
+def numbers_in_json(obj) -> set[Decimal]:
+    """Every number anywhere in the record, including ones embedded in strings."""
+    found: set[Decimal] = set()
+
+    def walk(o):
+        if isinstance(o, bool):
+            return
+        if isinstance(o, (int, float)):
+            try:
+                found.add(Decimal(str(o)))
+            except decimal.InvalidOperation:
+                pass
+        elif isinstance(o, str):
+            for _, v, _, _ in numbers_in_text(o):
+                found.add(v)
+        elif isinstance(o, dict):
+            for k, v in o.items():
+                for _, kv, _, _ in numbers_in_text(str(k)):
+                    found.add(kv)
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+
+    walk(obj)
+    return found
+
+
+def traceable(val: Decimal, decimals: int, pct: bool, pool: set[Decimal]) -> bool:
+    """Is this number a stated number, allowing rounding and percent conversion?"""
+    if val in pool:
+        return True
+    if val in ALLOWED_BARE:
+        return True
+    q = Decimal(1).scaleb(-decimals)
+    for j in pool:
+        try:
+            if j.quantize(q, rounding=decimal.ROUND_HALF_UP) == val:
+                return True
+            # a share of 0.3952 written as 39.5% or 40%
+            if pct or abs(val) > 1:
+                if (j * 100).quantize(q, rounding=decimal.ROUND_HALF_UP) == val:
+                    return True
+            # a percentage in the record written as a share in the prose
+            if (j / 100).quantize(q, rounding=decimal.ROUND_HALF_UP) == val:
+                return True
+        except (decimal.InvalidOperation, decimal.Overflow):
+            continue
+    return False
+
+
+def split_front(text: str) -> tuple[str, str]:
+    if text.startswith("---"):
+        end = text.index("\n---", 3)
+        return text[: end + 4], text[end + 4 :]
+    return "", text
+
+
+def check(case: str, body: str, stats: dict) -> list[str]:
+    pool = numbers_in_json(stats)
+    bad = []
+    for literal, val, dec, pct in numbers_in_text(body):
+        if not traceable(val, dec, pct, pool):
+            bad.append(literal)
+    return bad
+
+
+def cmd_verify(case: str, quiet: bool = False) -> int:
+    stats_p, out_p = case_paths(case)
+    if not out_p.exists():
+        print(f"  {case}: no brief")
+        return 1
+    stats = json.loads(stats_p.read_text())
+    front, body = split_front(out_p.read_text())
+    bad = check(case, body, stats)
+    pool = numbers_in_json(stats)
+    n = len(numbers_in_text(body))
+    if bad:
+        print(f"  {case}: REFUSED — {len(bad)} of {n} numbers are not in stats.json")
+        for b in bad:
+            print(f"      {b}")
+        return 1
+    if not quiet:
+        print(f"  {case}: ok — all {n} numbers trace to stats.json "
+              f"({len(pool):,} numbers available)")
+    return 0
+
+
+def cmd_generate(case: str) -> int:
+    from shared.pipeline.brief import generate
+
+    stats_p, out_p = case_paths(case)
+    if not stats_p.exists():
+        print(f"  {case}: no stats.json — run the pipeline first")
+        return 1
+    out_p.parent.mkdir(parents=True, exist_ok=True)
+
+    tmp = out_p.with_suffix(".md.candidate")
+    generate(stats_p, tmp)
+    stats = json.loads(stats_p.read_text())
+    front, body = split_front(tmp.read_text())
+    bad = check(case, body, stats)
+    if bad:
+        print(f"  {case}: REFUSED — the brief used {len(bad)} number(s) that are not "
+              "in stats.json:")
+        for b in bad:
+            print(f"      {b}")
+        print(f"  candidate kept at {tmp.relative_to(ROOT)} for inspection; "
+              "nothing published")
+        return 1
+    tmp.replace(out_p)
+    n = len(numbers_in_text(body))
+    print(f"  {case}: written, unreviewed — {n} numbers, all traceable")
+    print(f"  {out_p.relative_to(ROOT)}")
+    print("  the site will not render it until a person runs "
+          f"`ops/brief approve {case}`")
+    return 0
+
+
+def cmd_approve(case: str) -> int:
+    _, out_p = case_paths(case)
+    if not out_p.exists():
+        print(f"  {case}: no brief to approve")
+        return 1
+    if cmd_verify(case, quiet=True) != 0:
+        print("  refusing to approve a brief that fails verification")
+        return 1
+    s = out_p.read_text()
+    if "reviewed: true" in s:
+        print(f"  {case}: already reviewed")
+        return 0
+    out_p.write_text(s.replace("reviewed: false", "reviewed: true", 1))
+    print(f"  {case}: marked reviewed — it will render on the next build")
+    return 0
+
+
+def cmd_status() -> int:
+    rows = []
+    for p in sorted(ROOT.glob("cases/*/web/src/data/brief.md")):
+        case = p.parts[len(ROOT.parts) + 1]
+        s = p.read_text()
+        stamp = (re.search(r"generated:\s*(.+)", s) or [None, "?"])[1].strip()
+        rows.append((case, "reviewed" if "reviewed: true" in s else "AWAITING REVIEW",
+                     stamp))
+    if not rows:
+        print("  no briefs generated")
+        return 0
+    for case, state, stamp in rows:
+        print(f"  {case:20} {state:16} generated {stamp}")
+    return 0
+
+
+def main() -> int:
+    args = sys.argv[1:]
+    if not args:
+        print(__doc__)
+        return 2
+    cmd, rest = args[0], args[1:]
+    if cmd == "status":
+        return cmd_status()
+    if not rest:
+        print(f"  {cmd} needs a case name")
+        return 2
+    return {"generate": cmd_generate, "verify": cmd_verify,
+            "approve": cmd_approve}.get(cmd, lambda c: 2)(rest[0])
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
