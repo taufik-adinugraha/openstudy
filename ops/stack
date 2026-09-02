@@ -216,12 +216,29 @@ def main() -> int:
         if not DEST.exists():
             print("  stack.json missing — run ops/stack")
             return 1
-        old = json.loads(DEST.read_text())
-        a, b = dict(old), dict(doc)
+        a, b = dict(json.loads(DEST.read_text())), dict(doc)
         a.pop("generated", None)
         b.pop("generated", None)
+        # The line counts move whenever anyone touches a file, including this one.
+        # Failing on that would train a reader to ignore the check, so counts get a
+        # tolerance and everything that is a CLAIM — the packages, their versions, the
+        # data sources, the estimators — has to match exactly.
+        drift = []
+        for lang, was in a.pop("code", {}).items():
+            now = b.get("code", {}).get(lang, {})
+            for k in ("files", "lines"):
+                o, n = was.get(k, 0), now.get(k, 0)
+                if o and abs(n - o) / o > 0.03:
+                    drift.append(f"{lang}.{k} {o:,} → {n:,}")
+        b.pop("code", None)
         if a != b:
-            print("  stack.json is out of date — run ops/stack")
+            for key in sorted(set(a) | set(b)):
+                if a.get(key) != b.get(key):
+                    print(f"  stack.json is out of date in '{key}' — run ops/stack")
+            return 1
+        if drift:
+            print("  stack.json counts have drifted over 3%: " + "; ".join(drift))
+            print("  run ops/stack")
             return 1
         print("  stack.json matches the repository")
         return 0
